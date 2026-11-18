@@ -12,7 +12,7 @@ import { LearningService } from '../src/app/service.ts';
 
 /** A tiny in-memory imitation of the Supabase REST endpoints this app uses. */
 function fakeSupabase() {
-  const tables: Record<string, any[]> = { ll_sessions: [], ll_events: [], ll_traces: [], ll_idempotency: [], ll_reading_events: [], ll_profiles: [], ll_llm_calls: [] };
+  const tables: Record<string, any[]> = { ll_sessions: [], ll_events: [], ll_traces: [], ll_idempotency: [], ll_reading_events: [], ll_profiles: [], ll_llm_calls: [], ll_video_extras: [] };
   let seq = 0;
   const requests: { method: string; url: string; headers: Record<string, string> }[] = [];
   const reply = (status: number, body: unknown) => ({ ok: status < 300, status, text: async () => (body === undefined ? '' : JSON.stringify(body)) });
@@ -44,7 +44,7 @@ function fakeSupabase() {
     if (init.method === 'POST') {
       const rows = Array.isArray(body) ? body : [body];
       for (const r of rows) {
-        const pk = path === 'll_idempotency' ? 'key' : path === 'll_profiles' ? 'learner_id' : 'id';
+        const pk = path === 'll_idempotency' ? 'key' : path === 'll_profiles' ? 'learner_id' : path === 'll_video_extras' ? 'video_id' : 'id';
         const i = table.findIndex((x) => x[pk] === r[pk]);
         if (i >= 0 && init.headers.prefer?.includes('merge-duplicates')) table[i] = r;
         else if (i < 0) table.push(r);
@@ -56,9 +56,9 @@ function fakeSupabase() {
   return { fetchImpl, tables, requests };
 }
 
-test('Supabase store runs the learning loop end to end, with the service-role key on every request', async () => {
+test('Supabase store runs the learning loop end to end, with the secret key on every request', async () => {
   const fake = fakeSupabase();
-  const store = new SupabaseStore('https://proj.supabase.co/', 'service-key', fake.fetchImpl);
+  const store = new SupabaseStore('https://proj.supabase.co/', 'sb_secret_testkey', fake.fetchImpl);
   const svc = new LearningService(store);
   const v = await svc.startSession({ learnerId: 'u1' });
   const r = await svc.submitAttempt(v.sessionId, 'u1', { idempotencyKey: 'abc-12345', expectedRevision: v.revision, answer: { salePrice: 900, profit: 100, marginPct: 11.11, decision: 'accept' } });
@@ -68,7 +68,7 @@ test('Supabase store runs the learning loop end to end, with the service-role ke
   assert.equal(again.attemptId, r.attemptId);
   assert.equal(fake.tables.ll_events!.length, 1);
   assert.ok((await svc.trace(v.sessionId, 'u1', r.attemptId)).diagnosis);
-  assert.ok(fake.requests.every((q) => q.headers.apikey === 'service-key' && q.headers.authorization === 'Bearer service-key'));
+  assert.ok(fake.requests.every((q) => q.headers.apikey === 'sb_secret_testkey' && q.headers.authorization === undefined), 'new secret keys go only in apikey');
   assert.ok(fake.requests.every((q) => q.url.startsWith('https://proj.supabase.co/rest/v1/')));
 });
 
@@ -181,4 +181,15 @@ test('Supabase store: deleting a learner’s reading data leaves other learners 
   assert.equal((await store.readingEvents('u2')).length, 1);
   assert.equal(await store.getProfile('u1'), undefined);
   assert.ok(fake.requests.some((r) => r.method === 'DELETE' && r.url.includes('ll_profiles?learner_id=eq.u1')));
+});
+
+test('Supabase store: legacy JWT keys also go in Authorization; video extras round-trip', async () => {
+  const fake = fakeSupabase();
+  const legacy = new SupabaseStore('https://proj.supabase.co', 'eyJlegacy.jwt.key', fake.fetchImpl);
+  await legacy.saveVideoExtras({ videoId: 'F8OWdzcf6go', data: { quiz: [] }, updatedAt: '2026-11-19T00:00:00.000Z' });
+  await legacy.saveVideoExtras({ videoId: 'F8OWdzcf6go', data: { quiz: [1] }, updatedAt: '2026-11-19T01:00:00.000Z' });
+  assert.deepEqual((await legacy.getVideoExtras('F8OWdzcf6go'))!.data, { quiz: [1] });
+  assert.equal((await legacy.listVideoExtras()).length, 1);
+  assert.equal(await legacy.getVideoExtras('nope'), undefined);
+  assert.ok(fake.requests.every((q) => q.headers.authorization === 'Bearer eyJlegacy.jwt.key'));
 });

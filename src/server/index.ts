@@ -31,7 +31,9 @@ if (existsSync(envFile)) {
 }
 const env = process.env;
 
-const store: Store = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY ? new SupabaseStore(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY) : new MemoryStore();
+// SUPABASE_SECRET_KEY (sb_secret_…) is the current name; SUPABASE_SERVICE_ROLE_KEY (legacy JWT) still works.
+const serverKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+const store: Store = env.SUPABASE_URL && serverKey ? new SupabaseStore(env.SUPABASE_URL, serverKey) : new MemoryStore();
 const auth = env.AUTH_MODE === 'supabase' && env.SUPABASE_URL && env.SUPABASE_ANON_KEY ? supabaseAuth(env.SUPABASE_URL, env.SUPABASE_ANON_KEY) : anonymousAuth();
 const gateway = gatewayFromEnv(env, store);
 const live = new LiveSearch({ apiKey: env.TAVILY_API_KEY || null, store });

@@ -97,7 +97,7 @@ Copy `.env.example` to `.env`. Never commit it or paste keys in chat.
 
 | Variable | Turns on | Without it |
 | --- | --- | --- |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Postgres store (data survives restarts) | Memory store |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`) | Postgres store (data survives restarts) | Memory store |
 | `AUTH_MODE=supabase` + `SUPABASE_ANON_KEY` | Google / email-link sign-in | Anonymous HttpOnly cookie |
 | `GEMINI_API_KEY` (`GEMINI_MODEL`) | AI rewording of answers, first choice | Reviewed text only |
 | `GROQ_API_KEY` (`GROQ_MODEL`) | Fallback AI provider | — |

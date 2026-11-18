@@ -33,11 +33,10 @@ export class SupabaseStore implements Store {
   }
 
   private async rest<T = unknown>(method: string, path: string, body?: unknown, prefer?: string): Promise<T> {
-    const headers: Record<string, string> = {
-      apikey: this.key,
-      authorization: `Bearer ${this.key}`,
-      'content-type': 'application/json',
-    };
+    // New secret keys (sb_secret_…) are not JWTs and go only in the apikey
+    // header; legacy service_role keys (JWTs) also go in Authorization.
+    const headers: Record<string, string> = { apikey: this.key, 'content-type': 'application/json' };
+    if (this.key.startsWith('eyJ')) headers.authorization = `Bearer ${this.key}`;
     if (prefer) headers.prefer = prefer;
     const res = await this.fetchImpl(`${this.url}/rest/v1/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     const text = await res.text();
