@@ -1,0 +1,47 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A stopwatch can tell you how long one run took. It cannot tell you how much slower the program will become when a class grows from 60 students to 6,000. To answer that question, count the work as a function of input size. This is the starting point for comparing data structures.</p>
+<p>Imagine searching roll-number marks written on cards. If the required card is first, you stop immediately. If it is absent, you examine every card. The number of cards is the same in both situations. The position of the answer changes the work.</p>
+<p>An <dfn>operation count</dfn> measures a chosen action, such as comparing one stored value with a target. You must say what you count. A comparison count is easier to explain than wall-clock seconds and is less dependent on the computer running your program.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>Let n be the number of live values. Reading an indexed array cell needs a fixed amount of work, independent of n. Traversing all cells needs work proportional to n. Comparing every pair needs work proportional to n squared. Repeatedly halving a remaining range takes about log base two of n rounds.</p>
+<p><dfn>Big-O</dfn> is an upper growth bound. Saying a cost is O(n) means that, beyond some size, a constant times n bounds it above. The constant and the starting threshold are not the focus. An exact count of 3n+7 is therefore O(n). O(n squared) is also an upper bound for that function, but the tighter linear bound tells you more.</p>
+<p><dfn>Big-Omega</dfn> supplies a lower growth bound. <dfn>Big-Theta</dfn> gives matching upper and lower bounds. A complete traversal taking one action per element is Theta(n). Big-O does not automatically mean worst case, and Big-Omega does not automatically mean best case. First choose a cost function; then describe its growth.</p>
+<p>Best case chooses the cheapest input of a fixed size. Worst case chooses the most expensive. Average case needs an explicit probability model. For a present target equally likely at each of n positions, linear search averages (n+1)/2 comparisons.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>The search function keeps comparisons separate from the returned index. Before each equality test, it increments comparisons. Searching [12,24,36,48] for 12 returns index zero after one test. Searching for 48 returns index three after four tests. Searching for 99 returns -1 after four failed tests.</p>
+<table class="ref"><thead><tr><th scope="col">Target</th><th scope="col">Cells checked</th><th scope="col">Result</th></tr></thead><tbody><tr><td>12</td><td>12</td><td>index 0</td></tr><tr><td>48</td><td>12,24,36,48</td><td>index 3</td></tr><tr><td>99</td><td>12,24,36,48</td><td>absent</td></tr></tbody></table>
+<p>The pair example uses j=i+1. For n=4, the outer iterations contribute three, two, one and zero pairs. Their total is six. In general the sum is n(n-1)/2. Removing the lower-order term and constant factor leaves quadratic growth. Doubling n approaches four times the work for large n.</p>
+<pre class="diagram">n=4 pair rows:
+i=0: (0,1) (0,2) (0,3)
+i=1:       (1,2) (1,3)
+i=2:             (2,3)
+i=3:             no pair</pre>
+<p>The growth-copy example introduces <dfn>amortized cost</dfn>. Some appends copy many elements, but most append into a spare slot. With doubling, the copy counts are 1+2+4+8 and so on. A sequence of n appends copies fewer than 2n old elements. Add the n new writes and the total remains O(n), yielding O(1) amortized work per append.</p>
+<table class="ref"><caption>Common costs, with the required location information</caption><thead><tr><th scope="col">Representation and request</th><th scope="col">Worst-case time</th><th scope="col">Auxiliary space</th></tr></thead><tbody><tr><td>Array read at valid index</td><td>O(1)</td><td>O(1)</td></tr><tr><td>Unsorted array search</td><td>O(n)</td><td>O(1)</td></tr><tr><td>Array insertion at front with spare capacity</td><td>O(n)</td><td>O(1)</td></tr><tr><td>Singly linked head insertion</td><td>O(1)</td><td>One new node</td></tr><tr><td>Singly linked tail append without tail retained</td><td>O(n)</td><td>One new node</td></tr><tr><td>Known-node doubly linked deletion</td><td>O(1)</td><td>O(1)</td></tr><tr><td>Search in a search tree of height h</td><td>O(h)</td><td>Depends on traversal</td></tr><tr><td>Vector append requiring growth</td><td>O(n)</td><td>May need replacement storage</td></tr></tbody></table>
+<h2 id="examples">Examples</h2>
+<h3>Measure an early and a late search</h3>
+<p>Finding 12 uses one comparison. Finding 48 or proving 99 absent needs four; equal input sizes can have different costs.</p>
+<div data-example="ex-1"></div>
+<h3>Count pairs without a stopwatch</h3>
+<p>The counts are 1, 6 and 28. The inner loop gets shorter, but the total remains n(n-1)/2, a quadratic function.</p>
+<div data-example="ex-2"></div>
+<h3>Count copies while capacity doubles</h3>
+<p>The ninth append triggers eight copies. Across nine appends there are fifteen copies, showing why occasional expensive appends can still be cheap on average.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Time and space answer different questions. Linear search stores the original n values but uses only a few extra variables. Its auxiliary space is O(1). If you make a separate copied array, that new storage is O(n). State whether a space claim includes input storage, output storage or only temporary work.</p>
+<p>For common operations, remember the conditions behind each entry. Array indexing is O(1). Unsorted search is O(n) worst case. Front insertion into a fixed array is O(n) because values shift. Head insertion into a linked list is O(1) after allocation. Finding its last node without tail is O(n). Tree search depends on height, so a very skewed tree can also take O(n).</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Counting loops by appearance</h3>
+<p>Two nested loops do not always mean exactly n squared steps. Count the actual ranges. A triangular inner range still gives Theta(n squared), while an inner loop with a fixed three repetitions gives Theta(n).</p>
+<h3>Calling amortized cost a guarantee for one operation</h3>
+<p>The ninth doubling append may copy eight old values. Its individual cost is linear in the current size. The constant amortized claim applies to a whole sequence, including those expensive calls.</p>
+<h3>Averaging without assumptions</h3>
+<p>Do not say a target is usually near the middle unless the input model supports that claim. A frequently requested first item changes the average, while the worst-case bound stays linear.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Choose a visible basic action, write a small trace and derive the sum before using notation. Record whether n counts live elements or reserved capacity. If two implementations have equal growth rates, memory locality and constant factors can still matter for real workloads.</p>
+<p>Use exact counts for small exam inputs and asymptotic bounds for growing sizes. An answer such as four comparisons explains one search. Theta(n) explains a family of searches when the target is absent.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The counting arguments do not depend on a new C language feature. C17 does not promise a particular speed for malloc, memory access or integer division. The examples count explicit actions; they do not claim to measure processor instructions.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Cost analysis starts with the work being counted and the input size. Separate cases, growth bounds and sequence averages. Continue with the memory tools in <a href="topic:ds-c-review">C Review</a>.</p>

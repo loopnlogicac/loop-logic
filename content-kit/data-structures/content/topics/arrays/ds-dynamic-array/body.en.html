@@ -1,0 +1,72 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A fixed array can run out of slots even when the computer has more memory available. A <dfn>dynamic array</dfn> keeps array-style indexing but replaces its reserved block when it needs more room. Think of moving a growing class register into a larger notebook while preserving every existing entry.</p>
+<p>The collection still has one logical sequence. Its physical block may move, and spare capacity may increase suddenly. This lesson builds a small <dfn>vector</dfn>: a struct containing the owning pointer, the live size and the reserved capacity. You will grow it by doubling and shrink it with a separate threshold.</p>
+<p>Resizing needs care because allocation can fail. It also explains a useful cost result: one append may be expensive, but a long sequence of appends can have constant amortized cost. The memory picture and the cost argument describe the same movement from different viewpoints.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>The Vector fields are values, size and capacity. Maintain size &lt;= capacity. When capacity is zero, values starts as NULL. The first append requests one slot. Later, append can write directly at values[size] whenever size is below capacity.</p>
+<p>When full, choose a new capacity twice the old capacity. The small library limits capacity to 1024 slots. Its supported sizes therefore keep both doubling and multiplication by sizeof safely bounded. An unrestricted reusable library would need explicit overflow checks against the largest size_t value before requesting bytes.</p>
+<pre><code class="language-c">int *values = realloc(vector-&gt;values, capacity * sizeof *values);
+if (values == NULL) {
+    return 0;
+}
+vector-&gt;values = values;
+vector-&gt;capacity = capacity;</code></pre>
+<p>realloc may extend the block in place or move its contents to another block. On failure, it returns NULL and leaves the old allocation valid. Store its result in a temporary pointer, then update the owner only after success. Do not keep using a saved element pointer after a resize that may have moved the allocation.</p>
+<p>The pop operation removes the final live element by decreasing size. It reports failure when size is zero. Optional shrinking halves capacity only when size is at most one quarter of capacity. Capacity never drops below one after an allocation has existed. The empty initial vector can still have capacity zero.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Append values 1 through 5. The first append reserves one slot. The second finds that slot full and reserves two. The third needs four. The fourth uses an existing spare cell. The fifth needs eight. The sequence is regular enough that you can predict the next resize boundary before running it.</p>
+<pre class="diagram">After value 1: [1]                         size=1 capacity=1
+After value 2: [1][2]                      size=2 capacity=2
+After value 3: [1][2][3][spare]             size=3 capacity=4
+After value 4: [1][2][3][4]                 size=4 capacity=4
+After value 5: [1][2][3][4][5][ ][ ][ ]      size=5 capacity=8</pre>
+<p>The growth lab models a moving allocation so you can see the possible copying cost. Its old-values panel preserves the current live sequence while the larger block is prepared. Each old value is placed back before the new value is appended. A real realloc may avoid physical copying by extending in place; the logical result and capacity policy stay the same.</p>
+<p>The C append function writes the new value only after storage is ready. Then it increments size. A failed growth returns zero, leaving the old size and values intact. The caller checks the result and frees the current owner before returning failure.</p>
+<p>Now begin with eight live elements in capacity eight and remove from the end. Sizes seven through three keep capacity eight. Reaching size two triggers capacity four. Reaching size one triggers capacity two. Reaching zero can shrink to one reserved slot.</p>
+<pre class="diagram">Before shrinking: [1][2][ ][ ][ ][ ][ ][ ] size=2 capacity=8
+After shrinking:  [1][2][ ][ ]             size=2 capacity=4
+Next append:      [1][2][3][ ]             size=3 capacity=4</pre>
+<p>The gap between growth and shrink thresholds matters. After shrinking at one quarter, the smaller block is roughly half full. One new append therefore does not immediately trigger another growth. This avoids repeated resizing when a workload alternates between adding and removing near one boundary.</p>
+<h3>Trace the operation</h3>
+<pre><code class="language-text">start with values = NULL, size = 0, capacity = 0
+for each value in input order
+    if size == capacity: choose capacity = max(1, 2 * capacity)
+        allocate new cells and preserve all size live values
+    write value at values[size]; increase size
+finish; release the allocation after using it</code></pre>
+<div data-lab="dynamic-array-growth"></div>
+<h2 id="examples">Examples</h2>
+<h3>Append through two capacity boundaries</h3>
+<p>Capacities are 1, 2, 4, 4 and 8. Only live values print; spare capacity reserves room for later appends.</p>
+<div data-example="ex-1"></div>
+<h3>Shrink only after enough deletions</h3>
+<p>Removing the first few values leaves capacity at eight. Capacity halves when occupancy reaches one quarter, avoiding resize work on every pop.</p>
+<div data-example="ex-2"></div>
+<h3>Use an empty vector and reuse its storage</h3>
+<p>An empty pop fails without changing size. After removing 72, the reserved slot can hold 85 without another allocation.</p>
+<div data-example="ex-3"></div>
+<h3>Build a vector from input</h3>
+<p>Five input marks require capacity eight. realloc can move the block, so append updates the owner before writing the new value.</p>
+<div data-example="ex-4"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>The append cost has two cases. With spare capacity it performs O(1) work. A moving resize can preserve n existing values, giving O(n) worst-case time for that append. Across many appends, the copied lengths form 1+2+4+8 and so on. Before the nth append finishes, their sum is below 2n. Including the n new writes keeps the total O(n).</p>
+<p>That sequence bound gives O(1) amortized append time without assuming random input. It does not promise that every call is equally fast. Indexing remains O(1), while inserting in the middle still needs O(n) shifts. Resizable storage solves capacity growth, not every sequence-operation cost.</p>
+<p>The vector uses O(n) reserved space after ordinary doubling growth, with at most a constant-factor amount of spare room. A moving allocation can temporarily need the old and new blocks together. If optional shrinking fails, pop still succeeds logically; the old larger allocation remains a valid place for the smaller sequence.</p>
+<p>Empty pop returns failure. One-element pop leaves no live values. A vector can be reused after becoming empty. Release vector.values exactly once when the owner is finished, including when that pointer remains NULL.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Assigning realloc directly to the owner</h3>
+<p>If growth fails, vector->values=realloc(...) overwrites the only old address with NULL. The allocation still exists but becomes unreachable. The temporary-result pattern prevents that loss.</p>
+<h3>Printing capacity cells</h3>
+<p>Unused cells have no promised mark values. show prints only indices below size, even after a pop leaves old data beyond the live boundary.</p>
+<h3>Shrinking after every deletion</h3>
+<p>Keeping capacity equal to size can turn repeated appends into repeated copying. Using identical grow and shrink boundaries can also make alternating operations expensive. Separate those thresholds.</p>
+<h3>Using an old element pointer after growth</h3>
+<p>An address such as &amp;vector.values[2] may belong to the released block after realloc moves storage. Keep an index and obtain a fresh pointer from the current owner when needed.</p>
+<p>A vector interface can expose indexed reading without exposing its allocation policy. A caller asks for element i only when i is below size. Internally, growth may change values and capacity while the logical positions remain stable. Returning indices instead of long-lived element addresses often makes that boundary easier to respect. The interface should still explain which operations can invalidate a borrowed pointer.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Treat append as a transaction: calculate the supported capacity, request storage, check success, update ownership, then write the value. Keep failure returns meaningful so callers can respond without assuming the element was saved.</p>
+<p>When explaining amortized cost, show both the resize boundaries and the sum of copies. When explaining shrinking, trace alternating operations near the threshold. These two views catch different policy errors. Remember that the 1024-slot ceiling is a deliberate limit of this small library, not a property of dynamic arrays in general.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The vector uses C17 allocation functions. realloc(NULL, positive_size) can perform the initial allocation. This implementation never calls realloc with a zero size, avoiding the version-sensitive corner around zero-size requests. size_t fields print with %zu, available since C99.</p></div>
+<h2 id="summary">Summary</h2>
+<p>A vector combines direct indexed access with replaceable storage. Preserve ownership on failure, and analyze resize work across a sequence. Continue with independently allocated nodes in <a href="topic:ds-singly-linked-list">Singly Linked List</a>.</p>

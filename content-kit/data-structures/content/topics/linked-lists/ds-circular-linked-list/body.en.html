@@ -1,0 +1,85 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A <dfn>circular linked list</dfn> joins its final node back to its first node. Think of students taking turns around a table. After the final seat, the next turn belongs to the first seat again. There is no natural NULL at the end of a nonempty round.</p>
+<p>This shape supports repeated turns, rotating schedules and elimination problems. It also changes traversal and release rules. A loop that waits for NULL will never complete on an intact circle. You need a remembered starting node or an explicit count to stop after one lap.</p>
+<p>This lesson stores only tail for the circular operations. Since tail->next is head, that one pointer gives direct access to both ends of the logical sequence. You will build a circle, insert at its front, rotate its starting point and solve a small Josephus elimination.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>In a singly circular list, each node still has one next field. The tail’s next points at head. Empty storage uses tail=NULL. A singleton points its next to itself, because its successor after one turn is the same participant.</p>
+<p>With tail retained, head is derived as tail->next. To insert at head, set node->next=tail->next, then tail->next=node. The stored tail stays the same for a nonempty circle. To append at tail, make those same links and then set tail=node. Both updates take a fixed amount of link work.</p>
+<pre class="diagram">Nonempty singly circular:
+head = tail.next
+  +--------------------------------+
+  v                                |
+A[12] --&gt; B[24] --&gt; C[36] --&gt; tail.next
+                    tail=C
+
+Singleton: tail --&gt; A[7]
+                    A.next=A</pre>
+<p>A doubly circular list adds prev and wraps in both directions. head.prev=tail and tail.next=head. A singleton has next and prev both pointing to itself. The ordinary doubly linked endpoint checks from the previous lesson must be adapted because boundary neighbors now exist through wrap links.</p>
+<p>One-lap printing first guards tail!=NULL. Save head=tail->next, set cur=head, print and advance in a do-while loop, then stop when cur==head. Comparing addresses is essential: duplicate values do not tell you whether a complete lap has occurred.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>The examples first build a linear chain, find its final node and connect tail->next=head. This preparation makes the change from an ordinary list visible. Empty input returns no tail and performs no link update.</p>
+<pre class="diagram">Before closing:
+head --&gt; A[12] --&gt; B[24] --&gt; C[36] --&gt; NULL
+
+After closing:
+A --&gt; B --&gt; C --&gt; A
+head=A       tail=C</pre>
+<p>For head insertion of 64 into a circle starting at 72, prepare the new node’s next as the old head. Redirect tail->next to the new node. The first visible value changes, but the old tail remains the endpoint that identifies the first node through its next.</p>
+<pre class="diagram">Before: tail=C; C.next=A
+A[72] --&gt; B[85] --&gt; C[91] --&gt; A
+
+Prepare N[64].next=A
+Publish C.next=N
+After: N[64] --&gt; A[72] --&gt; B[85] --&gt; C[91] --&gt; N</pre>
+<p>An empty insertion needs a separate case. Set node->next=node and tail=node. There is no old first node to preserve. This self-link makes the same one-lap printing routine visit the singleton exactly once.</p>
+<p>Rotating the logical starting point can be cheaper than moving values. Advancing tail one link also advances the derived head one link. The node relationships stay circular and unchanged. Repeating that step changes which participant is considered first without allocating or freeing anything.</p>
+<p>Josephus repeatedly counts a fixed number of participants and removes the selected one. Here the current node counts as one. Keep cur and its predecessor prev. Advance both step-1 times, save next=cur->next, bypass cur with prev->next=next, free cur and restart at next.</p>
+<pre class="diagram">Labels 1,2,3,4,5; step=2
+1 --&gt; 2 --&gt; 3 --&gt; 4 --&gt; 5 --&gt; 1
+Remove 2: 1 --&gt; 3 --&gt; 4 --&gt; 5 --&gt; 1
+Remove 4: 1 --&gt; 3 --&gt; 5 --&gt; 1
+Remove 1: 3 --&gt; 5 --&gt; 3
+Remove 5: 3 --&gt; 3
+Survivor: 3</pre>
+<p>The elimination routine owns the circle while it runs. It releases every removed node and finally releases the survivor after saving its label. The caller must not destroy or traverse the old head or tail afterward. Those former pointers may identify nodes whose lifetimes already ended.</p>
+<pre class="diagram">Doubly circular before inserting N between tail C and head A:
+C.next=A; A.prev=C
+
+After: C.next=N; N.prev=C; N.next=A; A.prev=N
+New head=N; tail=C
+
+Delete N: C.next=A; A.prev=C; free N
+The original two-way wrap is restored.</pre><p>Each completed circular doubly linked update must preserve both wrap links. This is the circular counterpart of the ordinary <a href="topic:ds-doubly-linked-list">doubly linked neighbor rule</a>.</p>
+<h2 id="examples">Examples</h2>
+<h3>Traverse exactly one lap</h3>
+<p>The do-while visits head once before checking whether it has returned. An empty circle needs a separate guard.</p>
+<div data-example="ex-1"></div>
+<h3>Insert at the front using only tail</h3>
+<p>tail-&gt;next identifies head, so inserting after tail makes a new head. For an empty list the first node points to itself.</p>
+<div data-example="ex-2"></div>
+<h3>Josephus: count two, remove one</h3>
+<p>Counting starts at head and includes the current node. After each removal, counting restarts at its successor; five labels leave label 3.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>One full circular traversal takes Theta(n) time and O(1) auxiliary pointers. Head or tail insertion with tail retained takes O(1) link work and adds one node. Constructing a circle from an existing linear chain takes O(n) to find its tail unless that endpoint is already known.</p>
+<p>Deleting head with tail retained takes O(1), including the singleton case. Deleting tail in a singly circular list generally needs its predecessor, which takes O(n) to locate. A doubly circular list can obtain that predecessor through prev when the node is known, making its local deletion O(1).</p>
+<p>For Josephus, this direct implementation advances up to step-1 links before each of n-1 removals. Its time is O(n*step), and its auxiliary space is O(1) beyond the existing nodes. With fixed step two, the elimination work is linear. A separate mathematical recurrence can find only the survivor more efficiently for large steps, but does not show the removal sequence.</p>
+<p>Empty printing produces no labels. Empty Josephus returns -1 as this program’s chosen marker. A singleton survives immediately and is then freed. For ordinary whole-circle destruction, save head and break tail->next=NULL before using the linear destroy helper.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Waiting for NULL in an intact circle</h3>
+<p>A valid circular link never reaches NULL. Save the starting address and stop when you return to it. A do-while gives a singleton its one required visit.</p>
+<h3>Stopping at a repeated value</h3>
+<p>Two participants can share a stored value. Their addresses still identify different nodes. Compare node identity when deciding whether the lap is complete.</p>
+<h3>Using linear destruction without breaking the circle</h3>
+<p>The walk can reach storage it already freed. Cut one wrap link first, or remove nodes with a carefully maintained circular invariant.</p>
+<h3>Changing Josephus counting conventions halfway</h3>
+<p>Counting the successor as one gives a different elimination order. State that cur counts as one and restart at the saved successor after each removal.</p>
+<p>A circular doubly linked deletion makes the wrap rule concrete. Given a known node cur in a circle with at least two nodes, connect cur-&gt;prev-&gt;next to cur-&gt;next and cur-&gt;next-&gt;prev to cur-&gt;prev. If cur is the retained tail, move tail to cur-&gt;prev before freeing it. For a singleton, clear tail instead, because its predecessor and successor are the victim itself. Forward and backward laps should then visit the same surviving identities in opposite orders.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Draw the wrap edge even when it makes the picture less tidy. A chain drawing with no visible final edge can hide the difference between a circle and a linear list. For a doubly circular drawing, include both wrap relationships.</p>
+<p>Keep ownership of an elimination routine explicit. Once it consumes and frees the participants, old endpoint variables are no longer usable. Returning the survivor label rather than its freed pointer makes that interface clear.</p>
+<p>Try step one, a singleton and an empty circle before longer Josephus traces. Step one removes the current participant immediately, exercising a different movement pattern from step two. Distinct node identities also let you test circles with equal stored labels without confusing termination.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>These circle routines use C17 allocation and pointer semantics. A self-link is valid when it refers to a live node of the same type. It does not make free follow links automatically; allocation release remains an explicit responsibility of the program.</p></div>
+<h2 id="summary">Summary</h2>
+<p>A circular structure replaces a missing end with a wrap relationship. Use node identity to finish a lap and preserve the predecessor during elimination. Next, combine pointer techniques in <a href="topic:ds-linked-list-problems">Classic Linked List Problems</a>.</p>

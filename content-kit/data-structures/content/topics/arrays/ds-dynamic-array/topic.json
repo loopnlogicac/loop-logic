@@ -1,0 +1,458 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ds-dynamic-array",
+  "module": "arrays",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Dynamic (Resizable) Arrays",
+    "bn": "বাড়ানো যায় এমন অ্যারে"
+  },
+  "summary": {
+    "en": "Build a vector that doubles safely and shrinks without repeated resizing.",
+    "bn": "নিরাপদে দ্বিগুণ হয় এমন vector বানাও, আর ঘন ঘন resize না করে ছোট করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "ds-2d-arrays-matrices"
+  ],
+  "related": [
+    "ds-singly-linked-list"
+  ],
+  "keywords": [
+    "dynamic array",
+    "memory",
+    "operations",
+    "C17"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "These implementations use C17. Compound literals and declarations in loop headers date from C99; C17 does not add automatic memory management."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Representation and rules"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow the memory"
+    },
+    {
+      "id": "examples",
+      "title": "Examples"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Costs and boundary cases"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "best-practices",
+      "title": "Working habits"
+    },
+    {
+      "id": "version-notes",
+      "title": "C version notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Append through two capacity boundaries",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "standard": "c17",
+      "explanationHtml": "<p>Capacities are 1, 2, 4, 4 and 8. Only live values print; spare capacity reserves room for later appends.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Shrink only after enough deletions",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "standard": "c17",
+      "explanationHtml": "<p>Removing the first few values leaves capacity at eight. Capacity halves when occupancy reaches one quarter, avoiding resize work on every pop.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Use an empty vector and reuse its storage",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "standard": "c17",
+      "explanationHtml": "<p>An empty pop fails without changing size. After removing 72, the reserved slot can hold 85 without another allocation.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Build a vector from input",
+      "level": "intermediate",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "standard": "c17",
+      "explanationHtml": "<p>Five input marks require capacity eight. realloc can move the block, so append updates the owner before writing the new value.</p>",
+      "stdin": "examples/ex-4.in"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "easy",
+      "title": "Append a stream of marks",
+      "statementHtml": "<p>Read n (0..16), then n values (-99..99). Start with no allocation, append each value, and print size, capacity and values using the lesson format.</p>",
+      "hints": [
+        "Allocate one slot for the first append."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "medium",
+      "title": "Pop with an underflow check",
+      "statementHtml": "<p>Read n (0..16), n values (-99..99), and pop count (0..20). Print Removed: count of successful pops, then show the vector.</p>",
+      "hints": [
+        "An empty pop leaves size unchanged."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "difficulty": "medium",
+      "title": "Append only nonnegative readings",
+      "statementHtml": "<p>Read n (0..16), then n readings (-99..99). Store only nonnegative readings in a vector; print its size, capacity and values.</p>",
+      "hints": [
+        "A rejected reading must not increase size."
+      ],
+      "solution": "practice/p-3.c",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-4",
+      "difficulty": "hard",
+      "title": "Remove all copies of one reading",
+      "statementHtml": "<p>Read n (0..16), n values (-99..99), then target. Compact values in place; apply pop until size matches survivors, allowing the shrink policy to run. Show the vector.</p>",
+      "hints": [
+        "Move survivors first, then change size through pop."
+      ],
+      "solution": "practice/p-4.c",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-5",
+      "difficulty": "easy",
+      "title": "Report spare slots",
+      "statementHtml": "<p>Read n (0..16), then n values (-99..99). Print Spare: capacity minus size after doubling appends.</p>",
+      "hints": [
+        "Allocated slots and live elements are different counts."
+      ],
+      "solution": "practice/p-5.c",
+      "tests": [
+        {
+          "stdin": "practice/p-5.t1.in",
+          "output": "practice/p-5.t1.out"
+        },
+        {
+          "stdin": "practice/p-5.t2.in",
+          "output": "practice/p-5.t2.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why store realloc’s result in a temporary pointer?",
+      "options": [
+        "Failure must leave the old allocation reachable",
+        "realloc always frees old storage on failure",
+        "The temporary pointer prevents all copying",
+        "C17 forbids pointer reassignment"
+      ],
+      "answer": 0,
+      "explanation": "On failure realloc returns NULL and leaves the old allocation valid. Direct assignment could lose its address."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "When size equals capacity, what must append do before writing?",
+      "options": [
+        "Write past the final reserved slot",
+        "Obtain enough space and update the owner",
+        "Decrease size",
+        "Set capacity to zero"
+      ],
+      "answer": 1,
+      "explanation": "A full vector has no destination slot. Writing first would exceed the allocation."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is one append’s worst-case time when doubling moves n values?",
+      "options": [
+        "O(1) guaranteed per call",
+        "O(log n)",
+        "O(n)",
+        "O(n squared)"
+      ],
+      "answer": 2,
+      "explanation": "The allocator may move the existing block. Amortized O(1) describes a sequence, not every individual append."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why shrink at one quarter rather than immediately below one half?",
+      "options": [
+        "To guarantee realloc never fails",
+        "To keep size always equal to capacity",
+        "To avoid tracking size",
+        "To separate shrink and growth thresholds"
+      ],
+      "answer": 3,
+      "explanation": "After halving, occupancy is near one half. Several appends are needed before another growth."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should happen if an optional shrink allocation fails?",
+      "options": [
+        "Keep the old capacity and the successful smaller size",
+        "Restore the removed value automatically",
+        "Lose the owner pointer",
+        "Write through NULL"
+      ],
+      "answer": 0,
+      "explanation": "The pop already removed an element logically. Keeping spare storage preserves a valid vector."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many live values may show print after size becomes three and capacity eight?",
+      "options": [
+        "Eight",
+        "Three",
+        "Five",
+        "Zero"
+      ],
+      "answer": 1,
+      "explanation": "Capacity includes unused slots, whose contents should not be treated as live values."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does the small vector’s 1024-slot bound protect?",
+      "options": [
+        "Every possible unbounded workload",
+        "Every pointer alias after growth",
+        "Its doubling arithmetic and supported allocation size",
+        "The numerical sum of stored marks"
+      ],
+      "answer": 2,
+      "explanation": "This teaching library deliberately limits capacity. A general library needs overflow checks against SIZE_MAX."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After five appends from capacity one, which capacity is needed?",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int capacity = 1;\n    for (int size = 0; size < 5; size++) {\n        if (size == capacity) {\n            capacity *= 2;\n        }\n    }\n    printf(\"%d\\n\", capacity);\n    return 0;\n}\n",
+      "options": [
+        "5",
+        "8",
+        "4",
+        "16"
+      ],
+      "answer": 1,
+      "explanation": "The full boundaries occur before appends two, three and five. Capacities double through 2,4,8, ending at eight."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "At quarter occupancy, what capacity follows one shrink from eight?",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int size = 2;\n    int capacity = 8;\n    if (capacity > 1 && size <= capacity / 4) {\n        capacity /= 2;\n    }\n    printf(\"%d %d\\n\", size, capacity);\n    return 0;\n}\n",
+      "options": [
+        "2 8",
+        "4 4",
+        "2 4",
+        "2 2"
+      ],
+      "answer": 2,
+      "explanation": "Two live elements equal one quarter of eight, so capacity halves to four while size stays two."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many spare slots remain after nine appends reach capacity sixteen?",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int size = 9;\n    int capacity = 16;\n    printf(\"%d\\n\", capacity - size);\n    return 0;\n}\n",
+      "options": [
+        "9",
+        "16",
+        "8",
+        "7"
+      ],
+      "answer": 3,
+      "explanation": "Capacity minus live size is 16-9=7. Those seven slots are reserved but contain no live elements."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "After capacity eight shrinks to four at size two, how many appends fit before another growth is required?",
+      "options": [
+        "Zero",
+        "One",
+        "Two",
+        "Four"
+      ],
+      "answer": 2,
+      "explanation": "Sizes three and four use spare slots. The following append finds capacity full and grows."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which saved reference survives a moving vector resize as a usable location description?",
+      "options": [
+        "A raw pointer into the old block",
+        "The released block’s address",
+        "A pointer one past the old allocation",
+        "A valid logical index"
+      ],
+      "answer": 3,
+      "explanation": "An index can be applied to the new owner. A pointer into replaced storage no longer identifies a live element."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A vector stores an owner pointer, a live size and a capacity.",
+      "bn": "Vector-এ মালিক পয়েন্টার, ব্যবহৃত size আর capacity রাখতে হয়।"
+    },
+    {
+      "en": "A temporary realloc result preserves the old owner when growth fails.",
+      "bn": "realloc-এর ফল অস্থায়ী পয়েন্টারে রাখলে ব্যর্থতায় পুরোনো মেমরি হারায় না।"
+    },
+    {
+      "en": "Doubling gives constant amortized append time despite occasional linear copying.",
+      "bn": "দ্বিগুণ করে বাড়ালে মাঝে কপি লাগলেও append-এর amortized খরচ ধ্রুব থাকে।"
+    },
+    {
+      "en": "Shrinking at one-quarter occupancy leaves room before the next growth.",
+      "bn": "এক-চতুর্থাংশ ভরলে ছোট করায় পরের growth-এর আগে ফাঁকা জায়গা থাকে।"
+    },
+    {
+      "en": "Pointers into vector storage may become invalid after realloc moves it.",
+      "bn": "realloc মেমরি সরিয়ে নিলে vector-এর ভেতরের পুরোনো পয়েন্টার আর বৈধ থাকে না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "List capacities after appending values 1 through 9 to an empty vector.",
+      "marks": 4,
+      "answerHtml": "<p>The capacities are 1,2,4,4,8,8,8,8,16. Resize copies total 1+2+4+8=15 old elements. Each append also writes one new element.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Show why doubling provides O(1) amortized append time.",
+      "marks": 5,
+      "answerHtml": "<p>For n appends, capacities form powers of two. Copied old elements form a geometric sum smaller than 2n. The n new writes plus fewer than 2n copies total O(n), so dividing by n gives O(1) per append over the sequence.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Write safe realloc growth for a full bounded vector, explaining failure.",
+      "marks": 5,
+      "answerHtml": "<pre><code class=\"language-c\">size_t capacity = vector-&gt;capacity == 0 ? 1 : 2 * vector-&gt;capacity;\nif (capacity &gt; 1024) {\n    return 0;\n}\nint *values = realloc(vector-&gt;values, capacity * sizeof *values);\nif (values == NULL) {\n    return 0;\n}\nvector-&gt;values = values;\nvector-&gt;capacity = capacity;</code></pre><p>The owner changes only after success. Callers must discard saved pointers into the old allocation after a moving resize.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Give a grow/shrink policy that avoids resizing on alternating append and pop.",
+      "marks": 4,
+      "answerHtml": "<p>Double only when full. Halve when size is at most one quarter of capacity, keeping at least one slot. After halving, the vector is roughly half full, leaving a gap before the growth boundary. Failed optional shrinking keeps the old storage.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C allocation functions and object lifetimes",
+      "url": "https://en.cppreference.com/w/c/memory"
+    },
+    {
+      "title": "MIT introductory algorithms course",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "dynamic-array-growth"
+  ]
+}

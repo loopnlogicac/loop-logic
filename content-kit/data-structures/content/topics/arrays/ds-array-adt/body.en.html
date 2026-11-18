@@ -1,0 +1,65 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">An array resembles a row of numbered lockers. Once you know the number, you can reach that locker directly. This makes arrays useful for roll-number marks, daily readings and tables whose positions have clear meanings. The numbering also explains why inserting in the middle needs more work than reading.</p>
+<p>An <dfn>array ADT</dfn> describes operations on an indexed sequence. Here you will traverse, search, insert and delete. The C representation reserves a fixed group of adjacent cells. A separate size records how many cells currently belong to the sequence.</p>
+<p>Suppose you reserve eight cells and store three marks. The collection contains three elements, not eight. Spare cells are available for insertion, but their old contents have no meaning as live marks. Keeping that boundary explicit is the central rule of this implementation.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>Use values for the reserved array, size for its live length and capacity for its maximum length. Maintain 0 &lt;= size &lt;= capacity. Live indices run from zero through size-1. An insertion position names a gap, so valid insertion positions include size itself. Deletion requires an existing element and therefore excludes that final gap.</p>
+<p>The insert function receives &amp;size because success must update the caller’s length. It checks capacity and position before changing any cell. A rejected insertion returns zero and preserves the collection. A successful insertion makes room, writes the new value and increments size.</p>
+<p>The erase function also checks before updating. It shifts later values left and decreases size. The bytes outside the new live range need not be erased. They no longer belong to the sequence, even if a former mark remains there.</p>
+<p>Indexed location follows a simple formula: address(a[i]) = base + i * element_width. The index is zero-based. If a question supplies base 1000 and width four bytes, a[3] begins at 1012. C does not require int to occupy four bytes, so use sizeof values[0] when expressing actual byte widths in C.</p>
+<pre><code class="language-c">for (int i = size; i &gt; position; i--) {
+    values[i] = values[i - 1];
+}
+values[position] = value;
+size++;</code></pre>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Insert 64 at position one into [72,85,91]. First copy index two to index three. Next copy index one to index two. Only then write 64 into index one. Moving from right to left preserves every old source until it has been used.</p>
+<pre class="diagram">Before:      [72][85][91][  ][  ][  ][  ][  ] size=3
+Move 91:     [72][85][91][91][  ][  ][  ][  ]
+Move 85:     [72][85][85][91][  ][  ][  ][  ]
+Write 64:    [72][64][85][91][  ][  ][  ][  ] size=4</pre>
+<p>The duplicate-looking intermediate cells are temporary. The algorithm has not inserted extra logical copies. Size increases only after the gap holds the new value. The lab shows spare cells as empty boxes; the C program uses size to decide what to print.</p>
+<p>Delete position one from the resulting sequence. Copy 85 from index two into index one. Copy 91 from index three into index two. Then reduce size from four to three. Deletion shifts in the opposite direction because the destination lies before its source.</p>
+<pre class="diagram">Before erase: [72][64][85][91] size=4
+Move 85 left: [72][85][85][91]
+Move 91 left: [72][85][91][91]
+After erase:  [72][85][91][spare] size=3</pre>
+<p>Searching an unsorted array uses a different pattern. Compare the target with each live value in order and return the first matching index. Return -1 when no match exists. Duplicates do not require continuing if the interface promises only the first match.</p>
+<h3>Trace the operation</h3>
+<pre><code class="language-text">validate mode and position against size and capacity
+if inserting: move values[i - 1] right, from size down to position + 1
+write value at position; increase size
+if deleting: move values[i + 1] left, from position through size - 2
+decrease size; the old final cell is no longer live
+finish with the updated live sequence</code></pre>
+<div data-lab="array-insert-delete"></div>
+<h2 id="examples">Examples</h2>
+<h3>Insert or delete while tracking the live size</h3>
+<p>Mode zero shifts values right before insertion; mode one closes the gap after deletion. An invalid request leaves the live sequence unchanged.</p>
+<div data-example="ex-1"></div>
+<h3>Traverse and search marks</h3>
+<p>Traversal reads each live slot. Search stops at index 2, so it performs three comparisons rather than visiting the final mark.</p>
+<div data-example="ex-2"></div>
+<h3>Calculate an element’s byte offset</h3>
+<p>Pointer arithmetic advances by elements. The offset formula uses sizeof(int), so the printed truth value stays portable without assuming four-byte integers.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Traversal takes Theta(n) time for n live elements. Indexed reading or replacement takes O(1). Insertion at position p shifts n-p values, so its worst-case time is O(n). Deletion at p shifts n-p-1 values. Appending with available capacity and deleting the final value need no shifts and take O(1).</p>
+<p>The array occupies O(capacity) storage. Each operation uses O(1) working variables. An empty insertion at zero succeeds if capacity is positive. Empty deletion fails. A singleton can be deleted at zero, leaving size zero. Full insertion fails before shifting; existing values remain readable.</p>
+<p>A linked-list preview helps you compare costs. Changing links near a known node can avoid moving many values. Reaching a numbered node still requires traversal, and each node adds pointer storage. Arrays favor frequent indexed reads and compact scans.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Shifting insertion from the left</h3>
+<p>If you copy index one into index two first, you overwrite 91 before saving it. Start at the final live element and work backward. The insertion destination at index size is valid only when capacity has a spare cell.</p>
+<h3>Using capacity as the printing limit</h3>
+<p>Spare cells can contain undefined or stale values. Print only indices below size. Decreasing size is what removes the old final cell from the collection.</p>
+<h3>Mixing element positions with gap positions</h3>
+<p>For three elements, position three is a valid append gap. It is not a valid deletion position. Give insert and erase their own range checks.</p>
+<h3>Assuming an address width</h3>
+<p>An exam may state four-byte elements. A portable C explanation should keep the width symbolic or use sizeof. Do not turn a common platform detail into a language guarantee.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Write size and capacity beside every array drawing. Mark the operation position before moving values, then count how many source cells lie after that boundary. This gives both a correct loop direction and a time-cost explanation.</p>
+<p>When removing many equal values, consider compaction: scan once and write retained values into an earlier prefix. Repeatedly deleting individual positions can shift the same suffix many times. The final practice problem shows how one retained-prefix index avoids that repeated work.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The array operations run as C17. C guarantees adjacent elements within one array. Declarations in loop headers use the C99-or-later syntax. The location example prints a portable equality check instead of printing addresses whose values change between runs.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Arrays provide direct indexed access, while middle updates move a suffix. Keep live size separate from storage capacity. Continue with row and column layouts in <a href="topic:ds-2d-arrays-matrices">2D Arrays and Matrices</a>.</p>

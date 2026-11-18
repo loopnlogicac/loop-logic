@@ -1,0 +1,85 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Reversing a linked list changes the direction of its next relationships. The values can stay inside their original nodes. Imagine a line of direction signs: after reversal, the final sign becomes the starting point and every arrow points toward the former beginning.</p>
+<p>The danger is losing the road ahead while turning an arrow. If you overwrite cur->next before saving it, the unprocessed suffix may no longer be reachable. The iterative algorithm therefore keeps three roles: prev for the reversed prefix, cur for the next node to process, and next for the saved continuation.</p>
+<p>You will also reverse recursively. Both versions take linear time, but their auxiliary-space costs differ. The goal is to explain each pointer movement, rather than memorize a compact sequence of assignments.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>The iterative function receives head and returns the new head. Start prev=NULL and cur=head. While cur exists, save next=cur->next, redirect cur->next=prev, move prev=cur, and move cur=next. Return prev after the loop.</p>
+<pre><code class="language-c">Node *prev = NULL;
+Node *cur = head;
+while (cur != NULL) {
+    Node *next = cur-&gt;next;
+    cur-&gt;next = prev;
+    prev = cur;
+    cur = next;
+}</code></pre>
+<p>The function’s return value matters. Call it as head=reverse(head). The caller’s original head will become the tail, so keeping that old pointer as the only owner would hide the rest of the reversed chain.</p>
+<p>The recursive function stops at an empty list or a singleton. Otherwise it reverses head->next and receives new_head. During return, head->next->next=head makes the old successor point backward. Then head->next=NULL removes the old forward edge. Return new_head unchanged through every waiting call.</p>
+<p>Reversal assumes an ordinary acyclic list. A circular chain never reaches the iterative NULL condition or recursive final-node base case. Circular reversal needs its own stopping rule and endpoint convention, so do not apply these functions to a circle unchanged.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Use identities A, B and C for nodes storing 72,85 and 91. Initially prev=NULL and cur=A. The reversed prefix is empty. The unprocessed suffix begins at A and still has all original forward edges.</p>
+<pre class="diagram">Start:
+prev --&gt; NULL
+cur  --&gt; A[72] --&gt; B[85] --&gt; C[91] --&gt; NULL
+
+Save next=B; set A.next=NULL:
+prev --&gt; A[72] --&gt; NULL
+cur  --&gt; B[85] --&gt; C[91] --&gt; NULL</pre>
+<p>After the first iteration, A forms a one-node reversed prefix. In the second iteration, save C before changing B.next to A. Move prev to B and cur to C. The two working chains still cover every original node exactly once.</p>
+<pre class="diagram">After second iteration:
+prev --&gt; B[85] --&gt; A[72] --&gt; NULL
+cur  --&gt; C[91] --&gt; NULL
+
+After third iteration:
+prev --&gt; C[91] --&gt; B[85] --&gt; A[72] --&gt; NULL
+cur  --&gt; NULL</pre>
+<p>At the loop boundary, prev heads the processed nodes in reverse order, and cur heads the untouched suffix. This statement is a <dfn>loop invariant</dfn>: it remains true after each completed iteration. Saving next preserves the suffix, redirecting one edge grows the prefix, and moving cur removes exactly one node from the remaining work.</p>
+<p>When cur is NULL, no untouched suffix remains. The invariant therefore says prev heads every original node in reverse order. No values were copied, no nodes were allocated and no nodes were freed. The old head now has next=NULL because it was the first edge redirected toward an empty prefix.</p>
+<p>For recursive reversal, follow A->B->C. The call at C returns C immediately. The B call sets C.next=B and B.next=NULL. The A call then sets B.next=A and A.next=NULL. Every returning call preserves C as new_head.</p>
+<pre class="diagram">Recursive return at B:
+C --&gt; B --&gt; NULL       A still awaits its return
+
+Recursive return at A:
+C --&gt; B --&gt; A --&gt; NULL</pre>
+<p>The animation uses the iterative names prev, cur and next. Its head endpoint changes after the loop, matching the returned-head assignment in the C example. During intermediate steps, the working pointers explain where both pieces of the structure live even though the original head no longer reaches the suffix.</p>
+<h3>Trace the operation</h3>
+<pre><code class="language-text">prev = NULL; cur = head
+while cur != NULL
+    next = cur.next
+    cur.next = prev
+    prev = cur; cur = next
+head = prev; old head is the new tail</code></pre>
+<div data-lab="sll-reverse"></div>
+<h2 id="examples">Examples</h2>
+<h3>Reverse with prev, cur and next</h3>
+<p>next saves the unprocessed suffix before cur-&gt;next changes. prev becomes the new head after cur reaches NULL.</p>
+<div data-example="ex-1"></div>
+<h3>Reverse by returning through recursive calls</h3>
+<p>The final node returns as new_head. Each returning call turns its successor’s link backward and clears the old forward link.</p>
+<div data-example="ex-2"></div>
+<h3>Reverse twice to restore the order</h3>
+<p>Reversal changes links rather than values. Repeating it restores both the sequence and the original first node.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Iterative reversal touches each of n nodes once, taking Theta(n) time and O(1) auxiliary space. The recursive version also performs constant work per node, giving Theta(n) time. Its waiting calls can require O(n) stack space. C17 does not guarantee that a compiler will remove those frames.</p>
+<p>Empty input returns NULL. A singleton returns the same node, with its next still NULL. Repeated values do not matter because identity and links define order. If an application stores tail, its old head becomes the new tail after a completed reversal.</p>
+<p>Reversing twice restores the original structure. This is useful as a reasoning check: every directed adjacency turns back. It does not prove that a broken implementation handles every input, but it gives a concrete property to inspect alongside empty and singleton cases.</p>
+<p>A prefix reversal adds one boundary repair. After reversing the first k nodes, the old prefix head must point to the untouched suffix. When k is zero, leave head unchanged. When k equals size, that suffix is NULL and the operation becomes a full reversal.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Overwriting the continuation</h3>
+<p>The order cur->next=prev followed by next=cur->next saves the wrong address. Capture the original next before redirecting. Otherwise cur may follow the reversed prefix instead of progressing forward.</p>
+<h3>Returning the original head</h3>
+<p>The old head is now the tail. Return prev from the iterative function, and assign that return value in the caller. Printing from the old head may show only one node.</p>
+<h3>Leaving a recursive forward edge</h3>
+<p>After head->next->next=head, the old edge from head to its successor would form a two-node cycle. Clear head->next before returning.</p>
+<h3>Releasing through an outdated owner</h3>
+<p>Always destroy the chain starting at the new head. The old head no longer reaches the complete list and cannot release every node on its own.</p>
+<p>A three-pointer trace can also explain termination. Each iteration removes one node from the unprocessed suffix and adds it to the reversed prefix. The original acyclic chain has a finite number of nodes, so that suffix eventually becomes empty. The algorithm cannot revisit a processed node because cur always advances through the saved original successor rather than the newly reversed edge.</p>
+<p>A full-array reversal often swaps values between two indices. This linked reversal has a different observable effect when other code holds node pointers. A borrowed pointer to node A still sees A’s original value, but A may now occupy a different sequence position. If the application associates extra data with nodes, preserving that identity can matter. Explain whether a requested reversal means changing node order or merely exchanging payload values.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Trace roles rather than memorizing variable letters. At every iteration ask which pointer preserves the next unprocessed node and which pointer heads the reversed part. If a diagram leaves a node reachable from neither role, find the missing saved address before continuing.</p>
+<p>Use node labels in a repeated-value example such as A[7], B[7], C[7]. A correct reversal yields C,B,A even though the printed values look unchanged. Identity-aware drawings reveal what value-only output cannot show.</p>
+<p>For large chains, prefer the iterative routine unless recursion is required by the task. When teaching the recursive version, write the base return and both link changes separately so the reason for clearing the forward edge stays visible.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>Both reversal implementations use C17 syntax and ordinary pointer assignment. No allocation is needed during reversal. The recursive method relies on available call-stack space, whose practical limit depends on the environment rather than a portable fixed number of nodes.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Reversal preserves nodes while redirecting their edges. Save the suffix, grow the reversed prefix, and publish the new head. Next, add backward links in <a href="topic:ds-doubly-linked-list">Doubly Linked List</a>.</p>

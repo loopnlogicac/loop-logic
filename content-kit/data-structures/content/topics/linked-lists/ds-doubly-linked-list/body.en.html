@@ -1,0 +1,87 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A singly linked node tells you where to go next, but not how to step backward. A <dfn>doubly linked list</dfn> adds a prev pointer beside next. Picture connected cards with directions on both sides. From a known card, you can reach either neighbor without restarting at the beginning.</p>
+<p>This helps when removing a known node, walking backward, or moving through an editable sequence. The benefit comes with a responsibility: forward and backward links must agree. Repairing only one direction can leave a list that prints correctly from head but fails when traversed from tail.</p>
+<p>You will insert after a known node, remove a known node and print both directions. Head and tail are both retained. Every boundary operation must preserve their relationship to the first and final nodes.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>A Node stores value, prev and next. For an ordinary non-circular list, head->prev is NULL and tail->next is NULL. Empty storage has head=NULL and tail=NULL. A singleton has both links NULL and both endpoints identifying that one node.</p>
+<p>For adjacent A and B, A.next=B must agree with B.prev=A. This is the central neighbor rule. Use it to check completed operations in either direction. Temporary intermediate steps can show one side being repaired before the other, but the finished structure must satisfy both.</p>
+<pre><code class="language-c">typedef struct Node {
+    int value;
+    struct Node *prev;
+    struct Node *next;
+} Node;</code></pre>
+<p>insert_after receives head and tail addresses plus a known cur pointer. It allocates node, sets node->prev=cur and node->next=cur->next, repairs the successor’s prev if a successor exists, and finally connects cur->next=node. If no successor exists, update tail instead.</p>
+<p>The empty-list convention allows cur=NULL only when head is NULL. That request creates the first node and sets both endpoints. A NULL cur in a nonempty list is rejected rather than guessing a position.</p>
+<p>unlink_node accepts a known live node. Its predecessor’s next bypasses cur, or head changes when no predecessor exists. Its successor’s prev bypasses cur, or tail changes when no successor exists. Only after these repairs does free(cur) end the allocation. A NULL cur is treated as an empty removal request.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Begin with A[72] followed by B[85]. Insert N[64] after A. First prepare N with prev=A and next=B. Then point B.prev to N and A.next to N. Both original nodes stay in place; only four relationships are established or changed.</p>
+<pre class="diagram">Before:
+NULL &lt;-- A[72] &lt;--&gt; B[85] --&gt; NULL
+head=A                         tail=B
+
+Prepare:
+N.prev=A     N.next=B
+
+After:
+NULL &lt;-- A[72] &lt;--&gt; N[64] &lt;--&gt; B[85] --&gt; NULL</pre>
+<p>The lab inserts after head and then removes the inserted node. It uses the same names as insert_after and unlink_node. On a nonempty chain, cur is head. On an empty chain, the new node becomes the sole endpoint, and removing it returns both endpoints to NULL.</p>
+<p>To remove N from between A and B, assign A.next=B and B.prev=A. N is then detached from every live neighbor. Its own outgoing fields no longer determine the live chain. The picture clears those outgoing arrows before deleting the node so the release is visually unambiguous.</p>
+<pre class="diagram">Before removal:
+A &lt;--&gt; N &lt;--&gt; B
+
+Repair neighbors:
+A.next=B     B.prev=A
+N is detached
+
+After free(N):
+A &lt;--&gt; B</pre>
+<p>At head, there is no predecessor field to modify. Assign head=cur->next and, when that successor exists, set its prev=NULL. At tail, assign tail=cur->prev and set its next=NULL. A singleton has neither neighbor, so both branches update endpoints before releasing the sole node.</p>
+<pre class="diagram">Singleton before: head=tail=A
+                  NULL &lt;-- A[72] --&gt; NULL
+
+After unlink:     head=NULL, tail=NULL; free A</pre>
+<p>Forward printing begins at head and follows next. Backward printing begins at tail and follows prev. For [12,24,36], the lines should show 12,24,36 and 36,24,12. Matching these walks checks the two directions more meaningfully than inspecting only one endpoint.</p>
+<p>The code’s destroy routine frees forward through next. It does not need to repair prev fields in nodes that are all being destroyed. It must still save each next before free and must not perform another backward traversal after the nodes have been released.</p>
+<h3>Trace the operation</h3>
+<pre><code class="language-text">cur = head; allocate node with value 64
+node.prev = cur; node.next = cur.next (or NULL for empty list)
+if successor exists: successor.prev = node; otherwise tail = node
+if cur exists: cur.next = node; otherwise head = node
+bypass the inserted node in both directions, repairing head and tail
+free the inserted node; finish</code></pre>
+<div data-lab="dll-operations"></div>
+<h2 id="examples">Examples</h2>
+<h3>Insert after head, then remove that node</h3>
+<p>Insertion repairs the successor’s prev field as well as the predecessor’s next field. Removing the inserted node repairs both directions again.</p>
+<div data-example="ex-1"></div>
+<h3>Walk from each endpoint</h3>
+<p>The forward walk follows next from head. The backward walk follows prev from tail, so a broken back link is easy to notice.</p>
+<div data-example="ex-2"></div>
+<h3>Delete a singleton safely</h3>
+<p>Removing the only node changes both endpoints to NULL. The same unlink function also handles an already empty list.</p>
+<div data-example="ex-3"></div>
+<h3>Insert after a known tail</h3>
+<p>At the tail there is no successor to repair. The new node becomes tail, while its prev field preserves backward traversal.</p>
+<div data-example="ex-4"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Given a valid node pointer, insertion after it and deletion of it take O(1) link work. An insertion also reserves one new node. This cost excludes finding cur. Searching by value or walking to an index still takes O(n) worst-case time.</p>
+<p>A complete forward or backward traversal takes Theta(n) time. The list stores two links per value rather than one, so memory remains O(n) with a larger constant. Each update uses O(1) working pointers. The additional prev field can also increase padding depending on the platform.</p>
+<p>Empty insertion creates one node. Empty deletion does nothing. A singleton removal clears both endpoints. Head insertion or removal must leave the first prev as NULL. Tail insertion or removal must leave the final next as NULL. There is no fixed array capacity, but allocation failure can reject insertion before any live fields change.</p>
+<p>Compared with a singly linked list, the doubly linked version makes backward movement and known-node deletion easier. A singly linked list can also delete in O(1) when given its owning link or predecessor. The important difference is which location information the interface already supplies, not an unconditional claim that one list always deletes faster.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Repairing only next</h3>
+<p>A forward traversal may look right after bypassing a node, while the successor’s prev still points to released storage. Repair both neighbor fields before free. Then verify the backward order as well.</p>
+<h3>Using a missing neighbor</h3>
+<p>At head, cur->prev is NULL. At tail, cur->next is NULL. Guard each neighbor before accessing its fields and use the corresponding endpoint update when the neighbor is absent.</p>
+<h3>Forgetting tail after insertion</h3>
+<p>Inserting after the old tail creates a new final node. If tail still names the old one, backward printing starts too early and later appends can overwrite the wrong link.</p>
+<h3>Calling known-node deletion with an unrelated pointer</h3>
+<p>The function assumes cur belongs to this list and is live. A pointer from another list could corrupt both structures. A public interface may search or validate membership first, which adds cost.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Draw each next edge and its matching prev edge together. Label head and tail explicitly rather than assuming the leftmost and rightmost drawn boxes automatically identify them. This makes singleton transitions easier to audit.</p>
+<p>Check an interior insertion, a tail insertion, a head removal and a singleton removal. After each, walk in both directions and compare the sequences. Equal-valued nodes still need distinct labels in a pointer trace.</p>
+<p>Keep allocation ahead of publication. If malloc fails, the old head, tail and neighbor links should remain exactly as they were. Once the node is initialized, perform the bounded set of link repairs and return success. For destruction, choose a single direction so each allocation is released once.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The examples target C17 and initialize all three Node fields explicitly. The number of bytes per node is implementation-dependent because pointers and padding vary. Diagrams show two logical link fields without asserting a fixed machine layout or byte count.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Doubly linked updates preserve agreement between both directions and both endpoints. Account for finding a node separately from changing its neighbors. Next, connect the ends in <a href="topic:ds-circular-linked-list">Circular Linked List</a>.</p>

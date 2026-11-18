@@ -1,0 +1,50 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A <dfn>data structure</dfn> is a way to arrange values so your program can use them. Think about a class marks register. You may need the mark for roll 17, the class total, or a list of students who passed. The same marks can be arranged in different ways. Your choice changes how much work each request takes.</p>
+<p>A register with numbered rows gives you a useful picture of an array. Each roll has a known place. A chain of cards gives you a picture of a linked list. Each card tells you where to find the next card. Neither picture is a complete program yet. Both help you ask which relationships your program must preserve.</p>
+<p>You already know C variables, loops and functions. This course adds a question before writing those functions: how should the data live in memory? You will learn to explain that choice using operations, memory limits and boundary cases.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>An <dfn>abstract data type</dfn>, usually shortened to ADT, describes what a collection means and what you can do with it. A sequence ADT has an order. Its interface might let you read a position, insert a value, remove a position and ask for the size. The interface should also explain what happens when a request is invalid.</p>
+<p>An <dfn>implementation</dfn> supplies the actual fields and code behind that promise. You can implement a sequence using adjacent array cells or separately allocated linked nodes. A caller can use the same operation names while the internal work differs. This separation lets you change storage without rewriting every caller.</p>
+<p>A <dfn>linear</dfn> structure arranges elements in one logical sequence. Arrays, lists, stacks and queues are familiar examples. A non-linear structure branches or connects values in more general ways. Trees represent parent-child relationships. Graphs represent connections such as roads between places. Linear does not mean that allocated bytes must form one straight physical block.</p>
+<p>Static capacity means the reserved maximum is fixed. Dynamic storage can request or release memory while the program runs. These labels concern storage policy, not whether stored marks can change. A fixed array may hold changing marks. A dynamic list may still enforce an application limit.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Start with four marks: 72, 85, 64 and 91. In the array picture, the third mark occupies index two. An index counts from zero because the first element has zero displacement from the beginning. Reading index two finds 64 without walking past the earlier marks.</p>
+<pre class="diagram">Array: [72][85][64][91]
+Index:   0   1   2   3
+
+Linked sequence:
+head --&gt; [72|next] --&gt; [85|next] --&gt; [64|next] --&gt; [91|NULL]</pre>
+<p>A linked traversal begins at head and follows next. Each arrow stores a relationship between two nodes. The boxes may be far apart in actual memory. The final NULL says there is no successor. An empty linked sequence has head equal to NULL and needs no node box.</p>
+<p>Now insert a new first mark. An array shifts the old values right if it has room. A list allocates one new node, points that node at the old head, and replaces head. The final logical order can match even though the memory updates differ. Watch the difference between moving values and changing relationships.</p>
+<pre class="diagram">Before: head --&gt; [85|NULL]
+Prepare: new --&gt; [72|next] --&gt; [85|NULL]
+After:  head --&gt; [72|next] --&gt; [85|NULL]</pre>
+<p>The linked example is a first picture of nodes rather than a new storage rule to memorize. malloc requests a node and can return NULL; destroy releases the nodes after use. Follow those details in <a href="topic:ds-c-review">the pointer and allocation review</a> before adapting that example.</p>
+<h2 id="examples">Examples</h2>
+<h3>One marks collection, three operations</h3>
+<p>Index 2 selects the third mark. Updating one slot leaves the order unchanged; totaling visits all four slots.</p>
+<div data-example="ex-1"></div>
+<h3>A bounded collection behind an interface</h3>
+<p>The interface reports success twice and failure once. Capacity is an implementation choice; failure must not overwrite a mark.</p>
+<div data-example="ex-2"></div>
+<h3>A sequence whose links hold its order</h3>
+<p>The printed sequence follows next links. Separate allocations need not be adjacent, so the links carry the order.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Choose storage from the workload. A fixed set of 60 roll numbers favors indexed access. A collection with frequent front insertions may favor links. Printing every mark requires visiting every live value in either representation. A structure does not become suitable because one operation sounds fast.</p>
+<p>Include memory in your decision. An array reserves space for its capacity, including spare cells. A linked node needs its value plus a pointer and possibly padding. A dynamic allocation can fail even when your logical collection has no fixed limit. A full fixed array must reject insertion before writing outside its bounds.</p>
+<p>Check the empty, singleton and full states explicitly. Empty traversal should print no values. A singleton is both first and last. Full capacity affects insertion, but it does not prevent reading an existing mark.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Confusing size with capacity</h3>
+<p>A bag with capacity eight may contain only three marks. Loop to size when reading live values. Treating all eight slots as marks can read uninitialized storage or display unrelated leftovers.</p>
+<h3>Choosing by name alone</h3>
+<p>A linked list does not make every update constant time. Reaching a numbered position still requires a walk. Describe how the requested node is found before stating the cost of changing its links.</p>
+<h3>Forgetting failure behavior</h3>
+<p>The bounded bag example reports success or failure. Ignoring that result can make a caller believe a mark was saved when storage was full. Check the result before reporting that an update succeeded.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Write a short operation list before declaring fields. Include the most common read, the most common update and the largest expected collection. Decide whether order matters and whether duplicate values are allowed. These questions make the storage choice concrete.</p>
+<p>Use this course map as a route: foundations explain cost and C memory; arrays teach indexed storage; lists teach links. Stacks and queues restrict which ends you use. Trees add hierarchy, hashing targets fast lookup, and graphs describe general connections. Later practice combines these ideas rather than replacing them.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>These examples use C17. C arrays have adjacent elements, while separate malloc calls have no promised relative location. The C standard does not guarantee a particular byte size for int or for a pointer. Diagrams show logical boxes rather than machine addresses.</p></div>
+<h2 id="summary">Summary</h2>
+<p>A useful structure supports the operations your application needs at a reasonable cost. Keep its logical interface separate from its memory layout. Next, learn to count that cost in <a href="topic:ds-complexity-basics">Measuring Operations</a>.</p>
