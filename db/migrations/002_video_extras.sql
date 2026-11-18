@@ -6,3 +6,4 @@ create table if not exists public.ll_video_extras (
   updated_at  timestamptz not null default now()
 );
 alter table public.ll_video_extras enable row level security;
+grant select, insert, update, delete on public.ll_video_extras to service_role;

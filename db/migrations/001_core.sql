@@ -124,6 +124,16 @@ $$;
 
 revoke execute on function public.ll_commit(jsonb, integer, jsonb, jsonb) from public, anon, authenticated;
 
+-- Server access. New Supabase projects can be created without automatic API
+-- grants, so grant the server role (service_role) exactly what it needs.
+-- Browsers (anon, authenticated) get read access only where RLS allows.
+grant usage on schema public to service_role, authenticated;
+grant select, insert, update, delete on public.ll_sessions, public.ll_events, public.ll_traces, public.ll_idempotency,
+  public.ll_reading_events, public.ll_profiles, public.ll_llm_calls to service_role;
+grant usage, select on all sequences in schema public to service_role;
+grant execute on function public.ll_commit(jsonb, integer, jsonb, jsonb) to service_role;
+grant select on public.ll_sessions, public.ll_events, public.ll_reading_events, public.ll_profiles to authenticated;
+
 -- Row-level security: browsers may only READ their own learning rows.
 alter table public.ll_sessions       enable row level security;
 alter table public.ll_events         enable row level security;
