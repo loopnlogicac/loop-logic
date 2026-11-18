@@ -1,0 +1,73 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead"><dfn>Debugging</dfn> is the process of finding why a program fails to meet its requirements and correcting the cause. Begin by separating build failures from runtime failures and wrong results. The same symptom, such as no expected output, can have several different causes.</p>
+<p>Suppose a marks total should be 85 but the program reports 35. The source may be grammatically valid and the executable may exit successfully. You need to compare the calculation against the task rather than repeatedly changing build options.</p>
+<p>A useful bug report states the exact source, command, input, expected result and actual result. This small record makes the failure reproducible on the next run. Without it, changing several things at once can hide the cause before you understand it.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>A compiler diagnostic commonly uses the form file:line:column followed by a severity and message. The location identifies where the compiler noticed the problem, which may be after its actual cause. Read the first meaningful error and inspect the preceding source line as well.</p>
+<pre><code class="language-text">lab.c:8:5: error: expected ';' before ...</code></pre>
+<table class="ref"><caption>Common error categories</caption><thead><tr><th scope="col">Category</th><th scope="col">Example</th><th scope="col">Main evidence</th></tr></thead><tbody><tr><td>Syntax</td><td>A missing semicolon</td><td>Compiler grammar diagnostic</td></tr><tr><td>Semantic or constraint</td><td>A name used without a declaration</td><td>Compiler type or declaration diagnostic</td></tr><tr><td>Runtime</td><td>A failed input read or invalid memory operation</td><td>Exit status, runtime report or debugger</td></tr><tr><td>Logical</td><td>Subtracting marks instead of adding</td><td>Mismatch with a known expected result</td></tr></tbody></table>
+<p>These categories guide investigation, not every possible tool message. A linker error has its own build-stage evidence, as explained in <a href="topic:c-compilation-process">How C Code Is Compiled</a>. Classroom terminology sometimes groups logical errors under semantic errors, so explain what behavior you mean in an exam answer.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p><dfn>printf debugging</dfn> adds temporary output to reveal intermediate values. Label each value so you can identify its role after reading several lines. A bare 35 gives less evidence than a trace naming theory, lab and wrong_total.</p>
+<p>The first example deliberately uses a defined but incorrect formula. It prints the inputs and result, making the subtraction visible. The second example repairs the formula and produces 85; compare both runs to see why successful compilation was never enough.</p>
+<ol><li>Write the required formula in words.</li><li>Choose a small input whose result you can calculate by hand.</li><li>Print the input values and each important intermediate result.</li><li>Locate the first value that differs from your prediction.</li><li>Repair that step and run the original failing case again.</li></ol>
+<p>A <dfn>trace</dfn> is a record of the program's changing state. The minutes example traces a unit conversion from 2 minutes to 120 seconds. Naming the unit prevents confusing the number of minutes with the number of seconds.</p>
+<p>Remove temporary diagnostics from a solution whose exact output is graded, or make them part of an explicit debugging exercise. Extra trace lines can cause an otherwise correct algorithm to fail a judge's output comparison. Keep the failing input as a saved test after removing the temporary prints.</p>
+
+<h2 id="examples">Verified examples</h2>
+
+<h3 id="example-1">Expose a wrong formula safely</h3>
+<p>The output 35 is defined but fails the intended addition task; the compiler cannot infer that requirement.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Correct the formula</h3>
+<p>Addition yields 85, matching the stated task; compare this against the previous diagnostic trace.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Trace a unit conversion</h3>
+<p>The labeled values show where 2 becomes 120; explicit units make a conversion error easier to locate.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="gdb-session">Pause and inspect with gdb</h3>
+<p>A <dfn>debugger</dfn> lets you pause an executing program and inspect its state. Build a debugging copy with symbols using -g and a low optimization level, so source steps and local values are easier to follow. This debugging build is separate from the optimized verification build.</p>
+<pre><code class="language-bash">gcc -std=c17 -Wall -Wextra -g -O0 lab.c -o lab-debug
+gdb ./lab-debug</code></pre>
+<pre><code class="language-text">break main
+run
+next
+print theory
+next
+print lab
+next
+print wrong_total
+quit</code></pre>
+<p>A <dfn>breakpoint</dfn> requests a stop at a chosen source location or function. break main arranges a stop at the entry function, and run starts the process. next executes the next source-level step while stepping over a function call, so you can follow main without entering every library routine.</p>
+<p>Use print with a variable only after execution has reached a point where that variable has an initialized value. The exact number of next commands depends on your saved source and debugger. Debug symbols do not make an uninitialized object safe to read.</p>
+<h3 id="wrong-output-checklist">A wrong-output checklist</h3>
+<p>First confirm you rebuilt the file you edited and launched the new executable. Next verify that stdin contains the values you intended and that input conversion succeeded. Then compare types, units, operand order, integer division and output formatting against the task.</p>
+<p>Try zero where allowed, an ordinary case and the largest stated bound. Use unequal input values to reveal accidental swaps; equal values can hide subtraction-order mistakes. If a fix changes a formula, re-run both the original failure and a boundary case to check for regressions.</p>
+<p>A <dfn>regression</dfn> is a failure reintroduced after a change. Saving a small failing case turns it into a repeatable guard against that mistake. The practice tests include boundaries for that reason rather than relying only on pleasant-looking ordinary values.</p>
+<p>Some runtime faults are undefined behavior: C does not prescribe a result for the invalid operation. Do not invent a stable crash message or expected value for such code. Later sanitizer tools help expose some of these faults, but no tool replaces respecting object bounds and valid types.</p>
+
+<div class="callout note"><p class="callout-title">Reading the practice scaffold</p><p>The practice solutions use <code>scanf</code> to place typed input into a variable; <code>&amp;name</code> supplies its address, and a checked return value tells whether the read succeeded, as explained in <a href="topic:c-scanf">Input with scanf</a>. An <code>if</code> block runs only when its condition is true, and <code>return 1;</code> stops a failed read; see <a href="topic:c-if-statement">if Statement</a>. Here <code>+</code>, <code>-</code> and <code>*</code> mean addition, subtraction and multiplication; <a href="topic:c-arithmetic-operators">Arithmetic Operators</a> develops these rules. Keep the stated input bounds when trying the tasks.</p></div>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<p>The marked mistake example is supplied for compiler diagnostics. Repair the stated cause before running it; it has no expected stdout transcript.</p>
+<h3 id="random-edits">Changing many things at once</h3><p>A large random edit makes it harder to identify which assumption was wrong. Form one hypothesis, change the relevant line and repeat the saved test. Keep a clean baseline so a failed experiment can be reversed.</p>
+<h3 id="diagnostics-as-proof">Ignoring a warning because the output looks right</h3><p>One successful run does not make a format mismatch or uninitialized read safe. Read and fix the warning before trusting output. A wrong program may appear to work for one input or compiler configuration.</p>
+
+<h3 id="diagnostic-4">Mistake: a syntax error</h3>
+<p>The missing declaration semicolon can make the compiler point at the next statement; inspect the preceding line too.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Make each bug reproducible with a small source and input.</li><li>Read compiler locations and messages before editing.</li><li>Label trace values with names and units.</li><li>Inspect initialized variables at the correct execution point in gdb.</li><li>Keep the original failure and boundary cases after the repair.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The debugging method applies to C89 through C23. gdb is an external tool, not a language feature, and its interface depends on the installed version. These examples use C17 and avoid executing undefined behavior; a logical mistake is demonstrated with fully defined arithmetic.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Locate the failing stage, collect a small trace and repair the first incorrect assumption. Compiler diagnostics, printf and gdb provide different kinds of evidence. Next, learn how source text is divided into <a href="topic:c-tokens-keywords">Tokens and Keywords</a>.</p>

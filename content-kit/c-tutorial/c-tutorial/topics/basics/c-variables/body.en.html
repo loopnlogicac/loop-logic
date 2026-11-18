@@ -1,0 +1,64 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A <dfn>variable</dfn> is a named object whose stored value can be used and, when permitted, changed. Its declaration tells the compiler the type and name. Initialization supplies an initial value so the first later read has a defined meaning.</p>
+<p>A marks register is a useful picture: a column label identifies what is stored, and a number fills a particular student's entry. In C, the type also determines which values the object can represent. The name marks does not remove the need to choose an appropriate type.</p>
+<p>This lesson distinguishes creating storage, announcing a name and changing an existing value. These jobs often occur together in a short program, but separating them makes larger programs easier to understand.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>A <dfn>declaration</dfn> introduces information about a name. An object <dfn>definition</dfn> supplies the object itself, while an <dfn>initializer</dfn> specifies its starting value when present. An assignment expression updates an object after it already exists.</p>
+<pre><code class="language-c">int marks = 70;  /* definition with initialization */
+marks = 80;      /* later assignment */
+extern int total; /* declaration; definition is provided elsewhere */</code></pre>
+<table class="ref"><caption>Common forms</caption><thead><tr><th scope="col">Form</th><th scope="col">Meaning in a function block</th></tr></thead><tbody><tr><td>int marks;</td><td>Define an automatic int without an initializer</td></tr><tr><td>int marks = 0;</td><td>Define and initialize an int</td></tr><tr><td>marks = 80;</td><td>Assign to an existing object</td></tr><tr><td>int a = 0, b = 0;</td><td>Define and initialize two objects</td></tr></tbody></table>
+<p>Every definition is a declaration, but not every declaration is a definition. The extern example normally refers to an object defined elsewhere rather than creating a new local object. Multi-file definitions are developed in <a href="topic:c-multi-file-programs">Multi-File Programs</a>.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>The first example initializes marks to 70 and then assigns 80. When printf reads marks, the earlier value has already been replaced. Printing a variable shows its value at that execution point, not a history of every value it has ever held.</p>
+<table class="ref"><caption>Trace the stored value</caption><thead><tr><th scope="col">Step</th><th scope="col">marks</th><th scope="col">Effect</th></tr></thead><tbody><tr><td>Initialization</td><td>70</td><td>The object receives its first value</td></tr><tr><td>Assignment</td><td>80</td><td>The old stored value is replaced</td></tr><tr><td>Output</td><td>80</td><td>The current value is read</td></tr></tbody></table>
+<p>The second example initializes theory and lab separately on one source line. Their sum is then used to initialize total. A comma between declarators does not copy an initializer from one object to another: int a = 0, b leaves b without an explicit initializer.</p>
+<p>A <dfn>storage duration</dfn> describes how long an object exists. Ordinary local variables in these functions have automatic storage duration, while the third example's static local has static storage duration. The distinction controls initialization and lifetime, not merely how the source looks.</p>
+
+<h2 id="examples">Verified examples</h2>
+
+<h3 id="example-1">Initialize before reading</h3>
+<p>Initialization creates the first stored value; assignment later replaces it, so only 80 is printed.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Multiple declarations</h3>
+<p>Both variables are initialized separately; the total receives 85 after their values are available.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Static zero initialization</h3>
+<p>A static-duration object without an explicit initializer is zero-initialized; this does not apply to an uninitialized ordinary local int.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="uninitialized-values">Uninitialized does not mean useful randomness</h3>
+<p>An uninitialized automatic int has an indeterminate value and must not be read as ordinary program data. The familiar phrase garbage value is an informal warning, not a promise that you can print a safe random number. Such a read can have undefined behavior, meaning C does not prescribe a result.</p>
+<p>Initialize a local variable when a sensible initial value exists, or ensure a successful input read assigns it before use. Do not initialize to zero merely to hide a failed read and continue as though valid input arrived. The practice scaffold checks scanf so that conversion failure does not lead to a later read of an unassigned value.</p>
+<p>Static-duration objects have different rules: without an explicit initializer, arithmetic objects begin at zero. This includes static locals and ordinary file-scope arithmetic objects. The Visits example intentionally demonstrates that rule rather than depending on leftover memory contents.</p>
+<h3 id="storage-picture">Stack and static storage are implementation pictures</h3>
+<p>Many implementations keep automatic locals in a stack frame associated with a function call, and reserve a separate static storage region for long-lived objects. These are useful mental pictures. The C language does not require every local to occupy a physical stack slot; a compiler may use registers or optimize an object away.</p>
+<p>A <dfn>stack frame</dfn> is a common implementation area holding information for one active function call; lifetime rules are developed in <a href="topic:c-scope-lifetime">Scope and Lifetime</a>. Scope tells where a name is visible, while lifetime tells when its object exists. The two ideas are related but different.</p>
+<h3 id="update-order">Assignments have an order</h3>
+<p>Saving a balance before deducting a fare requires copying it first. If you overwrite balance before saving it, the old number is lost from that object. The swap practice uses a temporary variable for the same reason: each assignment replaces one value, so an intermediate copy preserves data needed later.</p>
+<p>Declare a variable close to its first useful value when the language mode permits it. This reduces the distance between the declaration and the operation it supports. Split a declaration line when several names have different roles or initialization needs.</p>
+
+<div class="callout note"><p class="callout-title">Reading the practice scaffold</p><p>The practice solutions use <code>scanf</code> to place typed input into a variable; <code>&amp;name</code> supplies its address, and a checked return value tells whether the read succeeded, as explained in <a href="topic:c-scanf">Input with scanf</a>. An <code>if</code> block runs only when its condition is true, and <code>return 1;</code> stops a failed read; see <a href="topic:c-if-statement">if Statement</a>. Here <code>+</code>, <code>-</code> and <code>*</code> mean addition, subtraction and multiplication; <a href="topic:c-arithmetic-operators">Arithmetic Operators</a> develops these rules. Keep the stated input bounds when trying the tasks.</p></div>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<p>The marked mistake example is supplied for compiler diagnostics. Repair the stated cause before running it; it has no expected stdout transcript.</p>
+<h3 id="partial-initialization">Assuming one initializer covers every name</h3><p>In int a = 0, b, only a receives that explicit initializer. Give b its own initializer or assign it successfully before reading it. Separate declaration lines can make the missing value easier to notice.</p>
+<h3 id="zero-local">Assuming every local starts at zero</h3><p>The zero-initialization rule for static duration does not apply to an ordinary uninitialized local int. An apparently stable output on one run is not a language guarantee. Repair the data flow instead of recording that accidental output.</p>
+
+<h3 id="diagnostic-4">Mistake: duplicate definition in one block</h3>
+<p>A second definition with the same name in the same block is invalid; assign to the existing object instead.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Initialize each object or prove assignment succeeds before its first read.</li><li>Keep declarations near the work they support.</li><li>Use a saved copy when an old value is needed after an update.</li><li>Separate scope, storage duration and physical placement in your explanation.</li><li>Use one declaration per line when roles differ.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>C89 required declarations at the start of a block before its statements. C99 and later allow declarations mixed with statements. The static zero-initialization rule remains applicable in the C17 baseline; later language editions do not make uninitialized automatic int reads safe.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Declarations describe names, definitions provide objects and initialization gives starting values. Later assignments change what is stored, so order and lifetime matter. Next, choose the values an object can hold in <a href="topic:c-data-types">Data Types</a>.</p>

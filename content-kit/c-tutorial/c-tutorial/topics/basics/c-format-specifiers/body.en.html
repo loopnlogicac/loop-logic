@@ -1,0 +1,68 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A <dfn>format specifier</dfn> tells an I/O function how to interpret a value or a destination. The same letters can have different type rules for printf and scanf. A reference table is useful only when you first identify the function and the argument's actual type.</p>
+<p>Suppose a marks system stores a double CGPA and a long long event count. Their visible values might look like short numbers, but their types still determine the required formats. A format mismatch is a correctness problem rather than an appearance preference.</p>
+<p>This page groups the common conversions by type, explains length modifiers and includes less common pointer rules. Use the table while writing code, then retain compiler diagnostics as a second check.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>An output conversion describes a value passed after default argument promotions. An input conversion describes the object that will receive a converted value through a pointer. Those are different contracts, so do not copy a format blindly between the two functions.</p>
+<pre><code class="language-text">printf: %[flags][width][.precision][length]specifier
+scanf:  %[*][width][length]specifier</code></pre>
+<table class="ref"><caption>Core type-based reference for C17</caption><thead><tr><th scope="col">Conversion</th><th scope="col">printf argument</th><th scope="col">scanf argument</th></tr></thead><tbody><tr><td>%d</td><td>int, signed decimal</td><td>int *, decimal input</td></tr><tr><td>%i</td><td>int, same decimal output as %d</td><td>int *, base detected from prefix</td></tr><tr><td>%u</td><td>unsigned int, decimal</td><td>unsigned int *</td></tr><tr><td>%ld</td><td>long</td><td>long *</td></tr><tr><td>%lld</td><td>long long</td><td>long long *</td></tr><tr><td>%f</td><td>double</td><td>float *</td></tr><tr><td>%lf</td><td>double, same as %f</td><td>double *</td></tr><tr><td>%e / %E</td><td>double, exponent form</td><td>float *</td></tr><tr><td>%g / %G</td><td>double, compact significant digits</td><td>float *</td></tr><tr><td>%c</td><td>int, character value</td><td>char *, no automatic whitespace skip</td></tr><tr><td>%s</td><td>Pointer to terminated character data</td><td>char *, enough writable capacity</td></tr><tr><td>%p</td><td>void *</td><td>void **</td></tr><tr><td>%x / %X</td><td>unsigned int, hexadecimal</td><td>unsigned int *</td></tr><tr><td>%o</td><td>unsigned int, octal</td><td>unsigned int *</td></tr><tr><td>%zu</td><td>size_t</td><td>size_t *</td></tr><tr><td>%%</td><td>No argument</td><td>No argument, match a percent</td></tr></tbody></table>
+<p>For e, g and related floating input conversions, adding l selects double * and adding L selects long double *. For output, L selects long double, while l has no effect on these floating conversions. The difference is central to the float-and-double input example in the previous lesson.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>The integer example uses d and i on the same signed value and gets the same decimal output. It also uses u, x and o on one unsigned value, showing that output base changes without changing the stored number. Length modifiers select the larger integer families.</p>
+<p>For input, %i recognizes a leading zero as octal and a hexadecimal prefix as base sixteen. %d reads decimal regardless of a leading zero. The input example receives 032 twice and stores twenty-six in the first int and thirty-two in the second.</p>
+<p>The floating example shows fixed, exponent and compact forms. %e places an exponent in the output; %g chooses a compact form based on value and precision. Precision means significant digits for %g, unlike fractional digits for %f.</p>
+<p>size_t is an unsigned type used by sizeof and many library sizes. %zu remains correct without knowing whether size_t aliases unsigned int, unsigned long or another permitted unsigned type. The count example uses a fixed value so its output is stable.</p>
+
+<h2 id="examples">Verified examples</h2>
+
+<h3 id="example-1">Signed and unsigned integer families</h3>
+<p>%d and %i are equivalent for output; unsigned 26 appears as 1a in hex and 32 in octal.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Floating, character and string families</h3>
+<p>For printf, %f and %lf both consume double; %e uses an exponent and %g chooses a compact representation.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">A size value</h3>
+<p>%zu matches the unsigned size_t type rather than assuming it is int or long.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Input base detection</h3>
+<p>%i recognizes 032 as octal 26, while %d reads 032 as decimal 32.</p>
+<div data-example="ex-4"></div>
+
+<h3 id="example-6">Object pointer formatting</h3>
+<p>%p receives a void * obtained from an object pointer. The address text is implementation-defined and varies between runs; the saved transcript is one real run, not a fixed address guarantee.</p>
+<div data-example="ex-6"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="length-reference">Additional length and conversion families</h3>
+<table class="ref"><caption>Less common but standard formats</caption><thead><tr><th scope="col">Form</th><th scope="col">Use</th></tr></thead><tbody><tr><td>%hhd / %hhu</td><td>signed char / unsigned char values after promotion for output; pointers for input</td></tr><tr><td>%hd / %hu</td><td>short / unsigned short, with corresponding input pointers</td></tr><tr><td>%lu / %llu</td><td>unsigned long / unsigned long long</td></tr><tr><td>%jd / %ju</td><td>intmax_t / uintmax_t</td></tr><tr><td>%td</td><td>ptrdiff_t, signed difference type</td></tr><tr><td>%a / %A</td><td>Hexadecimal floating representation</td></tr><tr><td>%Lf / %Le / %Lg</td><td>long double output; long double * input</td></tr><tr><td>%lc / %ls</td><td>Wide-character and wide-string families; consult their locale rules</td></tr><tr><td>%n</td><td>Store a consumed or written count through a matching pointer; not an ordinary printed number</td></tr><tr><td>%[...]</td><td>scanf scanset input; provide a width and capacity</td></tr></tbody></table>
+<p>A <dfn>scanset</dfn> matches a specified group of characters during input; see <a href="topic:c-string-input-output">String Input and Output</a>. These advanced forms are listed for recognition rather than required in the first exercises. Each family has detailed constraints beyond its short table entry.</p>
+<h3 id="pointer-rules">Pointers require deliberate treatment</h3>
+<p>A <dfn>pointer</dfn> holds a reference to an object or other permitted target; see <a href="topic:c-pointers-intro">Introduction to Pointers</a>. To display an object pointer with %p, explicitly convert it to void *. The printed representation is implementation-defined and may vary from run to run, so this package does not claim a fixed address transcript.</p>
+<p>For input %p, provide the address of a void * object, which has type void **. The textual input form and useful round-trip guarantees are implementation-dependent, so do not use it as a general parser for arbitrary integer addresses. Address values are not portable identifiers for students, records or files.</p>
+<h3 id="width-roles">Widths and stars have different meanings</h3>
+<p>In printf, a star width obtains the width from an int argument. In scanf, a star suppresses assignment for that conversion, so it does not contribute to the assignment count. Input width limits consumed characters, while output width normally supplies minimum padding.</p>
+<p>A scanf %s width must leave room for an added null terminator. For %c with a width greater than one, the function reads that many characters without appending a terminator. These details matter when deciding whether later output may safely use %s.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<p>The marked mistake example is supplied for compiler diagnostics. Repair the stated cause before running it; it has no expected stdout transcript.</p>
+<h3 id="guessing-by-value">Selecting a format from the numeric value</h3><p>A size_t holding twelve is still not necessarily int. Use its type's conversion, even for small values. A cast can be appropriate for a deliberate checked conversion, but weakening warnings does not make a mismatch valid.</p>
+<h3 id="copying-input-output">Assuming identical input and output rules</h3><p>printf receives values, while scanf usually receives pointers to objects. The float-to-double promotion in output does not change a float * destination into double *. Check both sides of the table before writing a read.</p>
+
+<h3 id="diagnostic-5">Mistake: a wrong size format</h3>
+<p>size_t is not int on this host; %zu expresses its type portably and avoids a format mismatch.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Identify the function and argument type before choosing a conversion.</li><li>Use length modifiers for the actual integer family.</li><li>Keep pointer values out of fixed expected-output questions.</li><li>Bound string input and understand whether a terminator is appended.</li><li>Consult the full library reference for advanced conversion constraints.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>C99 standardized useful additions including ll, j, z, t and hexadecimal floating conversions. The tables describe C17 behavior. C23 adds further facilities, so an older compiler accepting a format extension should not be treated as proof that it belongs to C17.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Format strings are typed contracts with different input and output rules. Match value families, destination pointers and length modifiers before controlling appearance. Next, learn how source literals represent special characters in <a href="topic:c-escape-sequences">Escape Sequences</a>.</p>

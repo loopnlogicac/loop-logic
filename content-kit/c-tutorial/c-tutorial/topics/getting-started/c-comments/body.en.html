@@ -1,0 +1,63 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A <dfn>comment</dfn> is source text written for people and ignored as executable instructions. Good comments explain an assumption, unit or reason that is not clear from the code alone. They help the next reader understand why a lab solution makes a particular choice.</p>
+<p>Suppose a seat calculator multiplies participants by two because each participant brings a kit. The multiplication is visible in the code; the reason for two may not be. A short comment preserving that reason is more useful than a sentence saying that multiplication happens.</p>
+<p>Comments are part of source maintenance. When a price or capacity changes, check any explanation that mentions it. An outdated comment can mislead a reader even when the executable calculation is correct.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>C17 supports line comments and block comments. A line comment begins with two slashes and covers the rest of its logical line. A block comment begins with slash-star and ends at the first star-slash marker.</p>
+<pre><code class="language-c">// The room is shared, so keep two spare seats.
+/* Units: the input duration is measured in minutes. */</code></pre>
+<table class="ref"><caption>Comment forms</caption><thead><tr><th scope="col">Form</th><th scope="col">End point</th><th scope="col">Common use</th></tr></thead><tbody><tr><td>// text</td><td>End of logical line</td><td>A short nearby explanation</td></tr><tr><td>/* text */</td><td>First closing marker</td><td>A short block or multi-line note</td></tr><tr><td>/** text */</td><td>Same block-comment end rule</td><td>A documentation convention for tools</td></tr></tbody></table>
+<p>The extra star in a documentation-style comment does not create a new execution feature. Documentation tools may interpret tags and descriptions, but the C compiler still treats the whole thing as a block comment.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>Comments are removed during translation before ordinary execution. Conceptually they become whitespace, preventing the surrounding tokens from being joined accidentally. A comment cannot print a label, create a variable or change the value stored in an object.</p>
+<p>In the seats example, the explanation gives the equipment reason for two seats. The executable still performs an ordinary multiplication. In the capacity example, a comment occupies several source lines while the single initialized integer remains 30.</p>
+<p>Comment markers inside quoted string literals are characters of the string, not comment delimiters. The practice label containing slash-star and star-slash therefore prints those characters. Before deciding that source text is commented out, check whether the marker occurs inside quotes.</p>
+<pre class="diagram">source comment --&gt; whitespace during translation
+source statement --&gt; compiled action --&gt; runtime result</pre>
+<p>The documentation example places a helper contract immediately before its definition. A <dfn>contract</dfn> states what inputs a function expects and what result it promises; helper functions are introduced in <a href="topic:c-functions-intro">Functions in C</a>. Stating the valid ticket count and taka unit helps a caller use the helper correctly.</p>
+
+<h2 id="examples">Verified examples</h2>
+
+<h3 id="example-1">Explain a reason with a line comment</h3>
+<p>The comment is ignored by execution; the multiplication gives 24.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A block comment across lines</h3>
+<p>The entire block is commentary even across lines; capacity remains a normal integer variable.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Documentation next to a helper</h3>
+<p>The documentation states the unit and valid range; it does not change the helper result of 60.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="helpful-comments">Choose information the code cannot tell</h3>
+<p>A useful comment may explain why a boundary is inclusive, which unit a value uses or where a fixed price came from. A weak comment repeats the visible operation without adding meaning. Comments should reduce uncertainty for a future reader, including you during exam revision.</p>
+<table class="ref"><caption>Improve a comment</caption><thead><tr><th scope="col">Weak explanation</th><th scope="col">Better information</th></tr></thead><tbody><tr><td>Add five</td><td>The lab task charges one fixed five-taka fee</td></tr><tr><td>Multiply by sixty</td><td>Convert input minutes to stored seconds</td></tr><tr><td>Return the answer</td><td>The returned amount is in whole taka</td></tr></tbody></table>
+<p>A function's documentation can state parameter meaning, output units, limits and failure behavior. Avoid promising validation that the function does not perform. If callers must supply counts from zero to one hundred, say that as a precondition rather than claiming all possible inputs are handled.</p>
+<h3 id="disabled-code">Commenting out code safely</h3>
+<p>A line comment can temporarily disable one source line. A block comment can disable several lines only when the selected region does not already contain a closing block marker. C block comments do not nest, so wrapping a commented function in another block comment is fragile.</p>
+<p>For longer experiments, version control preserves the old code without leaving large inactive sections in the file. Another tool is a preprocessing condition such as #if 0 followed by #endif; it excludes a source region from ordinary compilation. This is a directive technique, developed in <a href="topic:c-conditional-compilation">Conditional Compilation</a>, rather than a form of nested comment.</p>
+<p>Even excluded regions must obey relevant early translation rules, so do not use conditional exclusion as a place for unfinished string or comment delimiters. Keeping a clean saved revision is easier to reason about than layers of partly disabled source.</p>
+
+<div class="callout note"><p class="callout-title">Reading the practice scaffold</p><p>The practice solutions use <code>scanf</code> to place typed input into a variable; <code>&amp;name</code> supplies its address, and a checked return value tells whether the read succeeded, as explained in <a href="topic:c-scanf">Input with scanf</a>. An <code>if</code> block runs only when its condition is true, and <code>return 1;</code> stops a failed read; see <a href="topic:c-if-statement">if Statement</a>. Here <code>+</code>, <code>-</code> and <code>*</code> mean addition, subtraction and multiplication; <a href="topic:c-arithmetic-operators">Arithmetic Operators</a> develops these rules. Keep the stated input bounds when trying the tasks.</p></div>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<p>The marked mistake example is supplied for compiler diagnostics. Repair the stated cause before running it; it has no expected stdout transcript.</p>
+<h3 id="nested-blocks">Trying to nest block comments</h3><p>The first closing marker ends the comment regardless of how many opening markers appeared inside. Remaining text can suddenly become active source and produce confusing diagnostics. Use line comments for a short experiment or remove the inactive region through version control.</p>
+<h3 id="restating-code">Writing a comment for every obvious operation</h3><p>Too many repeated descriptions hide the few assumptions that matter. Let a meaningful variable name explain its role, and keep the comment for units or constraints. Re-read comments when the surrounding code changes.</p>
+
+<h3 id="diagnostic-4">Mistake: an unfinished block comment</h3>
+<p>The opening /* has no matching */; restore the delimiter rather than adding random braces.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Explain why a rule exists rather than narrating punctuation.</li><li>Put unit and range information next to the relevant declaration or function.</li><li>Keep comments accurate when changing code.</li><li>Use one short style consistently instead of decorative banners.</li><li>Avoid large abandoned code blocks in a finished solution.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>Block comments are available in C89 and later. Line comments were standardized in C99, so strict C89 builds may reject them. The course uses C17 and therefore permits both forms; documentation conventions do not change these delimiter rules.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Comments preserve reasons and contracts while leaving execution to the actual statements. Choose short, accurate explanations and remember that block comments cannot nest. Next, use source and runtime evidence in <a href="topic:c-errors-debugging-basics">Errors and Debugging Basics</a>.</p>

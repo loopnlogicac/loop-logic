@@ -1,0 +1,70 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">An <dfn>escape sequence</dfn> is a source spelling beginning with a backslash that represents a character inside a literal. It lets you write a newline, a quote or a backslash without confusing that character with source punctuation. The source spelling and the emitted character are different things.</p>
+<p>For a two-line marks card, you need newline characters in the output stream. Breaking a source statement across editor lines does not automatically add output newlines. Conversely, one source string can request several output lines by including several newline escapes.</p>
+<p>Some control characters have effects that depend on the viewer or terminal. A tab may look like several spaces, and an alert may make no sound at all. Read the recorded bytes and the language meaning separately from how one screen renders them.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>Place escapes within a character constant or a string literal. The compiler interprets a recognized escape as a character value. An ordinary unknown escape is not a portable way to print its second letter.</p>
+<pre><code class="language-c">/* Literal fragments, not separate output statements. */
+&quot;line one\nline two&quot;
+&quot;quote: \&quot; and slash: \\&quot;
+&#x27;\n&#x27;</code></pre>
+<table class="ref"><caption>Common escape sequences</caption><thead><tr><th scope="col">Escape</th><th scope="col">Meaning</th><th scope="col">Useful distinction</th></tr></thead><tbody><tr><td>\n</td><td>Newline</td><td>End a logical output line</td></tr><tr><td>\t</td><td>Horizontal tab</td><td>Not a fixed number of spaces</td></tr><tr><td>\\</td><td>Backslash</td><td>One output slash from two source slashes</td></tr><tr><td>\&quot;</td><td>Double quote</td><td>Keep a quote inside a string</td></tr><tr><td>\'</td><td>Single quote</td><td>Useful inside a character constant</td></tr><tr><td>\0</td><td>Zero-valued character</td><td>Null, not the visible digit zero</td></tr><tr><td>\a</td><td>Alert</td><td>May be silent in a captured run</td></tr><tr><td>\r</td><td>Carriage return</td><td>Return to the line start, not a full newline</td></tr><tr><td>\b / \f / \v</td><td>Backspace / form feed / vertical tab</td><td>Rendering depends on the output device</td></tr></tbody></table>
+<p>The visible table spellings are source representations. A backslash is also used by shells and other languages, but those tools have their own escape rules. Do not assume a command-line quoting rule is a C literal rule.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>The marks-card example emits a tab between headings and values, with newlines between rows. The .out file contains actual tab characters. A renderer may choose different tab stops, so a fixed-width report should use printf width conversions when precise columns are required.</p>
+<p>The quote-and-path example protects the double quotes that belong to the message and doubles the source backslash in the path label. The output shows one backslash. No filesystem is accessed: the path is only text in the output.</p>
+<p>A <dfn>null terminator</dfn> is a zero character marking the end of a C string; see <a href="topic:c-strings-intro">Introduction to Strings</a>. The literal "Lab\0Hidden" includes an embedded null before Hidden. %s stops at that first null, so it prints Lab rather than the full literal's visible source text.</p>
+<table class="ref"><caption>Null example character sequence</caption><thead><tr><th scope="col">Position</th><th scope="col">Character meaning</th></tr></thead><tbody><tr><td>0, 1, 2</td><td>L, a, b</td></tr><tr><td>3</td><td>Embedded null; %s stops here</td></tr><tr><td>4 onward</td><td>Hidden and the final automatic terminator</td></tr></tbody></table>
+<p>Stopping output at a null does not delete the rest of the literal array. It follows the string-reading rule used by %s. A null character and a null pointer are different concepts; a pointer is a reference value, developed in <a href="topic:c-void-null-pointers">Void and Null Pointers</a>.</p>
+
+<h2 id="examples">Verified examples</h2>
+
+<h3 id="example-1">A two-line marks card</h3>
+<p>\t emits a horizontal tab and \n a newline; the raw output contains tabs whose visual width depends on the viewer.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Quotes and a backslash</h3>
+<p>Escaped double quotes stay inside the string; a doubled source backslash produces one output backslash.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">A null terminator ends a string</h3>
+<p>The embedded zero character ends what %s reads, so Hidden is not printed even though it is in the literal array.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Octal and hexadecimal character values</h3>
+<p>On this ASCII-compatible host both escape values represent A; numeric character encodings are implementation-dependent.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="numeric-escapes">Octal and hexadecimal escapes</h3>
+<p>An octal escape starts with a backslash followed by one to three octal digits. \101 represents the numeric value sixty-five. A hexadecimal escape begins with \x and consumes subsequent hexadecimal digits without an automatic two-digit limit.</p>
+<p>On an ASCII-compatible implementation, both \101 and \x41 have the code used for A. That mapping is a character-encoding fact, not a universal language promise that every machine uses ASCII. For a readable letter, the character constant 'A' avoids depending on that numeric mapping.</p>
+<pre><code class="language-c">/* Adjacent literals stop the hex escape before B. */
+"\x41" "B"
+/* In contrast, \x41B consumes three hex digits. */</code></pre>
+<p>Adjacent string literals are joined during translation. Splitting the source as shown makes the end of the hexadecimal escape unambiguous before the letter B. This is useful when a following character happens to be a valid hex digit.</p>
+<h3 id="control-output">Control characters are not screen commands</h3>
+<p>\a represents the alert character, but a terminal may ignore it or signal visually rather than sounding. \r represents carriage return and often moves a cursor to the start of the current line. A captured file stores the character even when no visible cursor exists.</p>
+<p>Do not claim that \r clears a line or that \b always erases a printed character. Those effects depend on the terminal and later output. The language defines characters and stream operations; a display device interprets control characters according to its own behavior.</p>
+<p>Text streams can also translate newline representations for the host environment. The logical C newline remains the correct way to end a text line even if the operating system stores line endings differently. This package uses LF files and records runs on its declared verification environment.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<p>The marked mistake example is supplied for compiler diagnostics. Repair the stated cause before running it; it has no expected stdout transcript.</p>
+<h3 id="wrong-slash">Using a forward slash for an escape</h3><p>/n is ordinary slash-and-letter text, while \n requests a newline. The characters look similar in some fonts but serve different source roles. Inspect the actual source rather than changing output files to match a typo.</p>
+<h3 id="actual-line-break">Putting an unescaped physical newline in a string</h3><p>An ordinary string literal cannot continue through a raw source newline in this way. Use a newline escape for the output, or separate adjacent string literals for source layout. A newline in the editor and a newline character represented in a literal are different.</p>
+<h3 id="null-and-digit">Confusing null with zero text</h3><p>'0' is a character representing a digit, while '\0' has numeric value zero. They do not end strings in the same way. Choose the character based on whether you need visible text or termination.</p>
+
+<h3 id="diagnostic-5">Mistake: an unknown escape</h3>
+<p>\q is not a standard escape; the compiler warns. Write \\ in the source for one literal backslash.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Count emitted characters rather than source spelling characters.</li><li>Use character literals for letters when numeric encoding is irrelevant.</li><li>Double backslashes that must appear literally in output.</li><li>Separate hexadecimal escapes from following hex-digit text.</li><li>Use predictable visible examples instead of assuming terminal control effects.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The common escapes in this lesson are available in the C17 baseline and long predate it. C99 added universal character-name facilities for wider character notation, which are separate from the octal and hex byte-value examples here. C23 does not turn terminal-dependent display effects into fixed output guarantees.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Escape sequences represent characters that cannot always be written directly inside literal delimiters. Read source spelling, stored characters and screen effects as separate layers. Next, follow how values change type in <a href="topic:c-type-conversion">Type Conversion and Casting</a>.</p>

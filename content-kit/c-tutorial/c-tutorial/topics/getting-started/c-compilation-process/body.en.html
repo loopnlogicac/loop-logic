@@ -1,0 +1,70 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">The <dfn>compilation process</dfn> turns a source file into a program that can run. A typical GCC build passes through preprocessing, compilation, assembly and linking. Knowing the stages lets you recognize whether a failure concerns source grammar, machine code or a missing definition.</p>
+<p>Imagine preparing a printed exam paper: you first expand shared instructions, arrange the content, produce a physical form and combine the required pages. The stages are different jobs, even when one command handles the whole workflow. GCC similarly acts as a driver for several tools.</p>
+<p>The word compile is often used informally for the whole build. In the more precise stage description here, compilation turns preprocessed C into target assembly. A complete executable still needs assembly and linking after that step.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>The <code>-E</code>, <code>-S</code> and <code>-c</code> options stop the build at different points. Run each command on the first verified source after saving it as lab.c. The output files are build artifacts, meaning generated files rather than your original source.</p>
+<pre><code class="language-bash">gcc -std=c17 -E lab.c -o lab.i
+gcc -std=c17 -S lab.c -o lab.s
+gcc -std=c17 -c lab.c -o lab.o
+gcc lab.o -o lab
+./lab</code></pre>
+<table class="ref"><caption>What each stage produces</caption><thead><tr><th scope="col">Stage</th><th scope="col">Typical output</th><th scope="col">Human-readable?</th></tr></thead><tbody><tr><td>Preprocessing</td><td>Expanded C text, often .i</td><td>Yes, though headers make it long</td></tr><tr><td>Compilation</td><td>Target assembly, often .s</td><td>Text for a machine-specific instruction set</td></tr><tr><td>Assembly</td><td>Object file, often .o</td><td>Binary data with code and metadata</td></tr><tr><td>Linking</td><td>Executable file</td><td>Normally a binary program image</td></tr></tbody></table>
+<p>A <dfn>target</dfn> is the kind of machine and environment for which the toolchain generates code. Assembly syntax and object formats depend on that target. You do not need to understand every instruction to identify which stage produced a file.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>Preprocessing handles directives such as includes and macro definitions. In the capacity example, ROWS is a <dfn>macro</dfn>, a name replaced by preprocessing tokens before ordinary compilation; see <a href="topic:c-macros">Macros</a>. Inspect lab.i and find the output call with ROWS expanded to 3.</p>
+<p>Compilation checks C syntax and constraints, determines expression types and translates functions into target instructions. With -S, you may see labels, registers, directives and a call to an output routine. Optimization can change those details without changing the required observable result of a well-defined program.</p>
+<p>Assembly converts assembly text into machine-code bytes and records information needed later. An <dfn>object file</dfn> can contain function code, symbol information and unresolved references. A <dfn>symbol</dfn> identifies a function or object that other code may need to locate.</p>
+<p>Linking combines object files and selected library code, resolves required symbols and produces an executable. Our small program calls printf, whose implementation comes from the standard library supplied with the environment. The source header supplies a declaration, while linking supplies the actual callable implementation.</p>
+<pre class="diagram">lab.c --preprocess--&gt; lab.i --compile--&gt; lab.s
+lab.s --assemble---&gt; lab.o --link-----&gt; lab</pre>
+<p>A normal command with lab.c and -o lab performs all these jobs without preserving every intermediate file. The intermediate commands are useful for learning and diagnosis. Keeping them separate does not make a wrong formula correct; each stage has limited responsibilities.</p>
+
+<h2 id="examples">Verified examples</h2>
+
+<h3 id="example-1">Source with macro substitution</h3>
+<p>The preprocessor replaces ROWS with 3; the executable later prints 24.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A symbol resolved by the linker</h3>
+<p>A declaration allows compilation; the definition later in this file supplies the symbol that linking needs.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">A normal executable result</h3>
+<p>This result belongs to the running program, not the preprocessing or assembly stages.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="error-stages">Classify failures by evidence</h3>
+<p>A missing semicolon or an undeclared identifier is normally diagnosed while compiling the source. The compiler message names a source location and explains the grammar or constraint problem. Fix the earliest meaningful message before interpreting a long chain of later errors.</p>
+<p>A declared function without a definition can pass compilation into an object file. The linker then reports an unresolved or undefined reference when trying to finish the executable. The deliberately broken example demonstrates this distinction: the declaration is known, but no implementation exists.</p>
+<p>A <dfn>runtime error</dfn> happens after the program starts, for example an input failure handled with a nonzero exit status or an invalid memory operation in unsafe code. A <dfn>logical error</dfn> means the executed algorithm does not satisfy the task. Neither requires a syntax error, so a successful link is not the end of verification.</p>
+<table class="ref"><caption>Debugging direction</caption><thead><tr><th scope="col">Symptom</th><th scope="col">First place to inspect</th></tr></thead><tbody><tr><td>Expected semicolon diagnostic</td><td>The named source line and the preceding line</td></tr><tr><td>Undefined reference during final build</td><td>Missing definitions and linked object files</td></tr><tr><td>Program reports failed input</td><td>The supplied stdin and conversion checks</td></tr><tr><td>Wrong total with a clean build</td><td>The formula and task specification</td></tr></tbody></table>
+<p>When a build command fails, preserve its exact diagnostic and exit status before trying another command. Comparing a successful object-only build with a failed final link can isolate a missing definition without changing any C expression. Keep only source files as the authoritative input; regenerate intermediate artifacts after every relevant edit.</p>
+<h3 id="warnings">Warnings are useful evidence</h3>
+<p>-Wall enables a useful group of warnings, despite not literally meaning every warning. -Wextra adds other diagnostics, and -Wpedantic requests diagnostics related to the selected ISO dialect. -Werror changes enabled warnings into build failures; it does not by itself enable every possible check.</p>
+<p>Format mismatches, unused values and suspicious indentation often reveal real mistakes. Read the message and repair the cause rather than deleting a flag. A warning can also expose a design assumption that deserves an explicit comment or a different type.</p>
+<p>-O2 requests optimization. It is not a proof tool and cannot tell whether a marks formula should add or subtract. Well-defined code should retain its required behavior under optimization; undefined behavior can break that expectation, which is one reason later memory lessons use sanitizers.</p>
+<p>A <dfn>sanitizer</dfn> is compiler-assisted runtime checking for selected problems, not a complete correctness guarantee. Its checks execute only along paths your tests run. Treat passing tests and clean diagnostics as complementary evidence rather than interchangeable certificates.</p>
+
+<div class="callout note"><p class="callout-title">Reading the practice scaffold</p><p>The practice solutions use <code>scanf</code> to place typed input into a variable; <code>&amp;name</code> supplies its address, and a checked return value tells whether the read succeeded, as explained in <a href="topic:c-scanf">Input with scanf</a>. An <code>if</code> block runs only when its condition is true, and <code>return 1;</code> stops a failed read; see <a href="topic:c-if-statement">if Statement</a>. Here <code>+</code>, <code>-</code> and <code>*</code> mean addition, subtraction and multiplication; <a href="topic:c-arithmetic-operators">Arithmetic Operators</a> develops these rules. Keep the stated input bounds when trying the tasks.</p></div>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<p>The marked mistake example is supplied for compiler diagnostics. Repair the stated cause before running it; it has no expected stdout transcript.</p>
+<h3 id="running-object">Trying to run an object file</h3><p>An object is an input to linking, not normally a finished program. Link lab.o into lab before launching it. Renaming lab.o to lab does not perform the missing linker work.</p>
+<h3 id="editing-generated-files">Editing generated assembly as a source repair</h3><p>A fresh build will replace generated files, so ordinary C corrections belong in lab.c. Use intermediate outputs to understand a problem, then repair the original source and repeat the build.</p>
+
+<h3 id="diagnostic-4">Mistake: declared but never defined</h3>
+<p>The call is well-typed but the final build fails at linking because missing_total has no definition.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Keep source files separate from generated artifacts.</li><li>Use stage-specific commands when locating a build failure.</li><li>Compile with warnings enabled and investigate each message.</li><li>Record the compiler and selected standard for reproducible checks.</li><li>Run normal and edge inputs after a successful link.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The four-stage toolchain model applies across the course editions, although actual compilers may merge internal phases. The selected -std option controls accepted language rules; it does not choose the target instruction set. These artifacts and diagnostics were verified with the compiler recorded in the package manifest.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Preprocessing expands source, compilation translates it, assembly produces objects and linking finishes the executable. Identify the failing stage before changing code or commands. Next, learn how source explanations are handled in <a href="topic:c-comments">Comments in C</a>.</p>
