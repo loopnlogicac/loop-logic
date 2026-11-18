@@ -1,6 +1,6 @@
 // Supabase (Postgres) store over the REST API, using only fetch.
 // Server-side only: uses the service-role key, which must never reach a browser.
-// Schema: db/migrations/001_core.sql.
+// Schema: db/migrations/001_core.sql and 002_video_extras.sql.
 
 import type { EvidenceEvent } from '../core/evidence.ts';
 import type { SessionRecord, TraceRecord } from '../app/types.ts';
@@ -149,5 +149,17 @@ export class SupabaseStore implements Store {
   async deleteReading(learnerId: string) {
     await this.rest('DELETE', `ll_reading_events?learner_id=eq.${this.q(learnerId)}`, undefined, 'return=minimal');
     await this.rest('DELETE', `ll_profiles?learner_id=eq.${this.q(learnerId)}`, undefined, 'return=minimal');
+  }  async getVideoExtras(videoId: string) {
+    const rows = await this.rest<{ video_id: string; data: Record<string, unknown>; updated_at: string }[]>('GET', `ll_video_extras?video_id=eq.${this.q(videoId)}&select=video_id,data,updated_at`);
+    const r = rows[0];
+    return r ? { videoId: r.video_id, data: r.data, updatedAt: r.updated_at } : undefined;
   }
+  async listVideoExtras() {
+    const rows = await this.rest<{ video_id: string; data: Record<string, unknown>; updated_at: string }[]>('GET', 'll_video_extras?select=video_id,data,updated_at&order=video_id');
+    return rows.map((r) => ({ videoId: r.video_id, data: r.data, updatedAt: r.updated_at }));
+  }
+  async saveVideoExtras(row: { videoId: string; data: Record<string, unknown>; updatedAt: string }) {
+    await this.rest('POST', 'll_video_extras', { video_id: row.videoId, data: row.data, updated_at: row.updatedAt }, 'resolution=merge-duplicates,return=minimal');
+  }
+
 }

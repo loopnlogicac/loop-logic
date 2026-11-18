@@ -1,5 +1,6 @@
 // Video course player: plays a course's YouTube playlists in order, inside the site.
-import { api, getLang, applyI18n, mountNav, el, num, errorBox, toast, ensureSignedIn } from './common.js';
+import { api, getLang, applyI18n, mountNav, el, num, errorBox, toast, ensureSignedIn, getConfig } from './common.js';
+import { tryNowButton, learnerSections, editLink, openEditor } from './video-extras.js';
 
 const T = {
   en: {
@@ -8,7 +9,7 @@ const T = {
     watched: (a, b) => `${a} of ${b} watched`, prev: '← Previous', next: 'Next →', doneNext: '✓ Done, next video', markDone: '✓ Mark as watched', undo: 'Mark as not watched',
     finished: 'You have watched every video in this course.', onYt: 'Open on YouTube ↗', credit: (by) => `This video is by ${by}, from YouTube. It is part of the Loop & Logic playlist.`,
     by: (by) => `by ${by}`, repeat: 'also earlier in the course', notFound: 'Course not found.', back: 'Back to courses', saved: 'Saved',
-    hm: (h, m) => (h ? `${h} h ${m} min` : `${m} min`),
+    hm: (h, m) => (h ? `${h} h ${m} min` : `${m} min`), quizMark: 'quiz',
   },
   bn: {
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · ভিডিও চলে ইউটিউব থেকে; ভিউ চ্যানেলেই গোনা হয়',
@@ -16,7 +17,7 @@ const T = {
     watched: (a, b) => `${b}টির মধ্যে ${a}টি দেখা হয়েছে`, prev: '← আগেরটি', next: 'পরেরটি →', doneNext: '✓ দেখা শেষ, পরের ভিডিও', markDone: '✓ দেখা হয়েছে', undo: 'দেখা হয়নি হিসেবে রাখো',
     finished: 'এই কোর্সের সব ভিডিও দেখা শেষ।', onYt: 'ইউটিউবে খোলো ↗', credit: (by) => `এই ভিডিওটি ${by}-এর, ইউটিউব থেকে। এটি লুপ অ্যান্ড লজিকের প্লেলিস্টে আছে।`,
     by: (by) => `${by}-এর ভিডিও`, repeat: 'কোর্সে আগেও আছে', notFound: 'কোর্স পাওয়া যায়নি।', back: 'কোর্সে ফিরে যাও', saved: 'সেভ হয়েছে',
-    hm: (h, m) => (h ? `${h} ঘণ্টা ${m} মিনিট` : `${m} মিনিট`),
+    hm: (h, m) => (h ? `${h} ঘণ্টা ${m} মিনিট` : `${m} মিনিট`), quizMark: 'কুইজ',
   },
 };
 const t = () => T[getLang()];
@@ -24,6 +25,8 @@ const params = new URLSearchParams(location.search);
 const courseId = params.get('course') ?? '';
 const main = document.getElementById('main');
 let view = null;
+let config = null;
+let editing = false;
 
 const watchUrl = (v) => `/watch.html?course=${encodeURIComponent(courseId)}&v=${encodeURIComponent(v)}`;
 
@@ -54,8 +57,14 @@ function render() {
             ? el('button', { class: 'btn ghost small', type: 'button', onclick: () => mark(cur.id, false), text: L.undo })
             : el('button', { class: 'btn primary small', type: 'button', onclick: () => mark(cur.id, true, cur.next), text: cur.next ? L.doneNext : L.markDone }),
           cur.next ? el('a', { class: 'btn secondary small', href: watchUrl(cur.next), 'data-v': cur.next, onclick: go, text: L.next }) : null,
+          tryNowButton(cur.extras?.tryNow),
           el('a', { class: 'btn ghost small', href: cur.youtubeUrl, target: '_blank', rel: 'noopener noreferrer', text: L.onYt }))),
     );
+    const extrasBox = el('div', { class: 'vx-stack' }, ...learnerSections(course.id, cur));
+    left.append(extrasBox, el('p', { style: 'margin:10px 0 0' }, editLink(config, () => {
+      editing = true;
+      openEditor(extrasBox, cur, course, config, (changed) => { editing = false; load(cur.id); });
+    })));
     if (progress.watched === progress.total) left.append(el('p', { class: 'tag live', style: 'margin-top:14px', text: L.finished }));
   }
 
@@ -68,7 +77,8 @@ function render() {
       el('ol', {}, ...s.items.map((i) => el('li', {},
         el('a', { href: watchUrl(i.id), 'data-v': i.id, onclick: go, 'aria-current': cur && i.id === cur.id && !i.repeat ? 'true' : null },
           el('span', { class: `tick ${i.watched ? 'on' : ''}`, 'aria-label': i.watched ? 'watched' : null, text: i.watched ? '✓' : num(i.n) }),
-          el('span', {}, i.title, i.by ? el('span', { class: 'by', text: L.by(i.by) }) : null, i.repeat ? el('span', { class: 'by', style: 'color:var(--muted)', text: L.repeat }) : null),
+          el('span', {}, i.title, i.by ? el('span', { class: 'by', text: L.by(i.by) }) : null, i.repeat ? el('span', { class: 'by', style: 'color:var(--muted)', text: L.repeat }) : null,
+            i.materials || i.quiz ? el('span', { class: 'marks', text: [i.materials ? `📎 ${num(i.materials)}` : null, i.quiz ? `📝 ${L.quizMark}` : null].filter(Boolean).join('  ') }) : null),
           el('span', { class: 'dur', text: i.duration })))))));
   }
   const right = el('aside', { class: 'card' },
@@ -118,6 +128,7 @@ async function mark(videoId, watched, then) {
 
 window.addEventListener('popstate', (e) => load(e.state?.v ?? new URLSearchParams(location.search).get('v')));
 await ensureSignedIn();
+config = await getConfig().catch(() => null);
 mountNav('courses', () => load(view?.current?.id));
 applyI18n(t());
 load(params.get('v'));

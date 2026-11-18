@@ -110,7 +110,7 @@ Copy `.env.example` to `.env`. Never commit it or paste keys in chat.
 ### Supabase setup (once)
 
 1. Create a project (Singapore region). Copy the URL, anon key and service-role key into `.env`.
-2. SQL editor → run `db/migrations/001_core.sql`. Run the checks at the bottom of the file; each should return the expected result.
+2. SQL editor → run `db/migrations/001_core.sql`, then `db/migrations/002_video_extras.sql`. Run the checks at the bottom of 001; each should return the expected result.
 3. Auth → URL configuration: set the Site URL to your deployed address and add it (and `http://127.0.0.1:8787/**` for local) to Redirect URLs.
 4. Auth → Providers: turn on Google (needs a Google Cloud OAuth client; add `https://<project>.supabase.co/auth/v1/callback` as its redirect URI). Email links work on the built-in mailer but it is limited to about 2 emails an hour — set up custom SMTP before a pilot.
 5. Set `AUTH_MODE=supabase` and restart. The startup log shows `data: supabase` and `sign-in: supabase`.
@@ -141,7 +141,7 @@ tested with fake servers; they have **not** yet been run against the live servic
 | Stores: memory and Supabase (REST + `ll_commit` RPC) | `src/store/` |
 | HTTP server, routes, sign-in, CSP | `src/server/` |
 | Pages (vanilla JS, no build step) | `public/` |
-| Database schema with row-level security | `db/migrations/001_core.sql` |
+| Database schema with row-level security | `db/migrations/001_core.sql`, `002_video_extras.sql` |
 
 ## API
 

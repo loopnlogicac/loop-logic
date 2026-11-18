@@ -7,6 +7,7 @@ import { AppError } from './service.ts';
 import { COURSES, getCourse, playlistUrl, type Course } from '../content/courses.ts';
 import { getPlaylist, getVideo } from '../content/videos.ts';
 import type { Lang } from '../content/pricing-pack.ts';
+import { VideoExtrasService, COURSE_TRY_NOW, LANGUAGES } from './video-extras.ts';
 
 const courseKey = (courseId: string) => `course:${courseId}`;
 
@@ -35,8 +36,16 @@ const hm = (seconds: number) => ({ hours: Math.floor(seconds / 3600), minutes: M
 
 export class WatchService {
   private readonly store: Store;
-  constructor(store: Store) {
+  private readonly extras: VideoExtrasService;
+  constructor(store: Store, extras?: VideoExtrasService) {
     this.store = store;
+    this.extras = extras ?? new VideoExtrasService(store);
+  }
+
+  async quiz(courseId: string, videoId: string, learnerId: string, answers: unknown) {
+    const course = this.courseOr404(courseId);
+    if (!courseVideoOrder(course).includes(videoId)) throw new AppError('bad_video', 400, 'This video is not part of the course');
+    return this.extras.gradeQuiz(course.id, videoId, learnerId, answers);
   }
 
   private courseOr404(id: string): Course {
@@ -48,7 +57,7 @@ export class WatchService {
   /** Sections and progress for a course page or the player. */
   async view(courseId: string, learnerId: string, lang: Lang, current?: string | null) {
     const course = this.courseOr404(courseId);
-    const events = await this.store.readingEvents(learnerId);
+    const [events, marks] = await Promise.all([this.store.readingEvents(learnerId), this.extras.summary()]);
     const watched = watchedSet(course.id, events);
     const order = courseVideoOrder(course);
     const shown = new Set<string>();
@@ -62,7 +71,7 @@ export class WatchService {
           const v = getVideo(id)!;
           const repeat = shown.has(id);
           shown.add(id);
-          return { id, n: i + 1, title: v.title, duration: v.duration, by: v.by, watched: watched.has(id), repeat };
+          return { id, n: i + 1, title: v.title, duration: v.duration, by: v.by, watched: watched.has(id), repeat, materials: marks.get(id)?.materials ?? 0, quiz: marks.get(id)?.quiz ?? 0 };
         }),
       };
     });
@@ -72,8 +81,9 @@ export class WatchService {
     const currentId = current && order.includes(current) ? current : nextUp;
     const idx = currentId ? order.indexOf(currentId) : -1;
     const cur = currentId ? getVideo(currentId)! : null;
+    const extras = cur ? await this.extras.forLearner(course.id, cur.id, learnerId) : null;
     return {
-      course: { id: course.id, title: course.title[lang], code: course.code, hasLessons: course.lessons.length > 0 },
+      course: { id: course.id, title: course.title[lang], code: course.code, hasLessons: course.lessons.length > 0, tryNowDefault: COURSE_TRY_NOW[course.id] ? LANGUAGES[COURSE_TRY_NOW[course.id]!].label : null },
       sections,
       progress: {
         total: order.length,
@@ -95,6 +105,7 @@ export class WatchService {
             youtubeUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(cur.id)}`,
             prev: idx > 0 ? order[idx - 1]! : null,
             next: idx >= 0 && idx < order.length - 1 ? order[idx + 1]! : null,
+            extras,
           }
         : null,
     };

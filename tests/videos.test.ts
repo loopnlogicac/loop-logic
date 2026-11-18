@@ -95,3 +95,88 @@ test('dashboard shows continue watching; catalog counts unique videos', async ()
   assert.ok(cat.totals.videos <= 302 && cat.totals.videos > 250);
   assert.ok(cat.courses.find((c) => c.id === 'c-programming')!.hours > 0);
 });
+
+// ── per-video extras: materials, quiz, Try now ─────────────────────────────
+
+import { VideoExtrasService, cleanExtras, resolveTryNow } from '../src/app/video-extras.ts';
+import { buildRoutes } from '../src/server/app.ts';
+
+const QUIZ = {
+  materials: [
+    { title: 'Slides', url: 'https://drive.google.com/file/d/abc/view' },
+    { title: 'Hello world code', code: '#include <stdio.h>\nint main(void){printf("hi");}' },
+  ],
+  quiz: [
+    { prompt: 'Which header declares printf?', options: ['stdlib.h', 'stdio.h', 'math.h'], answer: 1, explanation: 'printf lives in stdio.h.' },
+    { prompt: 'main returns…', options: ['int', 'void'], answer: 0 },
+  ],
+  tryNow: { mode: 'default', language: 'c', code: '' },
+};
+
+test('extras: validation catches bad links, missing answers and empty items', () => {
+  const ok = cleanExtras(QUIZ);
+  assert.equal(ok.materials.length, 2);
+  assert.equal(ok.quiz[0]!.answer, 1);
+  assert.ok(ok.quiz[0]!.id && ok.quiz[1]!.id && ok.quiz[0]!.id !== ok.quiz[1]!.id, 'questions get ids');
+  assert.throws(() => cleanExtras({ materials: [{ title: 'x', url: 'javascript:alert(1)' }] }), /must start with http/);
+  assert.throws(() => cleanExtras({ materials: [{ title: 'x' }] }), /needs a link or some code/);
+  assert.throws(() => cleanExtras({ materials: [{ url: 'https://a.b' }] }), /title is empty/);
+  assert.throws(() => cleanExtras({ quiz: [{ prompt: 'q', options: ['a'], answer: 0 }] }), /at least 2 options/);
+  assert.throws(() => cleanExtras({ quiz: [{ prompt: 'q', options: ['a', 'b'], answer: 5 }] }), /choose which option/);
+  assert.throws(() => cleanExtras({ quiz: Array.from({ length: 21 }, () => ({ prompt: 'q', options: ['a', 'b'], answer: 0 })) }), /At most 20/);
+});
+
+test('Try now: on by default in programming courses, instructor can turn it on, off or change language', () => {
+  const t = (mode: 'default' | 'on' | 'off', language: 'c' | 'python' = 'c', code = '') => ({ mode, language, code });
+  assert.equal(resolveTryNow('c-programming', t('default'))!.label, 'C');
+  assert.match(resolveTryNow('c-programming', t('default'))!.url, /programiz\.com\/c-programming\/online-compiler/);
+  assert.ok(resolveTryNow('c-programming', t('default'))!.code.includes('printf'), 'starter program when no code given');
+  assert.equal(resolveTryNow('c-programming', t('off')), null);
+  assert.equal(resolveTryNow('mat-101', t('default')), null, 'maths has no compiler by default');
+  const py = resolveTryNow('machine-learning', t('on', 'python', 'print(2+2)'))!;
+  assert.equal(py.label, 'Python');
+  assert.equal(py.code, 'print(2+2)');
+  assert.equal(py.starter, false);
+});
+
+test('extras: learners never see answers until they submit; results are graded on the server and saved', async () => {
+  const store = new MemoryStore();
+  const extras = new VideoExtrasService(store);
+  const watch = new WatchService(store, extras);
+  await extras.save('F8OWdzcf6go', QUIZ);
+  const v = await watch.view('c-programming', 'u1', 'en', 'F8OWdzcf6go');
+  const x = v.current!.extras!;
+  assert.equal(x.materials.length, 2);
+  assert.equal(x.quiz.length, 2);
+  assert.ok(!JSON.stringify(x.quiz).includes('"answer"') && !JSON.stringify(x.quiz).includes('stdio.h.'), 'no answers or explanations before submitting');
+  assert.equal(x.tryNow!.label, 'C');
+  assert.equal(v.sections[0]!.items[0]!.quiz, 2, 'list shows the video has a quiz');
+
+  const [q1, q2] = x.quiz;
+  const r = await watch.quiz('c-programming', 'F8OWdzcf6go', 'u1', { [q1!.id]: 1, [q2!.id]: 1 });
+  assert.equal(r.score, 1);
+  assert.equal(r.total, 2);
+  assert.equal(r.results[0]!.correct, true);
+  assert.equal(r.results[1]!.answer, 0);
+  assert.equal(r.results[0]!.explanation, 'printf lives in stdio.h.');
+  const again = await watch.view('c-programming', 'u1', 'en', 'F8OWdzcf6go');
+  assert.deepEqual([again.current!.extras!.lastQuiz!.score, again.current!.extras!.lastQuiz!.total], [1, 2]);
+  assert.equal((await watch.view('c-programming', 'u2', 'en', 'F8OWdzcf6go')).current!.extras!.lastQuiz, null);
+
+  await assert.rejects(watch.quiz('c-programming', '3-b8QUMn2m4', 'u1', {}), /no quiz yet/);
+  await assert.rejects(watch.quiz('c-programming', 'AnJzqaKEbhA', 'u1', {}), /not part of the course/);
+  await assert.rejects(extras.save('notAVideo00', QUIZ), /Video not found/);
+
+  const full = await extras.forEditor('F8OWdzcf6go');
+  assert.equal(full.extras.quiz[0]!.answer, 1, 'editor sees answers');
+  const exp = await extras.exportAll();
+  assert.ok(exp.videos['F8OWdzcf6go']);
+});
+
+test('editing routes: locked on a public deploy without a key, key-checked when a key is set', () => {
+  const routes = buildRoutes({ config: { editLocked: true } } as never);
+  const editors = routes.filter((r) => r.auth === 'editor').map((r) => `${r.method} ${r.pattern.source}`);
+  assert.equal(editors.length, 3, 'read-full, save and export are editor-only');
+  assert.ok(routes.some((r) => r.method === 'POST' && r.pattern.test('/api/courses/c-programming/videos/F8OWdzcf6go/quiz') && r.auth === 'learner'));
+  assert.ok(routes.find((r) => r.method === 'POST' && r.pattern.test('/api/videos/F8OWdzcf6go/extras'))!.maxBody! >= 512 * 1024);
+});

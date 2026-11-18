@@ -9,7 +9,7 @@ export interface ReadingEventRow {
   learnerId: string;
   lessonId: string;
   blockId: string | null;
-  type: 'view' | 'active_time' | 'select' | 'help' | 'quiz' | 'feedback' | 'scroll_back' | 'setting' | 'lab_check' | 'video';
+  type: 'view' | 'active_time' | 'select' | 'help' | 'quiz' | 'feedback' | 'scroll_back' | 'setting' | 'lab_check' | 'video' | 'video_quiz';
   payload: Record<string, unknown>;
   at: string;
 }
@@ -25,6 +25,13 @@ export interface LlmCallRow {
   latencyMs: number;
   outcome: string;
   at: string;
+}
+
+/** Instructor-written extras for one YouTube video (materials, quiz, Try now). */
+export interface VideoExtrasRow {
+  videoId: string;
+  data: Record<string, unknown>;
+  updatedAt: string;
 }
 
 export interface Store {
@@ -48,6 +55,9 @@ export interface Store {
   saveProfile(learnerId: string, profile: Record<string, unknown>): Promise<void>;
   /** Removes a learner's reading events and reading profile (learner-requested reset). */
   deleteReading(learnerId: string): Promise<void>;
+  getVideoExtras(videoId: string): Promise<VideoExtrasRow | undefined>;
+  listVideoExtras(): Promise<VideoExtrasRow[]>;
+  saveVideoExtras(row: VideoExtrasRow): Promise<void>;
 }
 
 export class StaleStateError extends Error {
@@ -66,6 +76,7 @@ export class MemoryStore implements Store {
   private reading: ReadingEventRow[] = [];
   private calls: LlmCallRow[] = [];
   private profiles = new Map<string, Record<string, unknown>>();
+  private extras = new Map<string, VideoExtrasRow>();
 
   async getSession(id: string) {
     const s = this.sessions.get(id);
@@ -127,5 +138,15 @@ export class MemoryStore implements Store {
   async deleteReading(learnerId: string) {
     this.reading = this.reading.filter((r) => r.learnerId !== learnerId);
     this.profiles.delete(learnerId);
+  }
+  async getVideoExtras(videoId: string) {
+    const r = this.extras.get(videoId);
+    return r ? structuredClone(r) : undefined;
+  }
+  async listVideoExtras() {
+    return [...this.extras.values()].map((r) => structuredClone(r));
+  }
+  async saveVideoExtras(row: VideoExtrasRow) {
+    this.extras.set(row.videoId, structuredClone(row));
   }
 }

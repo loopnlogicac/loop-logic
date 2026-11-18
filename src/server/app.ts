@@ -9,6 +9,7 @@ import type { ReadingService } from '../reading/service.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
 import type { WatchService } from '../app/watch.ts';
+import type { VideoExtrasService } from '../app/video-extras.ts';
 import type { LabService } from '../app/labs.ts';
 import { StaleStateError } from '../store/store.ts';
 import { AuthError, type Authenticator } from './auth.ts';
@@ -33,6 +34,7 @@ export interface AppDeps {
   learner: LearnerService;
   labs: LabService;
   watch: WatchService;
+  extras: VideoExtrasService;
   auth: Authenticator;
   publicDir: string;
   config: {
@@ -42,6 +44,8 @@ export interface AppDeps {
     liveSearch: boolean;
     storeKind: string;
     instructorKey: string | null;
+    /** No instructor key on a public deploy: editing course content is refused. */
+    editLocked: boolean;
     allowSeed: boolean;
   };
 }
@@ -53,22 +57,24 @@ interface Route {
   pattern: RegExp;
   keys: string[];
   handler: Handler;
-  auth: 'learner' | 'instructor' | 'none';
+  /** editor = instructor, but refused outright when editing is locked (public deploy without a key). */
+  auth: 'learner' | 'instructor' | 'editor' | 'none';
+  maxBody?: number;
 }
 
-function route(method: string, path: string, handler: Handler, auth: Route['auth'] = 'learner'): Route {
+function route(method: string, path: string, handler: Handler, auth: Route['auth'] = 'learner', maxBody?: number): Route {
   const keys: string[] = [];
   const pattern = new RegExp('^' + path.replace(/:(\w+)/g, (_, k: string) => (keys.push(k), '([^/]+)')) + '$');
-  return { method, pattern, keys, handler, auth };
+  return { method, pattern, keys, handler, auth, maxBody };
 }
 
-async function readJson(req: IncomingMessage): Promise<any> {
+async function readJson(req: IncomingMessage, limit = MAX_BODY_BYTES): Promise<any> {
   if (req.method === 'GET' || req.method === 'HEAD') return {};
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req) {
     size += (chunk as Buffer).length;
-    if (size > MAX_BODY_BYTES) throw new AppError('payload_too_large', 413, 'Request body is too large.');
+    if (size > limit) throw new AppError('payload_too_large', 413, 'Request body is too large.');
     chunks.push(chunk as Buffer);
   }
   if (size === 0) return {};
@@ -91,7 +97,7 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 export function buildRoutes(d: AppDeps): Route[] {
-  const { learning, reading, instructor, learner, labs, watch } = d;
+  const { learning, reading, instructor, learner, labs, watch, extras } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   return [
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
@@ -103,6 +109,7 @@ export function buildRoutes(d: AppDeps): Route[] {
       liveSearch: d.config.liveSearch,
       store: d.config.storeKind,
       instructorKeyRequired: Boolean(d.config.instructorKey),
+      editing: d.config.instructorKey ? 'key' : d.config.editLocked ? 'locked' : 'open',
       lessons: LESSONS.map((l) => ({ id: l.id, subject: l.subject, title: l.title, summary: l.summary })),
     }), 'none'),
     route('GET', '/api/me', ({ learnerId, email }) => ({ learnerId, email })),
@@ -117,6 +124,10 @@ export function buildRoutes(d: AppDeps): Route[] {
 
     // video courses (YouTube playlists played in the site)
     route('GET', '/api/courses/:id/videos', ({ params, query, learnerId }) => watch.view(params.id!, learnerId, lang(query.get('lang')), query.get('v'))),
+    route('POST', '/api/courses/:id/videos/:vid/quiz', ({ params, body, learnerId }) => watch.quiz(params.id!, params.vid!, learnerId, body.answers)),
+    route('GET', '/api/videos/:vid/extras', ({ params }) => extras.forEditor(params.vid!), 'editor'),
+    route('POST', '/api/videos/:vid/extras', ({ params, body }) => extras.save(params.vid!, body), 'editor', 1024 * 1024),
+    route('GET', '/api/instructor/video-extras', () => extras.exportAll(), 'editor'),
     route('POST', '/api/courses/:id/videos/watched', ({ params, body, learnerId }) => watch.mark(params.id!, learnerId, { videoId: body.videoId, watched: body.watched })),
 
     // labs
@@ -215,14 +226,16 @@ export function createApp(d: AppDeps) {
         learnerId = id.learnerId;
         email = id.email;
         if (id.setCookie) headers['set-cookie'] = id.setCookie;
-      } else if (match.r.auth === 'instructor' && d.config.instructorKey) {
+      } else if (match.r.auth === 'editor' && !d.config.instructorKey && d.config.editLocked) {
+        throw new AppError('edit_locked', 403, 'Editing is turned off until an instructor key (INSTRUCTOR_KEY) is set on the server.');
+      } else if ((match.r.auth === 'instructor' || match.r.auth === 'editor') && d.config.instructorKey) {
         const given = String(req.headers['x-instructor-key'] ?? '');
         if (!given || !sameSecret(given, d.config.instructorKey)) throw new AppError('forbidden', 403, 'Instructor key required.');
       }
 
       const params: Record<string, string> = {};
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
-      const body = await readJson(req);
+      const body = await readJson(req, match.r.maxBody);
       const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email });
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
