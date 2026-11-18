@@ -85,16 +85,50 @@ test('Gemini and Groq providers send the documented request shapes and read usag
     };
   };
   const signal = new AbortController().signal;
-  const g = await geminiProvider('k1', 'gemini-flash-latest', fetchImpl).call({ purpose: 'p', system: 'sys', user: 'hi', maxOutputTokens: 99 }, signal);
-  const q = await groqProvider('k2', 'llama-3.3-70b-versatile', fetchImpl).call({ purpose: 'p', system: 'sys', user: 'hi', maxOutputTokens: 99 }, signal);
+  const g = await geminiProvider('k1', 'gemini-3.5-flash-lite', fetchImpl).call({ purpose: 'p', system: 'sys', user: 'hi', maxOutputTokens: 99 }, signal);
+  const q = await groqProvider('k2', 'openai/gpt-oss-120b', fetchImpl).call({ purpose: 'p', system: 'sys', user: 'hi', maxOutputTokens: 99 }, signal);
   assert.equal(g.text, '{"a":1}');
   assert.equal(g.inputTokens, 11);
   assert.equal(seen[0]!.headers['x-goog-api-key'], 'k1');
   assert.equal(seen[0]!.body.generationConfig.responseMimeType, 'application/json');
+  assert.deepEqual(seen[0]!.body.generationConfig.thinkingConfig, { thinkingLevel: 'minimal' });
+  assert.ok(seen[0]!.body.generationConfig.maxOutputTokens > 99, 'headroom for thinking tokens');
   assert.equal(q.text, '{"a":2}');
   assert.equal(q.outputTokens, 5);
   assert.equal(seen[1]!.headers.authorization, 'Bearer k2');
   assert.deepEqual(seen[1]!.body.response_format, { type: 'json_object' });
+  assert.equal(seen[1]!.body.model, 'openai/gpt-oss-120b');
+  assert.equal(seen[1]!.body.reasoning_effort, 'low');
+  assert.ok(seen[1]!.body.max_completion_tokens > 99, 'headroom for reasoning tokens');
+  assert.equal(seen[1]!.body.max_tokens, undefined);
+});
+
+test('Gemini retries without a thinking level when the model rejects it; errors carry the provider reason', async () => {
+  const bodies: any[] = [];
+  const fetchImpl: FetchLike = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    bodies.push(body);
+    if (body.generationConfig.thinkingConfig) return { ok: false, status: 400, json: async () => ({ error: { message: 'thinking level not supported' } }) };
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'hidden', thought: true }, { text: '{"ok":1}' }] } }] }) };
+  };
+  const r = await geminiProvider('k', 'gemini-3.5-flash', fetchImpl).call({ purpose: 'p', system: 's', user: 'u', maxOutputTokens: 50 }, new AbortController().signal);
+  assert.equal(r.text, '{"ok":1}', 'thought parts are not part of the answer');
+  assert.equal(bodies.length, 2);
+  const old = await geminiProvider('k', 'gemini-2.5-flash', fetchImpl).call({ purpose: 'p', system: 's', user: 'u', maxOutputTokens: 50 }, new AbortController().signal);
+  assert.equal(old.text, '{"ok":1}');
+  assert.equal(bodies.length, 3, 'older models are never sent a thinking level');
+
+  const failing: FetchLike = async () => ({ ok: false, status: 404, json: async () => ({ error: { message: 'model not found' } }) });
+  await assert.rejects(groqProvider('k', 'gone-model', failing).call({ purpose: 'p', system: 's', user: 'u', maxOutputTokens: 5 }, new AbortController().signal), /groq 404: model not found/);
+});
+
+test('a timed-out provider is not retried; the next provider answers', async () => {
+  let slowCalls = 0;
+  const slow: Provider = { name: 'slow', model: 'm', call: (_r, signal) => { slowCalls++; return new Promise((_res, rej) => signal.addEventListener('abort', () => rej(new Error('aborted')))); } };
+  const fast: Provider = { name: 'fast', model: 'm', call: async () => ({ text: '{}', provider: 'fast', model: 'm', inputTokens: 1, outputTokens: 1 }) };
+  const r = await new AiGateway([slow, fast], { timeoutMs: 20, retryDelayMs: 1 }).generate({ purpose: 't', system: 's', user: 'u', maxOutputTokens: 5 });
+  assert.equal(r?.provider, 'fast');
+  assert.equal(slowCalls, 1);
 });
 
 test('practice help uses AI wording only when it passes; otherwise reviewed text', async () => {
