@@ -7,7 +7,7 @@ const T = {
     hello: 'Your learning', helloSub: 'Pick up where you left off. Everything here comes from what you did on Loop & Logic.',
     welcome: 'Welcome to Loop & Logic', welcomeSub: 'Start with a five-minute lesson. Select any line you don’t understand — you’ll get a short answer with its source.',
     tryMl: 'Machine-learning lesson', tryBiz: 'Accounting lesson', browse: 'Browse all courses',
-    continue: 'Continue reading', read: (p) => `${p}% read`, resume: 'Continue', last: 'last read',
+    continue: 'Continue reading', contWatch: 'Continue watching', watchedN: (a, b) => `${a} of ${b} videos watched`, play: 'Play next', read: (p) => `${p}% read`, resume: 'Continue', last: 'last read',
     sLessons: 'Lessons started', sQuiz: 'Quizzes correct', sHelp: 'Labs completed', labDone: 'Lab done', labBtn: 'Lab', more: (n) => `${n} more lessons in Courses`, sPractice: 'Practice tasks',
     lessons: 'Your lessons', notStarted: 'Not started', start: 'Start', open: 'Open',
     practice: 'Practice and sealed check', noPractice: 'You haven’t practised yet.', noPracticeSub: 'Judge an AI coworker’s pricing advice, then prove it on a fresh task with no help.', practiceCta: 'Start practice',
@@ -21,7 +21,7 @@ const T = {
     hello: 'তোমার শেখা', helloSub: 'যেখানে থেমেছিলে সেখান থেকে শুরু করো। এখানের সবকিছু লুপ অ্যান্ড লজিকে তোমার কাজ থেকে।',
     welcome: 'লুপ অ্যান্ড লজিকে স্বাগতম', welcomeSub: 'পাঁচ মিনিটের একটা পাঠ দিয়ে শুরু করো। যে লাইন বোঝোনি তা সিলেক্ট করো — উৎসসহ ছোট উত্তর পাবে।',
     tryMl: 'মেশিন লার্নিং পাঠ', tryBiz: 'অ্যাকাউন্টিং পাঠ', browse: 'সব কোর্স দেখো',
-    continue: 'পড়া চালিয়ে যাও', read: (p) => `${p}% পড়া হয়েছে`, resume: 'চালিয়ে যাও', last: 'শেষ পড়া',
+    continue: 'পড়া চালিয়ে যাও', contWatch: 'দেখা চালিয়ে যাও', watchedN: (a, b) => `${b}টির মধ্যে ${a}টি ভিডিও দেখা হয়েছে`, play: 'পরেরটি চালাও', read: (p) => `${p}% পড়া হয়েছে`, resume: 'চালিয়ে যাও', last: 'শেষ পড়া',
     sLessons: 'শুরু করা পাঠ', sQuiz: 'ঠিক কুইজ', sHelp: 'সম্পন্ন ল্যাব', labDone: 'ল্যাব সম্পন্ন', labBtn: 'ল্যাব', more: (n) => `কোর্সে আরও ${n}টি পাঠ আছে`, sPractice: 'অনুশীলনী প্রশ্ন',
     lessons: 'তোমার পাঠ', notStarted: 'শুরু হয়নি', start: 'শুরু করো', open: 'খোলো',
     practice: 'অনুশীলন ও বন্ধ যাচাই', noPractice: 'এখনো অনুশীলন করোনি।', noPracticeSub: 'এআই সহকর্মীর দামের পরামর্শ যাচাই করো, তারপর সাহায্য ছাড়া নতুন প্রশ্নে প্রমাণ দাও।', practiceCta: 'অনুশীলন শুরু করো',
@@ -61,6 +61,18 @@ function render(d) {
         el('p', { text: `${L.read(num(c.percent))}${c.lastAt ? ` · ${L.last} ${ago(c.lastAt)}` : ''}` }),
         el('div', { class: 'progress' }, el('i', { style: `width:${c.percent}%` }))),
       el('a', { class: 'btn primary', href: `/lesson.html?id=${encodeURIComponent(c.lessonId)}`, text: L.resume })));
+  }
+
+  if (d.continueWatching) {
+    const w = d.continueWatching;
+    const pct = Math.round((w.watched / w.total) * 100);
+    nodes.push(el('section', { class: 'continue', 'aria-label': L.contWatch },
+      el('div', {},
+        el('p', { class: 'kicker', style: 'color:#d9e8a6', text: `${L.contWatch} · ${w.courseTitle}` }),
+        el('h2', { text: w.title }),
+        el('p', { text: `${L.watchedN(num(w.watched), num(w.total))} · ${w.duration}` }),
+        el('div', { class: 'progress' }, el('i', { style: `width:${pct}%` }))),
+      el('a', { class: 'btn primary', href: `/watch.html?course=${encodeURIComponent(w.courseId)}&v=${encodeURIComponent(w.videoId)}`, text: `▶ ${L.play}` })));
   }
 
   if (!d.isNew) {

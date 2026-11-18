@@ -13,6 +13,8 @@ import { CONCEPT_NAMES } from '../content/library-more.ts';
 import { SUBJECT_LABELS } from '../content/subjects.ts';
 import { getLab } from '../content/labs.ts';
 import { labProgress } from './labs.ts';
+import { WatchService, courseVideoOrder } from './watch.ts';
+import { getVideo } from '../content/videos.ts';
 import { CHANNEL, COURSES, SUBJECTS, getCourse, courseForLesson, playlistUrl, type Course } from '../content/courses.ts';
 
 const DIAGNOSIS_NAMES: Record<string, Bi> = {
@@ -60,7 +62,8 @@ export class LearnerService {
       subjectName: SUBJECTS[c.subject][lang],
       title: c.title[lang],
       blurb: c.blurb[lang],
-      videos: c.playlists.reduce((n, p) => n + p.videos, 0),
+      videos: courseVideoOrder(c).length,
+      hours: Math.round(courseVideoOrder(c).reduce((n, id) => n + (getVideo(id)?.seconds ?? 0), 0) / 3600),
       lessons: c.lessons.length,
       labs: c.lessons.filter((id) => getLab(id)).length,
       practice: c.practice,
@@ -73,6 +76,7 @@ export class LearnerService {
     const courses = COURSES.map((c) => this.courseCard(c, lang));
     return {
       channel: CHANNEL,
+      totals: WatchService.totals(),
       subjects: Object.entries(SUBJECTS).map(([id, name]) => ({ id, name: name[lang], count: courses.filter((c) => c.subject === id).length })).filter((s) => s.count > 0),
       courses,
     };
@@ -166,7 +170,7 @@ export class LearnerService {
   }
 
   async dashboard(learnerId: string, lang: Lang) {
-    const [progress, practice, profile] = await Promise.all([this.lessonProgress(learnerId), this.practiceSummary(learnerId, lang), this.reading.profile(learnerId)]);
+    const [progress, practice, profile, watching] = await Promise.all([this.lessonProgress(learnerId), this.practiceSummary(learnerId, lang), this.reading.profile(learnerId), new WatchService(this.store).continueWatching(learnerId, lang)]);
     const lessons = LESSONS.map((l) => {
       const c = courseForLesson(l.id);
       return { id: l.id, title: l.title[lang], summary: l.summary[lang], subject: l.subject, courseId: c?.id ?? null, courseTitle: c?.title[lang] ?? null, ...progress.get(l.id)! };
@@ -179,8 +183,9 @@ export class LearnerService {
       lessonId: LESSONS.find((l) => l.blocks.some((b) => b.concepts.includes(id)))?.id ?? null,
     }));
     return {
-      isNew: started.length === 0 && practice.totals.sessions === 0,
+      isNew: started.length === 0 && practice.totals.sessions === 0 && !watching,
       continueReading: cont,
+      continueWatching: watching,
       lessons,
       practice,
       focus,

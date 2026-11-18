@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { LearningService } from '../app/service.ts';
 import { InstructorService } from '../app/instructor.ts';
 import { LearnerService } from '../app/learner.ts';
+import { WatchService } from '../app/watch.ts';
 import { LabService } from '../app/labs.ts';
 import { ReadingService } from '../reading/service.ts';
 import { MemoryStore, type Store } from '../store/store.ts';
@@ -39,6 +40,7 @@ const reading = new ReadingService(store, gateway, live, { dailyAiLimit: Number(
 const instructor = new InstructorService(store, { minGroup: Number(env.MIN_GROUP_SIZE ?? 3) });
 const learner = new LearnerService(store, reading, learning);
 const labs = new LabService(store);
+const watch = new WatchService(store);
 
 const server = createApp({
   learning,
@@ -46,6 +48,7 @@ const server = createApp({
   instructor,
   learner,
   labs,
+  watch,
   auth,
   publicDir: join(here, '../../public'),
   config: {

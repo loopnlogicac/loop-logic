@@ -8,6 +8,7 @@ import { AppError, type LearningService } from '../app/service.ts';
 import type { ReadingService } from '../reading/service.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
+import type { WatchService } from '../app/watch.ts';
 import type { LabService } from '../app/labs.ts';
 import { StaleStateError } from '../store/store.ts';
 import { AuthError, type Authenticator } from './auth.ts';
@@ -31,6 +32,7 @@ export interface AppDeps {
   instructor: InstructorService;
   learner: LearnerService;
   labs: LabService;
+  watch: WatchService;
   auth: Authenticator;
   publicDir: string;
   config: {
@@ -89,7 +91,7 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 export function buildRoutes(d: AppDeps): Route[] {
-  const { learning, reading, instructor, learner, labs } = d;
+  const { learning, reading, instructor, learner, labs, watch } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   return [
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
@@ -112,6 +114,10 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/profile', ({ query, learnerId }) => learner.profileView(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile/export', ({ learnerId }) => learner.exportData(learnerId)),
     route('POST', '/api/profile/reset', ({ body, learnerId }) => learner.reset(learnerId, body.scope)),
+
+    // video courses (YouTube playlists played in the site)
+    route('GET', '/api/courses/:id/videos', ({ params, query, learnerId }) => watch.view(params.id!, learnerId, lang(query.get('lang')), query.get('v'))),
+    route('POST', '/api/courses/:id/videos/watched', ({ params, body, learnerId }) => watch.mark(params.id!, learnerId, { videoId: body.videoId, watched: body.watched })),
 
     // labs
     route('GET', '/api/labs', ({ query }) => ({ labs: labs.list(lang(query.get('lang'))) }), 'none'),
@@ -168,7 +174,7 @@ export function createApp(d: AppDeps) {
   const routes = buildRoutes(d);
   const publicDir = resolve(d.publicDir);
   const connect = ["'self'", d.config.supabaseUrl && d.auth.mode === 'supabase' ? new URL(d.config.supabaseUrl).origin : ''].filter(Boolean).join(' ');
-  const csp = `default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ${connect}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
+  const csp = `default-src 'self'; img-src 'self' data: https://i.ytimg.com; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ${connect}; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
   async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
     const rel = pathname === '/' ? '/index.html' : pathname;

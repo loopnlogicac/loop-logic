@@ -3,6 +3,7 @@
 // the reader; the rest link to the videos until lessons are written.
 
 import type { Bi } from './pricing-pack.ts';
+import { getPlaylist } from './videos.ts';
 
 export const CHANNEL = {
   name: 'Loop & Logic',
@@ -43,6 +44,13 @@ const pl = (id: string, title: string, videos: number): Playlist => ({ id, title
 
 export const COURSES: Course[] = [
   {
+    id: 'c-programming', code: null, subject: 'cse',
+    title: { en: 'C Programming', bn: 'সি প্রোগ্রামিং' },
+    blurb: { en: 'From your first program to loops, arrays and 2D arrays, plus solved PPS midterm and final papers. For SPL, PPS and HSC ICT Chapter 5.', bn: 'প্রথম প্রোগ্রাম থেকে লুপ, অ্যারে আর টু-ডি অ্যারে, সঙ্গে PPS মিডটার্ম ও ফাইনালের সমাধান। SPL, PPS ও এইচএসসি আইসিটি পঞ্চম অধ্যায়ের জন্য।' },
+    playlists: [pl('PL66eeXZhO4z6o42wWTvMZZpwSAgxsQR5V', 'C Programming in Bangla | SPL, PPS & HSC ICT Chapter 5', 27), pl('PLdy3tDZmQLoc', 'Array in C', 2), pl('PLCrDUY95Hws4', 'C Programming Revision', 4)],
+    lessons: [], practice: false,
+  },
+  {
     id: 'machine-learning', code: null, subject: 'cse',
     title: { en: 'Machine Learning', bn: 'মেশিন লার্নিং' },
     blurb: { en: 'Concepts, maths and examples in Bangla, from data to model decisions.', bn: 'বাংলায় ধারণা, গণিত আর উদাহরণ — ডেটা থেকে মডেলের সিদ্ধান্ত পর্যন্ত।' },
@@ -73,8 +81,8 @@ export const COURSES: Course[] = [
   {
     id: 'data-structures', code: null, subject: 'cse',
     title: { en: 'Data Structures', bn: 'ডেটা স্ট্রাকচার' },
-    blurb: { en: 'Live classes from Spring 2026, plus arrays in C.', bn: 'স্প্রিং ২০২৬-এর লাইভ ক্লাস, আর সি-তে অ্যারে।' },
-    playlists: [pl('PL66eeXZhO4z4Alloq0LhOoXnov8_mvEz0', 'Data Structures Live Class Spring - 2026', 10), pl('PLdy3tDZmQLoc', 'Array in C', 2)],
+    blurb: { en: 'Live classes from Spring 2026: structures, linked lists, stacks, queues and expression evaluation.', bn: 'স্প্রিং ২০২৬-এর লাইভ ক্লাস: স্ট্রাকচার, লিংকড লিস্ট, স্ট্যাক, কিউ আর এক্সপ্রেশন ইভ্যালুয়েশন।' },
+    playlists: [pl('PL66eeXZhO4z4Alloq0LhOoXnov8_mvEz0', 'Data Structures Live Class Spring - 2026', 10)],
     lessons: ['stack-queue'], practice: false,
   },
   {
@@ -190,6 +198,14 @@ export const COURSES: Course[] = [
     lessons: [], practice: false,
   },
 ];
+
+// Video counts come from the playlist data, not from the hand-written numbers above.
+for (const course of COURSES) {
+  for (const p of course.playlists) {
+    const data = getPlaylist(p.id);
+    if (data) p.videos = data.videoIds.length;
+  }
+}
 
 export const getCourse = (id: string) => COURSES.find((c) => c.id === id);
 export const courseForLesson = (lessonId: string) => COURSES.find((c) => c.lessons.includes(lessonId));
