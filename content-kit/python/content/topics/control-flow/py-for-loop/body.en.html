@@ -1,0 +1,65 @@
+<h2 id="introduction">Take the next item rather than manage every step</h2>
+<p class="lead">When reading a short course code aloud, you take its characters in order. You do not need to keep asking which numeric position comes next. Python for loops let you process values in that direct way.</p>
+<p>An <dfn>iterable</dfn> is an object that can supply items one at a time. Strings supply characters, ranges supply integers and many containers supply their stored values. A for loop asks for each next item and runs its body with that item.</p>
+<p>Use <a href="topic:py-while-loop">while</a> when a condition controls ongoing work. Use for when an iterable already describes the values to visit. Counted repetition is a special case where range supplies the numbers for you.</p>
+<h2 id="syntax">Loop over values or a range</h2>
+<pre><code class="language-python">for item in sequence:
+    process_item
+
+for number in range(start, stop, step):
+    process_number</code></pre>
+<p>The body descriptions above stand for your statements. The loop binds the target name to each supplied value. You do not initialise that target before a nonempty for loop. When the iterable is empty, no assignment by the loop takes place.</p>
+<p>The range constructor accepts a stop alone, a start and stop, or all three values. Its default start is zero and default step is one. The stop is always excluded. For an inclusive positive upper endpoint n, a common choice is stop n plus one.</p>
+<table class="ref"><caption>Read range boundaries before writing a loop</caption><thead><tr><th scope="col">Range</th><th scope="col">Values supplied</th></tr></thead><tbody>
+<tr><td>range(4)</td><td>0, 1, 2, 3</td></tr>
+<tr><td>range(2, 6)</td><td>2, 3, 4, 5</td></tr>
+<tr><td>range(2, 8, 2)</td><td>2, 4, 6</td></tr>
+<tr><td>range(5, 0, -2)</td><td>5, 3, 1</td></tr>
+<tr><td>range(5, 0)</td><td>No values</td></tr>
+</tbody></table>
+<p>A negative step moves towards smaller values. The start must therefore be above the excluded stop for a nonempty descending range. A zero step raises ValueError. It is not a shortcut for an open-ended repetition.</p>
+<h2 id="how-it-works">The iterable controls the next value</h2>
+<p>For a string CSE, the loop first binds letter to C, then S, then E. After the final item, iteration finishes. The loop machinery handles the request for another item, so you do not manually update a character index.</p>
+<table class="ref"><caption>Visit a three-character code</caption><thead><tr><th scope="col">Request</th><th scope="col">Target value</th><th scope="col">Body action</th></tr></thead><tbody>
+<tr><td>First item</td><td>C</td><td>Print C</td></tr>
+<tr><td>Next item</td><td>S</td><td>Print S</td></tr>
+<tr><td>Next item</td><td>E</td><td>Print E</td></tr>
+<tr><td>No next item</td><td>No new assignment</td><td>Leave the loop</td></tr>
+</tbody></table>
+<p>Assigning a different value to the target inside the body does not change the iterable's next supplied item. Avoid treating it as a C-style counter update. If you need a different sequence of numbers, express that sequence in range or choose while for condition-driven updates.</p>
+<p>A range represents its arithmetic sequence compactly. It does not create a stored list of every integer merely to loop over them. Visiting a billion values still takes a billion iterations, though the range object itself stays small. Representation cost and execution time are different questions.</p>
+<h2 id="examples">Use the right source of values</h2>
+<h3>Read characters without indexes</h3>
+<p>The first example prints the three characters of a course prefix. Direct iteration keeps the body focused on what happens to each character. An index would add an extra value to track without helping this task.</p>
+<div data-example="ex-1"></div>
+<h3>Count with chosen boundaries</h3>
+<p>The range example first uses a step of two and then a step of negative one. The spaces come from print's end argument. A separate empty print ends each displayed row after its loop finishes.</p>
+<div data-example="ex-2"></div>
+<h3>Keep an index beside the item</h3>
+<p>The function enumerate supplies an index-value pair. The two target names unpack that pair on each iteration. start=1 changes the numbering for display, while the first supplied character remains L. Use this when position is part of the result.</p>
+<div data-example="ex-3"></div>
+<h3>Pair corresponding values</h3>
+<p>The function zip combines iterables into corresponding pairs. The example uses tuples, fixed groups of values; <a href="topic:py-tuples">Tuples</a> explains them fully. The course group has three items but the marks group has two, so normal zip supplies two pairs.</p>
+<div data-example="ex-4"></div>
+<h3>Report that a search finished</h3>
+<p>The search scans a word for Z and would break on a match. No character matches, so the loop reaches exhaustion and runs else. The else is aligned with for, rather than with the if inside its body.</p>
+<div data-example="ex-5"></div>
+<h2 id="pairing-and-search">Know when information is discarded</h2>
+<p>Normal zip stops at its shortest input. This can be useful, but it can also silently omit unmatched values. When equal lengths are required, Python 3.10 and later offers <code>zip(first, second, strict=True)</code>. A mismatch then raises ValueError during iteration instead of disappearing unnoticed.</p>
+<p>The loop else runs after the iterable is exhausted without break. It also runs for an empty iterable, since no early break occurred. In a search, this means you do not need a separate found flag solely to remember whether the search ended early.</p>
+<p>break exits the nearest loop. continue skips the remaining body and asks for the next item. Because a for loop obtains that next item automatically, continue does not skip a manual range update as it might skip a while counter update.</p>
+<p>When loops are nested, break affects only the innermost active loop. The outer loop can continue with its next item. Write out the two sequences on paper if you need to predict how many total body actions occur.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python for has no initializer-condition-update header. Use range for arithmetic counting, enumerate for positions and zip for paired streams. Direct value iteration often expresses the intention more clearly than translating an index loop line by line.</p></div>
+<h2 id="common-mistakes">Choose the values before the body</h2>
+<h3>Including the stop accidentally</h3>
+<p>range(1, 10) ends at nine. Write the desired first and last visited values, then choose the excluded stop. Check a zero-length and a one-item case when the boundary comes from input.</p>
+<h3>Counting down with a positive step</h3>
+<p>range(5, 0) is empty because its default step moves upwards. Use a negative step for a countdown. Python does not infer direction from the endpoints.</p>
+<h3>Using indexes where items are enough</h3>
+<p>A loop over range(len(text)) can work, but it makes you retrieve each character separately. Prefer direct iteration when the index has no purpose. Choose enumerate when both are needed.</p>
+<h3>Assuming a loop target always exists afterwards</h3>
+<p>A nonempty loop leaves its final target binding available, but an empty loop never creates that binding. Avoid depending on it for a result. Keep the result in a deliberately initialised accumulator instead.</p>
+<h2 id="version-notes">Use strict pairing when required</h2>
+<div class="callout version"><p>for, range, enumerate and normal zip work in all lesson versions. zip(strict=True) was added in Python 3.10. These examples run on Python 3.12 and intentionally show normal zip's shorter-input behavior.</p></div>
+<h2 id="summary">Let the sequence explain the repetition</h2>
+<p>Select an iterable that matches the work, then keep the body focused on each value. Understand excluded stops, pair truncation and completion without break. Apply these ideas in <a href="topic:py-loop-problems">Classic Loop Problems</a>.</p>

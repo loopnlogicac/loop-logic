@@ -1,0 +1,56 @@
+<h2 id="introduction">Decide what kind of answer you need</h2>
+<p class="lead">If 23 students travel in groups of seven, you need three full groups and two students left over. A decimal quotient alone does not answer that question. Python gives you several arithmetic operators because different problems need different kinds of result.</p>
+<p>Use whole-number arithmetic for counts and exact whole units. Use floating-point arithmetic for approximate measurements. Before choosing an operator, ask whether your answer should be a count, a remainder, a power or a fractional quantity.</p>
+<p>You learned int and float in <a href="topic:py-variables-types">Variables and Data Types</a>. Here you will see why their differences matter during calculation. A value that looks correct when printed with two decimals may still be stored approximately.</p>
+<h2 id="syntax">Arithmetic operators and priority</h2>
+<table class="ref"><caption>Common numeric operations</caption><thead><tr><th scope="col">Operator</th><th scope="col">Job</th><th scope="col">Example result</th></tr></thead><tbody>
+<tr><td>+</td><td>Add</td><td>7 + 3 gives 10</td></tr>
+<tr><td>-</td><td>Subtract or negate</td><td>7 - 3 gives 4</td></tr>
+<tr><td>*</td><td>Multiply</td><td>7 * 3 gives 21</td></tr>
+<tr><td>/</td><td>True division</td><td>6 / 3 gives 2.0</td></tr>
+<tr><td>//</td><td>Floor division</td><td>7 // 3 gives 2</td></tr>
+<tr><td>%</td><td>Remainder</td><td>7 % 3 gives 1</td></tr>
+<tr><td>**</td><td>Exponentiation</td><td>2 ** 3 gives 8</td></tr>
+</tbody></table>
+<p>Parentheses group an expression explicitly. Powers generally come before multiplication and division, which come before addition and subtraction. Operators at the multiplication level normally group from left to right. Powers group from right to left, so <code>2 ** 3 ** 2</code> means two raised to the ninth power.</p>
+<p>A leading minus has a subtle relationship with powers. The expression <code>-2 ** 2</code> means the negative of four. To square a negative base, write <code>(-2) ** 2</code>. Do not use ^ for powers: it is a different operator.</p>
+<p>The short form <code>total += amount</code> updates an accumulator by adding amount. For the ordinary numeric values here, it has the same effect as calculating total plus amount and assigning the result back. Similar update forms exist for multiplication and subtraction.</p>
+<h2 id="how-it-works">Quotients, remainders and signs</h2>
+<p><dfn>Floor division</dfn> rounds the mathematical quotient down towards negative infinity. For positive inputs this often looks like dropping the fractional part. For negative inputs, dropping that part towards zero would give the wrong Python result.</p>
+<p>The quotient of -7 by 3 lies between -3 and -2. Its floor is -3. Python chooses a remainder of 2 so that the original number can be reconstructed. For a nonzero divisor b, the relation is <code>a == (a // b) * b + (a % b)</code>.</p>
+<table class="ref"><caption>Check the quotient-remainder relation</caption><thead><tr><th scope="col">a</th><th scope="col">b</th><th scope="col">a // b</th><th scope="col">a % b</th></tr></thead><tbody>
+<tr><td>7</td><td>3</td><td>2</td><td>1</td></tr>
+<tr><td>-7</td><td>3</td><td>-3</td><td>2</td></tr>
+<tr><td>7</td><td>-3</td><td>-3</td><td>-2</td></tr>
+<tr><td>-7</td><td>-3</td><td>2</td><td>-1</td></tr>
+</tbody></table>
+<p>A nonzero remainder has the divisor's sign. Division, floor division and remainder all reject a zero divisor with ZeroDivisionError. Check that zero cannot reach the operation, or later handle the error deliberately. Do not replace a forbidden zero with one without a rule from the problem.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python / gives a float even for two int operands. Python // rounds down; C integer division truncates towards zero. For negative operands, translate the intended rule rather than replacing one operator by another mechanically.</p></div>
+<h2 id="examples">Calculate and inspect the result</h2>
+<h3>Division on both sides of zero</h3>
+<p>The first program shows a fractional result, then quotient-remainder pairs. Verify each pair by multiplying the quotient by three and adding the remainder. That check explains the negative result more reliably than memorising a sign rule alone.</p>
+<div data-example="ex-1"></div>
+<h3>Large powers and explicit grouping</h3>
+<p>The next program calculates a value far beyond a 64-bit signed integer. Python int expands as needed. This avoids fixed-width wraparound, but a huge result still needs memory and takes time to calculate.</p>
+<div data-example="ex-2"></div>
+<h3>Approximation versus display</h3>
+<p>The third example displays the raw sum of 0.1 and 0.2, then a shorter formatted form. Binary floating-point cannot represent many decimal fractions exactly. A format field such as .2f creates two-decimal text; it does not repair the stored approximation. Formatting is explained fully in <a href="topic:py-input-output">Input and Output</a>.</p>
+<div data-example="ex-3"></div>
+<h3>Import mathematical tools</h3>
+<p>A module is a named collection of tools. The statement import math makes the standard math module available, and a dot selects one tool. See <a href="topic:py-modules-packages">Modules and Packages</a> for the full import rules. isqrt returns an exact integer square root, sqrt returns a float, and ceil or floor chooses a directional whole-number boundary.</p>
+<div data-example="ex-4"></div>
+<h2 id="precision">Round with a stated purpose</h2>
+<p>round can request a rounded value, but its default halfway rule is nearest even. Exactly represented 2.5 rounds to 2, while 3.5 rounds to 4. Decimal inputs such as 2.675 may already be approximate before rounding, so their visible behavior can surprise you.</p>
+<p>For approximate comparisons, math.isclose accepts tolerances rather than requiring identical float values. Pick tolerances that make sense for the units and measurement scale. Near zero, an absolute tolerance may be necessary. A tolerance is part of the problem's meaning, not a universal magic constant.</p>
+<p>For simple exact money tasks, store whole taka or integer poisha instead of approximate fractions of taka. More advanced decimal calculations have dedicated tools. Choose those tools when needed instead of assuming that formatting changes how addition works.</p>
+<h2 id="common-mistakes">Keep the numeric model clear</h2>
+<h3>Expecting // to truncate towards zero</h3>
+<p>Test a negative example before using floor division for signed data. If your algorithm requires another rounding rule, express it explicitly. A positive-only test cannot reveal this difference.</p>
+<h3>Using float for an exact large square root</h3>
+<p>Converting a huge integer to float can lose low digits or exceed its range. math.isqrt avoids that conversion for a nonnegative integer. Its result r satisfies r squared at most n and the next square greater than n.</p>
+<h3>Assuming unlimited integers mean unlimited work</h3>
+<p>A power with millions of digits still costs resources. Keep meaningful input bounds. In modern Python, conversion between huge integers and decimal strings can also have a safety limit, even though arithmetic itself has no fixed-width overflow.</p>
+<h2 id="version-notes">Arithmetic across supported versions</h2>
+<div class="callout version"><p>These operators and math.isqrt are available on Python 3.10 and later. The examples run on Python 3.12. Floating-point representation depends on the implementation, so reason about approximation rather than assuming every decimal is exact.</p></div>
+<h2 id="summary">Match the operation to the question</h2>
+<p>You can now distinguish fractional division, floor groups, remainders and powers. Keep approximation separate from display and use integer tools for exact integer questions. Next, work with textual values in <a href="topic:py-strings-basics">Strings Basics</a>.</p>

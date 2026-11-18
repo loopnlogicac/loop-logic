@@ -1,0 +1,74 @@
+<h2 id="introduction">Turn a rule into a repeated step</h2>
+<p class="lead">A loop problem becomes easier when you can explain one small step. To add digits, remove one digit. To find a greatest common divisor, replace one pair of numbers. The loop repeats that step until a simple stopping condition holds.</p>
+<p>This lesson connects <a href="topic:py-while-loop">while loops</a> and <a href="topic:py-for-loop">for loops</a> with common university exercises. You will solve primality, factorial, Fibonacci, GCD, digit and pattern problems. Each needs a clear starting state, progress rule and edge case.</p>
+<p>Before coding, choose a tiny input and calculate its answer by hand. Then trace the names that change on every iteration. This approach catches mistakes that a large successful-looking answer can hide. A short Python solution still needs a reason to be correct.</p>
+<h2 id="syntax">Recognise the reusable loop shapes</h2>
+<p>An <dfn>accumulator</dfn> stores a result built over repeated steps. A sum starts at zero; a product starts at one. A search examines candidates until it finds a match or exhausts them. A pair-update algorithm keeps two related values and replaces both together.</p>
+<table class="ref"><caption>Choose a state and stopping rule</caption><thead><tr><th scope="col">Problem</th><th scope="col">Changing state</th><th scope="col">When to stop</th></tr></thead><tbody>
+<tr><td>Prime test</td><td>Candidate divisor</td><td>A factor is found or the square-root boundary is passed</td></tr>
+<tr><td>Factorial</td><td>Product and next factor</td><td>All factors through n were used</td></tr>
+<tr><td>Fibonacci</td><td>Two consecutive terms</td><td>The requested number of updates is complete</td></tr>
+<tr><td>GCD</td><td>A pair and its remainder</td><td>The second number is zero</td></tr>
+<tr><td>Digit processing</td><td>Remaining magnitude</td><td>No digits remain</td></tr>
+<tr><td>Triangle</td><td>Row and sometimes column</td><td>The requested height is reached</td></tr>
+</tbody></table>
+<p>A useful <dfn>invariant</dfn> is a fact that remains true through every iteration. For a running sum, it says the accumulator contains exactly the values processed so far. For a factorial, the product contains all earlier factors. State that fact in words before trying formal notation.</p>
+<h2 id="how-it-works">Explain why the algorithms stop correctly</h2>
+<h3>Primes need only small factor candidates</h3>
+<p>A <dfn>prime</dfn> is an integer greater than one with exactly two positive divisors. Zero and one are not prime. A <dfn>composite</dfn> is an integer greater than one with additional positive divisors.</p>
+<p>If a composite n equals a times b, both factors cannot exceed its square root. Their product would then exceed n. At least one factor is therefore at most the square root. Trying every integer from two through that inclusive boundary is enough.</p>
+<p>Use math.isqrt to obtain the exact floor square root. For 49, candidate seven must be included, since seven squared equals 49. A range stop of isqrt(n) would wrongly omit it. Add one because range excludes its stop.</p>
+<h3>Factorial is a growing product</h3>
+<p>The <dfn>factorial</dfn> n! multiplies the whole numbers from one through n. The empty product is one, so 0! is one. Initialising the accumulator to zero would make every later product zero. Start at one and multiply factors from two through n.</p>
+<p>After using factor k, the accumulator contains k factorial. This invariant starts correctly before factor two, and each multiplication extends it by one factor. When the range finishes, the product is n factorial. For zero and one, the empty range leaves one unchanged.</p>
+<h3>Fibonacci needs the old pair</h3>
+<p>The <dfn>Fibonacci sequence</dfn> begins with F0 = 0 and F1 = 1. Each later term is the sum of the previous two. Keep consecutive terms in two names. Simultaneous assignment computes the new pair from the old pair before either name is rebound.</p>
+<table class="ref"><caption>Consecutive Fibonacci state</caption><thead><tr><th scope="col">Updates completed</th><th scope="col">Left value</th><th scope="col">Right value</th></tr></thead><tbody>
+<tr><td>0</td><td>0</td><td>1</td></tr>
+<tr><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>2</td><td>1</td><td>2</td></tr>
+<tr><td>3</td><td>2</td><td>3</td></tr>
+<tr><td>4</td><td>3</td><td>5</td></tr>
+</tbody></table>
+<p>Distinguish “print n terms” from “print the term with index n”. The first prints inside the loop before each update. The second performs n updates and prints the left value afterwards. Both can start with the same pair, but they answer different questions.</p>
+<h3>Euclid preserves common divisors</h3>
+<p>The <dfn>greatest common divisor</dfn>, or GCD, is the largest positive integer dividing both nonzero magnitudes. Euclid replaces the pair a, b with b and a modulo b. Any common divisor of the original pair also divides the remainder, and the reverse reasoning holds.</p>
+<p>For nonnegative values with b positive, the remainder is smaller than b. The second value therefore decreases until it reaches zero. The first value is then the GCD. Use absolute values to normalise signs; define the both-zero answer as zero for these exercises.</p>
+<h2 id="examples">Six complete problem-solving patterns</h2>
+<h3>Reject a non-prime early</h3>
+<p>The first program handles numbers below two before trying divisors. Finding a factor breaks the search. Otherwise, loop else confirms that every required divisor was tried. The shown prime input 29 survives all candidates through five.</p>
+<div data-example="ex-1"></div>
+<h3>Multiply only the missing factors</h3>
+<p>The factorial example reads n within its stated bounds. Beginning with one avoids special code for n equal to zero. Python's growing integers let moderately large factorials retain every digit.</p>
+<div data-example="ex-2"></div>
+<h3>Generate terms in order</h3>
+<p>The Fibonacci example prints seven terms beginning with zero. The loop target underscore signals that the repetition count matters, while the particular range value is unused. The two stored sequence terms supply the real state.</p>
+<div data-example="ex-3"></div>
+<h3>Reduce a GCD pair</h3>
+<p>The Euclid example normalises both signs and repeatedly updates the pair. For 48 and 18, the states are (48,18), (18,12), (12,6) and (6,0). The last first value gives six.</p>
+<div data-example="ex-4"></div>
+<h3>Extract a final digit</h3>
+<p>For a nonnegative integer, remainder by ten gives its final decimal digit. Floor division by ten removes that digit. The digit-sum example turns -407 into magnitude 407, then processes seven, zero and four. Their sum is eleven.</p>
+<div data-example="ex-5"></div>
+<h3>Build a row with repetition</h3>
+<p>The triangle example prints one through height stars per row. String multiplication creates a row without an inner loop. The number-triangle exercise uses nested loops when each column needs a different digit.</p>
+<div data-example="ex-6"></div>
+<h2 id="edge-cases">Zero, signs and realistic cost</h2>
+<p>A digit-sum loop can leave its accumulator at zero for input zero and still be correct. A digit-count loop needs a separate zero rule because the written representation has one digit. Do not reuse the same initial count without checking the meaning.</p>
+<p>Trial division performs roughly a square-root number of candidate checks in the worst case. Factorial and Fibonacci use a linear number of loop iterations in their requested bound. Euclid needs logarithmically many remainder steps for positive inputs. Big-integer arithmetic makes the cost of each step depend on the number of digits too.</p>
+<p>A growing triangle prints one plus two through height characters. The total is height times height plus one divided by two. Its output alone is quadratic in height. Shorter syntax using string multiplication does not remove the work of producing those characters.</p>
+<p>Input bounds keep exercises practical. A simple prime test is useful for understanding divisibility, but not for arbitrary enormous numbers. For production calculations, the standard math module offers factorial and gcd. Here the explicit loops reveal the ideas those tools solve.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>The invariants and stopping proofs transfer from C. Python removes fixed-width integer overflow from these calculations, but it does not remove resource limits. Python also provides simultaneous assignment, direct ranges and string repetition that can replace manual temporary variables or character loops.</p></div>
+<h2 id="common-mistakes">Check the smallest meaningful input</h2>
+<h3>Calling one prime</h3>
+<p>A divisor search for one has no candidates, but that does not make one prime. Reject every value below two before applying the factor-search argument. The definition matters as much as the loop.</p>
+<h3>Overwriting a Fibonacci value too soon</h3>
+<p>Updating the left name first and then summing with it can use the new value twice. Simultaneous assignment or an explicit temporary preserves the old pair. Trace the first three updates to expose this error.</p>
+<h3>Removing digits from a negative number directly</h3>
+<p>Negative floor division can stick at -1 instead of approaching zero. Process abs(number) for ordinary digit tasks. This also prevents a minus sign from being mistaken for a digit.</p>
+<h3>Printing a newline inside the wrong loop</h3>
+<p>A nested pattern needs one newline per row, not one per column. Keep the row-ending print after the inner loop. Trace a height of two to check indentation and spacing before using a larger height.</p>
+<h2 id="version-notes">Integer tools on the lesson baseline</h2>
+<div class="callout version"><p>math.isqrt and the loop syntax here work on Python 3.10 and later. All demonstrated programs target Python 3.12. Decimal conversion limits for extremely long integers are outside these deliberately bounded exercises.</p></div>
+<h2 id="summary">Carry the proof with the code</h2>
+<p>Each classic problem now has a starting state, a progress rule and a reason its final value is correct. Keep tracing edge cases instead of relying only on familiar inputs. Next, collect several values together in <a href="topic:py-lists">Lists</a>.</p>

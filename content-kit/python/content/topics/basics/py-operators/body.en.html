@@ -1,0 +1,57 @@
+<h2 id="introduction">Ask a precise question about your values</h2>
+<p class="lead">Before accepting a mark, you may need to ask whether it lies between zero and one hundred. Before dividing, you need to know whether the denominator is nonzero. Operators let you express those questions clearly.</p>
+<p>An <dfn>operator</dfn> combines or inspects values. Arithmetic operators calculate quantities; comparison operators ask about relationships. Logical operators combine conditions. The goal is not to write the shortest expression, but to make the intended rule visible.</p>
+<p>You already know basic arithmetic from <a href="topic:py-numbers-math">Numbers and Arithmetic</a>. This lesson focuses on comparisons, logic, object identity and membership. These expressions become the conditions used by decisions and loops.</p>
+<h2 id="syntax">Comparisons and logic</h2>
+<table class="ref"><caption>Read each operator as a question</caption><thead><tr><th scope="col">Expression</th><th scope="col">Question</th></tr></thead><tbody>
+<tr><td>a == b</td><td>Are these values equal?</td></tr>
+<tr><td>a != b</td><td>Are these values unequal?</td></tr>
+<tr><td>a &lt; b or a &lt;= b</td><td>Is a smaller, perhaps allowing equality?</td></tr>
+<tr><td>a &gt; b or a &gt;= b</td><td>Is a larger, perhaps allowing equality?</td></tr>
+<tr><td>left and right</td><td>Do both conditions hold?</td></tr>
+<tr><td>left or right</td><td>Does at least one condition hold?</td></tr>
+<tr><td>not condition</td><td>Does the condition fail?</td></tr>
+</tbody></table>
+<p>Assignment uses one equals sign. Equality uses two. The expression <code>mark == 40</code> compares without changing mark. When ordinary numeric comparisons succeed, they produce True or False, the Boolean values you met with types.</p>
+<p>A <dfn>comparison chain</dfn> checks adjacent relationships. The expression <code>0 &lt;= mark &lt;= 100</code> means the mark is at least zero and at most one hundred. Python evaluates the middle expression only once. It does not compare a temporary Boolean to the final boundary as a C translation might.</p>
+<p>Read logical expressions using comparisons first, then not, then and, then or. Parentheses are useful when a business rule has several groups. For eligibility through either of two routes, make the route boundaries visible even when precedence would already give the desired result.</p>
+<h2 id="how-it-works">Stop evaluating when the answer is known</h2>
+<p><dfn>Short-circuit evaluation</dfn> means skipping an operand when an earlier value already determines the result. For and, a falsey left operand ends the expression. For or, a truthy left operand ends it. Python evaluates left to right.</p>
+<p>Truthy and falsey describe whether a value counts as yes or no in a condition. Numeric zero, empty text and None are falsey. Nonzero numbers and nonempty text are usually truthy. The text "0" is nonempty, so it is truthy despite looking like a zero.</p>
+<pre class="diagram">denominator != 0
+       |
+       +-- False --&gt; and finishes; division is skipped
+       |
+       +-- True ---&gt; evaluate numerator / denominator &gt; 2</pre>
+<p>This evaluation rule can protect an operation. Put the denominator check before the division. Reversing the operands would attempt the division before the guard could help. An expression with the same words in another order may therefore behave differently.</p>
+<p>and and or return operands, rather than always creating a Boolean result. The expression <code>"" or "Guest"</code> returns Guest. The expression <code>0 and 99</code> returns zero without evaluating any further need for 99. Use this behavior only when the returned value matches your purpose.</p>
+<p>A fallback using or treats every falsey value as absent. That can be wrong when zero is a valid result. If only None means missing, test specifically for None instead of replacing all falsey values.</p>
+<h2 id="examples">Express a rule and inspect its effect</h2>
+<h3>Include both marks boundaries</h3>
+<p>The interval example checks a valid mark and a value above the valid domain. Both endpoints are inclusive. Try predicting the result for exactly 0 and exactly 100 before changing the program.</p>
+<div data-example="ex-1"></div>
+<h3>Avoid a forbidden division</h3>
+<p>The guarded division never evaluates 12 divided by zero. The expression returns False from its left side. The same program also uses or to supply a display name when the first candidate is empty.</p>
+<div data-example="ex-2"></div>
+<h3>Equal contents, separate objects</h3>
+<p>The identity example uses lists, groups of values written in square brackets. You only need to know that each list expression creates an object here; <a href="topic:py-lists">Lists</a> develops their operations. The separate lists compare equal but have different identities.</p>
+<div data-example="ex-3"></div>
+<h3>Check whether text contains a part</h3>
+<p>The membership example asks whether one string occurs within another. Matching is case-sensitive. not in reverses that test. An empty string is considered a substring of every string, which is useful to remember when validating a search term.</p>
+<div data-example="ex-4"></div>
+<h2 id="comparison">Equality, identity and membership have different jobs</h2>
+<p><dfn>Equality</dfn> asks whether values compare the same. <dfn>Identity</dfn> asks whether two references point to the very same object. Use == for ordinary numeric or text value comparisons. Use is when the object itself matters, most commonly in <code>value is None</code>.</p>
+<p>Python may reuse some immutable objects internally. An experiment comparing two small numbers with is can therefore appear to work, then fail for another construction. Do not depend on such reuse. The intended question should choose the operator before you inspect an accidental result.</p>
+<p><dfn>Membership</dfn> asks whether a container includes an item. For strings, in searches for a substring. Other containers define membership according to their own contents. Do not use membership when you intend equality of the entire string.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python writes and, or and not instead of the C logical symbols. Comparison chains are meaningful Python syntax. The operator is tests object identity, so it is not a replacement for C's numeric equality operator.</p></div>
+<h2 id="common-mistakes">Check the expression's actual meaning</h2>
+<h3>Leaving the comparison out of an alternative</h3>
+<p>The expression <code>course == "CSE" or "EEE"</code> does not compare course with both words. The second operand is nonempty text, so the expression is truthy regardless. Write both comparisons, or use membership in a group when you learn containers.</p>
+<h3>Using bitwise symbols for ordinary conditions</h3>
+<p>The symbols &amp; and | have other meanings for numbers and some specialised objects. Use and and or for the ordinary Boolean conditions taught here. Their short-circuit behavior is part of why they are suitable.</p>
+<h3>Comparing unrelated types by order</h3>
+<p>Python will not generally order a string and an integer for you. Convert only when the values have compatible meanings. An error from comparing mark text with a numeric boundary often reveals a missing input conversion.</p>
+<h2 id="version-notes">Consistent expression rules</h2>
+<div class="callout version"><p>Chaining, short-circuiting, is and in follow these rules in Python 3.10 and later. Exact object reuse is an implementation detail and must not become a program requirement.</p></div>
+<h2 id="summary">Write the question you intend</h2>
+<p>Choose equality for values, identity for objects and membership for inclusion. Arrange logic so it protects risky work and preserves valid falsey results. Next, use these conditions to choose actions in <a href="topic:py-if-statements">if, elif and else</a>.</p>
