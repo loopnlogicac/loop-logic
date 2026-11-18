@@ -1,0 +1,73 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Think of a C workspace as a desk with three tools. An editor lets you write, a compiler builds your program, and a terminal lets you run it. Together they form your <dfn>C environment</dfn>. Start with a small program so you can check each tool before tackling a lab problem.</p>
+<p>Imagine submitting a lab task from a shared computer. Your code should build from a saved file with a clear command, even if the next machine uses a different editor. A repeatable terminal build gives you that starting point.</p>
+<p>This lesson uses C17 and warning flags. GCC is used to verify the programs below. On macOS the command named gcc often runs Apple Clang instead. Read the version output rather than assuming a command name identifies the implementation.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>The <code>-o</code> option names the generated executable, while <code>-std=c17</code> selects the language dialect. The source filename and output filename serve different jobs. Keep the source as <code>lab.c</code>. Do not overwrite it with the executable.</p>
+<pre><code class="language-bash">gcc --version
+gcc -std=c17 -Wall -Wextra -Wpedantic -Werror -O2 lab.c -o lab
+./lab</code></pre>
+<table class="ref"><caption>Build command parts</caption><thead><tr><th scope="col">Part</th><th scope="col">Purpose</th></tr></thead><tbody><tr><td>gcc</td><td>Invoke the compiler driver</td></tr><tr><td>-std=c17</td><td>Select this course baseline</td></tr><tr><td>-Wall -Wextra -Wpedantic</td><td>Request useful diagnostics</td></tr><tr><td>-Werror</td><td>Make enabled warnings fail the build</td></tr><tr><td>-O2</td><td>Enable a standard optimization level</td></tr><tr><td>-o lab</td><td>Name the output file</td></tr></tbody></table>
+<p>A <dfn>terminal</dfn> accepts commands in a current working directory. Use <code>pwd</code> on a Unix-like shell or <code>Get-Location</code> in PowerShell to see that directory. List its files and confirm that the source you edited is actually there.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>On Windows, install a current MinGW-w64 GCC toolchain, for example through an MSYS2 UCRT64 environment. Use its package manager to install the matching UCRT64 GCC package, then use that environment's terminal or add its compiler bin directory to PATH. PATH is the list of directories the shell searches for executable commands.</p>
+<pre><code class="language-bash">pacman -S --needed mingw-w64-ucrt-x86_64-gcc
+gcc --version</code></pre>
+<p>The package command belongs in the MSYS2 UCRT64 terminal, not an ordinary Ubuntu shell. In PowerShell build with the same GCC options but name the output <code>lab.exe</code>, then run <code>.\lab.exe</code>. Avoid mixing several unrelated MinGW installations, because your editor and terminal could select different compilers.</p>
+<p>On Ubuntu, install the distribution build tools from a terminal. On macOS, request the Xcode Command Line Tools and finish the operating-system installer before testing the compiler. These installation commands configure your computer. They are not C source and do not belong in a <code>.c</code> file.</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install build-essential
+xcode-select --install</code></pre>
+<p>Use the two apt commands on Ubuntu and the xcode-select command on macOS. After installation, run the compiler version command and compile the first example. A successful run should show the exact message recorded beside its source.</p>
+
+<p>A <dfn>macro</dfn> substitutes source tokens before ordinary compilation. The language-mode example uses a predefined macro to inspect the selected standard. See <a href="topic:c-predefined-macros">Predefined Macros</a>.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Confirm a successful build</h3>
+<p>A visible message proves that this executable ran. A successful build alone produces no program output.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Confirm you rebuilt the edited source</h3>
+<p>After changing the source and rebuilding, Build 2 distinguishes the new executable from an older one.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Check the selected language mode</h3>
+<p>In C17 mode the macro value is 201710L, so the output records the language mode rather than a compiler version.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="editors">Choose and configure an editor</h3>
+<p>Code::Blocks is an integrated development environment: an editor with project and build controls. Select a GCC toolchain in its compiler settings and check the detected executable path. Some Windows distributions bundle a compiler and others do not, so inspect the installed tools instead of relying on the editor name.</p>
+<p>For VS Code, install C/C++ language support and separately install a compiler. Set the compiler path used for language analysis, and configure a build task that invokes the same command you tested in the terminal. Language highlighting and completion do not prove that a compiler is installed or that a build task is correct.</p>
+<p>Build the unchanged smoke-test program first. Then change Build works to Build 2, save, rebuild and run again. This small controlled edit proves that your build task uses the expected file and that you are launching the new executable.</p>
+<h3 id="online-tools">Online compilers as a temporary workspace</h3>
+<p>Programiz and OnlineGDB can help you try a single-file program without installing tools. Select C, inspect available standard settings, paste the complete source and put input in the provided stdin field. A browser text box for input is different from typing into a live terminal.</p>
+<p>Online services may restrict running time, files, compiler options or interactive input. Their compiler versions may differ from your laptop, and a saved browser session is not a reliable backup of coursework. Download or copy your source into your own files after experimenting.</p>
+<p>The language-mode example prints the standard-version macro, a predefined number supplied by the compiler. A <dfn>macro</dfn> substitutes text before ordinary compilation. The full mechanism is covered in <a href="topic:c-preprocessor-intro">The C Preprocessor</a>. In C17 mode this number is 201710L, regardless of whether GCC itself is version 13 or 14.</p>
+
+
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>For a useful setup check, choose an input you will recognize immediately, such as roll 42. <a href="topic:c-scanf">scanf</a> reads that roll; <code>&amp;roll</code> tells it where the variable is. An <a href="topic:c-if-statement">if block</a> handles a failed read. Try the terminal build first, then the editor button.</p>
+<p>Change the printed label and repeat both runs. If only one run shows your change, the two tools are using different source or executable paths. Copy the build command from the editor log and compare those paths. Reinstalling the editor is rarely the first useful step.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="wrong-folder">Building from the wrong folder</h3><p>A cannot-open-source message often means the terminal cannot find the file, rather than a C syntax failure. Check the current directory, filename suffix and spelling. An editor may silently save a file as lab.c.txt if extensions are hidden.</p>
+<h3 id="stale-executable">Running an old executable</h3><p>A failed build may leave the previous executable untouched. Read the build status before running, and verify a deliberate message change. Do not repair this by editing an printed result. Fix and rebuild the source.</p>
+
+<h3 id="diagnostic-4">Mistake: a missing closing quote</h3>
+<p>The source does not contain a closed string literal. Fix the quote before trying to run.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Record the compiler version used for your lab work.</li><li>Keep one tested terminal build command alongside your editor workflow.</li><li>Use a separate folder for each exercise and save before building.</li><li>Investigate warnings rather than hiding them with weaker flags.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>Selecting -std=c17 makes these examples follow the same baseline across current GCC installations. C23-only examples use -std=c2x in GCC. Toolchain support varies, so a newer language edition may need a newer compiler even when the editor works normally.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>A working environment turns a saved source file into a fresh executable through an explicit build command. Confirm the version, source path and output path before adding editor shortcuts. Next, understand each source line in <a href="topic:c-first-program">Your First C Program</a>.</p>

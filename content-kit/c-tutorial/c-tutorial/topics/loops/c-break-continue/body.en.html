@@ -1,0 +1,51 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">During a marks search, finding the required mark can end the search entirely. A bad but skippable mark may instead require ignoring only that item. C uses <dfn>break</dfn> for leaving a loop or switch, and <dfn>continue</dfn> for skipping the rest of one loop iteration.</p>
+<p>Think of reading a stack of forms. Break closes the stack and stops. Continue puts one form aside and starts the next turn. The distinction affects not only output but also which updates and conditions run next.</p>
+<p>Trace the destination of each transfer rather than treating both as a general skip command.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">for (int i = 1; i &lt;= 10; i++) {
+    if (i == 7) {
+        break;
+    }
+    if (i % 2 == 0) {
+        continue;
+    }
+    printf("%d ", i);
+}</code></pre><p>Both statements end with semicolons. Break requires an enclosing loop or switch. Continue requires an enclosing loop; an ordinary if statement alone does not provide a valid target for either.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>Break transfers control to the statement following the nearest enclosing loop or switch. In the example, reaching seven ends the for loop. The loop update does not run for that breaking iteration. Any remaining statements in the body are also skipped.</p>
+<p>Continue transfers to the continuation point of the nearest loop. In a for loop, that means the update expression, then the condition. In a while loop, it means the condition directly. In a do-while loop, it means the bottom condition.</p>
+<p>A while update placed at the bottom of the body can therefore be skipped by continue, causing accidental infinite repetition.</p>
+<p>For the odd-number example, one prints, two is skipped, three prints, four is skipped, and five prints. Six is skipped, then seven triggers break. The visible result is one, three and five. Each even value still reaches the for update, so the counter continues moving forward.</p>
+<p>Inside nested loops, an inner break leaves only the inner loop. To stop the whole search, set a found flag and make the outer condition inspect it. You can also jump to a clearly named label after both loops when that makes the exit path simpler. A goto target must remain inside the same function, as explained in <a href="topic:c-goto">goto</a>.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Skip evens and stop at seven</h3>
+<p>Even values skip the print but still reach the for update. Seven takes break before any print or update for that iteration. The output contains one, three and five. The two transfers have distinct roles in the trace.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Leave nested loops with a flag</h3>
+<p>The search reaches row two, column two first. Break exits the inner loop and found prevents another outer body. Without the flag test, the outer progression would continue to row three even though one result had already been located.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">A named exit after both loops</h3>
+<p>The first matching pair is row one and column three. The jump reaches a label after both loops, then prints Done. This is a deliberate whole-search exit; ordinary break at the same location would end only the inner loop.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>A switch nested in a loop introduces a different nearest-break target. A break inside one case exits that switch, not the surrounding loop. A continue in that switch still belongs to the nearest enclosing loop because switch is not a loop. Use these rules carefully when building menus that repeat.</p>
+<p>Prefer an ordinary loop condition when it describes the stopping rule clearly. An early break is useful when exit depends on information discovered halfway through an iteration. Continue can reduce deep indentation for rejected items, but only when the progress step cannot be skipped accidentally.</p>
+<p>A found flag should be initialized before the search. Give it one meaning, such as a matching pair has been located. Use that meaning consistently in the outer condition and final report. Reusing the flag as a counter makes the exit reason harder to understand.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Expecting break to leave every enclosing loop</h3>
+<p>Mark the nearest loop or switch around the statement. That construct alone ends. Add a separate outer test or a deliberate named exit when the whole nested search must stop.</p>
+<h3 id="mistake-2">Skipping a while counter update with continue</h3>
+<p>Move essential progress before the possible continue, or choose a for header update. Test a value that takes the skipped path repeatedly. A body that only prints correct values can still fail to terminate.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>What does break leave?</td><td>The nearest enclosing loop or switch. Its target is the nearest breakable construct.</td></tr><tr><td>Where does continue go in a for loop?</td><td>To the update expression. The next condition follows the update.</td></tr><tr><td>Where does continue go in a while loop?</td><td>To the condition. Body statements after continue do not run.</td></tr><tr><td>What does an inner-loop break do to an outer loop?</td><td>The outer loop may still continue. A separate outer exit rule is needed.</td></tr><tr><td>Which state can stop both loops after a search match?</td><td>A found flag tested by the outer condition. The flag carries the exit reason across levels.</td></tr><tr><td>A break in a switch inside a loop normally leaves which construct?</td><td>The switch. Switch is the nearest breakable construct.</td></tr><tr><td>What must every repeating continue path preserve?</td><td>Progress toward the next terminating test. Skipping the only update can make the loop infinite.</td></tr></tbody></table>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>Break and continue are available throughout C89 to C23. The destination of continue depends on the loop form, not the language edition. These C17 examples keep counter updates in predictable locations.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Break leaves the nearest loop or switch. Continue skips the rest of the current iteration. Continue with <a href="topic:c-pattern-programs">Pattern Programs</a>.</p>

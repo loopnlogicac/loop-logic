@@ -1,0 +1,76 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Suppose marks total eleven across two students. You want 5.5, but integer division gives five before the result reaches a double variable. A <dfn>type conversion</dfn> changes a value to another type. Some happen automatically.</p>
+<p>A cast requests one. You need the right conversion before the operation that would lose information.</p>
+<p>Suppose two students have marks five and six and you want their average. An integer quotient loses the fraction before a later assignment to double. To keep 5.5, make the division floating-point before calculating the quotient.</p>
+<p>This lesson follows integer promotions, the usual arithmetic conversions and explicit casts. The goal is to predict each expression's type and value, then check whether the destination can represent the result. A cast is a request, not a general safety check.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>An <dfn>implicit conversion</dfn> follows from context, such as assigning an int to a double or combining operands of different arithmetic types. An <dfn>explicit cast</dfn> writes a type name in parentheses before an expression. The original object is not automatically changed by casting its value.</p>
+<pre><code class="language-c">double average = (double)total / count;
+double too_late = (double)(total / count);
+int whole = (int)reading;</code></pre>
+<table class="ref"><caption>Where conversions occur</caption><thead><tr><th scope="col">Context</th><th scope="col">Example</th><th scope="col">Main question</th></tr></thead><tbody><tr><td>Initialization or assignment</td><td>double x = 5;</td><td>Can the destination represent the source value?</td></tr><tr><td>Arithmetic operands</td><td>5.0 / 2</td><td>Which common type is chosen before division?</td></tr><tr><td>Small integer arithmetic</td><td>unsigned char a + b</td><td>What do integer promotions select?</td></tr><tr><td>Cast expression</td><td>(int)3.9</td><td>What value is produced and what information is lost?</td></tr></tbody></table>
+<p>A <dfn>rank</dfn> is part of the ordering used by integer conversion rules. It generally follows the standard integer families from smaller ranks to larger ones, but rank and byte size are not identical concepts. Equal-size types can still have different ranks.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>With two int operands, division computes an integer quotient. In C17 the quotient truncates toward zero, so 5 / 2 is 2 and -5 / 2 is -2. A double destination receives that integer result after the operation. It cannot recover the discarded fraction.</p>
+<p>With 5.0 / 2, the first operand has type double, so the second converts to double before floating division. The result is 2.5. The first example puts these forms together to make the difference observable.</p>
+<table class="ref"><caption>Place the conversion before the information loss</caption><thead><tr><th scope="col">Expression</th><th scope="col">Operation</th><th scope="col">Result</th></tr></thead><tbody><tr><td>5 / 2</td><td>Integer division</td><td>2</td></tr><tr><td>(double)5 / 2</td><td>Floating division</td><td>2.5</td></tr><tr><td>(double)(5 / 2)</td><td>Integer division, then conversion</td><td>2.0</td></tr></tbody></table>
+<p>Integer promotions first lift types such as char, short and _Bool into int when int can represent all their values, otherwise into unsigned int where required. The unsigned-char example uses an eight-bit-byte implementation with a wide enough int, so 200 and 50 are added as ints to produce 250.</p>
+<p>Default argument promotions also convert float to double in calls such as printf. This does not change scanf destination pointers: float * remains a pointer to float. A type rule for an argument value is not a rule that rewrites every related pointer type.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Integer and floating division</h3>
+<p>Two int operands give integer quotient 2. The double operand converts the other operand and gives 2.5.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Cast before division</h3>
+<p>Casting before division gives 2.5. Casting the already-truncated integer quotient only produces 2.0.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Promotion of small integers</h3>
+<p>On this implementation int represents all unsigned char values, so both operands promote to int before addition.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Truncate toward zero</h3>
+<p>Both finite values are within int range. Floating-to-integer conversion discards the fraction toward zero.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="usual-arithmetic">The usual arithmetic conversions</h3>
+<p>The <dfn>usual arithmetic conversions</dfn> select a common type for many binary arithmetic operations and comparisons. For ordinary real floating operands, a higher floating type determines the common type: long double takes priority over double, and double over float. Integral operands are converted as needed when combined with that floating type.</p>
+<p>For two integer operands, apply integer promotions first. If both then have the same signedness, convert to the type with greater rank. If signedness differs, the decision depends on both rank and whether the signed type can represent every value of the unsigned type.</p>
+<ol><li>If the unsigned type has rank at least the signed type's rank, convert the signed operand to that unsigned type.</li><li>Otherwise, if the signed type can represent all values of the unsigned type, convert to the signed type.</li><li>Otherwise, convert both to the unsigned type corresponding to the signed type.</li></ol>
+<p>On the usual equal-width int and unsigned int pair, comparing -1 with 1U converts -1 to unsigned int. That value becomes UINT_MAX, so an expectation based on ordinary signed ordering fails. Later <a href="topic:c-relational-operators">Relational Operators</a> develops comparisons. Here the key is that conversion happens before the comparison.</p>
+<p>Do not reduce the rule to unsigned always wins. A wider signed type may represent the entire range of a lower-ranked unsigned type and therefore become the common type. Consult limits and ranks rather than relying on one memorized result from one data model.</p>
+<h3 id="truncation-range">Loss, truncation and representability</h3>
+<p>Converting a finite floating value to an integer discards its fraction toward zero when the resulting integer is representable. The final normal example converts 3.9 to 3 and -3.9 to -3. This is not rounding to the nearest integer and is not the same as taking the mathematical floor of a negative number.</p>
+<p>If the truncated value is outside the destination integer's range, ordinary floating-to-integer conversion has undefined behavior. A cast does not make it saturate or wrap. Check the domain before conversion in a program that accepts uncontrolled measurements.</p>
+<p>Converting an integer to an unsigned type reduces its value modulo one greater than that type's maximum. In C17, conversion to a signed integer type that cannot represent the value instead has an implementation-defined result or may raise an implementation-defined signal. Keep this separate from signed arithmetic overflow, which is undefined behavior.</p>
+<p>Converting a large integer to floating-point may lose exact low-order information even when the magnitude is within range. Converting double to float can also round and reduce precision. State whether the task needs an exact count or an approximate measurement before choosing such conversions.</p>
+<h3 id="safe-formula">Design the calculation type first</h3>
+<p>For an average, cast an operand or use an appropriate floating literal before division. For a large integer product, promote an operand to a sufficiently wide integer type before multiplication. Assigning the final expression to a wider destination is insufficient if the intermediate operation already overflowed.</p>
+<p>A denominator must also be nonzero. This lesson's quotient practice restricts it to one through ten, making that safety condition explicit in the task. Input bounds are part of the reasoning, not decorative notes after the code.</p>
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>For the percentage exercise, compare two routes on paper. One route divides the integer mark by the maximum before multiplying by one hundred. The other uses a floating operand before the division. Try a mark smaller than the maximum: the first route can discard the whole fraction.</p>
+<p><a href="topic:c-scanf">scanf</a> must first read both numbers with matching destinations. An <a href="topic:c-if-statement">if</a> can reject a zero maximum before division. Neither a cast nor a successful input read proves that a divisor is nonzero. Record the type at each arithmetic step, then decide where a conversion belongs.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="cast-after-division">Casting only the final quotient</h3><p>(double)(total / count) converts an integer quotient that has already lost its fraction. Move the cast to an operand. Predict the types at each operator before looking at the final assignment.</p>
+<h3 id="cast-as-proof">Using a cast to silence concern</h3><p>An explicit conversion can lose range or precision even when the compiler accepts it. Explain why the value fits the new type and why discarded information is acceptable. Do not use arbitrary pointer casts to disguise unrelated type errors.</p>
+
+<h3 id="diagnostic-5">Mistake: incompatible pointer initialization</h3>
+<p>A floating value cannot initialize an int pointer. A cast is not a general repair for unrelated types.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Trace operand types before tracing values.</li><li>Apply conversions before the operation that needs the wider range or precision.</li><li>Keep signed and unsigned interactions deliberate.</li><li>Check representability before floating-to-integer casts.</li><li>Choose exact integer arithmetic for exact count tasks where feasible.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The examples follow C17. C99 fixed signed integer division to truncate toward zero. Earlier editions allowed more implementation variation for negative operands. C23 changes some conversion details and adds types, so the signed out-of-range conversion description here is explicitly the C17 rule.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Conversions occur at defined points and may change range, precision or signedness. Cast before division when a fractional result is needed, and never treat a cast as proof of safety. Next, organize the operations themselves in <a href="topic:c-operators-overview">Operators Overview</a>.</p>

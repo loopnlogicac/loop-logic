@@ -1,0 +1,54 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A menu must appear before a student can choose an option. An input question must be asked before its answer can be checked. The <dfn>do-while loop</dfn> suits this act-then-check pattern. Its body comes first and its repeat condition comes at the end.</p>
+<p>Picture taking one practice attempt, then deciding whether to try again. Reaching the loop normally means taking that first attempt. A while loop is different because its initial test may skip every attempt. Choose the post-test shape only when the first action is required even before you know the repeat decision.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">do {
+    /* first action and later repetitions */
+} while (condition);</code></pre><pre class="diagram">body --&gt; condition? --false--&gt; after loop
+ ^            |
+ |           true
+ +------------+</pre><p>The semicolon after the condition is required. It is different from a stray semicolon after a while header, which can create an empty body. Keep the closing brace and repeat condition visually connected.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>Begin execution at the body, perform its statements, then evaluate the condition. Nonzero returns to the top of the body. Zero leaves the loop. A counter starting at zero can therefore run once even if its intended upper limit is also zero.</p>
+<p>That is a feature for menus and a mistake for workloads that should be empty.</p>
+<p>A menu iteration displays the options, reads one choice, processes it, and then asks whether the choice was the exit value. If zero means exit, zero still required the menu display and read that came before the test. You may want to suppress ordinary action messages for that exit choice inside the body.</p>
+<p>For input validation, read a representable integer and repeat while it is outside the permitted range. A valid boundary ends the loop. A numeric conversion failure is different: the invalid token may remain unread. These examples stop on conversion failure instead of repeatedly trying the same token.</p>
+<p>Later line-input techniques can offer more complete recovery.</p>
+<p>Digit counting illustrates another post-test use. Zero has one decimal digit. A do-while can increment the count and divide the working number once before testing whether more digits remain. Positive numbers then repeat until division removes every digit.</p>
+<p>This avoids a separate zero branch for the counting task.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">A first action despite zero limit</h3>
+<p>Attempt prints once before count is compared with zero. The increment makes count one and the repeat condition fails. This is useful for a required first attempt, but would be wrong for a count-of-items task that expects zero work.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A menu including its exit choice</h3>
+<p>The input first requests balance, then exits. Menu appears twice because both choices are read after a display. Balance appears only for choice one. The zero choice ends repetition at the bottom condition without performing a normal menu action.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Repeat until a mark is in range</h3>
+<p>The numeric mark one hundred one is outside the allowed interval, so Retry prints and another read occurs. The next mark is one hundred, an inclusive boundary, which is accepted. Conversion success and academic range validation are handled separately.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Count the digits of zero</h3>
+<p>The first body counts zero as one digit. Dividing zero leaves zero, so repetition ends immediately. Positive values would keep losing their last digit until the same stop condition is reached.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>A do-while does not ignore control transfers. A return inside the body can leave the function immediately. A break can leave the loop before its bottom test, and a continue transfers to that bottom condition. Those details are covered in <a href="topic:c-break-continue">loop control</a>.</p>
+<p>The ordinary at-least-once claim concerns reaching the body, not a guarantee that every statement in it finishes.</p>
+<p>The condition variable must be visible after the body's closing brace. A choice declared only inside the body block is out of scope in the trailing condition. Declare the variable in the enclosing block. Give it a value through a successful read or assignment before the condition uses it.</p>
+<p>Bound a retry sequence when the task needs guaranteed termination. An interactive menu may legitimately wait for a user to choose exit; a finite input example needs either that choice or an explicit end-of-input response. A loop is not complete merely because its happy-path input eventually works.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Forgetting the trailing semicolon</h3>
+<p>The syntax ends with while(condition);. A missing semicolon is a build error. Inspect the closing part of the construct rather than adding punctuation inside the body.</p>
+<h3 id="mistake-2">Using a post-test loop for an empty workload</h3>
+<p>If zero requested items must mean no work, use a pre-test for or while. A do-while would still process one item. Choose the loop from the task rather than making every repetition look alike.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>Where is the do-while repeat condition?</td><td>After the body. This makes it a post-test loop.</td></tr><tr><td>What punctuation ends the whole do-while construct?</td><td>A semicolon. The trailing semicolon is required by its syntax.</td></tr><tr><td>Which workload can be wrong for do-while?</td><td>A zero-item job that must do nothing. The body is entered before its repeat test.</td></tr><tr><td>What happens for a first valid validation input?</td><td>One body and then exit. The first read succeeds and the repeat test is false.</td></tr><tr><td>Why not blindly retry a failed %d read?</td><td>The bad token may remain unread. The same failure could repeat forever.</td></tr><tr><td>Where must choice be declared for a bottom test?</td><td>In a scope visible at that test. A body-local name is no longer in scope after its closing brace.</td></tr><tr><td>Where does continue go in a do-while?</td><td>To the bottom condition. The condition decides whether another iteration begins.</td></tr></tbody></table>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>Do-while and its trailing semicolon are part of C89 and remain in C17. The scope rule for a body-local declaration still applies: the trailing condition is outside that body block.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Do-while reaches the body before the repeat test. The trailing semicolon is required. Continue with <a href="topic:c-for-loop">for Loop</a>.</p>

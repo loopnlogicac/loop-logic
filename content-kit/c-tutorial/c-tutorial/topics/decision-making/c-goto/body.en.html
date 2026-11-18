@@ -1,0 +1,51 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Most decisions and repetitions are clearest with if, switch and loops. Sometimes a C function acquires several resources and must release them on several failure paths. A <dfn>goto statement</dfn> can transfer control to one shared cleanup location inside that function.</p>
+<p>Think of returning borrowed lab equipment at a single desk before leaving through different doors. The shared desk prevents forgetting one item on an unusual route. This is a limited reason to use goto. Scattered backward and forward jumps can instead turn a simple route into a maze.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">if (failed) {
+    goto cleanup;
+}
+/* normal work */
+cleanup:
+    /* release resources before returning */
+    return status;</code></pre><p>A label is an identifier followed by a colon and attached to a statement. The goto target must be a label in the same function. A jump cannot enter another function or another running program.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>When control executes goto, the next statement comes from its target label. Statements between the jump and target are skipped. A forward label is allowed: you do not need to place its spelling before the goto. Labels have function scope, although ordinary local-variable visibility still follows block rules.</p>
+<p>For a simple input check, returning immediately is usually clearer than jumping to a label that only returns. Cleanup becomes useful when several earlier actions require matching release actions. Each error path can set an appropriate status and go to the same release section.</p>
+<p>The resource example introduces dynamic memory, storage requested while a program runs. malloc returns a pointer to that storage or NULL on failure. A pointer refers to an object; the unary star accesses that object. free releases an allocation, and free(NULL) is safe. These ideas are developed in <a href="topic:c-dynamic-memory-intro">dynamic memory</a>; here they illustrate why one cleanup path matters.</p>
+<p>Initialize both resource pointers to NULL before attempting either allocation. If the first allocation fails, neither resource exists. If the second fails, the first still needs releasing. The cleanup section can safely free both pointer values in either case because a missing allocation remains NULL.</p>
+<p>The normal path also falls through cleanup after finishing the useful work.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">A forward exit label</h3>
+<p>The false readiness flag causes a forward jump to finished. Work is skipped, and End prints. An if-else would express this tiny choice more directly; the example isolates the meaning of the transfer.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A status reaches one reporting point</h3>
+<p>The condition does not jump because valid is one. Accepted prints, and ordinary fall-through reaches report. A label is not a barrier; normal execution can reach it just as a jump can.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Release two possible allocations</h3>
+<p>Successful allocations hold twelve and eight, producing total twenty. Both are then freed through cleanup. Either allocation failure instead reaches the same release section with status one. NULL initialization makes missing-resource cleanup safe.</p>
+<p>The program never dereferences an allocation that failed.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>A cleanup label does not automatically run when any arbitrary return executes. Every path that owns resources must reach the release section before returning. Review the control flow rather than assuming the label's presence is enough. Release in a sensible reverse-acquisition order, especially when one resource depends on another.</p>
+<p>Do not jump past initialization and then read a skipped local value. Ordinary fixed-size local variables do not receive automatic initialization merely because a jump enters their scope. C17 also forbids certain jumps into scopes containing variably modified types. Avoid jumping into nested blocks; keep cleanup in the same clear outer scope as its resource pointers.</p>
+<p>A break cannot leave several nested loops at once. A flag often makes that search termination clear; a carefully placed goto can also leave them for a named exit. Compare those designs in <a href="topic:c-break-continue">loop control</a>. Prefer the one that exposes the search intent and cleanup obligations with the fewest hidden paths.</p><h3 id="cleanup-path-table">Audit every resource path</h3><table class="ref"><thead><tr><th>Path</th><th>First pointer</th><th>Second pointer</th><th>Cleanup work</th></tr></thead><tbody><tr><td>First allocation fails</td><td>NULL</td><td>NULL</td><td>Both free calls safely do nothing</td></tr><tr><td>Second allocation fails</td><td>Owned allocation</td><td>NULL</td><td>Release the first allocation</td></tr><tr><td>Both succeed</td><td>Owned allocation</td><td>Owned allocation</td><td>Release both after computing the total</td></tr></tbody></table><p>The ownership table is more useful than hoping an allocation failure happens during a demonstration. Each incoming path has defined pointer values. No path reads through NULL, and no successful allocation is abandoned. When adding a third resource, extend the table before adding another failure exit.</p>
+<p>This keeps the cleanup design reviewable as the function grows.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Using goto to imitate every loop</h3>
+<p>A named loop already shows where repetition starts, what keeps it going, and how it advances. Replacing those parts with labels spreads the same reasoning across the function. Use a loop for ordinary counted or conditional repetition.</p>
+<h3 id="mistake-2">Jumping to cleanup before initializing resource pointers</h3>
+<p>An uninitialized pointer cannot safely be passed to free. Initialize ownership state before any possible failure jump. A shared cleanup path needs values that are valid on every incoming path.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>Where must a goto target label belong?</td><td>In the same function. The jump cannot transfer between functions.</td></tr><tr><td>Can ordinary execution reach a label without goto?</td><td>Yes. Labels mark statements and do not block fall-through.</td></tr><tr><td>When is a cleanup goto useful?</td><td>Several failure paths share resource releases. One release section can handle partial ownership consistently.</td></tr><tr><td>What should a resource pointer contain before acquisition?</td><td>NULL. free(NULL) is safe on missing-resource paths.</td></tr><tr><td>Does a cleanup label run automatically before every return?</td><td>No. Control must actually reach the cleanup section.</td></tr><tr><td>Why avoid jumping past initialization?</td><td>A later read may use a value never assigned. Skipping initialization can invalidate the data flow.</td></tr><tr><td>What is usually clearer for ordinary repetition?</td><td>A structured loop. A loop keeps the repetition condition and body together.</td></tr></tbody></table>
+
+<h3 id="cleanup-ownership">Give each resource one clear owner</h3><p>Cleanup is easier when the function knows exactly which successful acquisitions it owns. A pointer copied elsewhere does not create a second allocation, so freeing both copies would be a double release. Keep one owning pointer for each allocation and treat other references as temporary views. Do not dereference a pointer after its allocation has been freed.</p><p>A later edit may add an early return for a new validation failure. If that return occurs after acquisition, it must also release the owned resources. Review exits again whenever the acquisition sequence changes. The shared label helps by offering one route, but it cannot prevent a programmer from introducing another route that skips it.</p><p>A status variable should describe success or failure independently of resource ownership. The first pointer may need freeing even when status reports an error. Conversely, a successful computation still needs cleanup before returning success. Do not tie release decisions only to the final status code.</p><p>For a short no-resource function, early returns can stay clearer than goto. The cleanup technique earns its place when it reduces duplicated release logic and makes partial acquisitions explicit. Choose it for the resource problem it solves, and keep ordinary calculations on a straightforward path.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>goto and function-scope labels exist in C89. C99 added VLA-related jump restrictions. In C17, a label must precede a statement; put a null statement after a label if a declaration must follow. C23 relaxes some label-placement rules.</p></div>
+<h2 id="summary">Summary</h2>
+<p>goto targets a label in the same function. Labels do not replace structured loops for ordinary work. Continue with <a href="topic:c-loops-overview">Loops Overview</a>.</p>

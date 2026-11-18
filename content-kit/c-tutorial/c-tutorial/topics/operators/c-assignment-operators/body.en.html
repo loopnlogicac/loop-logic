@@ -1,0 +1,47 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A balance changes after you pay a fare. In C, <dfn>assignment</dfn> stores a new value in an existing object. The expression on the right is evaluated, converted to the destination type, and stored on the left. The equals sign means an action, not a claim that two values are equal.</p>
+<p>Often the new value depends on the old value. Compound assignments provide a shorter form for these updates. You will use them to add deposits, deduct fares and change flag bits. Keep each update readable enough that you can follow the balance by hand.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">balance = 100;
+balance += 20;
+balance -= 5;
+/* Other forms: *= /= %= &amp;= |= ^= &lt;&lt;= &gt;&gt;= */</code></pre><p>The left operand must identify a modifiable object. A literal or the result of ordinary addition cannot be the destination. A const-qualified object cannot be reassigned after initialization.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>For an ordinary integer variable, <code>balance += 20</code> adds twenty to its old value and stores the sum back. You can understand it like <code>balance = balance + 20</code>. The compound form evaluates its left operand only once, which matters for more complex destinations introduced later.</p>
+<p>Follow a starting balance of one hundred. Adding twenty produces one hundred twenty. Deducting five leaves one hundred fifteen. Multiplying by two doubles that current value, not the original balance.</p>
+<p>Each completed statement changes what the next statement reads.</p>
+<p>An assignment is also an expression. It supplies the value after storing and conversion. Thus <code>saved = (balance = 25)</code> stores twenty-five in balance and then in saved. Assignment associates from right to left, so <code>a = b = 7</code> groups as <code>a = (b = 7)</code>.</p>
+<p>This is valid, but separate statements are often clearer when the variables have different meanings.</p>
+<p>Compound assignment still follows arithmetic and conversion rules. For an int, <code>x /= 2</code> performs integer division. An unsigned destination can wrap, while a signed arithmetic overflow remains undefined. A shorter symbol does not add a safety check or preserve missing fractions.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Update a taka balance</h3>
+<p>Each statement reads the latest balance and replaces it. The deposit takes the balance to one hundred twenty; the fare leaves one hundred fifteen. The original one hundred is no longer stored in balance unless you saved another copy.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Trace chained assignment</h3>
+<p>The right assignment stores seven in b and supplies seven to the assignment into a. Both become seven. This is right association of the grammar, not a general rule that every C expression executes from right to left.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Update flag bits</h3>
+<p>OR adds the bit with value four, giving five. XOR removes the existing low bit, leaving four. Shifting left once gives eight. The unsigned values and small shift count keep the bit operations well-defined.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>The bitwise compound forms use integer bit patterns. OR-assignment can set selected flags; AND-assignment can keep selected flags; XOR-assignment toggles selected bits. Shift-assignment moves the bits subject to the same shift restrictions as the ordinary shift operators. See <a href="topic:c-bitwise-operators">bitwise operators</a> for masks and valid shift counts.</p>
+<p>When the right-hand result has a different type, conversion occurs before the destination stores it. For example, assigning a finite in-range 3.9 to int stores three. A chained assignment through that int would propagate the stored integer value. Avoid chains across different types unless this conversion is exactly what you intend.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Using = where a question is intended</h3>
+<p>Assignment can produce a nonzero value that looks true in a condition. Use == to compare. Read the left side as a destination whenever you see a single equals sign.</p>
+<h3 id="mistake-2">Assuming += avoids overflow</h3>
+<p>The addition must still have a valid result for its calculation type. Choose bounds that fit before updating the object. Inspect long sequences of updates as carefully as one large formula.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>Which operand of assignment names the destination?</td><td>The left operand. The right-hand value is stored into the left object.</td></tr><tr><td>What is the ordinary-variable meaning of x += 3?</td><td>Add 3 to x and store the result in x. It combines addition with storage.</td></tr><tr><td>How does a = b = 7 group?</td><td>a = (b = 7). Assignment associates right to left.</td></tr><tr><td>What value does an assignment expression supply?</td><td>The value after storage conversion. A later assignment can receive the newly stored value.</td></tr><tr><td>For an int x, what arithmetic does x /= 2 use?</td><td>Integer division. The compound form retains the integer operand rules.</td></tr><tr><td>Which compound operator toggles selected flag bits?</td><td>^=. XOR flips positions where the mask contains ones.</td></tr><tr><td>Can a compound assignment destination be a const int?</td><td>No. The destination must be modifiable.</td></tr></tbody></table>
+
+<h3 id="balance-update-table">Follow the stored state after each action</h3><table class="ref"><thead><tr><th>Action</th><th>Value before</th><th>Value stored</th></tr></thead><tbody><tr><td>Start balance</td><td>No earlier balance</td><td>100</td></tr><tr><td>balance += 20</td><td>100</td><td>120</td></tr><tr><td>balance -= 5</td><td>120</td><td>115</td></tr><tr><td>balance *= 2</td><td>115</td><td>230</td></tr></tbody></table><p>The final multiplication uses one hundred fifteen because earlier assignments have already completed. If you need to compare the final balance with the original one hundred, preserve a snapshot before the updates. A single object stores its present state, not a sequence of earlier values. This is why the order of compound assignments belongs to the problem's logic.</p>
+<p>Try exchanging the deposit and fare updates. Addition and subtraction produce the same final small balance here, but an intermediate minimum-balance check could change the outcome. Update order matters whenever another action observes the state between changes.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The assignment forms shown are supported in C89 and remain in C17. They do not introduce automatic range validation in newer editions. The lesson uses separate full expressions to make each stored update visible.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Assignment stores a converted right-hand value. Compound assignment updates the current value. Continue with <a href="topic:c-conditional-operator">Conditional (Ternary) Operator</a>.</p>

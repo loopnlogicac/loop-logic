@@ -1,0 +1,60 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Suppose you keep reading marks until a stop value arrives. You cannot write the exact number of reads in advance. A <dfn>while loop</dfn> repeats while its condition remains nonzero. The condition is tested before each body, including the first one.</p>
+<p>Picture a gate you revisit after every piece of work. Passing through once does not promise another turn. The loop must update its state or consume input before returning to the gate. You will use this structure for counting, reading until a sentinel, summing digits and reversing a number.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">while (condition) {
+    /* work */
+    /* advance the state */
+}</code></pre><pre class="diagram">condition? --false--&gt; after loop
+    |
+   true
+    v
+ body and update
+    |
+    +-----------------&gt; condition?</pre>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>A counter loop might start at one and run while the counter is at most three. Print the current counter, add one, then test again. After the third body the counter becomes four. The false test leaves the loop.</p>
+<p>Starting above three would skip all bodies, which is the correct behavior for an empty range.</p>
+<p>A sentinel loop gets its progress from reading new input. First try to read a value, then decide whether it is the sentinel. Process only ordinary data. You can combine a successful scanf assignment with a non-sentinel test using logical AND.</p>
+<p>If reading fails, short-circuiting prevents the stale destination from being treated as new data.</p>
+<p>For decimal digit work, percent ten extracts the last digit of a nonnegative integer. Integer division by ten removes that digit. Starting with 5070, the extracted digits are zero, seven, zero and five. Their sum is twelve.</p>
+<p>Each division makes a positive value smaller, so the loop eventually reaches zero.</p>
+<p>To reverse the digits, keep a separate result initialized to zero. Repeatedly multiply it by ten and add the next extracted digit. For 120, the result evolves through zero, two and twenty-one. Numeric reversal drops leading zeroes in the reversed representation because an integer does not preserve formatting width.</p>
+<p>Bound the input so the intermediate reversed value fits.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">A visible counter trace</h3>
+<p>The three body lines show one through three. The final line shows four, the value that fails the next test. The terminating counter can differ from the last printed body value by one step.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Sum decimal digits</h3>
+<p>Each pass extracts the low decimal digit and removes it from n. Zero digits contribute nothing but still require a division step. The final sum is twelve. The working number reaches zero, so the next condition fails.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Reverse a bounded number</h3>
+<p>The first extracted zero leaves the initial result zero. The next digit gives two, then the final digit produces twenty-one. The integer result does not keep a leading zero. All intermediate values fit the small bounded example.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Read until a sentinel</h3>
+<p>The input supplies two marks and then negative one. Only the marks are counted, giving count two and total one hundred twenty. The sentinel is checked before the body. A failed read also ends repetition without reusing a previous mark.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>The number zero needs special thought in digit algorithms. A while condition based on positive n skips its body for zero. That is fine for a digit sum initialized to zero. A digit-count task, however, should count zero as one decimal digit.</p>
+<p>Handle it separately or use a do-while shape.</p>
+<p>An intentional <code>while (1)</code> repeats until a break, return or another permitted transfer leaves it. Use it only with a clear termination mechanism. A failed scanf that consumes nothing can otherwise leave a loop stuck on the same nonmatching character. Stopping on failure is safer than retrying the identical read forever in these early examples.</p>
+<p>Keep an original copy when the task needs the input later. Digit extraction destroys the working copy by repeated division. A palindrome comparison, for example, must compare the reversed result against the preserved original number.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Forgetting the counter or digit update</h3>
+<p>If n stays positive forever, the condition never changes. Put the progress operation where every repeating path reaches it. Trace the smallest nonzero input to locate missing progress.</p>
+<h3 id="mistake-2">Using an unchecked read in the repeat condition</h3>
+<p>The destination may keep an old value after failure. Check scanf for the required assignment count, then inspect the sentinel. Do not process a stale mark as though a new mark arrived.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>When is a while condition tested?</td><td>Before every body execution. A false test skips the next body.</td></tr><tr><td>What progress does n /= 10 provide for positive digit work?</td><td>It removes the last decimal digit. A positive integer eventually reaches zero.</td></tr><tr><td>Which operator extracts the last nonnegative decimal digit?</td><td>% 10. Remainder after division by ten is the low digit.</td></tr><tr><td>Should a sentinel be added to a marks total?</td><td>No. Its role is termination rather than data.</td></tr><tr><td>Why preserve original before reversing n?</td><td>The working n is consumed by division. The original is needed for a later comparison.</td></tr><tr><td>How many body executions occur when a while starts false?</td><td>Zero. It is an entry-controlled loop.</td></tr><tr><td>What is dangerous about retrying a failed numeric scanf unchanged?</td><td>The same bad character may remain unread. Without consumption or exit, failure can repeat forever.</td></tr></tbody></table>
+
+<h3 id="working-copy">Choose a name for destructive work</h3><p>A variable called remaining_digits makes repeated division easier to recognize than changing the original input silently. Preserve the input when the final report needs to name it. The loop's progress and the report's identity are separate roles.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>While is part of C89 and remains unchanged in C17. The digit programs use C99-or-later division rules, though their nonnegative values avoid negative-remainder differences. C17 is the build baseline.</p></div>
+<h2 id="summary">Summary</h2>
+<p>While checks before every body. A false first test gives zero iterations. Continue with <a href="topic:c-do-while-loop">do-while Loop</a>.</p>

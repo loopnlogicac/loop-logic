@@ -1,0 +1,68 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A pattern on paper is a set of rows. Each row contains leading spaces and visible symbols. A <dfn>pattern program</dfn> turns those counts into nested loops. You do not need to memorize a separate long program for every shape.</p>
+<p>Derive the row rules first, then translate them into counters.</p>
+<p>Draw a small shape with height four. Number the rows from one to four and count its spaces and symbols. The resulting table is the algorithm. This approach helps you explain a pattern in an exam, adjust its size, and diagnose a shifted row without guessing where to add another print.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">for (int row = 1; row &lt;= height; row++) {
+    /* print the spaces belonging to this row */
+    /* print the symbols belonging to this row */
+    puts("");
+}</code></pre><table class="ref"><caption>Centered pyramid of height four</caption><thead><tr><th>Row</th><th>Leading spaces</th><th>Stars</th></tr></thead><tbody><tr><td>1</td><td>3</td><td>1</td></tr><tr><td>2</td><td>2</td><td>3</td></tr><tr><td>3</td><td>1</td><td>5</td></tr><tr><td>4</td><td>0</td><td>7</td></tr></tbody></table>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>A left-aligned growing star triangle has row stars on row number row. An inverted triangle has one fewer star on every later row. You can count the outer row downward from height to one and let that row value also be the number of stars.</p>
+<p>A centered pyramid has height minus row leading spaces and twice row minus one stars. The spaces decrease by one while the stars increase by two, keeping the center fixed. Use separate loops for spaces and stars. The newline comes after both loops, once for the whole row.</p>
+<p>A diamond combines a growing pyramid with a shrinking lower half. Start the lower half at height minus one so the widest middle row is not duplicated. Its total row count is twice height minus one. For height one, the lower half is empty and the diamond is a single star.</p>
+<p>Number patterns change the value printed per cell. Printing column numbers resets the visible sequence at every row. Floyd's triangle instead keeps a value outside both loops and increments it after each cell. Alphabet rows can index a fixed string of letters; this avoids assuming that the character codes for letters are consecutive on every C implementation.</p>
+<p>Pascal's triangle contains binomial coefficients. Each row begins with one. From column c to c+1, multiply the current coefficient by row-c and divide by c+1. These integer operations are exact for the coefficients, but intermediate products must still fit.</p>
+<p>The example and exercises limit the number of rows to ten.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">A growing star triangle</h3>
+<p>Row one prints one star, row two prints two, and so on through four. The inner counter restarts at one for each row. A newline after the inner loop creates a separate line for each row. The total number of stars is ten.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">An inverted star triangle</h3>
+<p>The outer counter decreases from four to one. Using that value as the inner limit gives row lengths four, three, two and one. The downward signed counter stops safely after reaching zero; an unsigned count with a nonnegative condition would need different care.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Reset number labels by column</h3>
+<p>The printed value is the column number. Each row therefore begins at one and grows to its row number. Compare the row lengths with the star triangle: the control structure is the same, while the symbol changes to a changing numeric value.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Alphabet rows with a lookup string</h3>
+<p>The string stores the desired alphabet order explicitly. Array indexing selects its first row letters, producing A, AB, ABC and ABCD. An array is a sequence of elements; see <a href="topic:c-arrays-intro">arrays</a> later. The small bound keeps every index inside the letter sequence.</p>
+<div data-example="ex-4"></div>
+
+<h3 id="example-5">A centered pyramid</h3>
+<p>The first row has three spaces and one star. Each later row removes a space and adds two stars. The base has seven stars and no leading space. The row table predicts every output line before the program runs.</p>
+<div data-example="ex-5"></div>
+
+<h3 id="example-6">A diamond without a repeated center</h3>
+<p>The upper half prints rows of one, three and five stars. The lower half starts at row two and prints three then one. There are five lines in total. Starting the lower half at three would incorrectly duplicate the widest row.</p>
+<div data-example="ex-6"></div>
+
+<h3 id="example-7">Floyd numbering across rows</h3>
+<p>The sequence counter lives outside the outer loop, so row two begins at two rather than restarting at one. Ten cells print values one through ten. The conditional separator avoids a trailing space at the end of each row.</p>
+<div data-example="ex-7"></div>
+
+<h3 id="example-8">Pascal coefficients by a recurrence</h3>
+<p>Row zero is one. The later rows follow the exact coefficient recurrence, reaching one four six four one on row four. The update is skipped after the last printed coefficient. The small row count keeps every multiply-before-divide intermediate safely inside unsigned long long.</p>
+<div data-example="ex-8"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>Separate algorithmic spaces from display formatting. A leading space is part of the shape; an accidental trailing space may be invisible on screen but still belong to the emitted text. The numeric Pascal example places a separator only before nonfirst columns, avoiding a trailing separator.</p>
+<p>A pattern's dimensions also control running cost. A star triangle prints a total of n*(n+1)/2 stars. A pyramid prints n*n stars across its rows, plus leading spaces. Small teaching bounds keep both output volume and arithmetic manageable.</p>
+<p>Do not remove bounds merely because each individual loop looks short.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Repeating the diamond middle row</h3>
+<p>Use height for the last upper row and height-1 for the first lower row. Trace height one and height two to see whether the center appears once.</p>
+<h3 id="mistake-2">Resetting the Floyd counter every row</h3>
+<p>The sequence must continue across row boundaries. Declare the next value before the outer loop, while the column counter still resets inside each row.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>What should you derive first for a new pattern?</td><td>The counts and values in one row. Row rules translate directly into loop bounds.</td></tr><tr><td>How many stars belong to pyramid row r?</td><td>2*r - 1. The odd widths keep the center aligned.</td></tr><tr><td>How many leading spaces belong to pyramid row r of height n?</td><td>n - r. The indentation decreases by one each row.</td></tr><tr><td>Where should the diamond lower half begin?</td><td>At height - 1. The widest row has already printed.</td></tr><tr><td>Where does a Floyd sequence counter belong?</td><td>Outside the outer loop. It must continue across rows.</td></tr><tr><td>Why use a string for alphabet lookup?</td><td>It records the letter order without assuming consecutive codes. The lookup expresses the desired sequence directly.</td></tr><tr><td>Why bound Pascal triangle rows?</td><td>Intermediate products can overflow. Even a multiply later divided must fit its calculation type.</td></tr></tbody></table>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The pattern algorithms use ordinary C17 loops. Header-local counters need C99 or later. The alphabet example uses a string lookup rather than depending on a specific numeric encoding for consecutive letters.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Derive one row before writing nested loops. A pyramid row has n-row spaces and 2*row-1 stars. Continue with <a href="topic:c-loop-problems">Classic Loop Problems</a>.</p>

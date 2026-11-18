@@ -1,0 +1,79 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A count of thirty seats and a tally of billions of events need different ranges. <dfn>Type modifiers</dfn> help you choose an integer family and its signedness. You can inspect the real limits instead of guessing from your laptop's name. This also helps you prevent arithmetic that leaves the permitted range.</p>
+<p>The words short, long, long long, signed and unsigned combine with suitable type specifiers. They do not set arbitrary widths by themselves. On a 64-bit system, long may still be thirty-two bits under one data model and sixty-four under another.</p>
+<p>This lesson also separates defined unsigned wraparound from undefined signed overflow. The distinction is a language rule, not a prediction based on what the processor appears to do during one test. Choose a range that prevents unintended overflow before performing the operation.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>Signed integer types can represent negative and nonnegative values. Unsigned types represent nonnegative values and have a defined modulo arithmetic rule. An omitted int in forms such as unsigned long still denotes an integer type.</p>
+<pre><code class="language-c">short seats = 30;
+unsigned int count = 26U;
+long distance = 1000000L;
+long long events = 9000000000LL;</code></pre>
+<table class="ref"><caption>Integer families and typical LP64 Linux widths</caption><thead><tr><th scope="col">Family</th><th scope="col">Typical bits</th><th scope="col">Important rule</th></tr></thead><tbody><tr><td>signed char / unsigned char</td><td>8</td><td>Explicit signedness; plain char is a separate type</td></tr><tr><td>short / unsigned short</td><td>16</td><td>At least the required short range</td></tr><tr><td>int / unsigned int</td><td>32</td><td>Natural integer family for many tasks</td></tr><tr><td>long / unsigned long</td><td>64</td><td>May be only 32 bits on another 64-bit environment</td></tr><tr><td>long long / unsigned long long</td><td>64</td><td>At least the required 64-bit-scale range</td></tr></tbody></table>
+<p>The table describes a common data model, not a portable size contract. sizeof(short) cannot exceed sizeof(int), which cannot exceed sizeof(long), which cannot exceed sizeof(long long). Equal sizes are permitted, and the number of bits per byte still comes from CHAR_BIT.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>The first example matches each integer family with its output length modifier. A short argument normally promotes to int in the call, but %hd requests a short-style conversion. A long needs %ld, and a long long needs %lld. Choosing the wrong format is not repaired by the value happening to be small.</p>
+<p>limits.h provides integer boundaries such as SHRT_MIN, SHRT_MAX, INT_MIN, INT_MAX, UINT_MAX, LONG_MAX and LLONG_MAX. Read them instead of embedding a machine assumption in a portable explanation. The limits example prints the host's int range and a floating precision characteristic.</p>
+<p>float.h provides separate facts about floating types, including FLT_DIG, DBL_DIG, FLT_MAX, DBL_MAX and precision-related macros. DBL_DIG describes decimal precision, while DBL_MAX concerns magnitude. A type can have a huge range without preserving every integer in that range exactly.</p>
+<table class="ref"><caption>Which header answers the question?</caption><thead><tr><th scope="col">Question</th><th scope="col">Header and macro</th></tr></thead><tbody><tr><td>Largest int?</td><td>limits.h: INT_MAX</td></tr><tr><td>Bits in a C byte?</td><td>limits.h: CHAR_BIT</td></tr><tr><td>Largest unsigned int?</td><td>limits.h: UINT_MAX</td></tr><tr><td>Decimal precision of double?</td><td>float.h: DBL_DIG</td></tr><tr><td>Largest finite double?</td><td>float.h: DBL_MAX</td></tr></tbody></table>
+<p>The unsigned example begins at UINT_MAX and adds one using unsigned arithmetic. The result is zero by the modulo rule. This example does not need a guessed maximum value to demonstrate wraparound.</p>
+
+<p>In the fixed-width example, <code>PRId32</code> expands to a string literal. Adjacent string literals join during translation, allowing the portable format macro to sit between the surrounding quoted text. See <a href="topic:c-constants-literals">Constants and Literals</a>.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Different integer widths</h3>
+<p>The length modifiers match the declared types. Short promotes to int when passed to printf.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Inspect limits and precision</h3>
+<p>The headers describe this implementation: the recorded int limits and DBL_DIG are platform facts, not portable constants.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Unsigned wrap is defined</h3>
+<p>Unsigned arithmetic is modulo UINT_MAX+1. Adding one to the maximum produces zero on every conforming implementation.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">An exact-width unsigned value</h3>
+<p>Exact-width typedefs are optional. This implementation supplies them, and the inttypes macro matches int32_t.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="overflow-rules">Two different overflow rules</h3>
+<p>For unsigned arithmetic, results are reduced modulo one greater than the maximum representable value. Subtracting one from zero therefore yields the maximum. This is useful in some low-level algorithms but can be a serious bug for sizes or balances if wrapping was not intended.</p>
+<p>Ordinary signed arithmetic whose mathematical result is outside the representable range has undefined behavior. Do not record a wrapped signed value as an expected answer. A compiler may optimize on the assumption that signed overflow does not occur, so behavior can change with options.</p>
+<p>To calculate a large product, choose a type that can represent the whole result and ensure the operands participate in that type before multiplication. Assigning an already-overflowed int product into long long is too late. A later conversion cannot restore information lost or invalidated earlier.</p>
+<p>A <dfn>cast</dfn> explicitly requests a conversion. See <a href="topic:c-type-conversion">Type Conversion and Casting</a>. A cast can change the calculation type when applied to an operand, but it is not a runtime proof that the result fits. Input bounds and arithmetic reasoning still matter.</p>
+<h3 id="fixed-width">Exact-width and minimum-width choices</h3>
+<p>stdint.h may provide exact-width types such as int32_t and uint8_t when the implementation supports suitable types. The number states the width. Unsigned uint8_t represents zero through 255 when present. Exact-width typedefs are optional rather than universal on every imaginable C target.</p>
+<p>A <dfn>typedef</dfn> is another name for an existing type, not a new storage operation. See <a href="topic:c-typedef">typedef</a>. stdint.h uses such names to express representation requirements. It also provides least-width and fast-width families for tasks that need minimum ranges without insisting on exact layouts.</p>
+<p>inttypes.h supplies portable format macros such as PRId32 for int32_t. A fixed-width typedef can alias a different underlying integer type on another system, so guessing %d from the width alone is less portable. The example uses the macro for the signed value and converts the byte value to unsigned int for %u.</p>
+<p>The byte task uses <code>||</code>, logical OR: its condition is true if either input conversion failed or the value exceeds 255. See <a href="topic:c-logical-operators">Logical Operators</a>. The following <code>if</code> block stops that invalid read before the cast.</p>
+<h3 id="conversion-versus-arithmetic">A small unsigned object can still use promoted arithmetic</h3>
+<p>The byte practice computes byte + 1 after integer promotion on this host, then converts back to uint8_t. At 255 the intermediate int result is 256, which fits int, and conversion to the unsigned byte yields zero. This is defined conversion, not signed overflow.</p>
+<p>The practice containing 4294967295 uses the recorded host's UINT_MAX to exercise unsigned int wraparound. On a different-width target, replace that boundary input after inspecting limits and predict and check the result again. The source rule remains portable even when a numeric test input is host-specific.</p>
+
+
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>For a large product, write the largest possible operands before selecting their type. Two individually valid int values can have a product that does not fit int. Convert an operand to a suitable wider type before multiplying. Input uses the matching formats from <a href="topic:c-scanf">scanf</a>, and a conditional read check is explained in <a href="topic:c-if-statement">if</a>.</p>
+<p>For the byte exercise, check zero and 255 before studying the conversion back to uint8_t. The chosen host has a 32-bit unsigned int, so 4294967295 reaches its maximum. A different target may require a different boundary number.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="unsigned-means-safe">Assuming unsigned prevents every bug</h3><p>Defined wraparound is still wrong when a task expects a growing count. Check capacity and input ranges before the operation. An unsigned type does not represent negative error values and can complicate comparisons with signed values.</p>
+<h3 id="long-is-64">Assuming long follows the OS label</h3><p>Inspect LONG_MAX and sizeof(long) for the target. Use a suitable fixed-width type when exact width is truly required, checking availability. Do not silently change a data format based on a laptop's observed layout.</p>
+
+<h3 id="diagnostic-5">Mistake: a mismatched length modifier</h3>
+<p>%d requests int, not long long. Use %lld rather than running this mismatched call.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Choose ranges before choosing a type name.</li><li>Consult limits.h and float.h rather than guessing.</li><li>Keep signed overflow out of normal examples and calculations.</li><li>Distinguish promoted arithmetic from conversion back to a narrow object.</li><li>Use inttypes.h formats for fixed-width typedefs when needed.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>C99 added long long, stdint.h and inttypes.h. C17 is the baseline for the demonstrated rules. C23 adds further integer facilities, but it does not make ordinary signed overflow a portable wrapping operation. Exact-width typedef availability remains a representation capability to check.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Modifiers describe integer families, headers reveal actual limits, and fixed-width typedefs express representation needs when supported. Unsigned wrap is defined while signed overflow must be avoided. Next, study written values and named constants in <a href="topic:c-constants-literals">Constants and Literals</a>.</p>

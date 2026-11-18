@@ -1,0 +1,73 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine asking a student for a mark and writing it into the right box on a sheet. <dfn>scanf</dfn> does a similar job for your variables. It reads what you type and stores converted values. You tell it what kind of value to expect, such as <code>%d</code> for an integer. You must then check whether the read worked.</p>
+<p>A terminal shows your typed input as part of its interactive display, but the program does not necessarily print those characters back. Only the text printed by the program is shown as output. That is why a prompt may be followed immediately by the result when the run is shown.</p>
+<p>This lesson assumes numeric input is representable in the destination type. Checking the assignment count detects missing or nonmatching fields. It is not a complete defense against arbitrarily large numeric text. For robust general parsing, later lessons combine line input with checked conversion functions.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>The address operator &amp; obtains the location of an object so scanf can store into it. An <dfn>address</dfn> identifies where an object is stored. Pointer details are introduced in <a href="topic:c-pointers-intro">Introduction to Pointers</a>. Supplying an integer's current value instead of its address is a serious type error.</p>
+<pre><code class="language-c">int marks;
+if (scanf("%d", &amp;marks) != 1) {
+    return 1;
+}</code></pre>
+<table class="ref"><caption>Match the destination object</caption><thead><tr><th scope="col">Object</th><th scope="col">Conversion</th><th scope="col">Argument type</th></tr></thead><tbody><tr><td>int</td><td>%d</td><td>int *</td></tr><tr><td>float</td><td>%f</td><td>float *</td></tr><tr><td>double</td><td>%lf</td><td>double *</td></tr><tr><td>char</td><td>%c</td><td>char *</td></tr><tr><td>char label[12]</td><td>%11s</td><td>Pointer to first element, supplied by label</td></tr></tbody></table>
+<p>The star in these type descriptions denotes a pointer type: a value that refers to an object. A string input destination is an array used through its first-element pointer. For that usual %s call, write label rather than &amp;label, because &amp;label has pointer-to-array type.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>scanf tries each conversion in format order and reports the number of successful assignments. A two-mark calculation must see a return value of two before using both marks. Returning one means only the first field was assigned. The second destination cannot be treated as new valid input.</p>
+<p>If the first numeric field does not match, scanf can return zero. If input ends before any conversion can complete, it returns EOF, a negative macro value whose exact number is not assumed here. Checking for the required assignment count handles both situations for these fixed-field reads.</p>
+<ol><li>Print a short prompt naming the expected input.</li><li>Provide correctly typed destination addresses.</li><li>Compare the return value with the number of required assignments.</li><li>Handle failure before reading destination values.</li><li>Perform the task using only successfully assigned values.</li></ol>
+<p>The float-and-double example is especially important: input %f requires float *, while %lf requires double *. These objects need not have the same size or representation. The output call then uses %f for both because a float argument is promoted to double in printf.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Read two integer marks</h3>
+<p>The call must assign both integers before their values are added. The sample input 60 25 produces Total=85 after the prompt.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Read float and double</h3>
+<p>Input float needs %f and double needs %lf. Both output arguments are passed as double to printf.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Read a grade after a number</h3>
+<p>The space before %c skips the newline left after the integer, so the grade is A rather than a newline.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Read a bounded word</h3>
+<p>The array has 12 character slots; %11s leaves one for the terminator and label already supplies its first-element address.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="whitespace">Whitespace and the leftover newline</h3>
+<p>Most numeric conversions skip preceding whitespace automatically. %c does not: it reads the next character, which may be the newline left after a prior numeric token. A leading whitespace directive in " %c" skips any amount of whitespace before reading the character.</p>
+<p>A whitespace character in a scanf format means skip a sequence of input whitespace, not match one exact source space. This lets the roll-and-grade example accept a line break between its fields. Do not add trailing whitespace to an interactive format without understanding that it may wait for the next non-whitespace input.</p>
+<p>The grade is a non-whitespace character by the stated task. If you need to read a literal space or newline as data, do not use the leading-space form. The format should express the task rather than blindly applying a remembered template.</p>
+<h3 id="bounded-strings">Reserve space for the terminator</h3>
+<p>An <dfn>array</dfn> is a sequence of elements. Char label[12] provides twelve character slots, as developed in <a href="topic:c-arrays-intro">Arrays</a>. %s reads a non-whitespace word and appends a null terminator. A width of eleven leaves the twelfth slot available for that terminator.</p>
+<p>The width does not include the null character in its maximum consumed text length. It also does not reject a longer word as a whole: extra input characters remain for later reads. If the task needs a complete line or must detect overlong input, a line-based strategy is more suitable.</p>
+<h3 id="failed-input">Failure handling and stream state</h3>
+<p>A nonmatching character generally remains unread after a failed numeric conversion. Repeating the same call without handling the bad input can fail forever on that character. These examples' failure paths stop or print Invalid rather than pretending recovery occurred.</p>
+<p>Do not use fflush(stdin) as portable cleanup. ISO C does not define that input-stream use. Some environments provide extensions, but those are not general language rules. Deliberate line reading and explicit parsing give you more controlled recovery when a larger application needs it.</p>
+<p>The output quizzes use sscanf, the related stdio.h function that applies formatted-input rules to a supplied string instead of stdin. You can therefore follow each input character directly in the source. Their assignment counts, whitespace behavior and %i versus %d rules follow the same conversion principles.</p>
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>Try reading two marks when the input is <code>60 x</code>. The first conversion succeeds, but the second cannot turn the letter into an integer. The return value is one. That is why a two-mark calculation must require two assignments before adding anything.</p>
+<p>Initializing the second mark to zero would avoid an uninitialized value, but it would hide the missing mark. These are separate concerns. Think of the assignment count as checking which boxes on the form were actually filled. For numeric text, also keep each value within the destination type's representable range.</p>
+<p>The return count alone cannot guarantee that.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="unchecked-input">Using a value after an unchecked read</h3><p>A failed conversion does not create the intended value. Check the return count before using the destination, even if you initialized it earlier. A fallback zero can hide failure when zero is also a valid task input.</p>
+<h3 id="unbounded-word">Using %s without a width</h3><p>An unbounded word can exceed the array and cause undefined behavior. Choose capacity first, then use a maximum text width one smaller. The field width does not allocate storage for you.</p>
+
+<h3 id="diagnostic-5">Mistake: wrong destination type</h3>
+<p>%f expects float *, not double *. The compiler warns and the call must be corrected to %lf before execution.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Match conversions with destination pointer types.</li><li>Check the exact required assignment count.</li><li>Use a leading space before %c only when whitespace should be skipped.</li><li>Bound every %s word read to the available array capacity.</li><li>Keep the numeric input within the stated representable range.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The demonstrated scanf family rules apply in C17 and have long-standing forms in earlier C editions. Input %f and %lf remain different because their destination pointer types differ. Compiler-specific input cleanup extensions are outside these portable examples.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>scanf needs correctly typed destinations and successful conversions before values are used. Whitespace directives and string widths must match the actual input task. Next, compare the full input and output rules in <a href="topic:c-format-specifiers">Format Specifiers Reference</a>.</p>
