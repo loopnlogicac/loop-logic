@@ -34,6 +34,17 @@ export interface HelpInput {
   question?: string;
 }
 
+/** What the current page contributes to a chat answer (built in src/app/ask-context.ts). */
+export interface ChatPage {
+  kind: 'video' | 'course' | 'lesson' | 'lab' | 'page';
+  key: string;
+  label: string;
+  subject: Subject;
+  concepts?: string[];
+  passageIds?: string[];
+  evidence: { id: string; title: string; location: string; text: string; url?: string }[];
+}
+
 interface SourceRef {
   id: string;
   title: string;
@@ -383,6 +394,89 @@ export class ReadingService {
       ? (depth === 'full' ? passages.slice(0, 2) : passages.slice(0, 1)).map((x) => x.text[lang]).join(' ')
       : lang === 'en' ? 'Reviewed support for this part is not available yet.' : 'এই অংশের জন্য পর্যালোচিত সহায়তা এখনো নেই।';
     return { kind: 'answer' as const, selectionType: type, origin: 'reviewed' as const, title: null, text, refresher, sources, chips, profile: this.summary(p, lang) };
+  }
+
+  // ── free-form chat ("Ask AI" box and selected text on any page) ─────────
+
+  /** Remaining AI answers today for this learner (the chat shows it). */
+  aiCallsLeft(learnerId: string): number {
+    const day = new Date().toISOString().slice(0, 10);
+    const b = this.budget.get(learnerId);
+    return !b || b.day !== day ? this.dailyAiLimit : Math.max(0, this.dailyAiLimit - b.count);
+  }
+
+  async chat(learnerId: string, input: { question?: unknown; selection?: unknown; history?: unknown; lang: Lang; page: ChatPage }) {
+    const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+    const lang: Lang = input.lang === 'bn' ? 'bn' : 'en';
+    const question = clean(input.question, 500);
+    const selection = clean(input.selection, 600);
+    if (!question && !selection) throw new AppError('empty_question', 400, lang === 'bn' ? 'একটা প্রশ্ন লেখো।' : 'Type a question first.');
+    await this.assertNotInSealedCheck(learnerId);
+    const history = (Array.isArray(input.history) ? input.history : []).slice(-4)
+      .map((h) => (h && typeof h === 'object' ? h as Record<string, unknown> : {}))
+      .filter((h) => (h.role === 'user' || h.role === 'assistant') && typeof h.text === 'string')
+      .map((h) => ({ role: h.role as string, text: String(h.text).slice(0, 400) }));
+    const page = input.page;
+    await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: page.key, blockId: null, type: 'ask', payload: { chars: question.length, selection: selection.length > 0, page: page.kind }, at: new Date().toISOString() }]);
+
+    // Evidence: what the page itself provides (instructor materials, lesson
+    // passages), then the reviewed library, then approved websites if needed.
+    const query = [selection, question].filter(Boolean).join(' ');
+    type Ev = { id: string; text: string; source: SourceRef };
+    const evidence: Ev[] = page.evidence.map((e) => ({ id: e.id, text: e.text, source: { id: e.id, title: e.title, location: e.location, reviewed: true, live: false, url: e.url } }));
+    const local = searchLocal({ query, subject: page.subject, concepts: page.concepts, preferIds: page.passageIds, limit: 3 });
+    for (const id of page.passageIds ?? []) {
+      const ps = getPassage(id);
+      if (ps && !evidence.some((e) => e.id === ps.id)) evidence.push({ id: ps.id, text: ps.text[lang], source: sourceOf(ps) });
+    }
+    for (const h of local.hits) if (!evidence.some((e) => e.id === h.passage.id)) evidence.push({ id: h.passage.id, text: h.passage.text[lang], source: sourceOf(h.passage) });
+    let liveUsed = false;
+    if (this.live.enabled && (!local.sufficient || page.evidence.length === 0)) {
+      for (const r of await this.live.search(query.slice(0, 200), page.subject)) {
+        liveUsed = true;
+        evidence.push({ id: r.url, text: r.content.slice(0, 1500), source: { id: r.url, title: r.title, location: r.domain, reviewed: false, live: true, url: r.url, retrievedAt: r.retrievedAt } });
+      }
+    }
+    const used = evidence.slice(0, 6);
+    const base = { sources: [] as SourceRef[], liveUsed, left: this.aiCallsLeft(learnerId) };
+
+    const cacheKey = ['chat', page.key, lang, normalizeQ(selection), normalizeQ(question)].join('|');
+    const cached = history.length ? undefined : this.answerCache.get(cacheKey);
+    if (cached) return { ...base, origin: 'ai_checked' as const, text: cached.text, sources: cached.sources, cached: true };
+
+    const maxWords = 140;
+    if (this.gateway.enabled && used.length && this.withinBudget(learnerId)) {
+      const languageName = lang === 'bn' ? 'Bangla (English technical terms in brackets are fine)' : 'English';
+      const user = [
+        `A learner on a ${page.kind} page asks a question. Page: ${page.label}.`,
+        `Answer in at most ${maxWords} words in ${languageName}, clearly and step by step if useful. Short code is allowed only if it is in the evidence.`,
+        history.length ? `<learner_text>Earlier in this chat: ${JSON.stringify(history)}</learner_text>` : '',
+        selection ? `<learner_text>Selected text: ${selection}</learner_text>` : '',
+        `<learner_text>Question: ${question || 'Explain the selected text.'}</learner_text>`,
+        `<evidence>${JSON.stringify(used.map((e) => ({ id: e.id, source: e.source.title, text: e.text })))}</evidence>`,
+      ].filter(Boolean).join('\n');
+      const req = { purpose: 'chat', system: SYSTEM_RULES, user, maxOutputTokens: Math.round(maxWords * 3) };
+      this.spend(learnerId);
+      const result = await this.gateway.generate(req);
+      if (result) {
+        const allowedNumbers = [...used.flatMap((e) => extractNumbers(e.text)), ...extractNumbers(query), ...extractNumbers(page.label)];
+        const v = validateAnswer(result.text, { allowedCitations: used.map((e) => e.id), allowedNumbers, lang, maxWords });
+        if (v.ok) {
+          const cited = used.filter((e) => v.value.citations.includes(e.id)).map((e) => e.source);
+          if (!history.length) this.answerCache.set(cacheKey, { text: v.value.explanation, sources: cited });
+          return { ...base, origin: 'ai_checked' as const, text: v.value.explanation, sources: cited, left: this.aiCallsLeft(learnerId) };
+        }
+        await this.gateway.logOutcome(req, result.provider, result.model, `fallback_${v.reason}`);
+      }
+    }
+
+    // No checked AI answer: point to the closest reviewed material, never invent text.
+    const overBudget = this.gateway.enabled && !this.withinBudget(learnerId);
+    const top = used.find((e) => e.source.reviewed);
+    const note = overBudget
+      ? (lang === 'bn' ? 'আজকের এআই উত্তরের সীমা শেষ। সবচেয়ে কাছের পর্যালোচিত অংশ:' : 'You have used today’s AI answers. The closest reviewed material:')
+      : (lang === 'bn' ? 'পর্যালোচিত নোট বা অনুমোদিত সাইটে এর নিশ্চিত উত্তর পাইনি।' : 'I could not find a checked answer to this in the reviewed notes or approved websites.');
+    return { ...base, origin: top ? ('reviewed' as const) : ('none' as const), text: top ? `${note} ${firstSentence(top.text)}` : note, sources: used.slice(0, 3).map((e) => e.source), left: this.aiCallsLeft(learnerId) };
   }
 
   async checkQuiz(learnerId: string, input: { lessonId: string; blockId: string; choice: number; lang: Lang }) {

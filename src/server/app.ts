@@ -10,6 +10,7 @@ import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
 import type { WatchService } from '../app/watch.ts';
 import type { VideoExtrasService } from '../app/video-extras.ts';
+import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import { StaleStateError } from '../store/store.ts';
 import { AuthError, type Authenticator } from './auth.ts';
@@ -170,6 +171,9 @@ export function buildRoutes(d: AppDeps): Route[] {
       }),
     ),
     route('POST', '/api/quiz/check', ({ body, learnerId }) => reading.checkQuiz(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), choice: Number(body.choice), lang: lang(body.lang) })),
+    route('POST', '/api/ask', async ({ body, learnerId }) =>
+      reading.chat(learnerId, { question: body.question, selection: body.selection, history: body.history, lang: lang(body.lang), page: await chatPage(body.page, lang(body.lang), extras) })),
+    route('GET', '/api/ask/limit', ({ learnerId }) => ({ left: reading.aiCallsLeft(learnerId) })),
     route('POST', '/api/selection-help/feedback', ({ body, learnerId }) => reading.feedback(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), value: String(body.value ?? ''), lang: lang(body.lang) })),
 
     // instructor
