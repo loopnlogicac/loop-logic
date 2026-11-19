@@ -1,0 +1,65 @@
+<h2 id="introduction">কোয়েরি ফল বলে,পথ নয়</h2>
+<p class="lead">DBMS নেওয়া শিক্ষার্থী-এর নাম চাই। SQL রো বলে,সার্ভার ঠিক করে প্রথম টেবিল,ইনডেক্স,registration match। <dfn>কোয়েরি processing</dfn> অনুরোধকে engine-এর কাজে নেয়।</p>
+<p>Equivalent SQL same প্ল্যান নিতে পারে,আবার একই টেক্সট ডেটা,stats,ভার্সন-এ অন্যplan। Optimizer estimated promising route বাছে,fastest possible guarantee নয়।</p>
+<p>Optimization অর্থ রাখবে। LEFT→INNER-এpopulation,duplicate বাদে সংখ্যা বদলায়। আগে intended রো-repeat policy,পরে equivalent route। দ্রুত ভুল উত্তর লাভ নয়।</p>
+
+<h2 id="syntax">প্ল্যান ব্যাখ্যা চাও</h2>
+<pre><code class="language-sql">EXPLAIN SELECT student_id, student_name
+FROM students WHERE student_id = 101 ORDER BY student_id;</code></pre>
+<p>Traditional EXPLAIN operation রো দেয়। Supported ভার্সন-এ FORMAT=TREE tree। ANALYZE8.0.18 থেকে actual কোয়েরি চালিয়ে timing-রো observation দেয়। Expensive কোয়েরি-তে harmless estimate ভেবো না।</p>
+
+<h2 id="how-it-works">Processing pipeline ধরো</h2>
+<pre class="diagram">SQL text
+   |
+parse আর name resolve
+   |
+logical transformation আর access alternative
+   |
+cost estimate -&gt; chosen physical plan
+   |
+execution operator -&gt; result row</pre>
+<p>Parser grammar,resolve টেবিল-কলাম আর ambiguous/unknown নাম দেখে;privilege-type-ও। Prepared স্টেটমেন্ট prepare-bind আলাদা,সব cost চিরস্থির নয়;metadata বদলালে reprepare পারে।</p>
+<p>Logical rewrite predicate simplify,derived merge/materialize,legal ফিল্টার move। Selective ফিল্টার scan-এর কাছে later রো কমায়। Outer জয়েন,aggregate,LIMIT,window boundary-তে naive move অর্থ বদলায়। Cost-এর আগে legality।</p>
+<p>Physical scan,ইনডেক্স,রেঞ্জ,জয়েন-অর্ডার/method option। Multi inner জয়েন-এ selective relation আগে later কাজ কমায়। Unlimited enumerate নয়,search strategy-engine capability সীমা।</p>
+<p><dfn>Cost model</dfn> page-CPU work estimate। Size,ইনডেক্স distribution,selectivity stats নেয়। Selectivity expected pass fraction। Unique equality one-রো bound,hometown বহু। Skew-এসব town এক frequency নয়।</p>
+<p>Stats stale/coarse হতে পারে। Correlated শর্ত independent ধরলে estimate ভুল,যেমনdepartment-কোর্স। ANALYZE TABLE supported stats refresh,নিজস্ব admin cost। প্রতিrequest-এ না চালিয়ে প্ল্যান বোঝো।</p>
+<p>Chosen অপারেটর execute। জয়েন inner ইনডেক্স probe বা ভার্সন-supported hash হতে পারে। সর্ট-গ্রুপ temporary স্টোরেজ,কেউstream,কেউআগে বহু ইনপুট নেয়। Access early stop পারলে LIMIT বেশি সাহায্য।</p>
+
+<h2 id="examples">প্ল্যান আর actual ফল</h2>
+<h3>Unique-কী lookup explain</h3>
+<p>PK equality one-রো bound। কী-type actual Ayesha-র পাশে পড়ো,speed benchmark নয়।</p>
+<div data-example="ex-1"></div>
+<h3>Selective joined রিপোর্ট</h3>
+<p>101-102 ফল। Tree-তেcovering enrollment তারপর শিক্ষার্থী PK probe। Schema-specific ref ফিল্ড এড়ায়,Tiny ডেটা shape শেখায়,speed নয়।</p>
+<div data-example="ex-2"></div>
+<h3>কলাম না ঢেকে তারিখ interval</h3>
+<p>দুইরূপ samefive admission। Half-open ordinary তারিখ ইনডেক্স option রাখে,expressionindex লাগে না। Tiny ডেটা runtime advantage proof নয়।</p>
+<div data-example="ex-3"></div>
+<h3>Covering access দেখো</h3>
+<p>Secondary-তেPK-ও। Hometown ইনডেক্স requested কলাম cover করে। Using ইনডেক্স coverage,zero physicalIO নয়।</p>
+<div data-example="ex-4"></div>
+<h3>Traditional ফিল্ড-এর অর্থ</h3>
+<table class="ref"><thead><tr><th scope="col">ফিল্ড</th><th scope="col">প্রশ্ন</th><th scope="col">এ সিদ্ধান্ত নয়</th></tr></thead><tbody><tr><td>টেবিল</td><td>কোনrelation/derived ইনপুট?</td><td>সবসময়full অপারেটর tree নয়</td></tr><tr><td>type</td><td>const,eq_ref,ref,রেঞ্জ,ALL?</td><td>পরিচিতtype মানেইfast নয়</td></tr><tr><td>possible_keys</td><td>কোনindex relevant?</td><td>সবগুলো ব্যবহৃতনয়</td></tr><tr><td>কী</td><td>কোনটি chosen?</td><td>NULL মানেইdefect নয়</td></tr><tr><td>রো</td><td>Estimated examined?</td><td>Exactreturned নয়</td></tr><tr><td>filtered</td><td>Expected survival percentage?</td><td>Observedmeasurement নয়</td></tr><tr><td>Extra</td><td>Cover,ফিল্টার,সর্ট,temp?</td><td>Filesort মানেইdisk নয়</td></tr></tbody></table>
+<p>একটি আনুমানিক হিসাবে 1000 রো scan আর filtered = 10 হলে প্রায় 100 রো শর্ত পার হবে। প্রতি outer রো-তে পাঁচ inner রো খুঁজলে প্রায় 500 visit। প্রথম estimate দশ গুণ ভুল হলে পরের কাজের হিসাবও অনেক ভুল হতে পারে।</p>
+<p>জমা প্ল্যান-এর সংখ্যা MySQL 8.4.7-এর ছোট shared ডেটা থেকে এসেছে। অন্য release বা নতুন statistics-এ কী, রো আর Extra বদলাতে পারে। প্রতিটি cell মুখস্থ না করে পথের যুক্তি পড়ো। সঙ্গে থাকা SELECT ঠিক কোন উত্তর রাখতে হবে তা দেখায়।</p>
+<p><dfn>Sargable</dfn> শর্ত উপযুক্ত search ইনডেক্স দিয়ে সরাসরি entry খুঁজতে দেয়। তারিখ interval তার উদাহরণ। কলাম-কে YEAR দিয়ে ঘিরলে সাধারণ ইনডেক্সের সহজ রেঞ্জ lookup নাও চলতে পারে। তবে matching functional ইনডেক্স বা সমর্থিত transformation থাকলে পরিস্থিতি বদলায়। তাই “সব ফাংশন এড়াও” বলা অতিরিক্ত broad নিয়ম।</p>
+<p>Composite ইনডেক্সের ক্রমও গুরুত্বপূর্ণ। (department_id, admitted_on)-এ বিভাগ equality প্রথম অংশ ছোট করে, তারপর তারিখ interval পরের অংশ। শুধু admitted_on-এর শর্ত একই সহজ prefix route দেয় না। ইনডেক্স covering scan বা অন্য কৌশলেও আসতে পারে, তাই প্ল্যান-এ নাম থাকা আর efficient lookup আলাদা করো।</p>
+<p>আসল workload tune করতে intended ফল-এর সংজ্ঞা আর প্রতিনিধিত্ব করে এমন dataset রাখো। উপযুক্ত execution measurement-এ estimated আর observed রো মেলাও। Parameter-এ skew, দেরিতে ফিল্টার আর aggregate-এর আগে রো multiplication আছে কি না দেখো। আট শিক্ষার্থী থেকে সিদ্ধান্ত না নিয়ে বাস্তবসম্মত cache আর concurrency-তে মাপো।</p>
+<p>WHERE-তে থাকা প্রতি কলাম-এ ইনডেক্স যোগ কোরো না। একটি ভালো ক্রমের composite ইনডেক্স গুরুত্বপূর্ণ শর্তগুলোর কাজে লাগতে পারে, কয়েকটি দুর্বল ইনডেক্স শুধু write cost বাড়াতে পারে। একইভাবে ইনডেক্স hint এক parameter দ্রুত আর অন্যটি ধীর করতে পারে। Evidence, ভার্সন-এর ধারণা আর ডেটা বদলালে আবার দেখার পরিকল্পনা থাকলেই hint নাও।</p>
+
+<h3>বারবার probe-এর খরচ হিসাব করো</h3>
+<p>এক প্ল্যান 10,000 enrollment scan করে প্রতিটির জন্য শিক্ষার্থী কী খোঁজে ধরি। অন্যটি আগে 20 শিক্ষার্থী বেছে উপযুক্ত enrollment ইনডেক্স-এ প্রত্যেকের পাঁচ registration পায়। দ্বিতীয়টি কম joined রেকর্ড দেখতে পারে, কিন্তু selectivity আর প্রতি শিক্ষার্থী-এর estimate ঠিক হলেই। শুধু ইনডেক্স থাকায় ওই সংখ্যা প্রমাণ হয় না।</p>
+<p>বাছা বিভাগ-এ আসলে 20 নয় 5,000 শিক্ষার্থী থাকলে repeated probe দামি হয়। এটি cardinality estimation-এর সমস্যা, সিনট্যাক্স এরর নয়। প্রতিনিধিত্বকারী parameter দিয়ে estimated আর observed ইনপুট রো দেখো, statistics workload বোঝায় কি না ভাবো। কোয়েরির বিকল্প রূপ চেষ্টা করলেও zero-registration case-এর সঠিক ফল রাখো।</p>
+<h2 id="common-mistakes">Tuning-এর সময়ও সঠিক ফল যাচাই করো</h2>
+<h3>রো-কে final আউটপুট সংখ্যা ভাবা</h3>
+<p>Traditional EXPLAIN-এর রো ওই operation-এর দেখা ইনপুটের estimate। ফিল্টার আর জয়েন শেষে সংখ্যা বদলায়। দরকার হলে বাস্তবে দেখা মানের সঙ্গে মেলাও।</p>
+<h3>ছোট প্ল্যান পেতে outer জয়েন সরানো</h3>
+<p>Student রাখার রিপোর্ট-এ enrollment নেই এমন শিক্ষার্থীও আসবে। Inner জয়েন তাকে বাদ দেয়। অপারেটর সংখ্যা বিচার করার আগে রিপোর্ট-এর অর্থ রক্ষা করো।</p>
+<h3>filesort মানেই disk-এ লেখা ভাবা</h3>
+<p>পুরোনো নামটি ইনডেক্স অর্ডার-এর বাইরে সর্ট বোঝায়। কাজ মেমরি-তেও ধরতে পারে। স্টোরেজ I/O bottleneck বলার আগে বাস্তব workload আর resource-এর আচরণ দেখো।</p>
+
+<h2 id="version-notes">ভার্সন অনুযায়ী প্ল্যান format পড়ো</h2>
+<p>Point আর covering উদাহরণ traditional format নেয়। Joined প্ল্যান FORMAT=TREE-তে schema-নির্ভর ref ছাড়া nested অপারেটর দেখায়। TREE এসেছে 8.0.16-এ, EXPLAIN ANALYZE 8.0.18-এ। জয়েন implementation আর cost release-এ বদলেছে। প্ল্যান তুলনায় ভার্সন লিখে রাখো এবং actual ফল check-ও রাখো।</p>
+
+<h2 id="summary">পথ বদলানোর আগে ব্যাখ্যা করো</h2>
+<p>Parsing অর্থ ঠিক করে, optimization বৈধ পথ তুলনা করে, execution বাছা কাজ করে। EXPLAIN estimate আর access choice দেয়; observation সেই estimate যাচাই করে। Page আর রো cost অস্পষ্ট হলে <a href="topic:db-storage-indexing">স্টোরেজ আর indexing</a> আবার দেখো।</p>
