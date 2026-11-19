@@ -1,9 +1,9 @@
-<h2 id="introduction">রিপোর্ট-এর ধাপের নাম দাও</h2>
+<h2 id="introduction">রিপোর্টের প্রতিটি ধাপের নাম দাও</h2>
 <p class="lead">Shop balance রিপোর্ট-এ billed ও paid তুলনার আগে item মোট ও পেমেন্ট মোট চাই। সব nested expression-এ রাখলে পড়া কঠিন। CTE দিয়ে প্রতিটি মাঝের প্রশ্নের নাম দাও।</p>
 <p><dfn>Common টেবিল expression</dfn> বা CTE হলো WITH-এ নাম দেওয়া কোয়েরি ফল। Main কোয়েরি relation হিসেবে নেয়। Temporary মানে শুধু একটি SQL স্টেটমেন্ট-এর scope, পুরো কানেকশন নয়।</p>
 <p>Nonrecursive CTE কাজের stage পড়তে সহজ করে। Recursive CTE mentor-এর team-এর মতো সম্পর্ক বারবার ধরে। WITH মিললেও যুক্তি আলাদা: recursion-এ শুরুর population, এগোনোর rule ও থামার পথ চাই।</p>
 <p>University dataset-এ শিক্ষক আছে, mentoring hierarchy নেই। তাই local teacher_links relation existing শিক্ষক reference করে। নতুন সম্পর্ক স্পষ্টভাবে যোগ করা হয়েছে; বিভাগ membership-কে parent-child বলা হয়নি।</p>
-<h2 id="syntax">সাধারণ নাম আর recursive self-reference</h2>
+<h2 id="syntax">সাধারণ CTE ও recursive reference বোঝো</h2>
 <p>Nonrecursive WITH-এ নাম,AS,parenthesized SELECT, তারপর main SELECT। এক WITH-এ comma দিয়ে অনেক definition। পরে আগেরটি নেওয়া যায়; লেখার ক্রম নয়, stage বোঝানো নাম দাও।</p>
 <p>Item_totals order_items, payment_totals payments স্বাধীনভাবে order_id-তে গ্রুপ করে। Final কোয়েরি orders-এ সারাংশ জয়েন করে। প্রতি সারাংশ-তে অর্ডার-প্রতি সর্বোচ্চ এক রো, তাই item-পেমেন্ট multiplication নেই। নাম দিলে cardinality দেখা সহজ।</p>
 <p>WITH RECURSIVE-এর anchor নিজেকে না নিয়ে শুরুর রো দেয়। Recursive member CTE নিয়ে আগের round বাড়ায়। এখানে UNION ALL সব round মেলায়।</p>
@@ -15,7 +15,7 @@
     &lt;recursive_query_with_stop_condition&gt;
 )
 SELECT &lt;columns&gt; FROM &lt;walk_name&gt; ORDER BY &lt;display_order&gt;;</code></pre>
-<h2 id="how-it-works">এক round করে hierarchy</h2>
+<h2 id="how-it-works">এক round করে hierarchy দেখো</h2>
 <p>শিক্ষক 11 Nusrat-এর mentor নেই। 12 Arif ও 14 Sajid 11-এর অধীনে, 13 Farhana 12-এর। mentor_id IS NULL root দেয়। Anchor depth zero, কারণ এখনও কোনো edge পার হয়নি।</p>
 <p>প্রথম round-এ child teacher_links current parent-এ জয়েন। 12 ও 14 parent 11 পেয়ে depth one। পরের round-এ 13 parent 12 পেয়ে depth two। 14-এর child নেই, আর কিছু দেয় না।</p>
 <p>13-এর নিচে পরের round খালি, তাই থামে। Final ফল anchor ও সব round রাখে। ORDER BY depth,teacher_id level-ভিত্তিক print করে, সার্ভার-এর internal traversal schedule বলে না।</p>
@@ -34,7 +34,7 @@ SELECT &lt;columns&gt; FROM &lt;walk_name&gt; ORDER BY &lt;display_order&gt;;</c
 <tr><td>পরের expansion</td><td>Child নেই,থামো</td><td>নতুন depth নেই</td></tr>
 </tbody>
 </table>
-<h2 id="examples">সম্পর্ক হাঁটার আগে stage</h2>
+<h2 id="examples">Recursion-এর আগে সাধারণ stage বোঝো</h2>
 <p>প্রথম রিপোর্ট শিক্ষার্থী সারাংশ-র নাম দেয়। Shop-এ দুটি স্বাধীন aggregate নাম দিয়ে জয়েন। কোনোটির self-reference নেই, তাই recursion লাগে না।</p>
 <p>Hierarchy-তে self-reference আসে। Cycle case-এ 11-এর mentor 13 দিয়ে child traversal-এ 11→12→13→11 হয়। Explicit 11 anchor root না থাকলেও শুরু দেয়।</p>
 <p>Path traversal দেখায় ও visited check দেয়। ছোট উদাহরণে CAST 200 character রাখে। বড় ID বা depth-এ অন্য capacity/representation চাই। Intended path না ধরলে guard নির্ভরযোগ্য নয়।</p>
@@ -58,10 +58,10 @@ SELECT &lt;columns&gt; FROM &lt;walk_name&gt; ORDER BY &lt;display_order&gt;;</c
 <p>পরের স্টেটমেন্ট-এ CTE নাম নেওয়া ভুল; semicolon scope শেষ করে। আবার একই stage চাইলে WITH লেখো বা মানালে ভিউতের মতো persistent object নাও। CTE কানেকশন-wide temporary টেবিল নয়।</p>
 <p>CTE সবসময় derived টেবিলের চেয়ে দ্রুত নয়। Optimizer nonrecursive CTE merge বা materialize করতে পারে। Named stage readability বাড়ায়; physical স্টোরেজ/execution আলাদা সিদ্ধান্ত। পারফরম্যান্স-এ প্ল্যান দেখো।</p>
 <p>Tree-এর বদলে graph-এ expansion দ্রুত বাড়ে। Cycle ছাড়াও বহু path-এ এক person বারবার আসতে পারে। সব path নাকি person একবার চাই ঠিক করো। Per-path guard cycle আটকায়, একই শিক্ষক-এর অনেক বৈধ route রাখে।</p>
-<h2 id="best-practices">Traversal contract আগে</h2>
+<h2 id="best-practices">Traversal-এর চুক্তি আগে বলো</h2>
 <p>Anchor মুখের ভাষায় লেখো: সব root, নির্বাচিত mentor নাকি অন্য population। এক step কী ও depth কী গোনে বলো। আলাদা path-এ repeated person থাকবে কি না ঠিক করো। এগুলো SQL shape নির্ধারণ করে।</p>
 <p>ছোট trace-এ শিক্ষক,mentor,depth ও দরকারে path রাখো। Root,interior,leaf,cycle পরীক্ষা করো। এক লম্বা acyclic chain-এর চেয়ে এগুলো anchor ও stopping ভুল বেশি দেখায়।</p>
 <h2 id="version-notes">সার্ভার limit শেষ রক্ষাকবচ</h2>
 <p>MySQL 8.0 recursive CTE দেয়। cte_max_recursion_depth ডিফল্ট 1000 level; ছুঁলে এরর, অনুমোদিত partial hierarchy নয়। Cycle না সারিয়ে limit বাড়াবে না। Shared CHECK 8.0.16 চায়।</p>
-<h2 id="summary">Stage নাম,recursive progress proof</h2>
+<h2 id="summary">ধাপের নাম দাও, recursion-এর অগ্রগতি বোঝাও</h2>
 <p>Ordinary CTE স্টেটমেন্ট গুছায়; recursive CTE নির্দিষ্ট state বাড়ায় যতক্ষণ রো মেলে। Root,depth,path capacity ও cycle স্পষ্ট করো। এরপর <a href="topic:db-stored-procedures">stored procedure ও ফাংশন</a>-এ parameter ও control flow-সহ reusable আচরণ রাখো।</p>

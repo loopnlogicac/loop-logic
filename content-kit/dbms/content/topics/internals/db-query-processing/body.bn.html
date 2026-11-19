@@ -1,23 +1,23 @@
-<h2 id="introduction">কোয়েরি ফল বলে,পথ নয়</h2>
+<h2 id="introduction">কোয়েরি ফল বলে, পথ নয়</h2>
 <p class="lead">ডেটাবেস Management Systems নেওয়া শিক্ষার্থী-এর নাম চাও। SQL কোন রো চাই বলে। কিন্তু কোন টেবিল আগে, কোন ইনডেক্স ও enrollment match কীভাবে হবে সার্ভার বাছে। <dfn>কোয়েরি processing</dfn> অনুরোধকে engine-এর করার মতো কাজে বদলায়।</p>
 <p>সমতুল্য দুই SQL একই প্ল্যান নিতে পারে। আবার একই টেক্সট ডেটা,statistics,ভার্সন বদলালে অন্য প্ল্যান পায়। Optimizer available পথের মধ্যে সম্ভাবনাময়টি বাছে। Estimate-ভিত্তিক বলে সবচেয়ে দ্রুত হবেই নয়।</p>
 <p>Optimization-এ অর্থ রাখতে হবে। LEFT-কে INNER JOIN করলে কোন শিক্ষার্থী থাকে বদলায়। Duplicate সরালে দরকারি সংখ্যা বদলাতে পারে। আগে intended রো ও repetition নীতি, তারপর একই উত্তর দেওয়া পথ তুলনা। দ্রুত ভুল উত্তর কাজে লাগে না।</p>
 
-<h2 id="syntax">প্ল্যান ব্যাখ্যা চাও</h2>
+<h2 id="syntax">প্ল্যানের ব্যাখ্যা চাও</h2>
 <pre><code class="language-sql">EXPLAIN SELECT student_id, student_name
 FROM students WHERE student_id = 101 ORDER BY student_id;</code></pre>
 <p>Traditional EXPLAIN প্ল্যান operation-এর রো দেয়; supported ভার্সন-এ FORMAT=TREE tree দেখায়। MySQL 8.0.18-এর ANALYZE আসল কোয়েরি চালিয়ে timing ও রো observation যোগ করে। Expensive কোয়েরি-তে একে harmless estimate ভাববে না।</p>
 
-<h2 id="how-it-works">Processing pipeline ধরো</h2>
+<h2 id="how-it-works">কোয়েরি প্রক্রিয়ার ধাপ বোঝো</h2>
 <pre class="diagram">SQL text
    |
-parse আর name resolve
+syntax যাচাই ও নাম মেলানো
    |
-logical transformation আর access alternative
+সমতুল্য রূপান্তর ও access-এর বিকল্প
    |
-cost estimate -&gt; chosen physical plan
+খরচের estimate -&gt; নির্বাচিত physical plan
    |
-execution operator -&gt; result row</pre>
+operator চালানো -&gt; ফলের row</pre>
 <p>Parsing সিনট্যাক্স ঠিক দেখে। নাম resolution কলাম-টেবিল মেলায়, ambiguous বা unknown নাম ধরে। Privilege ও type-ও পরীক্ষা হয়। Prepare ও binding আলাদা করা যায়, কিন্তু সব cost decision চিরতরে স্থির নয়; metadata বদলালে reprepare হতে পারে।</p>
 <p>Legal transformation predicate সরল, derived ফল merge/materialize, equivalent জায়গায় ফিল্টার সরাতে পারে। Selective ফিল্টার scan-এর কাছে নিলে পরে কম রো। Outer জয়েন,aggregate,LIMIT,window-এ সরল movement অর্থ বদলাতে পারে। আগে বৈধতা, পরে cost।</p>
 <p>Physical বিকল্প scan,ইনডেক্স lookup,রেঞ্জ,জয়েন অর্ডার ও method। Inner জয়েন-এ selective relation আগে নিলে পরে কাজ কমে। সব প্ল্যান খোঁজার অসীম সময় নেই; practical search ও engine capability বিবেচিত বিকল্প বাঁধে।</p>
@@ -25,7 +25,7 @@ execution operator -&gt; result row</pre>
 <p>Statistics পুরোনো বা বেশি coarse হতে পারে। Correlated predicate আলাদা ধরে estimate খারাপ হয়; বিভাগ ও কোর্স selection সম্পর্কিত হতে পারে। ANALYZE TABLE supported statistics refresh করে, নিজেও admin cost আছে। প্ল্যান না বুঝে প্রতি request-এ চালাবে না।</p>
 <p>Execution নির্বাচিত অপারেটর চালায়। জয়েন inner ইনডেক্স বারবার probe বা ভার্সন-প্ল্যান অনুযায়ী hash জয়েন নিতে পারে। সর্ট-গ্রুপ temporary স্টোরেজ নিতে পারে। কেউ stream করে, কেউ আগে অনেক ইনপুট নেয়। Access path আগে থামতে পারলেই LIMIT বেশি সাহায্য করে।</p>
 
-<h2 id="examples">প্ল্যান আর actual ফল</h2>
+<h2 id="examples">প্ল্যান ও আসল ফল মেলাও</h2>
 <h3>Unique-কী lookup explain</h3>
 <p>Primary equality-র one-রো bound। Actual Ayesha রো-এর পাশে কী ও access type পড়ো। এটি প্ল্যান পড়া, speed benchmark নয়।</p>
 <div data-example="ex-1"></div>
@@ -50,7 +50,7 @@ execution operator -&gt; result row</pre>
 <h3>বারবার probe-এর খরচ হিসাব করো</h3>
 <p>এক প্ল্যান 10,000 enrollment scan করে প্রতি রো-তে শিক্ষার্থী probe করে। অন্যটি আগে 20 শিক্ষার্থী, পরে ইনডেক্স-এ পাঁচ registration করে পায়। Estimate সঠিক হলে দ্বিতীয়টি কম joined রেকর্ড পড়তে পারে। শুধু ইনডেক্স থাকাই ওই সংখ্যা প্রমাণ নয়।</p>
 <p>বাস্তবে বিভাগ-এ 20 নয় 5,000 শিক্ষার্থী হলে repeated probe ব্যয়বহুল। এটি cardinality estimation, সিনট্যাক্স এরর নয়। Representative parameter,estimated-observed ইনপুট ও distribution statistics দেখো। কোয়েরি বদলাতে zero-registration case সঠিক রেখো।</p>
-<h2 id="common-mistakes">Tuning-এর সময়ও সঠিক ফল যাচাই করো</h2>
+<h2 id="common-mistakes">Tuning-এর সময়ও ফল যাচাই করো</h2>
 <h3>রো-কে final আউটপুট সংখ্যা ভাবা</h3>
 <p>Traditional রো ওই operation-এর examined ইনপুট estimate। ফিল্টার ও জয়েন final সংখ্যা বদলায়। দরকার হলে actual observation-এর সঙ্গে মেলাও।</p>
 <h3>ছোট প্ল্যান পেতে outer জয়েন সরানো</h3>
@@ -58,8 +58,8 @@ execution operator -&gt; result row</pre>
 <h3>filesort মানেই disk-এ লেখা ভাবা</h3>
 <p>Filesort-এর ঐতিহাসিক নাম ইনডেক্স অর্ডার-এর বাইরে সর্ট বোঝায়। মেমরি-তেই ধরতে পারে। স্টোরেজ I/O bottleneck বলার আগে workload ও resource behavior দেখো।</p>
 
-<h2 id="version-notes">ভার্সন অনুযায়ী প্ল্যান format পড়ো</h2>
+<h2 id="version-notes">ভার্সন অনুযায়ী প্ল্যানের format পড়ো</h2>
 <p>Point-covering example traditional format, joined প্ল্যান TREE—schema-dependent ref ছাড়া nested অপারেটর। TREE 8.0.16, ANALYZE 8.0.18 থেকে। জয়েন ও cost ভার্সন-এ বদলায়। প্ল্যান তুলনায় ভার্সন লিখে actual ফল check রাখো।</p>
 
-<h2 id="summary">পথ বদলানোর আগে ব্যাখ্যা করো</h2>
+<h2 id="summary">পথ বদলানোর আগে যুক্তি বোঝো</h2>
 <p>Parsing অর্থ স্থাপন, optimization legal পথ তুলনা, execution কাজ করে। EXPLAIN estimate ও access choice, observation সেগুলো পরীক্ষা। Page-রো cost অস্পষ্ট হলে <a href="topic:db-storage-indexing">স্টোরেজ ও indexing</a>-এ ফেরো।</p>

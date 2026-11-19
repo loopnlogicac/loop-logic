@@ -3,7 +3,7 @@
 <p><dfn>জয়েন</dfn> শর্ত অনুযায়ী রো মেলায়। পরিচিত শর্ত foreign কী ও তার referenced কী তুলনা করে; শিক্ষার্থী সঠিক বিভাগ পায়। অন্য কলাম-ও তুলনা করা যায়। নাম কাছাকাছি হলেই SQL নিজে সম্পর্ক বাছে না।</p>
 <p>আগে একটি আউটপুট রো-এর অর্থ বলো: শিক্ষার্থী, enrollment নাকি পেমেন্ট। এটিই ফল-এর grain। সিনট্যাক্স ঠিক থেকেও হঠাৎ grain বদলালে রিপোর্ট ভুল প্রশ্নের উত্তর দিতে পারে।</p>
 <p>University ডেটা-তে আট শিক্ষার্থী ও বারো enrollment। Fahim 108-এর enrollment নেই। Sadia 107 ভর্তি, কিন্তু ফল নেই। মানুষ রাখা ও recorded activity রাখার পার্থক্য এরা দেখায়।</p>
-<h2 id="syntax">Pair rule আর কোন পাশ থাকবে বাছো</h2>
+<h2 id="syntax">কোন pair মিলবে ও কোন পাশ থাকবে বাছো</h2>
 <p><code>INNER JOIN</code> ON সত্য এমন pair দেয়। <code>LEFT JOIN</code> partner না-পাওয়া প্রতিটি left রো-ও রাখে; right কলাম তখন NULL। <code>RIGHT JOIN</code> right ইনপুট-কে একই সুরক্ষা দেয়।</p>
 <p><code>students AS s LEFT JOIN enrollments AS e ON e.student_id = s.student_id</code> বাম থেকে পড়ো। Students রাখার প্রতিশ্রুত population, enrollments optional match দেয়। ON বর্তমান শিক্ষার্থী-এর registration চেনে। ছোট alias-এ দীর্ঘ নাম না লিখেও কলামের মালিক বোঝা যায়।</p>
 <p><code>CROSS JOIN</code> সব possible pair করে। আট শিক্ষার্থী ও ছয় সেকশন-এ 48 choice, না-ঘটা registration-ও আছে। <code>Self join</code> এক টেবিল দুই alias-এ পড়ে; alias আলাদা role, যেমন প্রথম ও দ্বিতীয় classmate।</p>
@@ -13,7 +13,7 @@ FROM &lt;left_table&gt; AS l
 LEFT JOIN &lt;right_table&gt; AS r ON &lt;matching_condition&gt;
 WHERE &lt;result_filter&gt;
 ORDER BY &lt;display_keys&gt;;</code></pre>
-<h2 id="how-it-works">গোনার আগে pair trace</h2>
+<h2 id="how-it-works">গোনার আগে pair অনুসরণ করো</h2>
 <p>Ayesha 101 তিন enrollment মেলায়, তাই তিন pair। Tanvir-ও তিন, Nabila দুই, 104 থেকে 107 একজন করে। Inner জয়েন মোট বারো রো দিয়ে থামে।</p>
 <p>Fahim-এর match list খালি। Left জয়েন NULL enrollment-সহ একটি padded রো দেয়। মোট তেরো রো: আট distinct শিক্ষার্থী, তেরো শিক্ষার্থী-enrollment রো। রিপোর্ট-এর দরকারি সংখ্যা কোনটি নিজে ঠিক হয় না।</p>
 <p>Student-এ গ্রুপ করলে <code>COUNT(e.section_id)</code> actual registration গোনে, কারণ প্রকৃত enrollment-এ section_id NULL নয়। <code>COUNT(*)</code> padded রো-ও গোনে। Fahim-এর জন্য যথাক্রমে শূন্য ও এক। কী বস্তু গুনছ তার সঙ্গে aggregate মেলাও।</p>
@@ -29,7 +29,7 @@ ORDER BY &lt;display_keys&gt;;</code></pre>
 <tr><td>108 Fahim</td><td>0</td><td>0</td><td>1 padded রো</td></tr>
 </tbody>
 </table>
-<h2 id="examples">রাখা রো আর আসল pair দেখো</h2>
+<h2 id="examples">রাখা রো ও আসল match দেখো</h2>
 <p>Department উদাহরণ guaranteed parent match দিয়ে শুরু। পরে absent enrollment ও missing ফল ইচ্ছা করে রাখা হয়েছে। NULL হওয়া কলাম ও preserved ইনপুটের কলাম তুলনা করো।</p>
 <p>Full-জয়েন উদাহরণ আসল enrollment-ফল সম্পর্ক নেয়। Foreign কী orphan ফল আটকায় বলে right-only branch খালি। কোয়েরি semantics এমন রো মানতে পারে, বর্তমান schema ওই state আটকায়—পার্থক্যটি খালি branch-ও শেখায়।</p>
 <h3>Department কোড-সহ শিক্ষার্থী</h3>
@@ -60,10 +60,10 @@ ORDER BY &lt;display_keys&gt;;</code></pre>
 <h3>দুই child list টাকার হিসাব গুণ করে</h3>
 <p>আরেক ভুলে টাকা গুণ হয়। অর্ডার 202-এ দুই item ও দুই পেমেন্ট; সরাসরি জয়েন-এ চার combination। Item ও পেমেন্ট amount দুবার আসে। আলাদা জয়েন শর্ত ঠিক থেকেও মোট দ্বিগুণ।</p>
 <p>প্রতিটি child আগে অর্ডার-প্রতি এক রো-তে সারাংশ করে তারপর জয়েন করো। SUM(DISTINCT amount) সাধারণ সমাধান নয়; দুটি প্রকৃত পেমেন্টের amount সমান হতে পারে। সমস্যা repeated পরিচয়, শুধু repeated number নয়।</p>
-<h2 id="best-practices">সম্পর্কের শর্ত দেখাও</h2>
+<h2 id="best-practices">সম্পর্কের শর্ত স্পষ্ট লেখো</h2>
 <p>স্পষ্ট ON লেখো, shared কলাম qualify করো। NATURAL JOIN schema বদলে চুপচাপ নতুন matching কলাম নিতে পারে; সাধারণ JOIN ভালো। চাওয়া কলাম বাছলে reader grain পরীক্ষা করতে পারে।</p>
 <p>জটিল রিপোর্ট চালানোর আগে expected সংখ্যা ভাবো। নতুন সম্পর্ক one-to-one, one-to-many নাকি optional? টেবিল যোগে সংখ্যা অপ্রত্যাশিত বাড়লে DISTINCT-এর আগে match দেখো। Deduplication ভুল ঢেকে দিতে পারে।</p>
-<h2 id="version-notes">MySQL outer-জয়েন সীমা</h2>
+<h2 id="version-notes">MySQL-এর outer জয়েন সীমা জানো</h2>
 <p>জয়েন MySQL 8.0 ও 8.4-এ চলে; FULL OUTER JOIN এখনও emulate করতে হয়। Shared CHECK-এর জন্য 8.0.16 লাগে। Complete ফল-এর ORDER BY display ঠিক করে; ইনডেক্স বা branch অর্ডার বিকল্প নয়।</p>
-<h2 id="summary">রিপোর্ট population স্পষ্ট</h2>
+<h2 id="summary">রিপোর্টে কাদের রাখবে স্পষ্ট করো</h2>
 <p>কোন population রাখবে বাছো, matching কী বলো, রো-প্রতি partner সংখ্যা দেখো। Missing ডেটা ও repeated মোট বোঝা সহজ হবে। প্রতিটি pair নয়, comparison, membership বা existence চাইলে <a href="topic:db-subqueries">subquery</a> নাও।</p>

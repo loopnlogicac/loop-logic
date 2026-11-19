@@ -1,27 +1,27 @@
-<h2 id="introduction">দুই cashier একসঙ্গে</h2>
+<h2 id="introduction">দুই cashier একসঙ্গে কাজ করলে</h2>
 <p class="lead">দুই cashier একই সময়ে শেষ খাতাটি বিক্রি করতে পারে। দুজন stock 1 পড়ে পরে 0 লিখলে দুই বিক্রির জন্য একবারই কমতে পারে। <dfn>Concurrency control</dfn> একসঙ্গে চলা ট্রানজ্যাকশন-কে কাঙ্ক্ষিত ফল রক্ষার নিয়ম মানায়।</p>
 <p><dfn>Schedule</dfn>-এ প্রতিটি ট্রানজ্যাকশন-এর নিজের ক্রম রেখে সব operation সাজানো হয়। Serial schedule একটির পরে অন্যটি চালায়। Serializable schedule-এ কাজ মিশলেও নির্দিষ্ট equivalence অনুযায়ী ফল কোনো serial অর্ডার-এর সমতুল্য। একজন disk বা lock-এর অপেক্ষায় থাকলে অন্যজন এগোতে পারে বলে interleaving কাজে লাগে।</p>
 <p>r1(X) মানে ট্রানজ্যাকশন 1-এর X পড়া, w1(X) লেখা। Recovery-তে commit-abort গুরুত্বপূর্ণ; basic conflict-serializability read/write অর্ডার দেখে। Serializability ও recoverability আলাদা; acyclic graph একাই dirty read নিরাপদ করে না।</p>
 
-<h2 id="how-it-works">আন্দাজের আগে precedence graph</h2>
+<h2 id="how-it-works">আন্দাজের আগে precedence graph আঁকো</h2>
 <p>ভিন্ন ট্রানজ্যাকশন-এর operation একই item ছুঁলে এবং অন্তত একটি write হলে conflict। Read-read conflict নয়। Ti থেকে Tj-এর প্রতিটি ordered conflicting pair-এ Ti → Tj edge দাও। Precedence graph acyclic হলে schedule conflict-serializable। যেকোনো topological অর্ডার সমতুল্য serial অর্ডার দেয়।</p>
 <table class="ref"><thead><tr><th scope="col">সময়</th><th scope="col">T1</th><th scope="col">T2</th><th scope="col">Conflict ফল</th></tr></thead><tbody><tr><td>1</td><td>r1(X)</td><td></td><td></td></tr><tr><td>2</td><td></td><td>r2(Y)</td><td>আলাদা item</td></tr><tr><td>3</td><td>w1(X)</td><td></td><td></td></tr><tr><td>4</td><td></td><td>r2(X)</td><td>T1 → T2</td></tr><tr><td>5</td><td></td><td>w2(Y)</td><td>T1,Y ছোঁয়নি</td></tr></tbody></table>
 <pre class="diagram">T1 ----&gt; T2
-Topological order: T1, T2</pre>
+Topological ক্রম: T1, T2</pre>
 <p>Graph-এ একটি edge, তাই interleaving T1 তারপর T2-এর conflict-equivalent। আলাদা item-এর operation স্থান বদলালেও প্রাসঙ্গিক conflict বদলায় না। Node হলো ট্রানজ্যাকশন, আলাদা SQL স্টেটমেন্ট বা অ্যাকাউন্ট নয়।</p>
 <p>এবার r1(X), r2(X), w1(X), w2(X) দেখো। r1(X)-এর পরে w2(X) থেকে T1 → T2; r2(X)-এর পরে w1(X) থেকে উল্টো edge। Cycle থাকায় সব conflict রাখা serial অর্ডার নেই। দুজন পুরোনো balance থেকে নতুন মান লিখলে শেষ write অন্য পরিবর্তন মুছে দেয়। একটি conditional UPDATE-এ engine lock নিয়ে পরিবর্তন evaluate করায় এই race এড়ানো যায়।</p>
 <pre class="diagram">T1 ----&gt; T2
  ^        |
  |________|
-Cycle: conflict-serializable নয়</pre>
+Cycle আছে: conflict-serializable নয়</pre>
 <p><dfn>Recoverable</dfn> schedule-এ reader তার পড়া মানের লেখক commit করার পরে commit করে। Cascadeless-এ uncommitted write পড়াই হয় না। Strict schedule-এ uncommitted write-এর ওপর লেখাও আটকে থাকে। এগুলো recovery ভালো করে; graph test-এর বিকল্প নয়।</p>
 
-<h2 id="worked-examples">Schedule থেকে actual lock</h2>
+<h2 id="worked-examples">Schedule থেকে আসল lock বোঝো</h2>
 <h3>Locking-এর দুই phase</h3>
 <p>Shared lock compatible reader-দের থাকতে দেয়; exclusive lock writer-কে incompatible access থেকে রক্ষা করে। Basic <dfn>two-phase locking</dfn> বা 2PL-এ আগে lock নেওয়ার growing phase। একটি ছাড়লেই shrinking phase; নতুন lock নেওয়া যায় না। Lock-based model-এ এটি conflict serializability দেয়, কিন্তু deadlock হতে পারে।</p>
 <p>Strict 2PL-এ commit বা abort পর্যন্ত exclusive lock থাকে; অন্যরা uncommitted write পড়তে বা overwrite করতে পারে না। Rigorous 2PL shared lock-ও রাখে। বইভেদে নাম বদলায়, তাই কোন lock থাকবে বলো। InnoDB locking ও MVCC মেলায়; ordinary consistent SELECT বইয়ের shared-lock 2PL-এর হুবহু বাস্তবায়ন নয়।</p>
 <table class="ref"><thead><tr><th scope="col">সময়</th><th scope="col">Session A</th><th scope="col">Session B</th></tr></thead><tbody><tr><td>1</td><td>Account1 exclusive</td><td></td></tr><tr><td>2</td><td></td><td>Account2 exclusive</td></tr><tr><td>3</td><td>Account2 চেয়ে অপেক্ষা</td><td></td></tr><tr><td>4</td><td></td><td>Account1 চেয়ে deadlock</td></tr></tbody></table>
-<pre class="diagram">Wait-for graph:
+<pre class="diagram">অপেক্ষার wait-for graph:
 A ----অপেক্ষা----&gt; B
 A &lt;---অপেক্ষা----- B</pre>
 <p>Wait-for graph-এ cycle, তাই কাউকে rollback বা interrupt না করলে কেউ শেষ করতে পারে না। Detection চালু থাকলে InnoDB victim বেছে এরর 1213 দেয়। কাজের পরিমাণ ও timing-এ victim বদলায়; কে হারবে ধরে app logic বানাবে না। সীমিত retry ও backoff দিয়ে পুরো ট্রানজ্যাকশন শুরু করো।</p>
@@ -49,7 +49,7 @@ COMMIT;</code></pre>
 <h3>Recoverability-তে commit অর্ডার-ও</h3>
 <p>w1(X), r2(X), c2, a1 ধরো: T2, T1-এর uncommitted মান পড়ে commit করে; পরে T1 abort। Read/write graph-এ শুধু T1 → T2, তাই acyclic। তবু recoverable নয়, কারণ source commit-এর আগে dependent reader commit করেছে।</p>
 <p>T1 commit পর্যন্ত T2 অপেক্ষা করলে dependency recoverable হতে পারে। অন্যের uncommitted write না পড়লে dirty read থেকে cascading abort এড়ায়। তাই serializability-এর উত্তর পুরো recovery argument নয়। Conflict অর্ডার ও commit dependency আলাদা বৈশিষ্ট্য রক্ষা করে।</p>
-<h2 id="common-mistakes">এক কানেকশন থেকে ভুল সিদ্ধান্ত নয়</h2>
+<h2 id="common-mistakes">এক কানেকশন দেখে সিদ্ধান্ত নিও না</h2>
 <h3>দুই read-এ edge</h3>
 <p>দুটি read পরস্পরের মান বদলায় না। একই item-এ শুধু read-write, write-read ও write-write conflict নাও। বাড়তি edge মিথ্যা cycle বানাতে পারে।</p>
 <h3>Savepoint সব deadlock সারাবে</h3>
@@ -57,5 +57,5 @@ COMMIT;</code></pre>
 <h3>Snapshot-কে serial proof</h3>
 <p>Stable snapshot-এও overlapping শর্ত পড়ে আলাদা রো লিখলে write skew হতে পারে। Shared invariant উপযুক্ত lock, কনস্ট্রেইন্ট বা serializable execution দিয়ে রক্ষা করো। শুধু repeated read স্থির হওয়া যথেষ্ট নয়।</p>
 
-<h2 id="summary">Graph,boundary,observation মিলাও</h2>
+<h2 id="summary">Graph, ট্রানজ্যাকশন boundary ও পর্যবেক্ষণ মেলাও</h2>
 <p>Precedence graph conflict অর্ডার পরীক্ষা করে; wait-for graph blocking cycle বোঝায়। InnoDB-তে snapshot ও locking read-এর আচরণ আলাদা। দুই-session schedule দিয়ে কাজটি বোঝো, তারপর failure-কে <a href="topic:db-recovery">undo, redo ও recovery</a>-এর সঙ্গে মেলাও।</p>

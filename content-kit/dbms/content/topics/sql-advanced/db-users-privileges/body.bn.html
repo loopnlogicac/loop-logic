@@ -1,9 +1,9 @@
-<h2 id="introduction">কাজের যতটুকু access লাগে ততটুকু</h2>
+<h2 id="introduction">কাজের যতটুকু access লাগে ততটুকু দাও</h2>
 <p class="lead">Results clerk নাম-নম্বর পড়তে চাইতে পারেন, grade বদলাতে নয়। Shop app অর্ডার বানাবে, সার্ভার অ্যাকাউন্ট চালাবে না। আলাদা অ্যাকাউন্ট ভিন্ন কাজের ক্ষমতা বলে এবং এক জায়গার ভুলের ক্ষতি কমায়।</p>
 <p><dfn>Authentication</dfn> কে connect করছে দেখে; <code>authorization</code> কী করতে পারবে দেখে। Login সফল মানেই সব টেবিল read নয়। আলাদা রাখলে অকারণে admin right না দিয়েই access-denied বোঝা যায়।</p>
 <p><code>Least privilege</code> মানে কাজের দরকারি action ও ডেটা-ই grant। Operation,scope,কলাম,delegation,অ্যাকাউন্ট lifetime সবই ধরো। প্রথম কোয়েরি চালাতে রিপোর্ট reader-কে global admin দেবে না।</p>
 <p>Exercise isolated teaching সার্ভার-এ admin হিসেবে চলে। Named temporary অ্যাকাউন্ট বানায়, narrow grant দেখে, শেষে সরায়। Sample পাসওয়ার্ড শুধু local অনুশীলনের। আসল credential protected runtime secret-এ, rotation process-সহ রাখো।</p>
-<h2 id="syntax">অ্যাকাউন্ট-এ host-ও আছে</h2>
+<h2 id="syntax">অ্যাকাউন্ট পরিচয়-তে host-ও আছে</h2>
 <p>MySQL অ্যাকাউন্ট user ও host জোড়া, যেমন <code>&#x27;report_reader&#x27;@&#x27;localhost&#x27;</code>। অন্য host-এ আলাদা credential-privilege অ্যাকাউন্ট হতে পারে। শুধু দৃশ্যমান username-কে সম্পূর্ণ পরিচয় ভাববে না।</p>
 <p>CREATE USER অ্যাকাউন্ট ও authentication সেটিং বানায়, selected ডেটাবেস-এ টেবিল access দেয় না। GRANT নির্দিষ্ট পারমিশন, যেমন এক ভিউ-তে SELECT বা কলাম-এ UPDATE। REVOKE নির্দিষ্ট grant, DROP USER অ্যাকাউন্ট সরায়।</p>
 <p>Global,ডেটাবেস,টেবিল,কলাম scope আছে। সব ডেটাবেস-এর grant এক schema-র students থেকে অনেক বড়। UPDATE(hometown)-এ edit সীমিত হয়; কিন্তু actual predicate-expression পড়তে কী SELECT লাগে তাও দেখো।</p>
@@ -13,7 +13,7 @@
 GRANT &lt;needed_privileges&gt; ON &lt;schema&gt;.&lt;object&gt; TO &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;
 REVOKE &lt;removed_privileges&gt; ON &lt;schema&gt;.&lt;object&gt; FROM &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;
 DROP USER &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;</code></pre>
-<h2 id="how-it-works">তৈরি থেকে সরানো পর্যন্ত grant</h2>
+<h2 id="how-it-works">তৈরি থেকে সরানো পর্যন্ত grant দেখো</h2>
 <p>CREATE USER-এর পর current schema-তে টেবিল grant নেই। প্রথম উদাহরণ metadata রো গুনে দেখায়। অ্যাকাউন্ট বানানো ও কাজের reporting login বানানো আলাদা; ডেটা পারমিশন ভেবে দিতে হবে।</p>
 <p>Students-এ SELECT দিলে টেবিল-level authorization হয়। information_schema.table_privileges current schema-র SELECT দেখায়। একই scope-এ REVOKE-এর পরে খালি। DROP USER পর্যন্ত অ্যাকাউন্ট থাকে।</p>
 <p>Practice-এ SELECT,UPDATE দিয়ে UPDATE revoke; SELECT থাকে। REVOKE নির্দিষ্ট grant সরায়, সব reset নয়। একটি টেবিল grant সরানো broad grant-এর ওপর deny rule-ও নয়।</p>
@@ -31,7 +31,7 @@ DROP USER &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;</code></pre>
 <tr><td>DROP USER</td><td>না</td><td>অ্যাকাউন্ট সরানো</td></tr>
 </tbody>
 </table>
-<h2 id="examples">Exact operation-scope দেখো</h2>
+<h2 id="examples">সঠিক operation ও scope যাচাই করো</h2>
 <p>প্রথম অ্যাকাউন্ট টেবিল access পায় না; পরেরটি এক পারমিশন পেয়ে হারায়। ভিউ example restricted interface দেয়। Temporary reader-কে ALL,global বা GRANT OPTION কোনোটিই দেওয়া হয় না।</p>
 <p>Metadata admin কানেকশন-এ দেখা হয়। Target user দিয়ে login ও allowed-denied operation test-এর বিকল্প নয়। Deployment review-তে ওই user দিয়ে approved read ও rejected write দুটোই যাচাই করো।</p>
 <h3>টেবিল access ছাড়া অ্যাকাউন্ট</h3>
@@ -43,17 +43,17 @@ DROP USER &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;</code></pre>
 <h3>Narrow ভিউতে নাম</h3>
 <p>শুধু public_students-এ SELECT। Exercise admin owner হলেও deployed ভিউ-তে narrow owner চাই।</p>
 <div data-example="ex-3"></div>
-<h2 id="common-mistakes">Narrow revoke-এর পরেও broad access</h2>
+<h2 id="common-mistakes">Narrow revoke-এর পরেও broad access থাকতে পারে</h2>
 <h3>সব authority source দেখো</h3>
 <p>টেবিল SELECT revoke-এর পরেও ডেটাবেস/global grant বা role দিয়ে students পড়া যেতে পারে। SHOW GRANTS ও role সেটিং দেখে নীতি অনুযায়ী আসল broad source সরাও। MySQL সাধারণ টেবিল-level deny system নয়।</p>
 <p>Access এরর-এ ALL ON *.* দেবে না। এতে এক রিপোর্ট-এর বাইরেও অ্যাকাউন্ট-management ও write ক্ষমতা আসে। আগে operation,object,effective অ্যাকাউন্ট চেনো। কাজের অধিকার থাকলেই narrow missing grant দাও।</p>
 <h3>Context দেখে reconnect</h3>
 <p>USER() ও CURRENT_USER() কানেকশন পরিচয় ও authenticated context আলাদা দেখাতে পারে। Host matching ও সেটিং-এ local কানেকশন-এর অনুমান ভুল হয়। Definer object-এ context আরও আলাদা; relevant call-এ দেখো, এক মানকে universal পরিচয় ধরবে না।</p>
 <p>Scope ও active session অনুযায়ী grant change-এর effect timing বদলায়। পরিষ্কার পরীক্ষায় target অ্যাকাউন্ট reconnect করো। Mysql system grant টেবিল সরাসরি edit সাধারণ workflow নয়। CREATE USER,GRANT,REVOKE-এ routine FLUSH PRIVILEGES লাগে না।</p>
-<h2 id="best-practices">Allowed আর rejected দুই কাজ</h2>
+<h2 id="best-practices">অনুমোদিত ও নিষিদ্ধ দুই কাজ পরীক্ষা করো</h2>
 <p>App ও admin অ্যাকাউন্ট আলাদা রাখো। রিপোর্ট reader-এর প্রয়োজন না হলে write নয়। Controlled delegation না থাকলে GRANT OPTION নয়। Object grant-এর সঙ্গে host,পাসওয়ার্ড,অ্যাকাউন্ট removal review করো।</p>
 <p>Fresh target কানেকশন-এ আসল রিপোর্ট চালাও। Approved ভিউ read সফল, sensitive direct read/write নীতি অনুযায়ী ব্যর্থ কি না দেখো। Broad grant ও active role-ও দেখো। Narrow example সফল মানেই বিকল্প authority নেই নয়।</p>
-<h2 id="version-notes">MySQL8-এ অ্যাকাউন্ট explicit</h2>
+<h2 id="version-notes">MySQL 8-এ অ্যাকাউন্ট আলাদা করে বানাও</h2>
 <p>MySQL 8.0/8.4-এ GRANT-এর আগে explicit CREATE USER; GRANT অ্যাকাউন্ট-creation shortcut নয়। Authentication ডিফল্ট ভার্সন-এ বদলায়; পুরোনো plugin instruction অন্ধভাবে নেবে না। Dataset baseline 8.0.16, অ্যাকাউন্ট action-এ উপযুক্ত admin privilege চাই।</p>
-<h2 id="summary">এক grant নয়,effective authority</h2>
+<h2 id="summary">এক grant নয়, কার্যকর ক্ষমতা দেখো</h2>
 <p>অ্যাকাউন্ট-এ পরিচয়,authentication ও additive পারমিশন source থাকে। সবচেয়ে ছোট কাজের interface দাও, অপ্রয়োজনীয় ক্ষমতা সরিয়ে target কানেকশন-এ যাচাই করো। এরপর <a href="topic:db-functional-dependencies">functional dependency</a>-তে টেবিল design-এর নিয়ম বোঝো।</p>

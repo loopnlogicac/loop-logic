@@ -1,9 +1,9 @@
-<h2 id="introduction">সম্পর্কিত change একসঙ্গে</h2>
+<h2 id="introduction">সম্পর্কিত পরিবর্তন একসঙ্গে রাখো</h2>
 <p class="lead">Shop অর্ডার বানিয়ে item যোগ করে। অর্ডার বেঁচে item হারালে কাজ অসম্পূর্ণ। ট্রানজ্যাকশন দিয়ে সম্পর্কিত change এক unit করে সফল হলে রাখা, ব্যর্থ হলে ফেরানো যায়।</p>
 <p><dfn>ট্রানজ্যাকশন</dfn> commit বা rollback boundary-তে নিয়ন্ত্রিত ডেটাবেস কাজের দল। COMMIT সফল change স্থায়ী, ROLLBACK এখনও uncommitted transactional change বাতিল করে। কোন স্টেটমেন্ট ও engine boundary-তে আছে জানতে হবে।</p>
 <p>Shared টেবিল InnoDB: transactional রো change,রো lock,foreign কী দেয়। একই SQL চলে বলেই nontransactional টেবিলের rollback এক ধরে নিও না। Engine কী ফেরানো যাবে ঠিক করে।</p>
 <p>এখানে এক কানেকশন-এর control দেখব। অন্য কানেকশন-এর visibility,level,deadlock <a href="topic:db-concurrency-control">concurrency control</a>-এ আছে। Boundary unit রক্ষা করে, কিন্তু অন্যরা কী দেখবে তার সব উত্তর নয়।</p>
-<h2 id="syntax">শুরু,শেষ আর partial progress</h2>
+<h2 id="syntax">শুরু, শেষ ও আংশিক অগ্রগতি বোঝো</h2>
 <p>START TRANSACTION-এর পরে related DML চালাও, ফল যাচাই করো; সফল হলে COMMIT, ব্যর্থ হলে ROLLBACK। মানুষ screen পড়া বা unrelated ইনপুট দেওয়ার সময় lock ধরে ট্রানজ্যাকশন খোলা রাখবে না।</p>
 <p><code>Savepoint</code> active ট্রানজ্যাকশন-এর named marker। SAVEPOINT first_item অবস্থান রাখে। ROLLBACK TO ওই marker-এর পরের কাজ ফেরায়, আগেরটি pending রাখে। ট্রানজ্যাকশন শেষ নয়; শেষে COMMIT বা full ROLLBACK চাই।</p>
 <p>RELEASE SAVEPOINT marker সরায়, change ফেরায় বা commit করে না। Full COMMIT/ROLLBACK সব savepoint শেষ করে। নতুন ট্রানজ্যাকশন শুরু MySQL-এ nested ট্রানজ্যাকশন নয়। এক unit-এর আংশিক rollback চাইলে savepoint নাও।</p>
@@ -14,7 +14,7 @@ SAVEPOINT &lt;marker&gt;;
 &lt;later_related_change&gt;;
 ROLLBACK TO SAVEPOINT &lt;marker&gt;;
 COMMIT;</code></pre>
-<h2 id="how-it-works">Pending আর permanent মান trace</h2>
+<h2 id="how-it-works">Pending ও permanent মান অনুসরণ করো</h2>
 <p>শুরুতে 100 exercise book। Conditional UPDATE অন্তত দুই থাকলেই দুই কমায়। Explicit ট্রানজ্যাকশন-এ COMMIT পর্যন্ত pending; পরে 98। Predicate numeric rule রক্ষা করে, ট্রানজ্যাকশন permanence।</p>
 <p>Conditional আপডেট zero রো বদলিয়েও এরর না দিতে পারে: পণ্য নেই বা stock কম। App-কে affected রো দেখে business success বলতে হবে। COMMIT সফল মানেই সব চাওয়া রো মিলেছে নয়।</p>
 <p>Student 106-এর mark সাময়িক 40→100। একই ট্রানজ্যাকশন 100 ও generated A+ দেখে। ROLLBACK-এ 40,D ফেরে। Generated কলাম base value অনুসরণ করে; আলাদা repair লাগে না।</p>
@@ -33,32 +33,32 @@ COMMIT;</code></pre>
 <tr><td>COMMIT</td><td>99</td><td>200</td><td>Book স্থায়ী</td></tr>
 </tbody>
 </table>
-<h2 id="examples">Boundary-র দুইপাশে পড়ো</h2>
+<h2 id="examples">Boundary-র দুই পাশে পড়ো</h2>
 <p>উদাহরণে full commit,full rollback,partial rollback ও সেটিং change আছে। Boundary-র আগে-পরে মান মেলাও। নিজের pending edit SELECT-এ দেখা যায়; নতুন মান দেখাই commit প্রমাণ নয়।</p>
 <p>Practice অর্ডার-এ parent ও এক child item। Foreign কী-তে parent আগে ইনসার্ট চাই। Rollback দুটো pending রো সরায়। Referential integrity ও atomic workflow একসঙ্গে লাগে, এরর check-এর বদলি নয়।</p>
-<h3>Stock adjustment commit</h3>
+<h3>Stock change commit করো</h3>
 <p>Book stock 98 হয়। Conditional predicate এই স্টেটমেন্ট-এ negative আটকায়।</p>
 <div data-example="ex-1"></div>
-<h3>Trial mark undo</h3>
+<h3>পরীক্ষার mark change ফেরাও</h3>
 <p>ভেতরে mark 100,A+; rollback-এর পরে 40,D।</p>
 <div data-example="ex-2"></div>
 <h3>শুধু দ্বিতীয় stock change undo</h3>
 <p>Book 99 commit; pen 200 ফেরে, কারণ marker-এর পরেরটিই undo।</p>
 <div data-example="ex-3"></div>
-<h3>Session autocommit</h3>
+<h3>Session-এর autocommit দেখো</h3>
 <p>নতুন ডিফল্ট session autocommit 1। Off করলে stock change rollback হয়; সেটিং স্পষ্টভাবে ফেরানো হয়।</p>
 <div data-example="ex-4"></div>
-<h2 id="common-mistakes">স্টেটমেন্ট এরর সবসময় full rollback নয়</h2>
+<h2 id="common-mistakes">স্টেটমেন্ট এরর সবসময় পুরো rollback নয়</h2>
 <h3>Failure explicit সামলাও</h3>
 <p>অর্ডার ইনসার্ট সফল, item CHECK-এ ব্যর্থ ধরো। অনেক এরর শুধু ব্যর্থ স্টেটমেন্ট ফেরায়, আগেরটি pending। Ignore করে commit করলে অসম্পূর্ণ অর্ডার থাকবে। এরর ধরে intended unit rollback করো।</p>
 <p>InnoDB deadlock victim-এর মতো এরর পুরো ট্রানজ্যাকশন ফেরাতে পারে। পুরো কাজ retry লাগবে কি না জানো এবং external effect duplicate এড়াও। ডেটাবেস ROLLBACK পাঠানো message বা আলাদা সার্ভিস-এর charge ফেরায় না।</p>
 <h3>DDL আর savepoint আলাদা boundary</h3>
 <p>CREATE TABLE,ALTER TABLE,CREATE INDEX implicit commit করতে পারে। Stock আপডেট-এর মাঝে ঢোকালে পরের rollback-এর আগেই stock স্থায়ী। Atomic DDL নিজের crash-safe আচরণ; user-controlled rollback গ্রুপের অংশ নয়।</p>
 <p>Savepoint স্বাধীন commit নয়। ROLLBACK TO-এর পরে আগের change pending; full rollback-এ সেটিও যায়। সব lock ছাড়ে ধরবে না; engine-specific detail আছে। এটি ডেটা rollback position, complete resource reset নয়।</p>
-<h2 id="best-practices">ট্রানজ্যাকশন owner স্পষ্ট</h2>
+<h2 id="best-practices">ট্রানজ্যাকশন-এর দায় কার স্পষ্ট করো</h2>
 <p>কোন layer boundary চালায় ঠিক করে লিখে দাও। Procedure হঠাৎ commit করলে বড় caller operation ভাঙে। Ordinary CALL নিজে atomic ধরে caller-ও ভুল করতে পারে। Routine ও trigger workflow review-তে ধরো।</p>
 <p>Schema migration সাধারণ business ট্রানজ্যাকশন-এর বাইরে রাখো। সম্ভব হলে lock-এর আগে ইনপুট validate, কাজের মাঝে affected রো ও প্রতিটি এরর path দেখো। Pool-এ ফেরানোর আগে সেটিং ফেরাও, যেন পরের user অপ্রত্যাশিত mode না পায়।</p>
-<h2 id="version-notes">InnoDB আর implicit commit জরুরি</h2>
+<h2 id="version-notes">InnoDB ও implicit commit মনে রাখো</h2>
 <p>ট্রানজ্যাকশন-savepoint MySQL 8.0/8.4-এ আছে। Shared CHECK 8.0.16 চায়। স্টেটমেন্ট অনুযায়ী implicit-commit rule বদলায়। Admin SQL ও DML মেশানোর আগে manual দেখো; BEGIN সব কমান্ড রক্ষা করে ধরে নিও না।</p>
 <h2 id="summary">কোন write এখনও pending জানো</h2>
 <p>সফল কাজে COMMIT, ব্যর্থতায় ROLLBACK, deliberate partial undo-তে savepoint। এরর,affected রো ও DDL boundary দেখো। কারা এসব করতে পারবে সীমিত করতে <a href="topic:db-users-privileges">user ও privilege</a> পড়ো।</p>
