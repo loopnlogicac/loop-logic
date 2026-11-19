@@ -187,9 +187,16 @@ export class SupabaseStore implements Store {
   }
 
   // ── admin documents (db/migrations/004_admin.sql) ──
-  async listDocs(kind: string): Promise<DocRow[]> {
-    const rows = await this.rest<{ kind: string; id: string; data: Record<string, any>; updated_at: string }[]>('GET', `ll_docs?kind=eq.${this.q(kind)}&select=*&order=updated_at.desc&limit=10000`);
-    return rows.map((r) => ({ kind: r.kind, id: r.id, data: r.data, updatedAt: r.updated_at }));
+  async listDocs(kind?: string): Promise<DocRow[]> {
+    const out: DocRow[] = [];
+    const filter = kind === undefined ? '' : `kind=eq.${this.q(kind)}&`;
+    // PostgREST commonly caps responses at 1,000 rows. Continue to an empty
+    // page, even when the server returned fewer rows than we requested.
+    for (;;) {
+      const rows = await this.rest<{ kind: string; id: string; data: Record<string, any>; updated_at: string }[]>('GET', `ll_docs?${filter}select=*&order=updated_at.desc,kind.asc,id.asc&limit=1000&offset=${out.length}`);
+      if (!rows.length) return out;
+      out.push(...rows.map((r) => ({ kind: r.kind, id: r.id, data: r.data, updatedAt: r.updated_at })));
+    }
   }
   async getDoc(kind: string, id: string): Promise<DocRow | undefined> {
     const rows = await this.rest<{ kind: string; id: string; data: Record<string, any>; updated_at: string }[]>('GET', `ll_docs?kind=eq.${this.q(kind)}&id=eq.${this.q(id)}&select=*`);

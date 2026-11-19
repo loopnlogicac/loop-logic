@@ -22,6 +22,7 @@ import type { MasteryService } from '../app/mastery.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
+import type { ReportService } from '../app/reports.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
@@ -55,6 +56,7 @@ export interface AppDeps {
   admin?: AdminService;
   classes?: ClassService;
   orders?: OrderService;
+  reports?: ReportService;
   runner?: RunnerService;
   search?: SearchService;
   store?: Store;
@@ -136,6 +138,10 @@ export function buildRoutes(d: AppDeps): Route[] {
   const cls = () => {
     if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
     return d.classes;
+  };
+  const reports = () => {
+    if (!d.reports) throw new AppError('unavailable', 503, 'Reports are unavailable.');
+    return d.reports;
   };
   const ord = () => {
     if (!d.orders) throw new AppError('unavailable', 503, 'Buying is not available on this server.');
@@ -283,6 +289,9 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/coupons/check', ({ body, email }) => adm().checkCoupon(body.code, String(body.target ?? 'all'), email)),
 
     // admin site (signed in, and an admin)
+    route('GET', '/api/admin/export', async () => new Download(JSON.stringify(await reports().backup(), null, 2), 'application/json; charset=utf-8', 'loop-logic-backup.json'), 'admin'),
+    route('GET', '/api/admin/revenue', ({ query }) => reports().revenue(lang(query.get('lang'))), 'admin'),
+    route('GET', '/api/admin/revenue.csv', async ({ query }) => new Download(await reports().revenueCsv(lang(query.get('lang'))), 'text/csv; charset=utf-8', 'revenue.csv'), 'admin'),
     route('GET', '/api/admin/me', ({ email }) => ({ email, role: adm().roleOf(email), config: adm().config() }), 'admin'),
     route('GET', '/api/admin/overview', () => adm().overview(), 'admin'),
     route('GET', '/api/admin/tutorials', () => adm().tutorialsAdmin(), 'admin'),
