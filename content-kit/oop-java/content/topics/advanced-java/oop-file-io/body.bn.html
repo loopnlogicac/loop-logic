@@ -1,0 +1,56 @@
+<h2 id="introduction">একবার চলার পরেও ডেটা রাখো</h2>
+<p class="lead">প্রোগ্রাম শেষ হলে মেমরির নম্বরের তালিকা হারায়। টেক্সট ফাইলে রাখলে পরের বার বা অন্য টুলে ব্যবহার করা যায়। <dfn>ফাইল ইনপুট-আউটপুট</dfn> ফাইলসিস্টেমের কোনো জায়গার বাইট আর অ্যাপের ব্যবহারযোগ্য মানের মধ্যে রূপ বদলায়।</p>
+<p>টেক্সটে তিনটি সিদ্ধান্ত লাগে: ফাইল কোথায়, বাইট দিয়ে অক্ষর কীভাবে লেখা, আর প্রতি লাইনের অর্থ কী। পড়া সফল হলেও encoding বা record format ভুল হলে ডেটা ভুল হয়। তিনটিই স্পষ্ট করো।</p>
+<p>ফাইল না থাকা, অনুমতি না পাওয়া বা লেখার সময় স্টোরেজ ভরে যাওয়ার মতো বাইরের কারণেও ব্যর্থতা হয়। <a href="topic:oop-exceptions">এক্সেপশনের নিয়মে</a> ব্যর্থ কাজ আর সফলভাবে পড়া খালি ফাইল আলাদা করো।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>Java reader FILE pointer প্রকাশ না করে অক্ষর সামলায়। খোলা রিসোর্সের lifetime-এর দায়িত্ব তবু তোমার। try-with-resources অনেক manual close সামলায়। charset ঠিক করে বাইট আর Java টেক্সটের মধ্যে রূপ বদলানো।</p></div>
+<h2 id="syntax">path, charset আর কাজ একসঙ্গে দাও</h2>
+<pre><code class="language-java">Path path = Path.of("marks.txt");
+String text = Files.readString(path, StandardCharsets.UTF_8);
+Files.writeString(path, text, StandardCharsets.UTF_8);</code></pre>
+<p>Path জায়গা বোঝায়; নিজে ফাইল খোলে বা বানায় না। Files সেখানে অপারেশন দেয়। StandardCharsets.UTF_8 নির্দিষ্ট encoding নেয়; মেশিনের default-এর ওপর নির্ভর করে না। নির্দিষ্ট format পড়া আর লেখায় একই encoding রাখো।</p>
+<p>relative path প্রক্রিয়ার working directory ধরে মেলে। IDE আর টার্মিনালে তা আলাদা হতে পারে। সোর্স ফাইলের ফোল্ডার নিজে থেকে নয়। অ্যাপে স্পষ্ট path argument নাও বা চালানোর ফোল্ডার বলো।</p>
+<p>ডিফল্ট writeString আর newBufferedWriter ফাইল না থাকলে বানায়, থাকলে truncate করে, অর্থাৎ আগের লেখা মুছে দেয়। শেষে যোগ করতে CREATE আর APPEND-এর মতো explicit option লাগে। নতুন record কোথায় শুরু তা বোঝার format-ও চাই।</p>
+<h2 id="how-it-works">খোলো, ব্যবহার করো, বন্ধ করো, অর্থ বের করো</h2>
+<pre class="diagram">Path + UTF-8 bytes -- reader --&gt; String lines -- parse --&gt; marks
+marks -- format --&gt; String lines -- writer --&gt; UTF-8 bytes at Path</pre>
+<p>BufferedReader একসঙ্গে কিছু অক্ষর আনে, readLine দেয়। ফলের লাইনে line terminator থাকে না। সত্যিকারের ফাঁকা লাইনে খালি String, ফাইল শেষে null। গুলিয়ে ফেললে আগে থেমে যেতে বা না থাকা ডেটা parse করতে পারো।</p>
+<p>BufferedWriter ছোট লেখাগুলো জমিয়ে নিচে পাঠায়। newLine প্ল্যাটফর্মের line separator দেয়। flush buffer-এর অক্ষর এগিয়ে পাঠায়; close রিসোর্সও ছাড়ে। flush-এর আগে reader খুললে নতুন লেখা নাও দেখতে পারে।</p>
+<p>একই ফাইল পড়ার আগে writer বন্ধ করো। আলাদা try-with-resources block-এ ক্রম পরিষ্কার থাকে। বডি throw করলেও স্বাভাবিক propagation-এ close চলে। cleanup-ও ব্যর্থ হতে পারে; ডায়াগনস্টিকে cause আর suppressed exception রাখো।</p>
+<p>পড়া আর parse আলাদা। IOException I/O ব্যর্থতা, NumberFormatException সংখ্যায় বদলানোর অযোগ্য token বোঝায়। সঠিক পূর্ণসংখ্যাও নম্বরের সীমা ভাঙতে পারে। যে স্তরের নিয়ম, সেখানেই সামলাও।</p>
+<h2 id="examples">নিজের ফাইলের আগে স্বয়ংসম্পূর্ণ উদাহরণ চালাও</h2>
+<h3>ছোট টেক্সট লিখে ফেরত পড়ো</h3>
+<p>প্রথম প্রোগ্রাম নিজের temporary file বানিয়ে দুই নম্বরের লাইন লেখে, পড়ে প্রিন্ট করে। বদলাতে থাকা temporary নাম প্রিন্ট করে না। finally ফাইল মুছে দেয়, তাই বারবার চালালে জমে না।</p>
+<div data-example="ex-1"></div>
+<h3>buffer দিয়ে পড়ো আর লেখো</h3>
+<p>writer আলাদা লাইনে CSE 80 আর MAT 75 রাখে। সেটি বন্ধ হলে reader খোলে। লুপ readLine-এর null পরীক্ষা করে, তাই প্রতিটি সত্যিকারের লাইন একবার প্রিন্ট হয়। প্রতি লাইনে record এলে এই ধরন কাজে আসে।</p>
+<div data-example="ex-2"></div>
+<h3>না থাকা path সামলাও</h3>
+<p>নতুন temporary directory-তে absent.txt নেই তা নিশ্চিত। নির্দিষ্ট catch স্থির মেসেজ দেয়, তারপর মেনু চালানোর লাইন আসে। প্ল্যাটফর্মভেদে বদলানো এক্সেপশন লেখা না দেখিয়েও ব্যর্থতা আর খালি সফল রিড আলাদা থাকে।</p>
+<div data-example="ex-3"></div>
+<h2 id="formats">এক record-এর অর্থ ঠিক করো</h2>
+<p>format লেখক আর পরের পাঠকের চুক্তি। প্রতি লাইনে নম্বর হলে ফাঁকা লাইন চলে কি না, space trim হয় কি না, সীমা কত বলো। নইলে অপ্রত্যাশিত লাইন বাদ দেবে না পুরো পড়া বাতিল করবে তা জানা যায় না।</p>
+<p>field-এ delimiter বা newline থাকতে পারলে escaping-এর নিয়ম লাগে। ছোট প্রজেক্টে সেগুলো স্পষ্ট নিষেধ করতে পারো। বড় অ্যাপে নির্দিষ্ট format বা মেলা escape-unescape অপারেশন নাও। ডেটা না ভেবে delimiter-এ split করলেই সাধারণ parser হয় না।</p>
+<p>শেষের খালি field দরকার হলে রাখো। String.split regular expression নেয়; ডিফল্টে শেষে খালি ফল বাদ দেয়। negative limit দিলে থাকে। অ্যারের index পড়ার আগে field count যাচাই করো।</p>
+<p>String length UTF-16 code unit গোনে। UTF-8 ফাইলের byte length আলাদা। বিশেষ করে বাংলায় অক্ষর গুনে বাইটের আকার ধরো না। একই explicit UTF-8 নীতিতে ASCII আর বাংলা দুটোই চলে।</p>
+<h2 id="failure-boundaries">import-এ চলতি ডেটা রক্ষা করো</h2>
+<p>নব্বইটি সঠিক নম্বরের পরে পরের লাইনে ব্যর্থ হলে কী হবে? আগে চলতি list মুছে বসাতে থাকলে অর্ধেক স্টেট দেখা যাবে। আংশিক নেওয়া ইচ্ছাকৃত কি না ঠিক করো। সব একসঙ্গে নিতে আগে অস্থায়ী collection বানিয়ে যাচাই করো।</p>
+<p>পুরো পড়া সফল হলেই চলতি collection বদলাও। এই commit point ডিজাইনের সিদ্ধান্ত; রিসোর্স ঠিকমতো বন্ধ হয়েছে কি না তা থেকে আলাদা। reader বন্ধ আগের mutation ফিরিয়ে দেয় না।</p>
+<p>save-এও overwrite-এর জন্য খুললেই নতুন লেখা শেষের আগে পুরোনো ডেটা মুছে যেতে পারে। পাশের staging file-এ লিখে শেষে move করলে ঝুঁকি কমে। সাধারণ move সব filesystem-এ atomic বা crash-safe এমন নয়।</p>
+<p>exists পরীক্ষা পরের open সফল হওয়ার নিশ্চয়তা নয়। মাঝখানে অন্য process path বা permission বদলাতে পারে। আসল অপারেশন করো, এক্সেপশন সামলাও। আগের পরীক্ষা ভালো মেসেজ দিতে পারে, ব্যর্থতা সামলানোর বিকল্প নয়।</p>
+<h2 id="size-and-resources">পুরো ফাইল না ধাপে ধাপে পড়বে বাছো</h2>
+<p>ছোট configuration বা মেসেজে readString সুবিধার; পুরো টেক্সট মেমরিতে আনে। বড় ফাইল বা লাইন ধরে কাজের জন্য BufferedReader ভালো। সব parsed record জমালে অবশ্য সেগুলোর মেমরি লাগবেই।</p>
+<p>Files.lines খোলা ফাইলের ওপর lazy stream দেয়। ছোট লেখা হলেও বন্ধ করতে হবে। try-with-resources নাও। শুধু বানানোর সময় নয়, traversal-এর সময়ও ব্যর্থতা আসতে পারে।</p>
+<p>helper-এ খোলা reader দিলে কে বন্ধ করবে বলো। কলারের এখনও দরকার এমন reader helper হঠাৎ বন্ধ করবে না। এই পূর্ণ উদাহরণে যে খোলে সে-ই বন্ধ করে।</p>
+<h2 id="common-mistakes">ডেটা না থাকা আর ব্যর্থতা আলাদা রাখো</h2>
+<h3>ফাঁকা লাইনকে EOF ধরা</h3>
+<p>ফাঁকা লাইনও ডেটা। null দিয়ে EOF ধরো, তারপর format-এর ফাঁকা লাইনের নিয়ম লাগাও। null পরীক্ষার আগে trim করলে শেষে null dereference হবে।</p>
+<h3>save ব্যর্থতা উপেক্ষা</h3>
+<p>কাজ আর close সফল হওয়ার পরেই সফলতার মেসেজ। লেখা বা বন্ধে throw হলে failed save জানাও। চুপ থাকলে ব্যবহারকারী ডেটা স্থায়ী হয়েছে ভাবতে পারে।</p>
+<h3>extension থেকে encoding ধরা</h3>
+<p>.txt Java-কে charset বলে না। আসল format লিখে দাও। অন্য টুলের ফাইল পড়লে নাম দেখে আন্দাজ না করে encoding নিশ্চিত করো।</p>
+<h2 id="best-practices">ফাইলের সীমার চুক্তি স্পষ্ট করো</h2>
+<ul><li>charset আর প্রতি record-এর grammar একসঙ্গে বলো।</li><li>buffer-এর লেখা শেষ করে তারপর পড়ো।</li><li>চলতি collection বদলানোর আগে import stage করো।</li><li>নিজের ডেটা বানানো উদাহরণে temporary path নাও।</li><li>ডায়াগনস্টিক path আর ব্যবহারকারীর স্থির মেসেজ আলাদা রাখো।</li></ul>
+<h2 id="version-notes">Java 17-এর টেক্সট API</h2>
+<div class="callout version"><p>Files.readString আর writeString Java 11 থেকে। buffered reader-writer factory Java 17-এ আছে। এখানে UTF-8 স্পষ্ট দেওয়া, platform default ধরা হয়নি। object serialization নেই।</p></div>
+<h2 id="summary">ফাইল খোলা সফল হলেই কাজ শেষ নয়</h2>
+<p>path, encoding, record-এর নিয়ম আর cleanup-এর দায়িত্ব ঠিক করো। পড়া বা parse ব্যর্থ হলেও বৈধ স্টেট রাখো। এবার <a href="topic:oop-multithreading">মাল্টিথ্রেডিংয়ে</a> আলাদাভাবে চলা কাজ সমন্বয় করো।</p>
