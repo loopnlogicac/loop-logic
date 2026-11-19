@@ -52,3 +52,14 @@ test('Supabase study plans use learner-filtered events', async () => {
   assert.ok((await plan.plan('student-a', 'en')).next);
   assert.ok(requests.every((r) => new URL(r).searchParams.get('learner_id') === 'eq.student-a'));
 });
+
+test('a single review answer from the study plan is marked as review and does not replace the topic score', async () => {
+  const { store, tutorials, plan } = setup(); const first = tutorials.allTopics('en').filter((t) => t.track === 'data-structures')[0]!;
+  const qs = tutorials.topic(first.track, first.topic, 'en').quiz;
+  await store.addReadingEvents([row('r', first.topic, 'quiz', { score: 2, total: 5, correct: { [qs[0]!.id]: false, [qs[1]!.id]: false } })]);
+  const wrongChoice = (Number((qs[1] as any).answer ?? 0) + 1) % 2;
+  await tutorials.gradeQuiz(first.track, first.topic, 'r', { [qs[1]!.id]: wrongChoice }, 'en', true);
+  const events = (await store.readingEvents('r')).filter((e: ReadingEventRow) => e.type === 'quiz');
+  assert.equal(events.length, 2); assert.equal(events.filter((e: ReadingEventRow) => e.payload.review === true).length, 1);
+  const p = await plan.plan('r', 'en', { track: first.track, topic: first.topic }); assert.match(p.review[0]!.reason, /40%/);
+});

@@ -236,7 +236,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
-    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),
+    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang), body.review === true)),
     route('GET', '/api/learn/:track/:topic/practice/:pid', ({ params, query }) => tutorials.solution(params.track!, params.topic!, params.pid!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic/labs/:lab', ({ params, query }) => tutorials.lab(params.track!, params.topic!, params.lab!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/labs/:lab/run', ({ params, body }) => tutorials.runLab(params.track!, params.topic!, params.lab!, body.input, lang(body.lang)), 'none'),

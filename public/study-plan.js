@@ -22,7 +22,7 @@ export function studyPlan(L, context) {
           if (choice === null) { status.textContent = L.planPick; return; }
           button.disabled = true;
           try {
-            const graded = await api('POST', `/api/learn/${encodeURIComponent(r.track)}/${encodeURIComponent(r.topic)}/quiz`, { answers: { [q.id]: choice }, lang: getLang() });
+            const graded = await api('POST', `/api/learn/${encodeURIComponent(r.track)}/${encodeURIComponent(r.topic)}/quiz`, { answers: { [q.id]: choice }, lang: getLang(), review: true });
             const result = graded.results[q.id]; status.textContent = `${result.correct ? L.planCorrect : L.planWrong}: ${result.explanation}`;
           } catch { status.textContent = L.planError; button.disabled = false; }
         };
