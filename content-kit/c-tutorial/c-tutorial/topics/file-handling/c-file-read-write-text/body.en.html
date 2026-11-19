@@ -1,0 +1,68 @@
+<h2 id="introduction">Choose what one read should mean</h2>
+<p class="lead">A club file might contain one mark pair per record, a sentence with spaces, or a short message to copy. These are all text, but they do not ask for the same reading operation. Choose between formatted fields, complete line fragments and individual characters according to what the data means.</p>
+<p>Imagine reading a notice aloud. Sometimes you want the whole sentence. Sometimes you want only a number written inside it. Sometimes you want to inspect every punctuation mark. C’s text I/O functions offer corresponding levels of control.</p>
+<p>Writing has similar choices. fprintf formats values, fputs writes an existing string, and fputc writes one character. Pair the chosen operation with its success test. A loop should use data only after the operation that produced it succeeded.</p>
+
+<h2 id="syntax">Know what each family returns</h2>
+<table class="ref"><thead><tr><th scope="col">Family</th><th scope="col">Reads or writes</th><th scope="col">Success information</th></tr></thead><tbody><tr><td>fprintf</td><td>Formatted characters</td><td>Nonnegative character count</td></tr><tr><td>fscanf</td><td>Converted fields</td><td>Number of assignments completed</td></tr><tr><td>fgets</td><td>A bounded line fragment</td><td>The destination pointer</td></tr><tr><td>fputs</td><td>A string without an added newline</td><td>A nonnegative result</td></tr><tr><td>fgetc</td><td>One character</td><td>An unsigned-character value represented as int</td></tr><tr><td>fputc</td><td>One character</td><td>The written character value</td></tr></tbody></table>
+<pre><code class="language-c">char line[64];
+while (fgets(line, sizeof line, input) != NULL) {
+    if (fputs(line, output) == EOF) {
+        break;
+    }
+}</code></pre>
+<p>The streams must already be valid. The character functions use EOF to report failure or completion. fgets instead returns NULL when it produces no line fragment. These different return conventions are a reason to read the function’s interface rather than treating every result as a Boolean.</p>
+
+<h2 id="how-it-works">Read only values that were actually obtained</h2>
+<h3>Formatted fields describe conversions</h3>
+<p>fprintf uses the familiar printf format with an explicit destination. fscanf similarly uses a scanf-style format on a selected input stream. For two integer fields, process a record only after two assignments succeed. A return of one does not make the untouched second variable a valid new mark.</p>
+<p>Whitespace in a scanning format can consume newlines as well as spaces. That is useful for token sequences, but it does not enforce physical records. A roll on one line and a mark on the next may still satisfy two conversions. Read a line first when line identity matters to the task.</p>
+<p>A matching failure can leave the offending input waiting. Repeating the same conversion without consuming anything may repeat the same failure forever. Stop, reject the record, or use a deliberate recovery rule. Checking feof before the read cannot predict that kind of matching failure.</p>
+<h3>Line fragments preserve useful structure</h3>
+<p>fgets reads at most one less than the supplied buffer size and adds a terminating null character. If it reads a newline, that newline stays in the string. fputs writes the string but adds no newline. This pairing can preserve spaces and existing line endings without inventing blank lines.</p>
+<p>A full buffer is not proof that a complete line arrived. If the newline did not fit, later reads may contain more of the same record. Establish a line-length contract or implement a reject-and-drain or bounded growth policy. The small import example explicitly uses short lines.</p>
+<h3>Characters make copy decisions visible</h3>
+<p>Keep fgetc’s result in int. First compare it with EOF; only a successful character belongs in the copy. Passing that character to fputc preserves its place in the sequence. Count a copied character only after the output operation succeeds.</p>
+<p>The copy example owns two resources. Failure to open the destination still requires closing the source. A failure inside the loop requires both close attempts. Save their outcomes separately so one failed close does not skip the other through short-circuit evaluation.</p>
+
+<h2 id="examples">Move fields, lines and characters</h2>
+<h3>Write mark pairs and read two conversions per record</h3>
+<p>Each record contributes two successful integer conversions. Newlines are ordinary whitespace to this format, so the loop is suitable only when record line boundaries do not carry separate meaning.</p>
+<div data-example="ex-1"></div>
+<h3>Keep spaces and existing newlines with line I/O</h3>
+<p>Both short lines fit the buffer. fgets retains each newline it reads, and fputs adds none of its own. The spaces inside Bring two pens remain part of the text.</p>
+<div data-example="ex-2"></div>
+<h3>Copy every returned character into another text stream</h3>
+<p>The source contains 26 characters, including two newlines. Every successful input character is written once. Both streams are closed, including when copying cannot finish.</p>
+<div data-example="ex-3"></div>
+<h3>Count words and a final unterminated line</h3>
+<p>Spaces and the tab separate words without creating empty words. There are four words. This policy counts the final next fragment as a second logical line even though it has no trailing newline.</p>
+<div data-example="ex-4"></div>
+<h3>Validate a complete bounded line before accepting its mark</h3>
+<p>Every input line here is shorter than 63 characters, and all numeric tokens fit int. The extra one-character token detects trailing nonwhitespace. Two valid rows survive; malformed text, an invalid mark and an extra token are rejected.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="variations">Define words and lines before counting them</h2>
+<p>A word counter needs a precise definition. Here a word is a maximal run of nonwhitespace characters. Punctuation remains part of that run. The word robot’s, for example, is not split merely because it contains an apostrophe. Different language-processing tasks may choose another rule.</p>
+<p>Track whether you are inside a word. Whitespace puts you outside. A nonwhitespace character increments the count only when you were outside, then puts you inside. Several spaces or tabs therefore separate words without producing empty words. End-of-file requires no extra increment because starts, not endings, are counted.</p>
+<p>Use isspace from ctype.h for the chosen whitespace classification. Its argument must be EOF or a value representable as unsigned char. The loop has already excluded EOF, so converting the returned character to unsigned char is safe. Do not pass an arbitrary negative signed-char value.</p>
+<p>Counting newline characters is not the only possible line policy. A final fragment without a newline may count as a logical line. Remember whether any character was seen and whether the last one was a newline. Add one unfinished line only when some text exists and its final character is not a newline.</p>
+<p>Under this policy, empty input has zero lines. A followed by a newline has one. A alone also has one logical line, but zero completed newlines. State which quantity your report presents instead of making the reader infer it from an example.</p>
+
+<h2 id="common-mistakes">Do not accept partial records or duplicate separators</h2>
+<h3>Printing a line with puts after fgets</h3>
+<p>If fgets retained the newline, puts adds another one. Use fputs for copying the existing string unchanged. If your task deliberately wants a modified line, remove or replace its ending explicitly rather than relying on two functions to cancel one another.</p>
+<h3>Counting every space as a word</h3>
+<p>A sequence with leading spaces, a tab and repeated separators can have fewer words than spaces. Count outside-to-inside transitions instead. Test empty text, whitespace-only text, a single word and a last word without a newline. These cases expose the state logic.</p>
+<h3>Using stale values after a short conversion</h3>
+<p>Initialising a mark to zero does not make a failed conversion acceptable. It only replaces one possible bug with a misleading default. Accept the record after every required field succeeds and its domain is valid. The bounded line importer also checks for a trailing token, so a correct prefix cannot hide extra data.</p>
+<h3>Treating bounded integer conversion as unlimited validation</h3>
+<p>The simple fscanf and sscanf examples use numeric tokens known to fit int. A field width limits consumed characters but does not generally prove a numeric range. For arbitrary external text, use a conversion design that detects range errors, such as checked strtol, then validate the application range. See <a href="topic:c-command-line-arguments">argument conversion</a> for that technique.</p>
+<h3>Replacing the source while copying it</h3>
+<p>Opening the destination with w can truncate existing data. If it names the same file as the source, you can destroy the input before the loop begins. The example uses distinct teaching names. Real path identity can be more complicated than comparing two strings, so design replacement workflows carefully.</p>
+
+<h2 id="version-notes">Text operations do not define a universal encoding</h2>
+<div class="callout version"><p>These C17 interfaces operate on character sequences according to their stream and locale rules. A byte-oriented word counter is not a complete Unicode word segmenter. Text-mode copying can involve platform newline translations. Use a defined binary transfer when exact external bytes, rather than text characters, are the requirement.</p></div>
+
+<h2 id="summary">Let successful reads drive the work</h2>
+<p>Read fields for token data, bounded lines for physical records, and characters for precise scanning. Preserve EOF in int, check output and cleanup, and define word and final-line policies. Next, use <a href="topic:c-file-binary">binary files</a> to transfer blocks and examine the limits of raw structure storage.</p>
