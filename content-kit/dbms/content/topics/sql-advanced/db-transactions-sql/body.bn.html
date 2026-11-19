@@ -1,0 +1,64 @@
+<h2 id="introduction">সম্পর্কিত change একসঙ্গে</h2>
+<p class="lead">Shop অর্ডার বানিয়ে item যোগ করে। অর্ডার থেকে item হারালে অসম্পূর্ণ। ট্রানজ্যাকশন compatible change এক unit করে,সম্পূর্ণ কাজ রাখবে নাকি failure-এ ফেরাবে বাছতে দেয়।</p>
+<p><dfn>ট্রানজ্যাকশন</dfn> commit-rollback boundary-র ডেটাবেস work। COMMIT স্থায়ী,ROLLBACK এখনও pending transactional change ফেরায়। কোন স্টেটমেন্ট-engine অংশ তা জানলেই কাজে লাগে।</p>
+<p>Shared InnoDB transactional রো,lock,FK দেয়। একই SQL চলে বলেই nontransactional টেবিল rollback মেলে না। Engine কী ফেরাতে পারে ঠিক করে।</p>
+<p>এখানে এক কানেকশন-এর control। Concurrency,isolation,deadlock পরে <a href="topic:db-concurrency-control">concurrency control</a>-এ। Boundary unit রক্ষা করে,অন্য কানেকশন কী দেখবে সব মেটায় না।</p>
+<h2 id="syntax">শুরু,শেষ আর partial progress</h2>
+<p>START TRANSACTION,related DML,required outcome যাচাই,সফলে COMMIT failure-এ ROLLBACK। মানুষ screen পড়া বা unrelated ইনপুট দিতে থাকা পর্যন্ত lock রেখো না,short রাখো।</p>
+<p><code>Savepoint</code> active ট্রানজ্যাকশন-এর named marker। SAVEPOINT first_item,পরে ROLLBACK TO-তে তার পরের কাজ ফেরে,আগের pending। ট্রানজ্যাকশন শেষ নয়,শেষে full rollback বা commit চাই।</p>
+<p>RELEASE শুধু marker সরায়,undo-commit নয়। Full boundary savepoint ফেলে। আরেক ট্রানজ্যাকশন শুরু nested independent করে না;এক unit-এ partial undo-তে savepoint।</p>
+<p>Autocommit1 আর explicit ট্রানজ্যাকশন না থাকলে সফল standalone transactional স্টেটমেন্ট সাধারণত commit। START TRANSACTION session variable স্থায়ী না বদলিয়ে গ্রুপ করে,শেষে configured আচরণ ফেরে।</p>
+<pre><code class="language-sql">START TRANSACTION;
+&lt;first_related_change&gt;;
+SAVEPOINT &lt;marker&gt;;
+&lt;later_related_change&gt;;
+ROLLBACK TO SAVEPOINT &lt;marker&gt;;
+COMMIT;</code></pre>
+<h2 id="how-it-works">Pending আর permanent মান trace</h2>
+<p>Book stock100। Conditional UPDATE অন্তত2 থাকলেই2 কমায়। Explicit ট্রানজ্যাকশন-এ pending,commit-এর পরে98। শর্ত numeric rule,ট্রানজ্যাকশন permanence ঠিক করে।</p>
+<p>Conditional আপডেট zero রো হলেও এরর নয়:পণ্য নেই বা stock কম। Affected-রো দেখে business success বাছতে হবে। Commit সফল মানেই intended সব রো পাওয়া নয়।</p>
+<p>106-এর mark40→100 trial। নিজের transaction100,A+ দেখে। Rollback40,D ফেরায়। Generated grade base-এর সঙ্গে ফেরে,manual repair নয়।</p>
+<p>Savepoint-এ book100→99,marker,pen200→198। ROLLBACK TO শুধু pen ফেরায়। Commit book99 রাখে। Final দুই stock বলে marker-এর কোনপাশে ছিল।</p>
+<p>Autocommit off-এ boundary-র পরে পরের transactional স্টেটমেন্ট নতুন ট্রানজ্যাকশন শুরু।0→1 সেটিং outstanding কাজ commit করতে পারে। Pooled সেটিং restore-এর আগে intended boundary explicit শেষ করো।</p>
+<p>Empty ট্রানজ্যাকশন rollback harmless। Already committed ফেরে না। এখন pending কি না জরুরি,কানেকশন আগে লিখেছিল কি না নয়। পরে compensating change বা restoration লাগে।</p>
+<table class="ref">
+<caption>এক কানেকশন-এ stock-savepoint trace</caption>
+<thead><tr><th scope="col">শেষ স্টেটমেন্ট</th><th scope="col">দেখা book</th><th scope="col">দেখা pen</th><th scope="col">স্থায়িত্ব</th></tr></thead>
+<tbody>
+<tr><td>START TRANSACTION</td><td>100</td><td>200</td><td>আগের committed</td></tr>
+<tr><td>Book কমানো</td><td>99</td><td>200</td><td>Pending</td></tr>
+<tr><td>SAVEPOINT first_item</td><td>99</td><td>200</td><td>Pending marker</td></tr>
+<tr><td>Pen কমানো</td><td>99</td><td>198</td><td>দুটো pending</td></tr>
+<tr><td>ROLLBACK TO first_item</td><td>99</td><td>200</td><td>Book pending</td></tr>
+<tr><td>COMMIT</td><td>99</td><td>200</td><td>Book স্থায়ী</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Boundary-র দুইপাশে পড়ো</h2>
+<p>Full commit,rollback,partial rollback আর সেটিং। নিজের pending edit SELECT দেখে,তাই নতুন মান দেখাই committed proof নয়।</p>
+<p>Practice অর্ডার-এ parent আর এক item। FK-তে আগে parent ইনসার্ট। Rollback দুটোই সরায়। Integrity আর atomic workflow মেলে,তবু app এরর check চাই।</p>
+<h3>Stock adjustment commit</h3>
+<p>Book98। Conditional predicate negative হতে দেয় না।</p>
+<div data-example="ex-1"></div>
+<h3>Trial mark undo</h3>
+<p>ভেতরে100,A+;rollback-এর পরে40,D।</p>
+<div data-example="ex-2"></div>
+<h3>শুধু দ্বিতীয় stock change undo</h3>
+<p>Book99 commit,pen200 ফেরে,marker-এর পরেরটাই বাদ।</p>
+<div data-example="ex-3"></div>
+<h3>Session autocommit</h3>
+<p>Fresh default1। Off-এ stock rollback হয়,সেটিং explicit restore।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">স্টেটমেন্ট এরর সবসময় full rollback নয়</h2>
+<h3>Failure explicit সামলাও</h3>
+<p>অর্ডার ইনসার্ট সফল,item CHECK fail হলে অনেক MySQL এরর শুধু failing স্টেটমেন্ট ফেরায়,আগের pending। Ignore করে commit-এ incomplete অর্ডার থাকে। এরর ধরে intended unit rollback।</p>
+<p>InnoDB deadlock victim-এর মতো failure পুরো ট্রানজ্যাকশন ফেরাতে পারে। Whole operation retry আর external effect duplicate এড়ানো জানতে হবে। Message বা অন্য সার্ভিস charge DB rollback ফেরায় না।</p>
+<h3>DDL আর savepoint আলাদা boundary</h3>
+<p>CREATE/ALTER TABLE,CREATE INDEX implicit commit করতে পারে। Stock আপডেট-এর মাঝে দিলে later rollback-এও stock permanent। Atomic DDL internal crash-safe,নিজের DML rollback গ্রুপের অংশ নয়।</p>
+<p>Savepoint independent commit নয়। ROLLBACK TO-এর আগের pending,পরে full rollback-এও যাবে। Marker-এর পরের সব lock ছেড়েছে ধরো না,engine detail আছে। ডেটা position,পুরো resource reset নয়।</p>
+<h2 id="best-practices">ট্রানজ্যাকশন owner স্পষ্ট</h2>
+<p>এক layer boundary own করুক,document। Procedure unexpected commit caller-এর বড় unit ভাঙে। CALL নিজে atomic ধরে caller-ও ভুল করতে পারে। Routine-trigger workflow-তে review।</p>
+<p>Schema migration business ট্রানজ্যাকশন-এর বাইরে। সম্ভব হলে lock-এর আগে validation,ভেতরে affected-রো,সব failure path। Pool-এ ফেরার আগে সেটিং restore,পরের user ভুল mode না পাক।</p>
+<h2 id="version-notes">InnoDB আর implicit commit জরুরি</h2>
+<p>8.0/8.4-তে ট্রানজ্যাকশন-savepoint। Shared CHECK8.0.16। Administrative-DML mix-এ স্টেটমেন্ট-পিছু implicit rule manual-এ দেখো,BEGIN সব কমান্ড রক্ষা নয়।</p>
+<h2 id="summary">কোন write এখনও pending জানো</h2>
+<p>Completed কাজে commit,failed-এ rollback,deliberate partial undo-তে savepoint। এরর-affected রো দেখো,DDL boundary স্পষ্ট। পরের <a href="topic:db-users-privileges">user আর privilege</a>-এ কারা কাজ করতে পারে সীমিত করবে।</p>
