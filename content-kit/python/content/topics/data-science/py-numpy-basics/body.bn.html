@@ -1,0 +1,55 @@
+<h2 id="introduction">Marks table এক numerical object</h2>
+<p class="lead">প্রতি quiz score-এ দুই mark যোগ চাইলে list-এ comprehension বা loop। NumPy <dfn>অ্যারে</dfn> numerical value এক object-এ রেখে entry জুড়ে arithmetic দেয়। একবার হিসাব বলো, library প্রয়োগ করে।</p>
+<p>ছোট collection-এ list ভালোই। বড় regular numerical data-তে repeated হিসাবে NumPy সুবিধা। Compiled operation Python loop overhead কমায়, তবে calculation-size-নির্ভর। ছোট list conversion-এর খরচ savings-এর বেশি হতে পারে।</p>
+<p>বাছা environment-এ python -m pip install numpy, import numpy as np প্রচলিত। Release-এর Python support মেলাও। এখানে modern release-এর shared feature।</p>
+<h2 id="syntax">অ্যারে বানিয়ে dimension দেখো</h2>
+<p>np.array([10, 20, 30]) এক-dimensional। সমান-length nested list rectangle। <dfn>dtype</dfn> entry representation, যেমন np.int64/np.float64। Numerical array-তে এক dtype, list-এর মতো unrelated object মেশানো নয়।</p>
+<pre><code class="language-python">marks = np.array([[40, 50, 60], [70, 80, 90]], dtype=np.float64)
+row_means = marks.mean(axis=1, keepdims=True)
+centered = marks - row_means</code></pre>
+<p><dfn>Shape</dfn> প্রতি axis-এর length। (2, 3)-এ দুই student, তিন quiz। ndim দুই, size মোট ছয়। (3,) এক axis length তিন; কমা এক-item tuple।</p>
+<p>Fraction চাইলে আগে floating dtype। Integer array-তে fraction assign-এ অংশ হারায়। Fixed-width integer overflow-ও পারে, Python int-এর মতো বাড়ে না। NumPy মানেই বেশি precision বা সব overflow check নয়।</p>
+<h2 id="how-it-works">Indexing-arithmetic-এ axis ধরো</h2>
+<p>a[row, column]-এ index zero থেকে, negative শেষে থেকে। a[:, 1] সব row-এর column এক। Integer selection axis সরায়, shape (2,), (2, 1) নয়।</p>
+<p>Length-one column রাখতে a[:, 1:2]। Slice stop বাদ। Reshape একই count নতুনভাবে সাজায়: ছয় entry (2, 3), পাঁচ নয়। Row-এর অর্থ না ভেবে শুধু error চাপতে reshape নয়।</p>
+<table class="ref"><caption>দুই-বাই-তিন marks table reduce</caption><thead><tr><th scope="col">Expression</th><th scope="col">Result shape</th><th scope="col">অর্থ</th></tr></thead><tbody><tr><td>marks.mean(axis=0)</td><td>(3,)</td><td>Quiz-পিছু mean</td></tr><tr><td>marks.mean(axis=1)</td><td>(2,)</td><td>Student-পিছু mean</td></tr><tr><td>marks.mean(axis=1, keepdims=True)</td><td>(2, 1)</td><td>Student mean column-এ</td></tr></tbody></table>
+<p><dfn>Vectorized operation</dfn> entry-প্রতি Python loop না লিখে পুরো array-র কাজ বলে। যোগ, তুলনা আর বহু math function এমন। সব operation processor vector instruction ব্যবহার বা memory শূন্য মানে নয়।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>Typed block-এর মতো, তবে NumPy shape-stride রাখে। Python lifetime সামলায়। View একই underlying block share করলে একটিতে edit অন্য array-তেও দেখা যায়।</p></div>
+<h2 id="examples">Numerical কাজ আর shared storage</h2>
+<h3>Repetition আর numerical multiplication</h3>
+<p>List item repeat করে, NumPy প্রতি সংখ্যা double। tolist সাধারণ Python মান দেয়।</p>
+<div data-example="ex-1"></div>
+<h3>Reduction-এ row-column</h3>
+<p>দুই row দুই student, তিন column তিন quiz। axis=1 প্রতি row-এর mean।</p>
+<div data-example="ex-2"></div>
+<h3>Mask-এ passing mark</h3>
+<p>Comparison mark-প্রতি Boolean। Boolean indexing True entry রাখে।</p>
+<div data-example="ex-3"></div>
+<h3>Column-পিছু adjustment broadcast</h3>
+<p>Length-three bonus last dimension-এ মেলে। দুই student একই তিন adjustment পায়।</p>
+<div data-example="ex-4"></div>
+<h3>Slice view আর copy</h3>
+<p>Basic slice storage ভাগ করে। Slice edit original বদলায়, explicit copy edit নয়।</p>
+<div data-example="ex-5"></div>
+
+<h2 id="broadcasting">যোগের আগে dimension মেলাও</h2>
+<p><dfn>Broadcasting</dfn> compatible shape-এ এক হিসাব দেয়। সবার row-তে একই তিন quiz bonus, পুরো bonus table লাগে না। Length-three দুই-বাই-তিন matrix-এর last axis-এ মেলে।</p>
+<p>Shape ডান থেকে বামে। সমান dimension বা যেকোনোটি one হলে compatible। না থাকা leading dimension one-এর মতো। (2,3)+(3,) দেয় (2,3); (2,3)+(2,) ব্যর্থ, শেষে three-two অমিল।</p>
+<p>Student-পিছু bonus-এ (2,1), এক column তিন quiz জুড়ে ছড়ায়। Flat length-two সেই অর্থ নয়। Broadcast সাধারণত repeated input copy বাঁচায়, result-এ তবু বড় memory লাগে। বড় intermediate-এর আগে shape দেখো।</p>
+<p>Row centering নিজের mean নিজের marks থেকে বিয়োগ। Reduced axis রাখলে mean (2,1), নিজের row-তে মেলে। keepdims=True-এর কারণ, শুধু নাম মুখস্থ নয়।</p>
+<p>এক entry হাতে মেলাও। [40,50,60]-এ bonus [1,2,3] দিলে [41,52,63], দ্বিতীয় row-তেও একই bonus। পুরো student row-তে এক bonus চাইলে column shape করো।</p>
+<h2 id="selection-and-copies">Selection-এ ownership ভুলো না</h2>
+<p>marks &gt;= 40 Boolean array। <dfn>Mask</dfn> কোন entry condition মানে রাখে। marks[mask] সেগুলো আনে। Flat-এ np.count_nonzero(mask) pass গোনে, none-pass-ও।</p>
+<p>Parenthesized comparison-এ &amp; বা |। Python and/or এক truth value চায়। বহু-entry array সব নাকি যেকোনোটি আন্দাজ করে না। এক হ্যাঁ-নায় all()/any()।</p>
+<p>Basic slice সাধারণত view, source-এর storage একই। স্বাধীন edit-এ copy()। Boolean আর advanced indexing copy আনে। Python list slice-এর নতুন outer list থেকে নিয়ম আলাদা।</p>
+<h2 id="common-mistakes">ফল বিশ্বাসের আগে অর্থ</h2>
+<h3>ভুল axis reduce</h3>
+<p>axis=0 row direction সরিয়ে column-পিছু মান রাখে। Average-এর আগে intended shape লেখো, student-subject summary অদলবদল ধরা যায়।</p>
+<h3>Flatten করে অমিল লুকানো</h3>
+<p>Row-column অর্থ হারায়। দুই shape দেখে adjustment student না quiz ঠিক করে axis রাখো।</p>
+<h3>Printed decimal-কে exact অঙ্ক</h3>
+<p>Binary float অনেক decimal approximate। Mean দুই দশমিকে দেখাও, numeric comparison-এ tolerance। Formatting display, calculation নয়।</p>
+<h2 id="version-notes">Syntax আর library support আলাদা</h2>
+<p>Syntax Python 3.10 থেকে। Tested NumPy notes-এ, নতুন release নতুন Python চাইতে পারে। Version-sensitive scalar repr এড়াতে list, integer আর formatted decimal print।</p>
+<h2 id="summary">হিসাবের অংশ হিসেবে shape</h2>
+<p>NumPy typed storage আর shape-aware কাজ মেলায়। Axis দেখো, compatible shape আর independent copy বাছো। Label আর mixed column দরকার হলে <a href="topic:py-pandas-basics">pandas</a>।</p>
