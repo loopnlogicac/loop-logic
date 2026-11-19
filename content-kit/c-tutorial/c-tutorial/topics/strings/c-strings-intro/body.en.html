@@ -1,0 +1,62 @@
+<h2 id="introduction">Introduction to Strings</h2>
+<p class="lead">Think of a label on a laboratory drawer. You want to store letters together and later print the whole label. A C <dfn>string</dfn> is a sequence of characters ending with a zero-valued character. You normally keep those characters in a <code>char</code> array.</p>
+<p>The end marker matters because the array itself does not announce where meaningful text stops. A room-label array might reserve twenty positions while holding only three letters. String operations follow the characters until they meet the first <code>null terminator</code>, written <code>&#x27;\0&#x27;</code>.</p>
+<p>You already know arrays and indices. Strings add a stopping rule to that familiar storage. The first string below uses the campus abbreviation DIU so you can inspect every element.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>Write <code>char campus[] = &quot;DIU&quot;;</code> to create a writable array whose size is inferred from the initializer. C includes a fourth element for the final zero. The initializer <code>{&#x27;D&#x27;, &#x27;I&#x27;, &#x27;U&#x27;, &#x27;\0&#x27;}</code> describes the same four character values explicitly.</p>
+<p>A <code>string literal</code> is the quoted text in source code. In this declaration, its contents initialize a separate array. Changing the array later does not change the literal. A pointer can instead select the literal itself, but that selected literal must never be modified.</p>
+<p>A fixed declaration such as <code>char campus[12] = &quot;DIU&quot;;</code> reserves twelve elements. The first three contain the visible letters, and the remaining initialized elements are zero. You can later store a longer label, provided the visible bytes and final zero still fit.</p>
+
+<pre><code class="language-c">char campus[] = &quot;DIU&quot;;
+char label[12] = &quot;Lab&quot;;
+label[3] = &#x27;\0&#x27;;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>campus</code></td><td>Four elements inferred, including zero</td></tr><tr><td><code>label</code></td><td>Twelve writable elements</td></tr><tr><td><code>&#x27;\0&#x27;</code></td><td>Character that ends the visible string</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>Follow the DIU diagram from left to right. <code>campus[0]</code> is D, <code>campus[1]</code> is I and <code>campus[2]</code> is U. The fourth element is not the digit zero; it is a character whose numeric value is zero. The digit <code>&#x27;0&#x27;</code> is a different character.</p>
+<p>When <code>puts(campus)</code> prints the array, it reads D, I and U, then stops at the null. It does not print the null itself. <code>puts</code> adds an output newline after the text; that newline is separate from the stored terminator.</p>
+<p>The <code>length</code> is the number of bytes before the first zero. The <code>capacity</code> is the total number of available array elements. DIU has length three and capacity four in the inferred array. Its terminator occupies index equal to its length, not the preceding index.</p>
+<p>Insert a zero at index one and the visible string becomes D. The U byte can still remain later in the array. String length changes because the stopping point changes; the array does not shrink. Code that needs a later suffix must track that suffix deliberately.</p>
+<p>An empty string has its zero in the first position. It therefore needs at least one char element even though it has no visible bytes. Do not invent a zero-element array to represent empty text.</p>
+<pre class="diagram">campus: char[4]
+index       0       1       2       3
+        +-------+-------+-------+-------+
+        |  &#x27;D&#x27;  |  &#x27;I&#x27;  |  &#x27;U&#x27;  | &#x27;\0&#x27;  |
+        +-------+-------+-------+-------+
+length = 3                       terminator
+capacity = 4 char elements</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Inspect the DIU characters</h3>
+<p>The indices 0, 1 and 2 hold D, I and U. Index 3 compares equal to the null character.</p>
+<div data-example="ex-1"></div>
+<h3>Change a copy of a literal</h3>
+<p>room owns five writable char positions. Replacing index 3 changes its displayed name to Lab2.</p>
+<div data-example="ex-2"></div>
+<h3>An early terminator hides a suffix</h3>
+<p>puts stops after ma. The later k remains stored, although it is outside the current string.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>A char array is not automatically a string. Three explicit elements D, I and U form a useful character sequence, but there is no terminator. You may access those three elements by index. You may not hand that sequence to an operation that searches for a final zero.</p>
+<p>C allows a special initializer such as <code>char exact[3] = &quot;DIU&quot;;</code> with no space for the literal&#x27;s terminator. That declaration does not create a valid terminated string. Prefer an inferred bound or reserve one extra position so a later reader cannot mistake raw characters for text.</p>
+<p>For a known array in its declaring scope, <code>sizeof campus</code> measures all its char storage. A char occupies one C byte by definition. The library function <code>strlen</code>, introduced shortly, measures the visible prefix instead. Neither measurement should be guessed from the appearance of printed text.</p>
+<p>These examples use basic Latin characters, each represented as one byte on the recorded system. UTF-8 Bangla text may use several bytes per visible character. Counting char elements is therefore not a general way to count Bangla letters. Keep that distinction when designing a name or message field.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Missing termination can make a print operation read beyond the array. Finding an accidental zero in nearby memory does not make the read valid. Add the terminator within owned storage rather than depending on surrounding bytes.</p>
+<p>Do not confuse <code>&#x27;\0&#x27;</code> with <code>&quot;\0&quot;</code>. The first is a character constant suitable for one array element. The second is a string literal containing a zero plus its own terminator. Assign a character when ending an existing string.</p>
+<p>A newline does not end a C string in memory. A stored <code>&#x27;\n&#x27;</code> changes how output appears but leaves following characters part of the string until a zero is reached.</p>
+<h3>A nonterminated array is not a string</h3>
+<p>The result is undefined: puts searches past the three valid elements for a null character. Add a fourth element containing &#x27;\0&#x27;.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Reserve a separate position for termination when choosing capacities. Inspect the empty, one-character and full-capacity cases by index. Use array storage when the label must be edited, and keep its maximum visible length in mind.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Character arrays and null-terminated strings have the same central rules in C89 through C23. The examples use C17 and C99-style loop declarations. No newer standard makes a nonterminated character array acceptable to string-reading functions.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Text becomes a C string when a zero terminator marks its end inside valid storage. Keep length separate from capacity. Next, read words and whole lines in <a href="topic:c-string-input-output">String Input and Output</a>.</p>

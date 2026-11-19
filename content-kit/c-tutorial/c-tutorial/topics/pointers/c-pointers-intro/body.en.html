@@ -1,0 +1,77 @@
+<h2 id="introduction">Introduction to Pointers</h2>
+<p class="lead">Imagine a library desk that keeps the location of a book rather than another copy of the book. A <dfn>pointer</dfn> plays a similar role. It stores an address that lets your program reach an object already in memory.</p>
+<p>An object is a region of storage used to hold a value, such as the int variable marks. Its <code>address</code> identifies that storage location within the running program. A pointer is itself a separate object: it has a stored value and an address of its own.</p>
+<p>You have already passed <code>&amp;marks</code> to scanf. That expression gives the input function a route to the caller&#x27;s variable. Now you will use the same idea directly to read and change values without depending on their variable names.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>The declaration <code>int *p = &amp;marks;</code> creates a pointer to int. The unary <code>&amp;</code> operator takes the address of marks. The star in the declaration belongs to p&#x27;s type: it says p stores an int pointer value.</p>
+<p>In an expression, <code>*p</code> means follow p to its target. This operation is called <code>dereferencing</code> or indirection. Reading <code>*p</code> reads the selected int, while assigning to <code>*p</code> writes that int. The expression <code>p = &amp;other</code> instead changes the address stored in p.</p>
+<p>Declare one pointer per line while learning. In <code>int *p, q;</code>, only p is a pointer; q is an ordinary int. Repeating a star for each pointer declarator is necessary, which is one reason separate declarations are clearer.</p>
+<p>Initialize a pointer immediately. <code>int *selected = NULL;</code> records that no target has been selected. NULL is a macro available through standard headers such as stdio.h and stddef.h. A null pointer is a useful absence marker, but it is never a valid target for reading or writing.</p>
+
+<pre><code class="language-c">int marks = 70;
+int *p = &amp;marks;
+*p = 85;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>&amp;marks</code></td><td>Address of a live int</td></tr><tr><td><code>p</code></td><td>Separate int pointer object</td></tr><tr><td><code>*p</code></td><td>Access to the selected marks object</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>Read the memory picture as two boxes and one arrow. The marks box holds seventy. The p box holds the address of marks. The illustrative addresses are teaching labels, not values your computer is required to use.</p>
+<p>After <code>*p = 85</code>, the marks box contains eighty-five. The arrow does not move. Printing marks and *p therefore reads the same stored int twice. No synchronization between separate int copies is needed because there is only one target object.</p>
+<p>After <code>p = &amp;other</code>, the arrow moves to another live int. That assignment does not change marks and does not copy the value of other into marks. Separate address assignment from target assignment whenever you trace a pointer program.</p>
+<p>Copying p into q creates a second pointer object with the same target address. These pointers are <code>aliases</code>: two access paths to the same object. A write through either path changes what the other reads. Redirecting p afterward changes only p; q keeps its own stored address.</p>
+<p>The address of p is <code>&amp;p</code>, whose type is int **. You do not need double-pointer operations yet, but notice that &amp;p and p describe different objects. The former identifies the pointer box, while the latter selects the int box.</p>
+<p>A valid dereference needs more than a non-null bit pattern. The target must exist, have a compatible type and alignment, and be within the permitted range. Assigning an arbitrary integer as an address cannot prove those facts. Use addresses derived from real live objects.</p>
+<pre class="diagram">Illustrative addresses only; actual sizes and locations vary.
+before:
+address 0x1000                   address 0x2000
++----------------+              +----------------+
+| marks: 70      | &lt;------------ | p: 0x1000      |
++----------------+              +----------------+
+after *p = 85:
++----------------+              +----------------+
+| marks: 85      | &lt;------------ | p: 0x1000      |
++----------------+              +----------------+
+p selects marks; &amp;p selects the separate pointer object</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Update marks through their address</h3>
+<p>Both expressions read the same marks object after the write, so both print 85.</p>
+<div data-example="ex-1"></div>
+<h3>Copy an address, then redirect one pointer</h3>
+<p>q keeps the address of a. Redirecting p does not move q or copy b into a.</p>
+<div data-example="ex-2"></div>
+<h3>Guard an initially empty pointer</h3>
+<p>The first branch avoids dereferencing NULL. Later assignment selects the live roll variable.</p>
+<div data-example="ex-3"></div>
+<h3>Print a real object address</h3>
+<p>The two addresses identify different objects: marks and the pointer variable p.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>To inspect an object pointer, use <code>printf(&quot;%p&quot;, (void *)p)</code>. The %p conversion expects void *, a generic object-pointer type. The explicit conversion supplies the proper argument type to this variadic printing function. <code>%d</code> and <code>%zu</code> are integer formats and do not replace %p.</p>
+<p>The address example prints both p and &amp;p. Their text form is implementation-defined, and their values may change between runs. Read the example as a distinction between target location and pointer-variable location, without memorizing a particular hexadecimal number.</p>
+<p>Pointer width need not equal int width. On many current systems they differ. Converting a pointer to an int merely to print it can lose information and is not the portable address-inspection method. Later lessons discuss sizeof without assuming a universal byte count.</p>
+<p>The address operator does not allocate another target. <code>&amp;marks</code> selects storage that already belongs to marks. Likewise, pointing at a local variable does not extend its lifetime. A pointer to that variable becomes unusable when the variable stops existing.</p>
+<p>A null initialization lets you postpone choosing a target safely. You may compare the initialized pointer with NULL and handle the missing case. Only after assigning a valid target should the program dereference it. A zero check on an uninitialized pointer reads an indeterminate value and is not an initialization technique.</p>
+<p>Use pointers when a function needs to modify caller storage, when traversing an array, or when representing relationships between objects. For a simple local calculation, an ordinary variable name is often clearer. The benefit of a pointer is a deliberate access path, not extra syntax around every value.</p>
+<p>An address is meaningful within the execution and storage context that produced it. Printing an address does not create a persistent identifier for a later run. Do not save its text in a file and expect another process to use it as a direct location. For a stored record, keep an application identifier such as a roll number instead.</p>
+<p>Pointer type also describes access size and interpretation. An int pointer lets the compiler access an int at a compatible target. It is not interchangeable with a double pointer merely because both expressions represent addresses. The selected object, alignment and type must support the requested read.</p>
+<p>A useful paper trace records three columns: variable name, current stored value and selected target. For p, the stored value is an address; for marks, it is an integer. That distinction makes an alias write easy to follow without needing actual machine addresses.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Dereferencing NULL has undefined behavior. Some systems terminate the program, but C promises no particular failure message. The intentional mistake example explains the invalid access without assigning it a predictable output.</p>
+<p>Do not write <code>int *p = 70</code> to point at an int whose value is seventy. An address and an int value are different roles. Create the int object, then initialize p with its address.</p>
+<p>An uninitialized automatic pointer has no valid selected target. Even comparing its value before assignment is a mistake. Initialize to NULL or a live address at declaration so the first read has a defined meaning.</p>
+<p>Parentheses help when combining operations. <code>(*p)++</code> increments the target value, while <code>p++</code> moves the pointer within a suitable array. Those operations answer different questions and have different safety requirements.</p>
+<h3>Dereference NULL</h3>
+<p>The result is undefined: NULL selects no int object. Assign a live int address before writing through p.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Draw the pointer box separately from the target box. For each assignment, ask whether the arrow moves or the target value changes. Keep the target alive, initialize every pointer and print addresses only when the location itself is relevant.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Object addresses, address-of and indirection are central C features from C89 onward. The examples target C17. NULL is used here for that baseline; C23 also introduces nullptr, discussed in the dedicated void and null pointer lesson.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>A pointer is a stored route to an object. Its value, its own address and its target value are three distinct things. Next, move through valid array positions in <a href="topic:c-pointer-arithmetic">Pointer Arithmetic</a>.</p>

@@ -1,0 +1,80 @@
+<h2 id="introduction">Array of Pointers</h2>
+<p class="lead">A row of addresses is different from an address of a row. The declarations look similar enough to confuse beginners, yet they describe different storage and different pointer steps. This lesson separates those two designs.</p>
+<p>An <dfn>array of pointers</dfn> owns several pointer entries. Each entry may select a separate variable, string or numeric row. A <dfn>pointer to an array</dfn> owns one address selecting an entire fixed-width array object. Its target type records the width of that row.</p>
+<p>Think of a list of room locations versus one location identifying a complete row of lockers. The list can select unrelated places. The row location describes a fixed-size group. Indexing syntax can hide the distinction, so begin with the declarations and memory picture.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>The declaration <code>int *items[3]</code> creates an array with three entries, each of type int *. Read items as array first because the brackets bind before the unparenthesized star. Every entry needs initialization before its pointer value is read.</p>
+<p>The declaration <code>int (*row)[3]</code> creates a pointer to an array of three ints. Parentheses group the star with row before the array suffix. A compatible target is one row of an int matrix with three columns.</p>
+<p>For a string table, <code>const char *names[3]</code> creates three pointers to read-only char access paths. The entries can be reassigned, while their literal targets must not be edited. <code>char *const names[3]</code> would instead fix the pointer entries while permitting writes through them only when their targets are truly writable.</p>
+<p>Keep an outer entry count separately from each target&#x27;s usable range. A pointer table does not encode the length of every row. Strings use their terminators for readable length; numeric jagged rows need explicit lengths.</p>
+
+<pre><code class="language-c">int *items[3] = {&amp;a, &amp;b, &amp;c};
+int matrix[2][3] = {{1, 2, 3}, {4, 5, 6}};
+int (*row)[3] = matrix;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>items</code></td><td>Three int pointer objects</td></tr><tr><td><code>row</code></td><td>One pointer to a three-int array</td></tr><tr><td><code>row + 1</code></td><td>Position of the next complete matrix row</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>The first example stores addresses of c, a and b in that order. Selecting items[1] retrieves &amp;a, so <code>*items[1]=15</code> changes a. The table order is independent of the variables&#x27; declaration order or physical placement.</p>
+<p>Reassigning an entry changes its selected target without changing the target&#x27;s address. Swapping two entries similarly changes a view over the objects. This can cheaply reorder strings while leaving the actual characters in their original storage.</p>
+<p>The matrix example uses a pointer-to-array. row initially selects matrix[0]. Incrementing row advances one complete three-int array, reaching matrix[1]. Dereferencing row accesses that whole row, and then an index selects one of its ints.</p>
+<p>The expression row[0][2] reads the third int in the currently selected row. Its meaning is consistent with <code>(*row)[2]</code>. The row width in the type supplies the correct stride; you do not manually multiply the pointer increment by three.</p>
+<p>A table expression items usually converts to int ** because its first element is an int * object. A matrix expression converts to a pointer to its first row instead. Their intermediate objects differ, even when both permit two bracket pairs during access.</p>
+<p>A table may select the same target twice. Writes through either entry then affect the same object. That aliasing can be intentional, but any operation promising independent rows must account for it. The array of addresses alone does not imply distinct owned targets.</p>
+<pre class="diagram">array of pointers: int *items[3]
+items[0] [address] ----&gt; c [30]
+items[1] [address] ----&gt; a [10]
+items[2] [address] ----&gt; b [20]
+items+1 advances one pointer entry
+
+pointer to array: int (*row)[3]
+row --------&gt; matrix[0]: [1][2][3]
+row+1 ------&gt; matrix[1]: [4][5][6]
+one step skips a complete three-int row
+
+jagged rows: rows[0] --&gt; [2][4], length 2
+             rows[1] --&gt; [6],    length 1</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>A table can reorder selected variables</h3>
+<p>The second table entry points at a. Writing through it changes a without changing the entry ordering.</p>
+<div data-example="ex-1"></div>
+<h3>A pointer to a row preserves its width</h3>
+<p>Advancing row skips one complete three-int row and reaches values four through six.</p>
+<div data-example="ex-2"></div>
+<h3>Jagged string lengths</h3>
+<p>Each entry selects its own terminated string. The visible lengths differ even though pointer entry types match.</p>
+<div data-example="ex-3"></div>
+<h3>Jagged numeric rows</h3>
+<p>The separate lengths prevent the second row from being traversed as though it contained two elements.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>The literal-name table selects A, Campus and Lab. These target strings have visible lengths one, six and three. Each target has its own terminator. Equal pointer entry sizes do not imply equal target string capacities or lengths.</p>
+<p>A numeric <code>jagged array</code> uses rows with different element counts. The example selects {2,4} and {6}. The accompanying lengths table stores two and one, preventing a traversal from reading a nonexistent second element of the shorter row.</p>
+<p>For a selected prefix, validate the row index before reading its length entry. Then validate the requested count against that row&#x27;s count. The final exercise uses short-circuit evaluation so an invalid row is rejected before lengths[row] is evaluated.</p>
+<p>An empty logical prefix can have count zero while its underlying row storage still exists. The sum loop performs no reads and returns zero. This is different from inventing an accessible row element when a pointer entry is null.</p>
+<p>Optional null rows require a deliberate contract. You might allow NULL only with length zero, and avoid arithmetic or dereference through that entry. Initializing all table entries to NULL provides a defined initial state, but it does not allocate any rows.</p>
+<p>Ownership is separate for the table and targets. A local pointer table selecting local arrays needs no free. A table selecting literals also needs no free for those literals. An allocated table selecting independently allocated rows requires release rules for both levels, as the double-pointer lesson demonstrated.</p>
+<p>If a table contains borrowed pointers into caller storage, its validity cannot exceed those targets&#x27; lifetimes. Returning the table does not extend an automatic row lifetime. Track each borrowed target, especially when some entries select nested-block arrays.</p>
+<p>The total sizeof a real pointer array measures its entries. Dividing by sizeof its first entry gives the outer count in the declaring scope. That says nothing about the count of ints or chars reached through any one entry. Likewise, sizeof *row for a row pointer measures one full fixed-width row.</p>
+<p>A cast cannot interchange these designs. Treating a matrix as int ** asks the program to read int data as pointer objects. Treating a table as a flat int matrix similarly reads address representations as values. Keep declarations compatible with the objects actually present.</p>
+<p>Choose a fixed matrix when rows share a known width and adjacent storage is useful. Choose a pointer table when targets differ in length or location, or when address-only reordering matters. The representation should follow the data, not the superficial convenience of bracket syntax.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Missing parentheses change one pointer-to-array into an array-of-pointers declaration. Read the name outward and draw the first selected object. If that object is a pointer entry, another indirection is required before reaching ints.</p>
+<p>Do not traverse every numeric row using the longest row&#x27;s count. A shorter target does not gain storage because another row is larger. Pair each row with its own valid length.</p>
+<p>An initialized outer table does not imply initialized targets. Conversely, valid target arrays do not initialize an unassigned pointer entry. Every arrow needs an actual stored address before use, and every target needs its own valid contents.</p>
+<p>A table of const char * entries protects character access, while a table of char *const entries fixes addresses. Do not substitute one qualification for the other when storing literals. Both const levels may be appropriate for a fully read-only view.</p>
+<h3>Uninitialized table entries are not rows</h3>
+<p>The result is undefined: the second entry has no initialized pointer value. Initialize every entry and check optional null rows.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Write parentheses before filling initializers. Keep row lengths beside jagged targets and review aliases explicitly. Use entry swaps for address reordering, row-pointer increments for fixed-width matrix traversal, and storage-specific ownership rules for cleanup.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Both declaration forms are available throughout standard C. The examples use C17 and C99-style loops. No newer standard makes a row-pointer type equivalent to a table-of-pointers type merely because their access expressions use similar brackets.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>A pointer array owns address entries, while a row pointer selects a fixed-width array object. Their types determine stepping, bounds and ownership. Continue to storage created during execution in <a href="topic:c-dynamic-memory-intro">Dynamic Memory Allocation</a>.</p>

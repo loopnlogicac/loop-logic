@@ -1,0 +1,73 @@
+<h2 id="introduction">Pointer Arithmetic</h2>
+<p class="lead">An array is a row of adjacent elements. A pointer selecting one element can move along that row without handling raw byte addresses. This is <dfn>pointer arithmetic</dfn>: addition and subtraction interpreted in units of the target type.</p>
+<p>Imagine walking between classroom seats. Moving forward by two seats means two whole positions, regardless of each seat&#x27;s physical width. An int pointer behaves similarly: adding two skips two int elements, not necessarily two bytes.</p>
+<p>The row also has boundaries. C permits a special end position immediately after the final element, but that marker is not another seat. Keep the legal positions separate from positions that contain readable values.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>For a pointer p into an array, <code>p + k</code> selects a position k elements forward, and <code>p - k</code> selects one k elements backward. <code>p++</code> and <code>--p</code> move by one element when the resulting position is valid. The target value is not changed by these address calculations.</p>
+<p>The difference <code>last - first</code> counts elements between two positions in the same array. Store it in <code>ptrdiff_t</code>, a signed integer type declared by stddef.h. Print it using <code>%td</code>. A negative result means the first operand precedes the second.</p>
+<p>An n-element array permits pointer positions from its beginning through one past its end. Reading and writing are limited to the actual n elements. Even forming a pointer two past the end or one before the beginning violates the arithmetic range rule.</p>
+<p>This lesson orders pointers with &lt; only when they identify positions in the same array. That is the useful portable rule for array traversal. Do not apply numeric-looking address order to unrelated local arrays.</p>
+
+<pre><code class="language-c">int *begin = values;
+int *end = values + count;
+ptrdiff_t distance = end - begin;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>count</code></td><td>Actual array element count</td></tr><tr><td><code>end</code></td><td>Permitted one-past position</td></tr><tr><td><code>distance</code></td><td>Signed count of element steps</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>Take scores containing 40, 60, 80 and 90. A pointer initially selects scores[0]. Adding two selects scores[2], whose value is eighty. On a system with four-byte ints, the address spacing would be eight bytes, but the expression remains +2 on every implementation.</p>
+<p>The scaling comes from the pointed-to type. A char pointer advances by one char; an int pointer advances by one int. Later, a pointer to an entire three-int row advances by a whole row. The compiler uses the target type rather than inferring a stride from the observed values.</p>
+<p>A <code>half-open range</code> includes its starting element and excludes its ending position. For three values, begin is values and end is values+3. The loop tests p != end, reads *p, then advances p. The final advance reaches end and the next condition stops before any end dereference.</p>
+<p>Half-open ranges describe empty work naturally. If begin equals end, the loop performs no reads and the sum remains zero. You do not need a fabricated last index of minus one. This matters for size_t lengths, where subtracting one from zero would wrap.</p>
+<p>Reverse traversal also benefits from the end marker. Start p at end, check p != begin, decrement, then read. The decrement first reaches the final live element. After reading the first element, stop without forming begin-1.</p>
+<p>Subtracting &amp;seats[4] and &amp;seats[1] yields three because three element steps separate them. It does not report a byte distance. Reversing the operands yields minus three. The mathematical result must fit ptrdiff_t; an unrepresentable pointer difference is not a usable value.</p>
+<pre class="diagram">values: int[3]
++---------+---------+---------+     end marker
+|    3    |    4    |    5    |       |
++---------+---------+---------+       |
+values   values+1  values+2       values+3
+  readable elements                 no element
+
+forward: read, then advance; stop at end
+backward: begin at end; decrement, then read
+never form values-1 or values+4</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Advance by elements</h3>
+<p>Adding two selects scores[2], regardless of how many bytes this implementation uses for int.</p>
+<div data-example="ex-1"></div>
+<h3>Measure an array distance</h3>
+<p>The positions differ by three elements. The relational comparison is valid inside this array.</p>
+<div data-example="ex-2"></div>
+<h3>Traverse a half-open range</h3>
+<p>The end pointer is formed but never dereferenced. The three selected elements sum to twelve.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>Within one array, relational comparison reflects element position. A pointer to an earlier element compares less than a pointer to a later element, and the one-past position follows the last. This supports two-ended traversals and range reasoning.</p>
+<p>Equality comparison asks whether compatible pointer values select the same position, with special rules for null pointers and array boundaries. For the straightforward cases here, a copied pointer compares equal to its source and an end pointer equals begin+n. Do not infer string equality or target-value equality from pointer equality.</p>
+<p>Pointers into two separately declared arrays cannot be subtracted, even if a debugger happens to show adjacent addresses. Physical adjacency in one run does not turn them into one array object. Their separate origins determine which arithmetic operations are valid.</p>
+<p>A single standalone object is treated like a one-element array for these arithmetic rules. You can form a pointer one past it, but not read through that pointer or step farther. This narrow allowance does not create neighboring int objects.</p>
+<p>Void-pointer arithmetic is not portable C17 because void has no object element size. GCC may accept it as an extension. Choose a correctly typed pointer, or use an unsigned char pointer when inspecting an object&#x27;s byte representation with an explicit byte range.</p>
+<p>For an input offset, check its domain before forming the pointer. Forming a wild position and then deciding not to dereference it is too late to satisfy the arithmetic rule. The selection exercise validates its index first, then adds it to the array beginning.</p>
+<p>A range contract must keep count consistent with the actual object. A helper receiving begin and count cannot validate that count from the pointer alone. If a caller passes count ten for a three-element array, the helper&#x27;s well-written traversal still receives an invalid range. Bounds are shared responsibilities across the interface.</p>
+<p>Pointer arithmetic changes a selected position without extending storage. Forming end does not allocate an extra sentinel element. If you want to store an explicit sentinel value, reserve a real element for it and include that storage in the array definition.</p>
+<p>The difference between two adjacent pointers can equal one even when their printed addresses differ by several numeric units. That is expected type scaling. Use ptrdiff_t for element distance, and use a separately designed valid byte view only when byte distance is the actual question.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>The one-past position is a boundary marker, not an element with a hidden zero value. The mistake example dereferences that marker and has undefined behavior. Replace the read with a condition that stops before the marker.</p>
+<p>Do not add sizeof(int) to an int pointer to move one int forward. The language already scales by the type size, so that expression moves several elements on common platforms. Use p+1 for one element.</p>
+<p>Using size_t to store a negative pointer difference loses its signed meaning. Use ptrdiff_t and the matching printf format. A cast does not make subtraction between unrelated arrays valid.</p>
+<p>Avoid a reverse condition that decrements p below begin before testing it. A non-dereferenced invalid pointer is still a problem. Organize the loop around the permitted one-past end instead.</p>
+<h3>Reading the end marker</h3>
+<p>The result is undefined: end is one past the array and has no element to read. Stop before dereferencing it.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Label beginning, final element and end marker separately in every range diagram. Validate offsets before arithmetic. Measure differences only within the same array, and choose traversal conditions that also explain the empty range.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>The type-scaled arithmetic and one-past rules apply throughout the C standards used in this course. C99 adds the %td printing length modifier used here. These programs target C17 without compiler-specific void-pointer arithmetic.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Pointer steps count target elements, while legal ranges determine which positions may be formed or accessed. Next, connect those steps to array indexing in <a href="topic:c-pointers-and-arrays">Pointers and Arrays</a>.</p>

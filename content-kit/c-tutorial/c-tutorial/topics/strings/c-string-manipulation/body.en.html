@@ -1,0 +1,75 @@
+<h2 id="introduction">String Manipulation Without Library Functions</h2>
+<p class="lead">Reversing a course code is a small problem with several useful lessons. You need a stopping rule, a pair of valid indices and a decision about empty text. Writing string operations yourself makes those decisions visible.</p>
+<p>A string loop reads characters until a zero or uses a length already measured from a valid string. The algorithms here handle ASCII text. A byte is the unit of work, so they do not claim to reverse Unicode letters or ignore language-specific spelling rules.</p>
+<p>You will build length, copy, append and compare operations, then use the same ideas for palindromes, words, vowels and case conversion. Each operation has its own bounds; one loop pattern does not automatically fit all of them.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>A length loop starts at zero and advances while <code>text[n] != &#x27;\0&#x27;</code>. The first zero appears at index n, so n is the visible length. This is O(n) time because each preceding byte must be examined.</p>
+<p>A copy loop writes visible bytes into a distinct destination and then writes its own zero. An append loop starts at the destination&#x27;s existing length instead of index zero. Both need a capacity agreement that includes the final terminator.</p>
+<p>For reversal, pair index i with <code>n-1-i</code> while <code>i &lt; n/2</code>. The expression for the far end is evaluated only inside that loop. With n equal to zero, the body is skipped, avoiding an unsigned underflow from computing n minus one too early.</p>
+
+<pre><code class="language-c">size_t length = 0;
+while (text[length] != &#x27;\0&#x27;) {
+    length++;
+}</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>length</code></td><td>Index of the first null</td></tr><tr><td><code>text[length]</code></td><td>Current byte within valid string storage</td></tr><tr><td><code>length++</code></td><td>Advance to the next character</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>Trace reversal of CSE from the outside inward. The first pair is C and E, so the result becomes ESC. The S in the middle needs no movement. For an even-length word, the last swap exchanges the two center positions.</p>
+<p>Each byte is moved at most once, giving O(n) time and O(1) extra space.</p>
+<p>A palindrome reads the same forward and backward. Compare the same opposing pairs without swapping them. Stop at the first difference or after checking n/2 pairs. This lesson uses exact byte equality: Level and level differ, and spaces remain significant.</p>
+<p>Empty and single-character strings have no mismatched pair, so both qualify.</p>
+<p>A hand comparison walks past equal nonzero characters. At the first difference, compare the unsigned byte values. If both reach zero together, the strings are equal. Do not return a length comparison before checking content: B is after AA by byte order even though it is shorter.</p>
+<p>A hand append first counts the used destination bytes. Before adding a source character, reserve one more slot for the final zero. The shown fixed strings fit entirely. A reusable helper should report whether it copied everything, truncated, or rejected the input; silent truncation can turn two distinct course codes into the same label.</p>
+<p>The source and destination for the shown copy are separate arrays. Moving characters inside a single overlapping region needs direction-aware handling. Copying left to right can destroy source bytes that a later iteration still needs. Choose a supported memory-move operation or reason carefully about the traversal direction.</p>
+<pre class="diagram">reverse CSE, n = 3
+before: [&#x27;C&#x27;][&#x27;S&#x27;][&#x27;E&#x27;][&#x27;\0&#x27;]
+          ^         ^
+          i=0       n-1-i=2
+swap:   [&#x27;E&#x27;][&#x27;S&#x27;][&#x27;C&#x27;][&#x27;\0&#x27;]
+i=1 fails i &lt; n/2; middle S stays
+empty input: n=0, loop body never runs</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Length and copy by hand</h3>
+<p>Six bytes are copied before the final zero is written. The known destination is large enough.</p>
+<div data-example="ex-1"></div>
+<h3>Append and compare with loops</h3>
+<p>The append leaves one slot free. The comparison stops at a difference or the shared terminator.</p>
+<div data-example="ex-2"></div>
+<h3>Reverse a course token</h3>
+<p>One outer-pair swap produces ESC. The n/2 bound avoids calculating n-1 for an empty string.</p>
+<div data-example="ex-3"></div>
+<h3>Count words and vowels</h3>
+<p>Repeated spaces do not create extra words. Lowercasing makes the initial A count as a vowel.</p>
+<div data-example="ex-4"></div>
+<h3>Normalize ASCII letter case</h3>
+<p>Letters become uppercase while the space and digits stay the same.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>A word counter needs a definition of word. Here a word is a maximal run of non-whitespace bytes. The variable <code>inside</code> records whether the previous byte belonged to a word. Increase the count only when a nonspace byte arrives while outside a word.</p>
+<p>For the line A lab followed by two spaces and room, the transitions start three words. The second space between lab and room does not start a fourth word. Leading spaces leave inside false, and trailing spaces do not add a word. An empty line therefore produces zero.</p>
+<p>Count vowels after converting each byte to lowercase. Testing membership in aeiou then handles uppercase and lowercase consistently. This is an English ASCII vowel rule, not a linguistic rule for every writing system. Digits and punctuation do not match that set.</p>
+<p><code>toupper</code> and <code>tolower</code> come from ctype.h. Give them an unsigned-char-representable value, typically <code>(unsigned char)text[i]</code>. A negative plain char is outside their valid argument domain unless it is EOF. These functions return int values; cast back to char when storing the converted byte.</p>
+<p>Avoid recomputing strlen in every loop condition when the string is unchanged. A loop of n iterations with an O(n) length calculation each time can become O(n squared). Measure once, or stop by inspecting the current character when that accurately describes the operation.</p>
+<p>For reversal and palindrome practice, preserve the original terminator at index n. Swapping only indices below n leaves that marker in place. For a new output such as alternating characters, record the used count and write a new zero after the final chosen byte.</p>
+<p>A useful correctness claim for manual copying is that the first i destination characters equal the first i source characters. It is true before the first copy because that prefix is empty. Copying source[i] preserves the claim for the next position. After all visible bytes are copied, writing the zero finishes the string contract.</p>
+<p>For palindrome testing, the claim is different: every pair outside the current unchecked middle has already matched. Each new comparison reduces that middle by two positions. An odd middle character matches itself, so it needs no separate test.</p>
+<p>The word-count state also has a precise meaning. After processing a prefix, count is the number of word starts seen, and inside says whether that prefix ends in a nonspace run. Writing this meaning beside the variable helps distinguish word counting from counting separators.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Computing <code>size_t right = strlen(text)-1</code> before testing empty input can wrap to a huge value. Avoid forming that invalid index. An n/2 loop or a half-open end position handles empty ranges naturally.</p>
+<p>Forgetting the final zero in a copied result can make a correct-looking character loop produce an invalid string. Trace the write immediately after the last visible character. The destination capacity must include that location.</p>
+<p>A vowel loop should not count the terminator as a vowel. Some search functions consider a searched zero a match at the end of their search string. Stop at the input terminator before searching the vowel set.</p>
+<p>Do not reverse arbitrary UTF-8 one byte at a time. A multibyte character would be split and reordered. Byte algorithms are suitable for the explicitly stated ASCII tasks; text-aware applications need a suitable Unicode approach.</p>
+
+
+<h2 id="best-practices">Working habits</h2>
+<p>State whether comparison is exact or normalized. Keep the empty-string case in every index proof. Separate counting from mutation when a changed terminator would alter the remaining traversal. Name the used length and capacity separately in reusable copy helpers.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>The string and character rules used here are unchanged in C17. C99 permits the size_t loop declarations shown. C23 does not make byte reversal Unicode-aware or add automatic bounds checks to these ordinary arrays.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Manual string algorithms combine familiar loops with an explicit end marker and storage contract. Their correctness rests on valid indices, termination and a clear text definition. Next, organize several labels in <a href="topic:c-array-of-strings">Array of Strings</a>.</p>

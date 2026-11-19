@@ -1,0 +1,64 @@
+<h2 id="introduction">string.h Functions</h2>
+<p class="lead">A room-label program often needs to copy text, add a suffix, compare names or find a separator. The <code>string.h</code> library supplies these operations. Its functions save loop-writing work, but you still supply the storage and its limits.</p>
+<p>Think of string functions as tools with different jobs. A measuring tape does not enlarge a box, and strlen does not create space. Before a copy or append, calculate the required capacity. Before using a search result, check that a match exists.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>Include <code>string.h</code> for the declarations. Pass valid terminated strings to functions that scan strings. A destination must also be writable and large enough for every byte the operation will write.</p>
+<p><code>strlen(text)</code> returns <code>size_t</code>, so print it with <code>%zu</code>. <code>strcmp(a,b)</code> returns an int whose sign describes byte ordering. <code>strchr(text,ch)</code> and <code>strstr(text,part)</code> return pointers selecting matching positions, or NULL when absent.</p>
+<p>The reference table below separates each function&#x27;s result from its main obligation. The word bounded needs care: a numeric argument does not always mean the function guarantees a terminated result.</p>
+<p>A pointer stores an address selecting existing storage. Here, search results select characters inside the searched string. The detailed address model is taught in <a href="topic:c-pointers-intro">Introduction to Pointers</a>; a search result is not a newly allocated string.</p>
+
+<pre><code class="language-c">size_t length = strlen(source);
+if (length &lt; capacity) {
+    strcpy(destination, source);
+}</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>source</code></td><td>Readable terminated string</td></tr><tr><td><code>destination</code></td><td>Writable, non-overlapping storage</td></tr><tr><td><code>capacity</code></td><td>Number of available destination char elements</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>For <code>strcpy(destination, source)</code>, measure the source plus one for its zero. The condition <code>strlen(source) &lt; capacity</code> proves the copy fits when the operands are valid and non-overlapping. The routine copies the terminating zero as well as visible text.</p>
+<p>For <code>strcat(destination, source)</code>, destination must already be a valid string. Its existing length consumes capacity. You need room for the old visible text, the new visible text and one final zero. The append replaces the old terminator with the first new character, then writes a later terminator.</p>
+<p><code>strncpy(destination, source, n)</code> writes exactly n bytes. A shorter source causes zero padding through the rest of those bytes. A source with at least n visible bytes leaves no null terminator in the copied part. The prefix example therefore copies capacity minus one and explicitly writes the last zero.</p>
+<p><code>strcmp</code> stops at the first differing byte or the shared end. It compares bytes as unsigned char values. Different lengths matter only after an equal prefix: Lab precedes Lab1 because the shorter string reaches zero first. Test less than zero, equal to zero, or greater than zero; never assume an exact result of minus one.</p>
+<p><code>strchr</code> finds one character, including the terminator if you search for <code>&#x27;\0&#x27;</code>. <code>strstr</code> finds a contiguous substring; an empty search string matches at the beginning. Neither routine creates a new copy. The returned position shares the original storage.</p>
+<pre class="diagram">label[16] before strcat: [&#x27;C&#x27;][&#x27;S&#x27;][&#x27;E&#x27;][&#x27;\0&#x27;][spare ...]
+source:                  [&#x27; &#x27;][&#x27;2&#x27;][&#x27;1&#x27;][&#x27;2&#x27;][&#x27;\0&#x27;]
+after: [&#x27;C&#x27;][&#x27;S&#x27;][&#x27;E&#x27;][&#x27; &#x27;][&#x27;2&#x27;][&#x27;1&#x27;][&#x27;2&#x27;][&#x27;\0&#x27;][spare ...]
+        old length 3 + added length 4 + terminator 1 = 8</pre>
+<table class="ref"><thead><tr><th scope="col">Function</th><th scope="col">Purpose and result</th><th scope="col">Storage rule</th></tr></thead><tbody><tr><td>strlen(s)</td><td>Visible byte count as size_t</td><td>s must be terminated</td></tr><tr><td>strcpy(d,s)</td><td>Copy through zero; returns d</td><td>No overlap; strlen(s)+1 slots</td></tr><tr><td>strncpy(d,s,n)</td><td>Copy or pad n bytes; returns d</td><td>n writable slots; may omit zero</td></tr><tr><td>strcat(d,s)</td><td>Append s; returns d</td><td>Both strings valid; combined length+1 fits</td></tr><tr><td>strcmp(a,b)</td><td>Negative, zero or positive int</td><td>Readable terminated inputs</td></tr><tr><td>strchr(s,c)</td><td>First character position or NULL</td><td>Check before dereferencing</td></tr><tr><td>strstr(s,part)</td><td>First substring position or NULL</td><td>Both arguments terminated</td></tr></tbody></table>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Copy and append within capacity</h3>
+<p>The combined seven visible bytes need eight slots with the terminator; capacity sixteen is enough.</p>
+<div data-example="ex-1"></div>
+<h3>Compare by sign</h3>
+<p>Only the sign of the first result is tested. Equal byte strings compare as zero.</p>
+<div data-example="ex-2"></div>
+<h3>Find a character and a substring</h3>
+<p>Both results point inside text. Printing from the dash produces -204; printing from the substring produces 204.</p>
+<div data-example="ex-3"></div>
+<h3>Terminate a bounded strncpy result</h3>
+<p>The explicit zero makes the three-character prefix Cam a valid string. strncpy alone would not terminate this truncated prefix.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>Searching Room-204 for the dash returns a pointer at that dash. Printing from there yields -204 because the suffix still ends at the original zero. Searching for 204 returns a later position that prints only the digits.</p>
+<p>For a missing separator, NULL is a status value rather than an empty string. <code>puts(NULL)</code> is invalid even if a particular library displays a helpful message. Branch on the result first, then choose your missing-value response.</p>
+<p>Copy and append operations here do not allow overlapping source and destination regions. Moving a suffix one character within the same array needs a different tool, such as <code>memmove</code> with a checked byte count including termination. A cast or larger destination bound does not remove the overlap restriction.</p>
+<p>These functions operate on bytes and stop at zero. A binary buffer containing embedded zeros needs explicit lengths and byte-memory operations instead. UTF-8 byte lengths also differ from visible-letter counts; strcmp does not promise dictionary order for Bangla names.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>A destination sized to strlen(source) is one byte too short. The zero is easy to overlook because it does not appear in output. Include it in every capacity proof.</p>
+<p>Do not use strncpy as a drop-in safe spelling of strcpy. Its padding and termination rules serve a different contract. Check whether you want rejection, truncation or a full copy, then implement that policy explicitly.</p>
+<p>Pointer equality compares addresses, not string content. Two separate arrays containing Lab can have different addresses while strcmp reports equal text. Use the operation matching the question you mean to ask.</p>
+<h3>Copying past a destination</h3>
+<p>The result is undefined because the copy needs four positions. Use an array of at least four chars.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Write capacity checks before mutation. Keep source and destination roles clear. Normalize comparison signs when displaying order. Test missing searches, equal strings and exactly full destinations, rather than only comfortable short labels.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>The listed string.h functions are available in C89 through C23. The examples use C17. Annex K checked functions are optional and are not required here; their existence is no reason to omit the ordinary functions&#x27; storage checks.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>String tools work safely when you supply valid strings, enough storage and clear search handling. Next, reproduce these ideas with loops in <a href="topic:c-string-manipulation">String Manipulation Without Library Functions</a>.</p>

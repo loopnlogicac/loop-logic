@@ -1,0 +1,73 @@
+<h2 id="introduction">Pointers and Strings</h2>
+<p class="lead">A string pointer can select a complete label or begin partway through one. That makes it useful for parsing course codes and room descriptions. The pointer supplies a starting address; the string&#x27;s zero terminator supplies the stopping point.</p>
+<p>There is a crucial storage choice behind this convenience. A writable character array owns characters you may edit. A pointer to a string literal selects text you must leave unchanged. Similar-looking declarations can therefore have very different write permissions.</p>
+<p>Think of an editable notebook page and a printed reference card. Both can be read, but changing the notebook does not imply you may write on the reference card. Choose storage according to whether your operation reads or modifies text.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>The declaration <code>char text[] = &quot;Lab&quot;</code> creates a four-element array containing a copy of the characters and zero. Its elements are writable. The declaration <code>const char *view = &quot;Lab&quot;</code> creates a pointer selecting a literal with static storage duration.</p>
+<p>C17 also accepts <code>char *view = &quot;Lab&quot;</code>, but writing the literal through that pointer is undefined. The non-const declaration does not grant permission to modify literal storage. Prefer const char * so accidental writes receive a compiler diagnostic.</p>
+<p>A character pointer can be redirected to another compatible target. An array cannot be redirected by assignment. <code>view = &quot;Office&quot;</code> selects another literal; <code>text = &quot;Office&quot;</code> is invalid for an array. Copying new text into an array requires enough capacity.</p>
+<p>Pointer arithmetic creates suffix views. If text holds CSE212, then text+3 selects the first digit. The substring remains terminated by the original final zero. No allocation or copying happens when that suffix pointer is formed.</p>
+
+<pre><code class="language-c">char editable[] = &quot;Lab&quot;;
+const char *view = &quot;Lab&quot;;
+char *suffix = editable + 1;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>editable</code></td><td>Owned writable four-char array</td></tr><tr><td><code>view</code></td><td>Read-only literal access</td></tr><tr><td><code>suffix</code></td><td>Borrowed view beginning at editable[1]</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>The first example changes the first element of editable from L to M. Its output becomes Mab while view still selects Lab. These are separate storage objects; their matching initial text does not create an automatic shared editable buffer.</p>
+<p>The room example searches Lab-204 for a hyphen using strchr. If found, the returned pointer selects the dash inside the writable room array. Incrementing that pointer selects the following digit. Changing its first character changes room itself because both access paths share those bytes.</p>
+<p>Printing the full room and the suffix afterward shows Lab-304 and 304. The suffix has no independent lifetime or capacity. It remains usable only while the containing array is alive and its required zero remains within bounds.</p>
+<p>A pointer walk tests <code>*p != &#x27;\0&#x27;</code>, reads the current character, then advances. The final test reads the terminator, which is a real array element. It stops before stepping farther. A string without a valid terminator cannot support this walk safely.</p>
+<p>The pointer does not retain the array capacity. <code>sizeof p</code> is a pointer size even if p began at a large buffer. For a suffix, the usable remaining capacity also depends on the offset. A writing helper needs that remaining bound, not the full original capacity.</p>
+<p>The length of text+3 for CSE212 is three. strlen starts from the address it receives and stops at the next zero. It has no knowledge of preceding characters, the original name text, or unused writable storage after the terminator.</p>
+<pre class="diagram">writable room array:
+[&#x27;L&#x27;][&#x27;a&#x27;][&#x27;b&#x27;][&#x27;-&#x27;][&#x27;2&#x27;][&#x27;0&#x27;][&#x27;4&#x27;][&#x27;\0&#x27;]
+                 ^    ^
+strchr result ---+    +--- suffix after increment
+                           *suffix = &#x27;3&#x27;
+after: [&#x27;L&#x27;][&#x27;a&#x27;][&#x27;b&#x27;][&#x27;-&#x27;][&#x27;3&#x27;][&#x27;0&#x27;][&#x27;4&#x27;][&#x27;\0&#x27;]
+room and suffix share bytes; neither pointer creates a copy
+
+literal view ---&gt; &quot;Lab\0&quot;    reading allowed, writing forbidden</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>An array copy and a literal view</h3>
+<p>The writable copy becomes Mab; the literal view still reads Lab.</p>
+<div data-example="ex-1"></div>
+<h3>A suffix points into existing bytes</h3>
+<p>suffix selects the digits inside room. Its write changes both the complete string and the suffix view.</p>
+<div data-example="ex-2"></div>
+<h3>Walk until the terminator</h3>
+<p>The full pointer walk counts six bytes. The suffix beginning at index three has length three.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>Library string functions work with pointer arguments because strings are accessed through their first characters. strcpy receives a writable destination pointer and a readable source pointer. The caller must still prove that the destination range fits the complete copy and does not overlap the source.</p>
+<p>A pointer returned by strchr or strstr often borrows storage from the searched string. It does not own a new allocation. Do not free that pointer merely because a search returned it. Free is for a valid allocated-block owner, introduced fully in the dynamic-memory module.</p>
+<p>A failed search returns NULL. Before advancing or printing a result, check that it is non-null. For a final hyphen, result+1 selects the existing terminator and represents a valid empty suffix. That case differs from a missing hyphen.</p>
+<p>The expression <code>*p++</code> reads the current character and then advances p, because postfix increment binds before unary star. <code>(*p)++</code> instead increments the character value. Spell the operations on separate lines until their roles are clear; compactness can hide whether text or selection changes.</p>
+<p>A literal has static storage duration, so its characters remain available for the program&#x27;s lifetime. That duration does not make it writable. A local array is writable but expires when its block ends. Mutability and lifetime are independent questions.</p>
+<p>Two identical literals may share storage, or they may occupy different storage. Comparing their pointers is not a reliable way to compare their text. Use strcmp when the desired question is whether character sequences match. The implementation&#x27;s literal-sharing choices should not affect the algorithm.</p>
+<p>These examples select ASCII byte offsets. An offset into the middle of a UTF-8 sequence may no longer start a valid encoded character. For user-facing Bangla text, a byte suffix operation needs an encoding-aware boundary policy rather than a guessed letter index.</p>
+<p>Removing a prefix illustrates another ownership distinction. Advancing a pointer past the first three characters leaves the original array unchanged. Moving the remaining characters to index zero changes the array contents and may require overlap-aware copying. Both can display the same suffix while doing different work.</p>
+<p>For read-only parsing, a borrowed suffix is often enough and avoids a copy. For storing an independent field, a separate destination is safer when the source buffer will be reused for the next input line. A saved pointer into that reused buffer would observe its new contents.</p>
+<p>A search within a const string should preserve read-only intent in your own result variable. Even where a C library declaration returns char *, the original storage may still be a literal. Access permissions follow the actual target, not the apparent mutability of a returned pointer type.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Writing a literal is undefined even if a test appears to work on one compiler. A cast that removes const does not change the underlying storage permissions. Allocate or declare a writable copy before editing.</p>
+<p>Changing a terminator can expose bytes that earlier string operations ignored. Ensure another zero exists within capacity before treating the result as a string. Replacing a zero with a letter does not automatically extend the buffer safely.</p>
+<p>A suffix view does not copy characters. If you need an independent result that survives later edits to the original, copy into separately owned storage with a capacity check. State which result kind your helper returns.</p>
+<p>Do not call strlen on a possibly null search result as a way to check whether it is empty. Test for NULL first; then a zero-length string is a distinct valid result.</p>
+<h3>Writing through a literal pointer</h3>
+<p>The result is undefined even if this declaration is accepted. Use char text[] for a writable copy, or const char * for a literal view.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Use const character pointers for borrowed read-only text. Keep writable capacity beside editing pointers. Label suffix results as borrowed views, and test the missing, final-separator and ordinary-suffix cases separately.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>C string literals must not be modified in C89 through C23, even though their array element type in C is char. These examples target C17 and use const on pointer access paths to express the intended read-only role.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>A string pointer selects existing bytes, so its validity depends on their termination, permission and lifetime. Next, use pointer parameters and safe result addresses in <a href="topic:c-pointers-and-functions">Pointers and Functions</a>.</p>

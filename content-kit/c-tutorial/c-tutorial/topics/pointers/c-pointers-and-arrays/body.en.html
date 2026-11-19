@@ -1,0 +1,77 @@
+<h2 id="introduction">Pointers and Arrays</h2>
+<p class="lead">Array indexing and pointer traversal are two ways to reach the same elements. Understanding their relationship explains why a function can change an array without receiving a complete array copy. It also prevents a common mistake: treating an array object as though it were a pointer variable.</p>
+<p>Picture a row of marks on a desk and a movable bookmark selecting one mark. The row owns the values; the bookmark owns a location. Moving the bookmark changes the selected element while leaving the row itself where it was.</p>
+<p>C connects these ideas through an automatic conversion in many expressions. That conversion supplies an address, while the original array retains its own type, extent and lifetime.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>For an actual array a, <code>a[i]</code> has the same element-access meaning as <code>*(a+i)</code> when the position is valid. Addition chooses a position, and the star accesses its element. The array bound still applies to either spelling.</p>
+<p>In most ordinary expressions, an array expression converts to a pointer to its first element. This is often called <code>array decay</code>. Initializing <code>int *p = a</code> uses that conversion. No elements are copied, and no new array is allocated.</p>
+<p>Important exceptions include an array operand of sizeof and unary address-of. <code>sizeof a</code> measures the whole actual array in its declaring scope. <code>&amp;a</code> takes the address of the array object itself, giving a pointer-to-array type rather than a first-element pointer type.</p>
+<p>A parameter written <code>int values[]</code> is adjusted to <code>int *values</code>. This parameter rule explains why sizeof inside that helper does not report the caller&#x27;s complete array size. Send the used length separately.</p>
+
+<pre><code class="language-c">int values[] = {12, 24, 36};
+int *p = values;
+size_t count = sizeof values / sizeof values[0];</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>values</code></td><td>Actual three-int array</td></tr><tr><td><code>p</code></td><td>Copied first-element address</td></tr><tr><td><code>count</code></td><td>Element count measured before parameter adjustment</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>For marks containing 12, 24 and 36, marks[1] and *(marks+1) both read twenty-four. The expression marks+1 selects the second int. Parentheses matter: *marks+1 instead reads the first int and adds one to its value.</p>
+<p>A separate pointer p can advance within marks because p is a modifiable pointer object. The expression marks++ is invalid: the array name does not denote an assignable pointer variable. The conversion result is useful for arithmetic, but it does not turn the array object into mutable address storage.</p>
+<p>Aliases still share the elements. If p equals marks and <code>p[1]=50</code>, then marks[1] reads fifty afterward. The index notation works with pointer operands because it is defined using pointer arithmetic and indirection. It does not prove how many elements p can access.</p>
+<p>The full array count can be calculated as <code>sizeof a / sizeof a[0]</code> where a really is the array object. The numerator includes every element, and the denominator is one element&#x27;s size. The result is a size_t value independent of whether int happens to occupy two, four or another number of bytes.</p>
+<p>With int *p, <code>sizeof p</code> measures only the pointer object. Dividing that by sizeof p[0] produces a ratio of unrelated object sizes, not an array length. Sometimes that ratio accidentally matches a small example&#x27;s count; accidental agreement does not validate the method.</p>
+<p>A pointer parameter cannot recover an arbitrary caller extent. Two callers may pass arrays of different lengths through the same pointer type. The helper therefore needs a count or a deliberate stopping convention, such as a string terminator. Ordinary integer arrays do not automatically carry a sentinel.</p>
+<pre class="diagram">a: int[3], owns elements
++-------+-------+-------+
+|  12   |  24   |  36   |
++-------+-------+-------+
+    ^       ^
+    |       +--- p after p++
+    +----------- p initially, a after conversion
+
+p: separate int * object, stores a position
+sizeof a: all 3 ints        sizeof p: pointer object only
+&amp;a: pointer to the whole int[3] array</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Indexing and dereferencing agree</h3>
+<p>Both expressions select the second int and print twenty-four.</p>
+<div data-example="ex-1"></div>
+<h3>A pointer can move while an array name cannot</h3>
+<p>The pointer selects eight after moving. The array still begins with seven.</p>
+<div data-example="ex-2"></div>
+<h3>Count elements before calling a helper</h3>
+<p>The caller measures the actual array. The helper receives a copied pointer and the explicit count.</p>
+<div data-example="ex-3"></div>
+<h3>Inspect array and pointer storage sizes</h3>
+<p>The sizes describe different objects. Dividing the array size by its element size gives three.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>The sum helper accepts a read-only pointer and a count. The caller computes four from its actual array and passes both arguments. The helper walks precisely four elements. A count of zero can describe no work, provided the interface avoids invalid arithmetic or dereferences for that case.</p>
+<p>A useful loop keeps begin and end pointers for a live array. Stop at end before reading, and advance one element per iteration. The array and pointer version have the same O(n) traversal cost. Choose whichever spelling makes the range clearest for the task.</p>
+<p>For int a[5], a after conversion has type int *. The expression &amp;a has type int (*)[5], a pointer to a complete five-int array. They begin at the same underlying array location but carry different target types. Adding one therefore means one int for the first and one entire array for the second.</p>
+<p>A two-dimensional matrix decays to a pointer to its first row, preserving the row&#x27;s width. It does not decay to int ** because its intermediate objects are arrays, not stored pointer values. Later lessons compare real pointer tables with fixed-width row pointers.</p>
+<p>The size-inspection example intentionally prints implementation-dependent values. On the recorded compiler platform those values describe the actual array, pointer and int element. The teaching rule is their role, not a claimed universal size. The deterministic element-count example remains portable.</p>
+<p>When passing a slice, its starting address alone does not prove that a later index is within the original object. Track the slice&#x27;s usable count. Pointer notation removes neither bounds obligations nor lifetime obligations. A helper must finish using a caller array while that array remains alive.</p>
+<p>A pointer can select an interior element, so index zero is relative to that selected position. If p equals a+1, p[0] is a[1] and p[1] is a[2]. The original array&#x27;s lifetime and remaining extent still control those accesses. The local zero-based view does not create an independent smaller array object.</p>
+<p>For a caller-owned result array, a helper can fill elements through a pointer without returning their storage. The caller later reads the same elements under its own array name. This is often a clearer interface than returning a pointer that merely repeats the input address.</p>
+<p>The address-of exception also explains why a and &amp;a should not be substituted blindly in calls. A helper expecting int * needs an element pointer, while a helper expecting int (*)[N] needs a whole-row pointer of matching width. Similar printed starting addresses do not erase that type distinction.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Do not describe an array as a const pointer. That phrase blurs two different objects and does not explain sizeof or address-of correctly. An array owns elements; a const pointer is still a pointer object holding an address.</p>
+<p>Adding an index to the pointed-to value instead of the pointer selects a different calculation. Read parentheses aloud: *(a+2) means select then read, while *a+2 means read then add. The output quiz distinguishes those roles.</p>
+<p>A fixed matrix cannot be made into a pointer table by casting. Such a cast does not manufacture pointer entries between rows. Keep the declaration that matches the real storage.</p>
+<p>The count formula belongs in the array-owning scope. Repeating it inside a pointer-taking helper is a frequent source of partially processed arrays. Receive the caller&#x27;s actual used count and state it in the interface.</p>
+<h3>Incrementing an array name</h3>
+<p>An array name is not a modifiable pointer variable. Introduce int *p = a and increment p within bounds.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Use array syntax for straightforward indexed work and pointer syntax for explicit ranges. Retain a separate count at function boundaries. Verify the complete type of each sizeof operand before using the result as a storage or element count.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Array-to-pointer conversion and array-parameter adjustment are established C rules and remain present in C17 and C23. These examples use C99 loop declarations and size_t formatting. Newer standards do not attach array-length metadata to an ordinary pointer.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Arrays and pointers cooperate through conversion and indexing, but they own different things and have different sizes. Next, apply that distinction to character storage in <a href="topic:c-pointers-and-strings">Pointers and Strings</a>.</p>

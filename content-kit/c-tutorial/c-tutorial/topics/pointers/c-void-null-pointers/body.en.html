@@ -1,0 +1,71 @@
+<h2 id="introduction">void and NULL Pointers</h2>
+<p class="lead">Sometimes a routine needs to carry an object&#x27;s address without knowing its type yet. A generic container or sorting function is a typical example. The type <code>void *</code> provides a generic object-pointer value, while a separate contract explains how the target may be used.</p>
+<p>Another common situation is absence: a search finds no element or a menu has no selection. A <dfn>null pointer</dfn> represents that missing target. Generic type and absence are different questions; a void pointer can select a real object, and a typed int pointer can be null.</p>
+<p>Think of an unlabelled storage location versus an empty selection. The first needs type information before use. The second has no object to use at all. Keeping those meanings separate avoids several pointer mistakes.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>An int address may be stored with <code>void *generic = &amp;score</code>. In C, assignment back to a compatible object pointer is allowed without a cast: <code>int *typed = generic</code>. If the target is still the original live int, the converted pointer can access it.</p>
+<p>You cannot read an int value through <code>*generic</code> while generic has type void *. void does not describe an object value or size. Recover an appropriate target type first. Casting to an arbitrary type does not prove that type matches the real object.</p>
+<p>Initialize an absent typed target with <code>int *found = NULL</code>. Standard headers such as stddef.h and stdio.h provide NULL. Test <code>found == NULL</code> or use the pointer as a condition before a dereference when null is an allowed state.</p>
+<p>C&#x27;s object-pointer conversions differ from C++ rules. A C++ example might require an explicit cast from void *, but these C17 programs do not. Follow the selected language rather than adding casts merely because another language uses them.</p>
+
+<pre><code class="language-c">int score = 72;
+void *generic = &amp;score;
+int *typed = generic;
+int *missing = NULL;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>generic</code></td><td>Object address with no exposed target type</td></tr><tr><td><code>typed</code></td><td>Recovered compatible int access</td></tr><tr><td><code>missing</code></td><td>Initialized absence state</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>The round-trip example starts with score at seventy-two. generic stores its address while hiding the target type in the pointer expression. typed restores int * access, and assigning through typed changes score to eighty. No separate score copy was created.</p>
+<p>The generic printer accepts const void * but documents that the target is an int. Converting to const int * lets it read that int without writing through the parameter. Calling it with an unrelated double address would violate the contract even though the initial object-pointer conversion is accepted.</p>
+<p>A generic interface often carries a tag, a callback or an element-size value alongside the address. The hard practice task uses a tag to choose between an int and a char target. The tag must describe the actual selected object. Inconsistent metadata is a program error, not something void * can repair.</p>
+<p>The missing-search example initializes found to NULL and scans a known three-element array. No value equals five, so the pointer stays null. The final branch prints Missing without attempting to read a nonexistent element.</p>
+<p>Null pointer values compare equal to a null pointer constant after the appropriate conversion. A zero integer constant can serve as such a constant in C. This does not mean address zero is an ordinary object selected by the pointer or that a null pointer&#x27;s bytes must all be zero.</p>
+<p>An implementation may spell NULL as a zero constant or a void-pointer form, subject to its language requirements. Do not treat NULL as an arbitrary integer for variadic printing. When printing an object pointer, provide a suitable void * argument to %p.</p>
+<pre class="diagram">int score [72] &lt;--- generic: void * [address of score]
+                    |
+                    +--- convert to int * ---&gt; typed ---&gt; same score
+
+found: int * [NULL] ---&gt; no target object
+
+empty text is different:
+text: char * [address] ---&gt; [&#x27;\0&#x27;]   real, readable empty string</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Round-trip an object address</h3>
+<p>Conversion back to the original compatible type preserves access to score. No cast is needed in C.</p>
+<div data-example="ex-1"></div>
+<h3>Use NULL for an absent search result</h3>
+<p>No element matches five, so the pointer stays null and is never dereferenced.</p>
+<div data-example="ex-2"></div>
+<h3>Keep type information alongside a generic parameter</h3>
+<p>The documented contract says data selects an int. void * itself does not discover that type.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>A non-null pointer is not automatically valid. It might be uninitialized, point beyond an array, select incompatible storage or outlive its former target. Null checks handle an agreed absence state; they do not replace type, lifetime or range reasoning.</p>
+<p>An uninitialized automatic pointer must not be read even to compare it against NULL. Initialize it before any branch uses its value. Similarly, after an object&#x27;s lifetime ends, do not inspect stale aliases as a general validity test. Track the owner and borrowing lifetime instead.</p>
+<p>Portable C17 does not define arithmetic on void pointers. There is no void element size to scale a step. GCC may accept byte-like stepping as an extension, but code using that extension is outside the ordinary C rules in these lessons.</p>
+<p>For access to an object&#x27;s bytes, an unsigned char pointer is the appropriate special tool, with an explicit valid byte range. For reading an int value, use an int pointer that actually selects an int object with the required alignment. A cast alone cannot create such an object.</p>
+<p>The conversion guarantee discussed here concerns object pointers. Function pointers have their own compatibility rules and cannot be assumed to round-trip through void * portably. Keep callback fields typed as function pointers rather than placing them in generic object-address slots.</p>
+<p>C23 adds <code>nullptr</code>, a dedicated null pointer constant with type <code>nullptr_t</code>, declared by stddef.h for the type name. It expresses the missing-pointer intention without using an ordinary integer-zero spelling. Strict C17 does not provide that keyword, so the runnable examples use NULL.</p>
+<p>Even with nullptr, dereferencing a null pointer is undefined. A newer null constant improves expression of the state; it does not create a target or add runtime validation. Keep the same branch-before-access logic.</p>
+<p>A nullable parameter should document what absence means. For an optional result, NULL may mean skip that output. For a required input, it may mean reject the call. The same pointer state can support different interfaces, but each interface must choose a clear behavior.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Do not dereference void * as though it implied int. The compiler needs the target type for meaningful object access. Convert according to known metadata, not according to whichever cast makes an error disappear.</p>
+<p>Do not assume calloc&#x27;s zeroed bytes initialize every pointer object to a null pointer representation. Explicit pointer assignment establishes a null pointer value. This subtle representation distinction matters when designing portable pointer tables.</p>
+<p>A null string pointer differs from a pointer to an empty string. The latter selects a real zero character that puts and strlen can read. The former selects no character storage at all, so those calls are invalid.</p>
+<p>Checking only non-null after free cannot validate an old alias. The allocation is gone even if the numerical-looking address remains unchanged. The following topic develops this lifetime problem with explicit examples.</p>
+<h3>Dereference an untyped pointer</h3>
+<p>void does not describe an object value that can be read. Convert data to a compatible int pointer first.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Keep type metadata with every generic object address. Prefer typed interfaces when generic storage is unnecessary. Define whether NULL means absence or invalid input, and check that state before selecting any target value.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>void * conversions and NULL are established C features. The executable examples use C17. C23 nullptr is a forward-looking note here; it should be compiled only with suitable C23 support and does not alter the dereference rules.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Generic pointers postpone type selection; null pointers represent no selected object. Neither removes the need for valid target storage. Next, prevent expired and uninitialized addresses in <a href="topic:c-dangling-wild-pointers">Dangling and Wild Pointers</a>.</p>

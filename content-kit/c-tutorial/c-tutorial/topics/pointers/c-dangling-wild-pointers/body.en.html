@@ -1,0 +1,81 @@
+<h2 id="introduction">Dangling and Wild Pointers</h2>
+<p class="lead">A pointer can look plausible in a debugger and still be unusable. Its target may never have been selected, or the selected object may already have disappeared. These are different causes of invalid access, and they need different prevention habits.</p>
+<p>An uninitialized pointer is often called a <dfn>wild pointer</dfn>. A pointer whose former target no longer exists is called a <dfn>dangling pointer</dfn>. These are common teaching terms rather than separate C pointer types. The declaration alone cannot reveal whether a particular runtime value is usable.</p>
+<p>Think of an address written on a blank card versus a real room address after the building has closed. The first never identified a usable destination. The second once did, but its history is no guarantee that access remains valid.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>An automatic local declaration <code>int *p;</code> leaves p with an indeterminate value. Assign NULL or a live target address before reading it. Comparing the uninitialized value with NULL does not turn it into a valid absence marker.</p>
+<p>A block variable exists only during its specified lifetime. A pointer saved from that block cannot keep the object alive. After the block ends, do not dereference the expired address or use it as though a non-null test established validity.</p>
+<p>Allocated storage has a different lifetime. <code>malloc</code> requests storage and returns an owner pointer or NULL. <code>free(owner)</code> ends that allocated object&#x27;s lifetime. The pointer variable owner is a separate object and can be assigned NULL afterward.</p>
+<p>Only free valid allocated storage according to its ownership contract. An address of a local int, an interior element address or an already released block is not a new owner to release. The dynamic-memory module develops these allocation rules fully.</p>
+
+<pre><code class="language-c">int *owner = malloc(sizeof *owner);
+if (owner == NULL) {
+    return 1;
+}
+*owner = 45;
+free(owner);
+owner = NULL;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>owner</code></td><td>Responsible route to one allocation</td></tr><tr><td><code>free(owner)</code></td><td>Ends the allocated target lifetime</td></tr><tr><td><code>owner = NULL</code></td><td>New explicit state; does not clear aliases</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>The safe initialization example creates p as NULL, then assigns the address of a live score. The dereference occurs while score exists. Initializing at declaration makes the pointer&#x27;s initial state explicit and prevents an accidental early read.</p>
+<p>The scope example creates local inside a nested block. A view reads it while the block is active, and the scalar value is copied into saved. After the block, saved remains usable because it owns an independent int value, not an expired location.</p>
+<p>If instead you copied &amp;local into an outer pointer, that pointer would not provide a live object after the block. C may reuse the storage for something else or optimize away the original memory entirely. Seeing the old value once does not make future access valid.</p>
+<p>The allocation example checks malloc before storing forty-five. It prints the value while the object is alive, releases the allocation once, then writes NULL to owner. The final status check reads that new null assignment rather than the stale allocated address.</p>
+<p>Assigning owner=NULL is a local bookkeeping action. If alias was copied from owner before release, alias occupies a separate pointer object. It does not change when owner changes. Once the allocation is freed, both former access paths have lost their target.</p>
+<p>The alias mistake demonstrates this point: clearing owner does not make <code>*alias</code> valid. The right repair is to end all alias use before release, copy any needed values while storage is live, and discard borrowed addresses when their owner ends the lifetime.</p>
+<pre class="diagram">before free:
+owner [address] ---+
+                  +----&gt; allocated int [45], alive
+alias [same] -----+
+
+after free(owner), then owner = NULL:
+owner [NULL] ----------&gt; no selection
+alias [old address] ---&gt; former target lifetime ended
+                        no reading, writing or second free
+
+scope exit similarly ends a local target without clearing copies</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Initialize before selecting a target</h3>
+<p>The pointer is initialized immediately and only dereferenced after a live target is assigned.</p>
+<div data-example="ex-1"></div>
+<h3>Copy a value before a block ends</h3>
+<p>The int value is copied while local is alive. No expired pointer is read after leaving the block.</p>
+<div data-example="ex-2"></div>
+<h3>Release allocated storage once</h3>
+<p>Allocation failure is checked. The value is read before free, then the owner is cleared and not reused.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>Ownership answers who is responsible for ending an allocation&#x27;s lifetime. A borrowed pointer allows temporary access without that responsibility. Several borrowers can share one owner, but every borrower must finish before the owner releases the object.</p>
+<p>One practical pattern places temporary aliases inside a block whose end precedes free. This makes their intended use window visible. It is still your responsibility not to return or save those aliases somewhere that outlives the window.</p>
+<p>A helper that returns a pointer needs a documented result lifetime. Returning a pointer to the caller&#x27;s own array is a borrow. Returning an allocated object transfers or shares ownership according to the interface. Returning a static object preserves lifetime but shares data across calls.</p>
+<p>Returning an automatic local object address is invalid.</p>
+<p>Freeing the same allocation twice is undefined behavior. Clearing one owner after release can prevent that exact variable from being used for a second free, because free(NULL) is harmless. It does not solve duplicated owners or stale aliases elsewhere in the program.</p>
+<p>Do not use a stale pointer comparison to ask whether storage still exists. A pointer value associated with an object whose lifetime ended can become indeterminate under C&#x27;s lifetime rules. Track a separate explicit state or clear controlled pointer variables without reading their former values.</p>
+<p>AddressSanitizer can detect many use-after-free, use-after-scope and bounds mistakes during execution. UndefinedBehaviorSanitizer catches additional invalid operations. Compile a standalone practice program with <code>-fsanitize=address,undefined</code> and debug information when investigating memory access. A clean run covers only the paths exercised.</p>
+<p>Compiler warnings can identify uninitialized pointers and returned local addresses. Treat those diagnostics as design feedback. Adding a cast or moving code into another helper may hide a warning without fixing lifetime. Follow the storage owner rather than judging whether the program happens to crash.</p>
+<p>Avoid returning dynamic storage only to sidestep a local lifetime problem when a scalar result or caller-owned output would suffice. Allocation adds failure handling and release responsibility. Choose the simplest storage model that genuinely matches the required lifetime.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>A null check on an uninitialized pointer is already a read of an indeterminate value. Initialize first. The wild-pointer mistake must be repaired at the address-selection step, not by checking whether its accidental bits look nonzero.</p>
+<p>Using memory after free is undefined even if the old bytes appear unchanged. The allocator may retain, recycle or protect that memory. No observed output can establish a permitted post-release read.</p>
+<p>Setting one pointer to NULL does not walk through the program clearing aliases. Draw each copied address separately so ownership and borrowing are visible. Ensure no old route remains in use when the target lifetime ends.</p>
+<p>Do not free each interior element of one array allocation. The complete allocation has one owner address and one release. Interior pointers borrow positions in that object and cannot independently end their portions.</p>
+<h3>An uninitialized pointer is not a destination</h3>
+<p>The result is undefined: p was never assigned a valid target address. Initialize a real int and point to it.</p>
+<div data-example="ex-4"></div>
+<h3>An alias still expires after free</h3>
+<p>The result is undefined: alias still refers to the object whose lifetime ended. Clearing owner does not revive or clear alias.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Initialize pointers immediately. Keep borrowed access shorter than owner lifetime. Copy ordinary values when locations are no longer needed. Release each owned allocation once, and end temporary aliases before that release.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Uninitialized reads and expired-object access remain invalid across the C standards in this course. The examples target C17. Sanitizers are compiler tools rather than language guarantees, so their usefulness complements lifetime reasoning instead of replacing it.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Pointer validity depends on a selected live target, not the appearance of an old address. Clear ownership and short borrowing windows prevent wild and dangling access. Next, express read and write permissions in <a href="topic:c-const-pointers">const with Pointers</a>.</p>

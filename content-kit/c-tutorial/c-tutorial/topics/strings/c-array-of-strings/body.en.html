@@ -1,0 +1,71 @@
+<h2 id="introduction">Array of Strings</h2>
+<p class="lead">One room label fits in one character array. A timetable needs several labels, and their lengths may differ. You can store them in fixed-width character rows or in a table of pointers to separate strings.</p>
+<p>Picture fixed rows as equal-sized drawer compartments. Every row reserves the same number of char positions, even if one holds A and another holds Office. A pointer table instead resembles an index of addresses: the table holds routes to text stored elsewhere.</p>
+<p>Both representations support <code>names[i]</code> as a selected string, but their storage and update rules differ. Choose the representation before choosing how to read, edit or sort its entries.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>The declaration <code>char rooms[3][12]</code> creates three adjacent rows, each containing twelve chars. <code>rooms[1]</code> selects the second row. <code>rooms[1][0]</code> selects that row&#x27;s first character. Each row needs its own terminator when used as a string.</p>
+<p>Initialize rows with <code>{&quot;Lab2&quot;, &quot;Lab1&quot;, &quot;Office&quot;}</code>. The remaining elements of each row are zero-initialized. Each row can later hold up to eleven visible bytes. The capacity comes from twelve char positions, not from the current string&#x27;s length.</p>
+<p>The declaration <code>const char *names[] = {&quot;A&quot;, &quot;Campus&quot;, &quot;Lab&quot;}</code> creates an array of pointers. Each entry selects a literal. const prevents writes through those character pointers, while the pointer entries themselves remain reassignable. Their targets do not share an equal fixed row width.</p>
+<p>A pointer stores the address of another object. In this table, that object is a character in existing string storage. If addresses are unfamiliar, use the diagrams in <a href="topic:c-pointers-intro">Introduction to Pointers</a> as a preview before tracing the pointer-table example.</p>
+
+<pre><code class="language-c">char rooms[3][12] = {&quot;Lab2&quot;, &quot;Lab1&quot;, &quot;Office&quot;};
+const char *names[3] = {&quot;A&quot;, &quot;Campus&quot;, &quot;Lab&quot;};</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>rooms[1]</code></td><td>Second owned twelve-char row</td></tr><tr><td><code>names[1]</code></td><td>Pointer entry selecting separate literal storage</td></tr><tr><td><code>names[1][0]</code></td><td>First character of the selected literal</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>In the fixed matrix, moving from rooms[0] to rooms[1] skips twelve chars. The compiler knows that physical row stride. A string length of four does not reduce the stride to five; unused capacity remains part of the row.</p>
+<p>For bounded token input, <code>scanf(&quot;%11s&quot;, rooms[i])</code> writes into one twelve-element row. Read each row separately and check every conversion result. Names containing spaces require a line-reading policy instead; using a matrix does not change scanf&#x27;s token behavior.</p>
+<p>A pointer table has two layers: pointer entries first, target characters second. Selecting names[i] reads the stored address; selecting names[i][j] then reaches a character in that target. Reassigning names[i] changes which text the entry selects without moving any characters.</p>
+<p>A literal target must not be modified. You may instead build a table of pointers to writable arrays if editing is needed. Those arrays must remain alive for every use of the table. Keeping their addresses does not extend their lifetimes.</p>
+<p>These representations also differ under sizeof. An actual fixed row reports its twelve-char capacity. A pointer-table entry reports pointer-object size, not target string capacity. Use strlen only to measure an already valid string; it cannot reveal unused writable space.</p>
+<pre class="diagram">fixed rows: char rooms[3][12]
+row 0: [&#x27;L&#x27;][&#x27;a&#x27;][&#x27;b&#x27;][&#x27;2&#x27;][&#x27;\0&#x27;][7 spare]
+row 1: [&#x27;L&#x27;][&#x27;a&#x27;][&#x27;b&#x27;][&#x27;1&#x27;][&#x27;\0&#x27;][7 spare]
+row 2: [&#x27;O&#x27;][&#x27;f&#x27;][&#x27;f&#x27;][&#x27;i&#x27;][&#x27;c&#x27;][&#x27;e&#x27;][&#x27;\0&#x27;][5 spare]
+
+pointer table:
+names[0] ---&gt; &quot;A\0&quot;
+names[1] ---&gt; &quot;Campus\0&quot;
+names[2] ---&gt; &quot;Lab\0&quot;
+entries hold addresses, not embedded twelve-char rows</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Fixed rows with spare capacity</h3>
+<p>Each row can hold eleven visible characters and a zero. Changing the first row does not touch the others.</p>
+<div data-example="ex-1"></div>
+<h3>Sort writable rows</h3>
+<p>The temporary row has the same capacity. The resulting order is Asha, Bela, Toma; these are invented labels.</p>
+<div data-example="ex-2"></div>
+<h3>Sort a table of literal pointers</h3>
+<p>Only addresses move. The character data in the literals is never written.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>To sort fixed rows, compare their text with strcmp. If two rows are out of order, copy the first to a temporary row, copy the second over the first, and copy the temporary into the second. The temporary must fit the complete strings, including their zeros.</p>
+<p>The row-sort example repeatedly compares the selected row against later rows. It is a small O(n squared) comparison sort for n rows. Character comparison adds a cost depending on common-prefix length. Row swaps also copy characters, so fixed-width storage has a different cost from swapping addresses.</p>
+<p>For a pointer table, comparison still uses strcmp on the selected strings. A swap exchanges pointer values using a pointer temporary. The target characters remain where they were. This is useful for read-only literal lists or several views over the same names.</p>
+<p>Do not sort names with <code>names[i] &gt; names[j]</code>. That asks about address ordering, which does not express text order and may not be valid between unrelated objects. The address with a larger numeric-looking representation does not mean its string comes later alphabetically.</p>
+<p>The invented labels in the sorting example appear as Asha, Bela and Toma after sorting. Equal names compare as zero. This particular swap-based algorithm is not promised stable for records with additional associated data. If you later attach marks or roll numbers to names, move the whole related record together.</p>
+<p>A two-dimensional char matrix does not convert to char **. The matrix stores characters in consecutive fixed-width rows, while char ** expects pointer objects at the intermediate level. A cast changes the expression type without rebuilding the storage and can lead to undefined behavior.</p>
+<p>When rows contain names with spaces, reserve the same per-row terminator space but use fgets with that row&#x27;s capacity. Remove its stored newline only after success. If one name is too long, handle its remaining input before reading the next row; otherwise the suffix becomes a different student&#x27;s name.</p>
+<p>An outer count can represent a partially filled matrix. With capacity for ten rows and used count three, only the first three initialized rows belong to the logical list. Sorting all ten would inspect entries outside that list. Track row capacity, used rows and each row&#x27;s character capacity as three different quantities.</p>
+<p>A fixed-row copy is safe only if the source is already terminated within a known bound. Equal row capacities support the swap proof because every valid source row fits the temporary and the destination rows. They do not repair an earlier unbounded input that already destroyed termination.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>A row cannot be assigned with <code>rooms[0] = rooms[1]</code> after declaration. An array row is not a pointer variable. Use a checked character copy when the destination row has enough space, or swap pointer entries only in a real pointer table.</p>
+<p>Do not apply the total matrix capacity as a %s width for one row. The write target is a single twelve-char row even if the complete matrix occupies thirty-six bytes. Crossing into a later row is still an out-of-bounds operation for that row.</p>
+<p>If a table selects local temporary arrays, returning the table does not preserve those targets. Choose caller-owned arrays, documented static data or allocated storage with clear ownership. The next pointer lessons explain these lifetime rules in detail.</p>
+<p>Avoid using strlen to infer how many rows exist. strlen scans characters in one terminated string. Keep a separate row count, or calculate it from the actual array in the scope where its full type is known.</p>
+<h3>A row is not assignable</h3>
+<p>An array row cannot be assigned after declaration. Copy a checked string with strcpy instead.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Use fixed rows for a small editable list with a known maximum name length. Use a pointer table for independent targets or address-only reordering. Validate each row&#x27;s input limit and keep a clear distinction between row count and per-row capacity.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Arrays of arrays and arrays of pointers follow the same layout rules from C89 through C23. These C17 examples use C99 loop declarations. Literal mutability does not change when a later standard is selected.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Several strings can live in equal-sized owned rows or separate targets reached through pointers. Text comparisons are the same, but swaps and capacity calculations depend on representation. Next, classify characters with <a href="topic:c-character-functions">Character Functions (ctype.h)</a>.</p>
