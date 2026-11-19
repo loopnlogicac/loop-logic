@@ -1,0 +1,62 @@
+<h2 id="introduction">পাশের শাখার আগে এক শাখা শেষ</h2>
+<p class="lead">নতুন room না থাকা পর্যন্ত corridor ধরে গিয়ে সর্বশেষ junction-এ ফেরার কথা ভাবো। পরের কোন দরজা দেখবে মনে রাখো। <dfn>Depth-first search</dfn> বা DFS nested call বা নিজের স্ট্যাক frame দিয়ে এইভাবে গ্রাফ দেখে।</p>
+<p>প্রতিটি reached vertex-এ দুই ঘটনা: প্রথম ঢোকা discovery; সব neighbor দেখা আর রিকার্সিভ child ফেরার পরে finishing। দুই ক্রম আলাদা, কারণ সক্রিয় descendant-এর আগে parent শেষ হতে পারে না।</p>
+<p>Visited অ্যারে cycle-এ endless রিকার্শন ঠেকায়। Neighbor দেখার আগে entry-তেই mark করো। উদাহরণ BFS-এর গ্রাফ choice মেনে ascending ID দেখে। একই source-এ BFS-এর একই component পায়, তবে route আর visit order সাধারণত আলাদা।</p>
+<h2 id="syntax">Frame-এ কোথা থেকে ফিরবে রাখো</h2>
+<p>রিকার্সিভ DFS-এর প্রতিটি active call frame বর্তমান vertex আর লুপ-এর next neighbor position রাখে। উদাহরণ লুপ-এর আগে enter U, পরে leave U প্রিন্ট করে। Child ফিরলে parent প্রথম neighbor থেকে নয়, থামার জায়গা থেকে চলে।</p>
+<p>ইটারেটিভ উদাহরণ stack[top] আর next[top]-এ একই state রাখে। Top active frame। Neighbor বাকি থাকলে নামার সিদ্ধান্তের আগেই saved next index বাড়াও। Unseen neighbor-এ mark করে next শূন্যের নতুন frame push করো।</p>
+<pre><code class="language-text">mark start; enter[start] = ++clock; push frame(start,0)
+while frames remain
+    u = top; advance its next neighbor index
+    if neighbor v is unseen: mark v; enter[v] = ++clock
+        push frame(v,0)
+    if no neighbors remain: leave[u] = ++clock
+        pop the exhausted frame and resume its parent
+report discovery order, finish order and times</code></pre>
+<p>Clock শূন্যে শুরু, প্রতি entry-exit-এ বাড়ে। Enter আর leave শূন্য দিয়ে শুরু বলে unreached vertex আলাদা বোঝা যায়। সাত vertex-এ সর্বোচ্চ সাত active frame আর চৌদ্দ event time। Explicit স্ট্যাক suspended call রাখে, এলোমেলো future visit নয়।</p>
+<h2 id="how-it-works">এক গ্রাফে discovery আর return ধরো</h2>
+<p>আগের মতো selector শূন্য shared diamond আর isolated ছয়, এক সাত-vertex path, দুই edge-হীন, তিন K7। Diamond edge 0-1,0-2,1-3,1-4,2-4,3-5,4-5। সব undirected neighbor list sorted।</p>
+<p>শূন্য থেকে DFS 0,1,3,5,4,2-এ ঢোকে। দুই থেকে দুই neighbor-ই discovered। দুই শেষ, তারপর চার saved neighbor position থেকে চলে। শেষে পাঁচ, তিন, এক, শূন্য ধরে ফেরে। ছয়ে ঢোকে না।</p>
+<pre class="diagram">1 থেকে 3-এ নামার আগে:
+frame নিচ থেকে ওপরে: [0,next=1] [1,next=2]
+নামার পরে:
+frame নিচ থেকে ওপরে: [0,next=1] [1,next=2] [3,next=0]
+3 আর তার descendant শেষ হলে:
+frame নিচ থেকে ওপরে: [0,next=1] [1,next=2]
+Vertex 1-এর পরের saved neighbor, vertex 4 থেকে আবার চলো।</pre>
+<table class="ref"><thead><tr><th scope="col">Vertex</th><th scope="col">Entry</th><th scope="col">Exit</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>12</td></tr><tr><td>1</td><td>2</td><td>11</td></tr><tr><td>3</td><td>3</td><td>10</td></tr><tr><td>5</td><td>4</td><td>9</td></tr><tr><td>4</td><td>5</td><td>8</td></tr><tr><td>2</td><td>6</td><td>7</td></tr><tr><td>6</td><td>0</td><td>0</td></tr></tbody></table>
+<div data-lab="graph-dfs"></div>
+<p>Lab active স্ট্যাক আর node entry/exit লেবেল দেখায়। Unfinished node-এর entry আছে, exit নেই। স্ট্যাক ফাঁকা হলে সব reachable vertex-এর দুই time আছে। Path preset-এ সবচেয়ে বড় active depth, no-edge preset-এ রিকার্সিভ child ছাড়া entry-exit দেখো।</p>
+<h2 id="examples">Frame আর আসল call তুলনা</h2>
+<h3>Frame দিয়ে রিকার্সিভ entry-return অনুকরণ</h3>
+<p>Discovery 0,1,3,5,4,2। Frame next neighbor মনে রাখে, তাই চার আবার চলার আগে দুই শেষ।</p>
+<div data-example="ex-1"></div>
+<h3>রিকার্সিভ call আর return সরাসরি দেখো</h3>
+<p>Path-এ entry শূন্য থেকে ছয়। প্রতিটি call child-এর অপেক্ষায় বলে return উল্টো ক্রমে।</p>
+<div data-example="ex-2"></div>
+<h3>Unseen component-এ নতুন DFS</h3>
+<p>প্রথম ট্রি শূন্য থেকে পাঁচ পায়। দ্বিতীয় root ছয় isolated component ধরে।</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">DFS কী তথ্য দেয় পড়ো</h2>
+<p>DFS interval [enter[u],leave[u]]-এ সব descendant interval থাকে। Forest-এ completed vertex-এর interval হয় nested নয় disjoint। যেমন দুইয়ের 6..7 চারের 5..8-এর ভেতর। সম্পর্ক traversal ট্রির, মূল গ্রাফে শুধু ট্রি edge ছিল এমন দাবি নয়।</p>
+<p>এক reached component-এ discovery edge ট্রি বানায়। অন্য দেখা edge আগেই seen vertex জুড়তে পারে। Undirected cycle detect করতে reverse parent edge অন্য visited neighbor থেকে আলাদা চাই। Directed-এ cycle detect-এ শুধু visited boolean নয়, active আর finished state লাগে।</p>
+<p>DFS connected component, topological ordering আর cycle analysis-এর ভিত্তি। DAG-এ সব vertex দেখে finish order উল্টালে topological order। Directed cycle থাকলে বৈধ topological order হয় না, তাই ওই ব্যবহারে cycle check-ও চাই।</p>
+<p>DFS path সবচেয়ে কম edge নিশ্চিত করে না। গ্রাফ শূন্যে দুইকে 0,1,3,5,4,2 দিয়ে পায়, অথচ 0-2 edge আছে। BFS দুইকে distance একে পেত। Exploration structure আর finish তথ্যের জন্য DFS, unweighted minimum-hop route-এ BFS নাও।</p>
+<p>সহজ ইটারেটিভ DFS reverse neighbor order-এ vertex push করে visited হলে skip করতে পারে। কাজের discovery order পেলেও রিকার্সিভ return event সরাসরি মেলে না। ঠিক একই entry/exit আর parent resume চাইলে frame পদ্ধতি দরকার।</p>
+<h2 id="edge-cases">Active call সীমিত করো, অন্য component-ও ধরো</h2>
+<p>পুরো forest-এ adjacency-list DFS O(V+E): প্রতি vertex একবার entry, প্রতি adjacency entry একবার দেখা। Visited, event অ্যারে আর worst-case active স্ট্যাক বাড়তি O(V)। Path-এ একসঙ্গে V call লাগতে পারে, রিকার্সিভ depth সবসময় logarithmic নয়।</p>
+<p>Fixed builder আগে matrix নেয়, construction O(V squared), storage rectangular। পরে traversal active neighbor count ধরে। বড় sparse গ্রাফে সরাসরি compact list বানাও; language call স্ট্যাক শেষ হতে পারলে explicit frame স্ট্যাক নাও।</p>
+<p>এক source থেকে no-edge গ্রাফে এক entry-exit; singleton-ও একই। Complete গ্রাফ অনেক seen neighbor দেখলেও প্রতি vertex একবার mark। শুধু unseen vertex নতুন frame করে বলে স্ট্যাক capacity যথেষ্ট।</p>
+<p>Disconnected গ্রাফ পেতে search-জুড়ে seen রেখে ID order-এ scan করো। প্রথম unseen নতুন forest root। তৃতীয় উদাহরণে গ্রাফ শূন্যে দুই component, সাত-vertex no-edge গ্রাফে সাত। Root-এর মাঝে seen reset করলে পুরোনো component আবার গুনবে।</p>
+<h2 id="common-mistakes">থামিয়ে রাখা কাজ মনে রাখো</h2>
+<h3>প্রতি pop-এর পরে neighbor লুপ শুরু থেকে</h3>
+<p>Parent আগের edge বারবার দেখে ভুলভাবে নামতে পারে। Frame-এ next index রেখে child push-এর আগে বাড়াও।</p>
+<h3>Discovery-তেই finish time</h3>
+<p>Child call এখনও হয়নি। Active frame-এর সব neighbor দেখা শেষেই finish লেখো।</p>
+<h3>Traversal forest-কে মূল গ্রাফ বলা</h3>
+<p>ট্রি edge প্রথম discovery রাখে। মূল গ্রাফে forest-এ না থাকা cycle আর extra connection থাকতে পারে।</p>
+<p>Timestamp implementation যাচাইয়ে কাজে লাগে। প্রতি reached vertex-এ enter ছোট হবে leave-এর চেয়ে। প্রতিটি event number একবার, descendant interval active ancestor-এর ভেতরে। Discovery order ঠিক দেখালেও ভুল early pop ধরা পড়ে।</p><p>নির্দিষ্ট রিকার্সিভ trace মেলাতে neighbor order আর marking time দুটোই মেলাও। সব unvisited neighbor একসঙ্গে push করলে বহু দিক থেকে পাওয়া vertex-এর parent আলাদা হতে পারে। এক active frame রেখে এক child করে নামলে ইটারেটিভ আচরণ রিকার্সিভ ব্যাখ্যার সঙ্গে মেলে।</p>
+<h2 id="version-notes">C17 call আর নিজের frame</h2>
+<div class="callout version"><p>C17 রিকার্সিভ call দেয়, portable সর্বোচ্চ depth-এর নিশ্চয়তা নয়। Explicit DFS frame অ্যারে bounded গ্রাফে সেই নির্ভরতা এড়ায়, saved neighbor index দেখায়।</p></div>
+<h2 id="summary">Return-ও trace-এর অংশ</h2>
+<p>DFS parent-এ ফেরার state রেখে এক শাখায় গভীর যায়। Entry-exit থেকে forest structure বোঝা যায়। এরপর edge আসতে থাকলে connected group রাখতে <a href="topic:ds-disjoint-set">union-find</a> দেখো।</p>

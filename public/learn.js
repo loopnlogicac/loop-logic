@@ -1,3 +1,4 @@
+import { studyPlanStrings, studyPlan } from './study-plan.js';
 import { masteryStrings, topicChecks } from './mastery.js';
 // Tutorials: track list → topic list → topic page (lesson, runnable examples, labs,
 // quiz graded on the server, practice with solutions, exam questions).
@@ -13,6 +14,7 @@ const T = {
     ...savedStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · every example in these tutorials was compiled and run before publishing',
     title: 'Tutorials', sub: (t, l) => `Step-by-step written lessons with runnable code, interactive labs, quizzes and practice. ${t} topics and ${l} labs so far, with more added every week.`,
+    ...studyPlanStrings.en,
     topics: 'topics', labs: 'labs', of: 'of', soon: 'Coming soon', start: 'Start', open: 'Open', inProgress: 'Being written',
     levels: { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
     kinds: { lesson: 'Lesson', theory: 'Concepts', project: 'Project', 'question-bank': 'Practice sheet' },
@@ -30,6 +32,7 @@ const T = {
     ...savedStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · এই টিউটোরিয়ালের প্রতিটি উদাহরণ প্রকাশের আগে কম্পাইল করে চালানো হয়েছে',
     title: 'টিউটোরিয়াল', sub: (t, l) => `ধাপে ধাপে লেখা পাঠ, চালানো যায় এমন কোড, ইন্টারঅ্যাকটিভ ল্যাব, কুইজ আর অনুশীলন। এখন পর্যন্ত ${t}টি টপিক আর ${l}টি ল্যাব; প্রতি সপ্তাহে আরও যোগ হচ্ছে।`,
+    ...studyPlanStrings.bn,
     topics: 'টপিক', labs: 'ল্যাব', of: '/', soon: 'শিগগিরই আসছে', start: 'শুরু করো', open: 'খোলো', inProgress: 'লেখা চলছে',
     levels: { beginner: 'শুরুর স্তর', intermediate: 'মাঝারি', advanced: 'উচ্চতর' },
     kinds: { lesson: 'পাঠ', theory: 'ধারণা', project: 'প্রজেক্ট', 'question-bank': 'অনুশীলন শিট' },
@@ -183,7 +186,7 @@ async function renderTopic() {
             d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
             d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
           el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
-        checks.before, langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, checks.after, quiz, practice, exam, videos, refs, pager)));
+        checks.before, langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, checks.after, quiz, practice, exam, videos, refs, studyPlan(L, { track: d.track.id, topic: d.topic.id }), pager)));
   fillAdSlots();
   api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
   main.querySelector('.tut-title').after(savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L));

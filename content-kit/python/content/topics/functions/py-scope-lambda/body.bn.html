@@ -1,0 +1,68 @@
+<h2 id="introduction">এক বানানে আলাদা মানের নাম</h2>
+<p class="lead">দুই ক্লাসে roll 12 দুই আলাদা শিক্ষার্থী হতে পারে। Python-এর নামও context-এর। <dfn>Scope</dfn> হলো নাম খোঁজার সময় Python যে অঞ্চলের binding বিবেচনা করে।</p>
+<p>ফাংশন অস্থায়ী নাম কাজের কাছে রাখে। এতে helper-এর হিসাব অন্য নাম ভুল করে বদলায় না। Nested ফাংশন আরেক layer: inner তার enclosing কলের setting পড়তে পারে।</p>
+<p>Scope বোঝায় ভেতরের মান বাইরে প্রিন্টের থেকে আলাদা কেন। কিছু অঙ্কের ভুল মনে হলেও আসলে name-binding error। নামের উৎস অস্পষ্ট হলে চারপাশের scope আঁকো।</p>
+
+<h2 id="syntax">দরকার হলেই rebinding-এর জায়গা বদলাও</h2>
+<pre><code class="language-python">visits = 0
+
+def record_visit():
+    global visits
+    visits += 1</code></pre>
+<p>সাধারণভাবে ফাংশনে নামে assignment থাকলে পুরো body-তে নাম local। Binding তৈরির আগে পড়লে UnboundLocalError। Local ঠিক করার পরে Python global মানে ফিরে খোঁজে না।</p>
+<p>global নামে binding module level-এ পাঠায়। nonlocal enclosing ফাংশন scope-এর existing binding বাছে। ওই ফাংশনে নাম ব্যবহারের আগেই declaration রাখো।</p>
+<p>কোনোটিই argument পাঠায় বা মান ফেরায় না; কোথায় binding হবে বদলায়। অনেক হিসাবে বাইরের state বদলানোর চেয়ে parameter নিয়ে ফল return পরিষ্কার।</p>
+
+<h2 id="how-it-works">LEGB ধরে বাইরে খোঁজো</h2>
+<p><dfn>LEGB</dfn> সাধারণ খোঁজার ক্রম: Local, Enclosing, Global, Built-in। আগে বর্তমান ফাংশনের parameter-সহ স্থানীয় নাম, তারপর ঘিরে থাকা ফাংশন scope, তারপর defining module, শেষে Python built-in।</p>
+<p>প্রথম প্রোগ্রামে inner-এর নিজের amount আর local_fee। rate local-এ নেই, outer-এ আছে, তাই module-level rate-এর আগে সেটি। কাছে কেউ না ঢাকায় len built-in থেকে।</p>
+<p>Nested ফাংশন নিজের defining environment মনে রাখে, পরে যে ফাংশন কল করে তার local ভেরিয়েবল নয়। এটি lexical scope। make_counter ফিরলেও returned counter count-এ access রাখে, যা closure।</p>
+<p><dfn>Closure</dfn> ব্যবহৃত enclosing binding-এ access রাখা ফাংশন। প্রতিটি factory call আলাদা state করতে পারে। তাই আলাদা make_counter কলের counter একই source হলেও একে অন্যে বাধা দেয় না।</p>
+
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>C block scope আর Python ফাংশন scope হুবহু নয়। Python for আর if সাধারণ নতুন local scope করে না। Returned closure enclosing binding রাখে; মেয়াদ শেষ C স্ট্যাক local-এর পয়েন্টার ফেরানো নয়।</p></div>
+
+<h2 id="examples">প্রতিটি ফাংশন কোন binding পড়ে দেখো</h2>
+<p>প্রিন্ট trace-এর আগে নাম L, E, G বা B দাও। Assignment-এ global বা nonlocal destination বদলায় কি না দেখো। প্রায়ই সব অঙ্ক না চালিয়েই ফল বোঝা যায়।</p>
+
+<h3>Local, enclosing, global আর built-in খোঁজো</h3>
+<p>inner amount আর local_fee local-এ, rate outer-এ, len built-in-এ পায়। ভেতরের হিসাব 33। outer-এর নিজের binding বলে module-level rate 5 থাকে।</p>
+<div data-example="ex-1"></div>
+
+<h3>এক module-level নাম rebind</h3>
+<p>global visits-এর assignment module-level-এ করে। দুই কল একই counter বাড়িয়ে 2। global ছাড়া local assignment-এর আগে read-এ UnboundLocalError।</p>
+<div data-example="ex-2"></div>
+
+<h3>এক enclosing counter রাখো</h3>
+<p>nonlocal enclosing কলের count বাছে। Returned inner binding access রাখে। প্রতিটি make_counter আলাদা state, তাই first 12 পেলেও second 1-এ শুরু।</p>
+<div data-example="ex-3"></div>
+
+<h3>ছোট ordering rule হিসেবে lambda</h3>
+<p>Key ফাংশনের pair-এ negative mark বড় mark আগে, roll tie ভাঙে। নাম দেওয়া lambda নিজের এক expression স্বয়ংক্রিয় ফেরায়। Reusable named হিসাবে lambda assign-এর চেয়ে def সাধারণত পরিষ্কার।</p>
+<div data-example="ex-4"></div>
+
+<h3>চাওয়া লুপ value ধরে রাখো</h3>
+<p>late ফাংশন কলের সময় shared লুপ name পড়ে, তখন 2। প্রতিটি lambda তৈরিতে default evaluate হওয়ায় fixed আলাদা 0, 1 আর 2 রাখে।</p>
+<div data-example="ex-5"></div>
+
+<h2 id="lambda-and-capture">নিয়ম না লুকিয়ে ছোট ফাংশন</h2>
+<p><dfn>Lambda expression</dfn> parameter আর এক expression দিয়ে ছোট ফাংশন বানায়। Syntax lambda parameters: expression। Expression-এর মান ফল, return লেখা হয় না। sorted-এ ছোট rule পাঠাতে ভালো।</p>
+<p>sorted-এর key argument প্রতিটি item-এর comparison key দেওয়া ফাংশন চায়। Key tuple primary-secondary order বলে। Negative mark আর positive roll-এ descending marks, tie-তে ascending roll।</p>
+<p>জটিল lambda স্থায়ী নামে assign def-এর চেয়ে কম readable। Named definition docstring আর কয়েকটি পরিষ্কার statement দেয়। আশপাশের কলে পুরো rule আরামে ধরলে lambda নাও।</p>
+<p>Closure binding access রাখে, সব মানের frozen snapshot নয়। লুপ-এ তৈরি ফাংশন পরে number পড়লে সবাই final binding দেখে। def-এ বানানো inner-এও একই, শুধু lambda নয়।</p>
+<p>number=number default ফাংশন তৈরির সময় current অবজেক্ট ধরে। Immutable লুপ value-তে ভালো হতে পারে। Mutable হলে আগের নিয়ম মনে রাখো: reference রাখা independent copy নয়।</p>
+
+<p>সাধারণ if বা for নতুন ফাংশন-local scope করে না। Executed branch-এর assigned নাম পরে পড়া যায়। Branch না চললে binding তৈরিই নাও হতে পারে। সব পরের পথে দরকার হলে branching-এর আগে result initialize করো।</p>
+<p>global মানে defining module, পুরো app-এর shared namespace নয়। দুই module-এ count থাকলে ফাংশন সাধারণত নিজের module-এর binding দেখে। ফাংশন import করলে defining global namespace caller-এর module-এ সরে না।</p>
+<p>Nested ফাংশন nonlocal ছাড়াই enclosing নাম পড়ে। ভেতর থেকে ওই নাম rebind করতে declaration লাগে। তাই read-only threshold closure-এ নয়, incrementing counter-এ লাগে।</p>
+
+<h2 id="common-mistakes">নাম বদল আর অবজেক্ট বদল আলাদা</h2>
+<h3>সব error সারাতে global</h3><p>Binding দেখাতে global counter ভালো, কিন্তু বেশি shared state-এ কল বোঝা কঠিন। আগে ভাবো পুরোনো মান নিয়ে নতুন মান ফেরানো উচিত কি না। এতে dependency দেখা যায়।</p>
+<h3>nonlocal module ভেরিয়েবল পাবে ভাবা</h3><p>nonlocal-এ surrounding ফাংশন binding চাই। না থাকলে definition invalid। ইচ্ছা করা design mutation হলেই module binding-এ global নাও।</p>
+<h3>Mutation আর reassignment মেশানো</h3><p>List-এ append নাম পড়ে অবজেক্ট edit করে। একই নামে অন্য list assign rebinding। শুধু rebinding-এ outer scope বাছার declaration লাগে।</p>
+<h3>দরকারি built-in ঢেকে ফেলা</h3><p>Local list বা sum সাধারণ lookup-এ built-in ঢাকে। পরে sum কল integer call হতে পারে। দরকারি tool না ঢেকে total বা numbers নাম নাও।</p>
+
+<h2 id="version-notes">Scope সংজ্ঞা মেনে চলে</h2>
+<div class="callout version"><p>LEGB, nonlocal আর lambda এখানে Python 3.10–3.12-তে চলে। সাধারণ লুপ target binding surrounding scope-এ রাখে; comprehension আলাদা target scope।</p></div>
+
+<h2 id="summary">মান trace-এর আগে binding খোঁজো</h2>
+<p>LEGB lookup বোঝায়, global আর nonlocal rebinding-এর জায়গা বদলায়। একই scope rule-এ lambda ছোট ফাংশন expression। পরের <a href="topic:py-recursion">রিকার্শন</a>-এ বারবার কলের local state আলাদা trace করবে।</p>

@@ -1,0 +1,63 @@
+<h2 id="introduction">দূরের আগে কাছের vertex দেখো</h2>
+<p class="lead">এক corridor, তারপর দুই, তারপর তিন corridor পেরিয়ে কোন room পাওয়া যায় ভাবো। পরের layer বাড়ানোর আগে কাছেরটি শেষ করবে। <dfn>Breadth-first search</dfn> বা BFS first-in first-out কিউ দিয়ে তা করে।</p>
+<p>BFS এক source থেকে শুরু। সেখান থেকে পৌঁছানো সব vertex আবিষ্কার করে, সর্বনিম্ন edge count রাখে। Source-এর distance শূন্য। Unreachable vertex-এ minus one থাকে, বৈধ nonnegative hop count-এর সঙ্গে মেশে না।</p>
+<p>উদাহরণে শূন্য থেকে ছয় সাত vertex। Neighbor ascending ID-তে দেখা হয়, তাই print order আর parent পুনরায় মেলে। একই দৈর্ঘ্যের অনেক route-এ অন্য neighbor order অন্য shortest route বাছতে পারে। Minimum distance একই থাকবে।</p>
+<h2 id="syntax">Distance দিয়েই discovery mark</h2>
+<p>Distance আর parent অ্যারে শুরুতে -1। Nonnegative distance মানে discovered। Source enqueue-এর আগে dist[start]=0 করো। u-এর নতুন neighbor v-তে dist[v]=dist[u]+1, parent[v]=u বসিয়ে কিউতে v যোগ করো।</p>
+<p>সাত-cell কিউতে head পরের removal, tail পরের insertion position। প্রতি vertex সর্বোচ্চ একবার ঢোকে, তাই tail সাত ছাড়ায় না। একবারের traversal-এ circular reuse লাগে না। দীর্ঘমেয়াদি কিউ service-এ circular representation বা reset rule চাই।</p>
+<pre><code class="language-text">dist = -1; parent = -1; dist[start] = 0
+mark start; enqueue start
+while queue not empty: u = dequeue
+for each ascending neighbor v: check dist[v]
+if undiscovered: dist[v] = dist[u]+1; parent[v] = u; mark v
+enqueue v
+finish u and append it to order
+report distances and parents</code></pre>
+<p>শেষ পাঁচ line উপযুক্ত লুপ বা condition-এর ভেতর: neighbor check কিউ লুপ-এ, enqueue undiscovered branch-এ। C brace scope পরিষ্কার করে। Lab একই dist, parent, কিউ আর order নাম ব্যবহার করে, কিউ-তে ঢোকানোর আগেই discovery mark করে।</p>
+<h2 id="how-it-works">একই diamond-এ কিউ trace</h2>
+<p>গ্রাফ শূন্যে edge 0-1,0-2,1-3,1-4,2-4,3-5,4-5 আর isolated ছয়। গ্রাফ এক path 0-1-2-3-4-5-6। গ্রাফ দুইয়ে সাত vertex, edge নেই। গ্রাফ তিন K7, সব distinct undirected pair আছে। চারটিতেই একই ID।</p>
+<pre class="diagram">0 expand-এর আগে:
+queue [0]     dist [0,-1,-1,-1,-1,-1,-1]
+0 expand-এর পরে:
+queue [1,2]   dist [0, 1, 1,-1,-1,-1,-1]
+1 expand-এর পরে:
+queue [2,3,4] parent[3]=1, parent[4]=1
+2 expand-এর পরে:
+queue [3,4]   vertex 4 আগেই discovered; আবার enqueue নয়</pre>
+<table class="ref"><thead><tr><th scope="col">Expanded</th><th scope="col">পরের কিউ</th><th scope="col">নতুন vertex</th></tr></thead><tbody><tr><td>0</td><td>1,2</td><td>Distance 1-এ 1 আর 2</td></tr><tr><td>1</td><td>2,3,4</td><td>Distance 2-এ 3 আর 4</td></tr><tr><td>2</td><td>3,4</td><td>নেই</td></tr><tr><td>3</td><td>4,5</td><td>Distance 3-এ 5</td></tr><tr><td>4</td><td>5</td><td>নেই</td></tr><tr><td>5</td><td>ফাঁকা</td><td>নেই</td></tr></tbody></table>
+<p>কিউতে expansion-এর অপেক্ষার vertex, পুরো visited set নয়। শূন্য সরালে distance মোছে না। দুই যখন চার দেখে তখন চার আগেই marked, তাই আবার enqueue নয়। Cycle কিউকে অনন্ত বাড়াতে পারে না।</p>
+<div data-lab="graph-bfs"></div>
+<p>গ্রাফ শূন্যে source ছয় করো। Lab শুধু ছয়ে শূন্য লেবেল দেয়, এক-entry কিউ চালায়। তারপর গ্রাফ তিন নাও: source থেকেই বাকি সব vertex discovered। Reachable set আর layer আলাদা দেখালেও একই অ্যালগরিদম।</p>
+<h2 id="examples">Distance পড়ে route উদ্ধার</h2>
+<h3>Distance আর parent-সহ কিউ traversal</h3>
+<p>কিউ 0,1,2,3,4,5 visit করে। ছয় unreachable। চার-এর আগে তিনের কাজ হওয়ায় পাঁচের parent তিন।</p>
+<div data-example="ex-1"></div>
+<h3>Parent link উল্টে route পাও</h3>
+<p>Parent ধরে 5,3,1,0 আসে। Temporary path উল্টো প্রিন্টে শূন্য থেকে পাঁচের তিন-edge route।</p>
+<div data-example="ex-2"></div>
+<h3>Isolated start নিজেকে খুঁজে পায়</h3>
+<p>Adjacency list ফাঁকা হলেও start-এর distance শূন্য, parent নেই। অন্য vertex কিউতে আসে না।</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">প্রথম discovery কেন shortest route</h2>
+<p>দরকারি invariant: কিউর সামনে থেকে পেছনে distance কমে না। Distance-d vertex expand করলে শুধু distance-(d+1) যোগ হতে পারে। আগের layer-এর queued vertex নতুনদের আগে থাকে। Source এক distance-zero entry দিয়ে শুরু করে।</p>
+<p>v প্রথম u থেকে d+1 পেল, অথচ ছোট route আছে ধরি। সেই route-এ v-এর predecessor-এর distance d-এর কম। BFS আগে সেটি expand করে v পেত। এখন প্রথম discovery কথার বিরোধ, তাই d+1 minimum hop।</p>
+<p>প্রতিটি সফল discovery এক parent রাখে। Reachable vertex-এ link-গুলো BFS ট্রি বানায়: source ছাড়া সবার distance এক কম এমন আগের parent। Path পেতে target থেকে -1 পর্যন্ত parent ধরে vertex জমাও। তারপর উল্টে source-to-target প্রিন্ট।</p>
+<p>dist[target] -1 হলে source থেকে route নেই। তার -1 parent-কে অ্যারে index কোরো না। Target source হলে path-এ শুধু সেই vertex, edge শূন্য। একাধিক shortest route-এ ascending neighbor একটি consistent parent বাছে, সব route দেয় না।</p>
+<p>সব edge-এর সমান cost-এ BFS hop কমায়। Unequal weight-এ অন্য অ্যালগরিদম চাই। BFS দ্রুত পেলেই প্রথম weighted route-এ থামা নিরাপদ নয়। Directed adjacency list-এ শুধু outgoing neighbor ধরা যাবে।</p>
+<h2 id="edge-cases">Traversal আর construction খরচ আলাদা</h2>
+<p>Adjacency list-এ প্রতিটি reachable vertex একবার কিউতে ঢোকে-বেরোয়। পৌঁছানো vertex-এর প্রতিটি adjacency entry একবার দেখা হয়; undirected-এ প্রতি reached edge দুইবার। অ্যারে initialization-সহ traversal O(V+E), distance, parent আর কিউ-তে বাড়তি O(V) জায়গা।</p>
+<p>Builder ছোট matrix দিয়ে sorted অ্যারে-backed neighbor list বানায়। তৈরির সময় O(V squared), rectangular অ্যারের reserved cell O(V squared)। bfs helper শুধু active neighbor count ধরে। Helper-এর traversal খরচ আর পুরো bounded প্রোগ্রামের setup ও reserved storage আলাদা বলো।</p>
+<p>Empty গ্রাফে আলাদা no-source policy লাগে; উদাহরণে সবসময় সাত vertex আর বৈধ source চাই। Edge না থাকলেও গ্রাফ বৈধ, শুধু source-এ পৌঁছায়। Complete গ্রাফ কিউতে একসঙ্গে V-1 neighbor তুলতে পারে, কিন্তু discovery-তে marking overflow ঠেকায়।</p>
+<p>Undirected গ্রাফের সব component পেতে বাইরের ID লুপ-এ এখনও undiscovered vertex থেকে BFS শুরু করো। Run-জুড়ে visited অ্যারে একই রাখো। Search-গুলো forest হয়। এক source search ইচ্ছা করেই অন্য component অছোঁয়া রাখে, গ্রাফ শূন্যের ছয়-সহ।</p>
+<h2 id="common-mistakes">প্রথম আগমনের অর্থ রাখো</h2>
+<h3>শুধু dequeue-তে mark</h3>
+<p>দুই আগের vertex একই neighbor-কে কোনো copy সরার আগেই enqueue করতে পারে। প্রথম distance বসানোর সময় enqueue-এর আগে mark করো।</p>
+<h3>প্রতি দেখা হলে parent বদল</h3>
+<p>পরে edge পাওয়া নতুন discovery নয়। বাছা shortest-hop ট্রি স্থির রাখতে প্রথম parent রাখো।</p>
+<h3>Parent walk সামনের দিকে প্রিন্ট</h3>
+<p>Parent source-এর দিকে যায়। চাওয়া source-to-target দিক দেখাতে জমা sequence উল্টাও।</p>
+<p>সমান shortest route অনেক হলে এক parent শুধু এক উত্তর রাখে। সব shortest predecessor চাইলে distance এক কম এমন incoming discovery-র list রাখো। শুধু route count চাইলে আলাদা count-এ equal-layer contribution যোগ করা যায়। বাড়তি state আর নিজস্ব numeric overflow limit লাগবে।</p><p>Stopping rule প্রশ্নের ওপর। এক target-এর distance প্রথম discovery-তেই স্থির। পুরো distance table বা component চাইলে কিউ ফাঁকা পর্যন্ত চলো। উদাহরণে unreachable vertex আর সব parent choice দেখাতে পুরো source search শেষ হয়।</p>
+<h2 id="version-notes">C17 কিউ আর parent অ্যারে</h2>
+<div class="callout version"><p>সবসময় সাত vertex বলে fixed অ্যারে। C17-এ built-in কিউ type নেই। Head আর tail dynamic allocation ছাড়া traversal কিউ বানায়।</p></div>
+<h2 id="summary">FIFO ক্রম distance-এর ক্রম হয়</h2>
+<p>BFS কিউ দিয়ে layer ধরে search করে, minimum hop আর parent path দেয়। Visited rule প্রতিটি vertex-এর কিউ entry unique রাখে। এর সঙ্গে <a href="topic:ds-graph-dfs">depth-first search</a> তুলনা করো, যা ফেরার আগে এক শাখা ধরে এগোয়।</p>

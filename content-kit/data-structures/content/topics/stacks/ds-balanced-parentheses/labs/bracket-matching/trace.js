@@ -24,7 +24,7 @@ function trace(input) {
                 note: {en: `${token} closes the latest opener, so remove that pending pair.`, bn: 'জোড়া মিলেছে, তাই খোলা বন্ধনী সরাও।'}});
         } else {
             steps.push({op: 'note', line: 2, vars: {position: i + 1},
-                note: {en: `${token === ' ' ? 'Space' : token} does not change bracket nesting.`}});
+                note: {en: `${token === ' ' ? 'Space' : token} does not change bracket nesting.`, bn: `${token === ' ' ? 'ফাঁকা জায়গা' : token} বন্ধনীর nesting বদলায় না।`}});
         }
     }
     if (!error && items.length) {

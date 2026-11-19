@@ -1,5 +1,6 @@
 // HTTP layer: routing, JSON, identity, errors and static files. node:http only.
 
+import { Download } from './download.ts';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import type { RunnerService } from '../app/runner.ts';
@@ -8,6 +9,7 @@ import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts'
 import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
+import type { StudyPlanService } from '../app/study-plan.ts';
 import type { ReadingService } from '../reading/service.ts';
 import type { NoteService } from '../app/notes.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
@@ -21,6 +23,7 @@ import type { MasteryService } from '../app/mastery.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
+import type { ReportService } from '../app/reports.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
@@ -54,8 +57,10 @@ export interface AppDeps {
   admin?: AdminService;
   classes?: ClassService;
   orders?: OrderService;
+  reports?: ReportService;
   runner?: RunnerService;
   search?: SearchService;
+  studyPlan?: StudyPlanService;
   store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
@@ -136,6 +141,10 @@ export function buildRoutes(d: AppDeps): Route[] {
     if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
     return d.classes;
   };
+  const reports = () => {
+    if (!d.reports) throw new AppError('unavailable', 503, 'Reports are unavailable.');
+    return d.reports;
+  };
   const ord = () => {
     if (!d.orders) throw new AppError('unavailable', 503, 'Buying is not available on this server.');
     return d.orders;
@@ -183,6 +192,12 @@ export function buildRoutes(d: AppDeps): Route[] {
     // catalog, dashboard, profile
     route('GET', '/api/courses', ({ query }) => learner.catalog(lang(query.get('lang'))), 'none'),
     route('GET', '/api/courses/:id', ({ params, query, learnerId }) => learner.course(params.id!, learnerId, lang(query.get('lang')))),
+    route('GET', '/api/study-plan', ({ learnerId, query }) => {
+      if (!d.studyPlan) throw new AppError('unavailable', 503, 'Study plans are unavailable.');
+      const track = query.get('track'), topic = query.get('topic');
+      if (Boolean(track) !== Boolean(topic)) throw new AppError('bad_input', 400, 'Provide both track and topic.');
+      return d.studyPlan.plan(learnerId, lang(query.get('lang')), track && topic ? { track, topic } : undefined);
+    }, 'learner'),
     route('GET', '/api/dashboard', ({ query, learnerId }) => learner.dashboard(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile', ({ query, learnerId }) => learner.profileView(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile/export', ({ learnerId }) => learner.exportData(learnerId)),
@@ -221,7 +236,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
-    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),
+    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang), body.review === true)),
     route('GET', '/api/learn/:track/:topic/practice/:pid', ({ params, query }) => tutorials.solution(params.track!, params.topic!, params.pid!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic/labs/:lab', ({ params, query }) => tutorials.lab(params.track!, params.topic!, params.lab!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/labs/:lab/run', ({ params, body }) => tutorials.runLab(params.track!, params.topic!, params.lab!, body.input, lang(body.lang)), 'none'),
@@ -282,6 +297,9 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/coupons/check', ({ body, email }) => adm().checkCoupon(body.code, String(body.target ?? 'all'), email)),
 
     // admin site (signed in, and an admin)
+    route('GET', '/api/admin/export', async () => new Download(JSON.stringify(await reports().backup(), null, 2), 'application/json; charset=utf-8', 'loop-logic-backup.json'), 'admin'),
+    route('GET', '/api/admin/revenue', ({ query }) => reports().revenue(lang(query.get('lang'))), 'admin'),
+    route('GET', '/api/admin/revenue.csv', async ({ query }) => new Download(await reports().revenueCsv(lang(query.get('lang'))), 'text/csv; charset=utf-8', 'revenue.csv'), 'admin'),
     route('GET', '/api/admin/me', ({ email }) => ({ email, role: adm().roleOf(email), config: adm().config() }), 'admin'),
     route('GET', '/api/admin/overview', () => adm().overview(), 'admin'),
     route('GET', '/api/admin/tutorials', () => adm().tutorialsAdmin(), 'admin'),
@@ -348,6 +366,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/instructor/meta', () => ({ tracks: tutorials.adminTracks().filter((t) => t.delivered && !t.hidden).map((t) => ({ id: t.id, title: t.title })), courses: allCourses().map((c) => ({ id: c.id, title: c.title.en })) }), 'staff'),
     route('GET', '/api/instructor/classes', ({ staff }) => cls().myClasses(staff!), 'staff'),
     route('POST', '/api/instructor/classes', ({ body, staff }) => cls().saveClass(staff!, body), 'staff'),
+    route('GET', '/api/instructor/classes/:id/gradebook.csv', async ({ params, staff, query }) => new Download(await cls().gradebookCsv(staff!, params.id!, lang(query.get('lang'))), 'text/csv; charset=utf-8', 'gradebook.csv'), 'staff'),
     route('GET', '/api/instructor/classes/:id', ({ params, staff, query }) => cls().dashboard(staff!, params.id!, lang(query.get('lang'))), 'staff'),
     route('POST', '/api/instructor/classes/:id', ({ params, body, staff }) => cls().saveClass(staff!, body, params.id!), 'staff'),
     route('DELETE', '/api/instructor/classes/:id', ({ params, staff }) => cls().archiveClass(staff!, params.id!), 'staff'),
@@ -467,6 +486,10 @@ export function createApp(d: AppDeps) {
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
       const body = await readJson(req, match.r.maxBody);
       const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers, staff });
+      if (result instanceof Download) {
+        res.writeHead(200, { ...headers, 'content-type': result.contentType, 'content-disposition': `attachment; filename="${result.filename}"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+        return res.end(result.body);
+      }
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
       if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details } }, headers);

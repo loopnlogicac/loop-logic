@@ -24,7 +24,9 @@ import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
 import { ClassService } from '../app/classes.ts';
 import { OrderService } from '../app/orders.ts';
+import { ReportService } from '../app/reports.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
+import { StudyPlanService } from '../app/study-plan.ts';
 import { SearchService } from '../app/search.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -90,8 +92,10 @@ const server = createApp({
   admin,
   classes,
   orders,
+  reports: new ReportService(store, Object.entries(env).filter(([key]) => /KEY|SECRET|TOKEN|PASSWORD/.test(key)).map(([, value]) => value ?? '').filter((value) => value.length >= 8)),
   runner,
   search,
+  studyPlan: new StudyPlanService(store, tutorials),
   store,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),

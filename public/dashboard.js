@@ -1,3 +1,4 @@
+import { studyPlanStrings, studyPlan } from './study-plan.js';
 import { masteryStrings, masteryDashboard } from './mastery.js';
 // Learner dashboard: continue reading, progress, practice, focus areas, receipts.
 import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn, currentUser, showSignIn, toast } from './common.js';
@@ -12,6 +13,7 @@ const T = {
     tryMl: 'Machine-learning lesson', tryBiz: 'Accounting lesson', browse: 'Browse all courses',
     continue: 'Continue reading', contWatch: 'Continue watching', watchedN: (a, b) => `${a} of ${b} videos watched`, play: 'Play next', read: (p) => `${p}% read`, resume: 'Continue', last: 'last read',
     sLessons: 'Lessons started', sQuiz: 'Quizzes correct', sHelp: 'Labs completed', labDone: 'Lab done', labBtn: 'Lab', more: (n) => `${n} more lessons in Courses`, sPractice: 'Practice tasks',
+    ...studyPlanStrings.en,
     lessons: 'Your lessons', notStarted: 'Not started', start: 'Start', open: 'Open',
     practice: 'Practice and sealed check', noPractice: 'You haven’t practised yet.', noPracticeSub: 'Judge an AI coworker’s pricing advice, then prove it on a fresh task with no help.', practiceCta: 'Start practice',
     phase: { practice: 'Practising', assessment: 'Sealed check open', complete: 'Completed' },
@@ -28,6 +30,7 @@ const T = {
     tryMl: 'মেশিন লার্নিং পাঠ', tryBiz: 'অ্যাকাউন্টিং পাঠ', browse: 'সব কোর্স দেখো',
     continue: 'পড়া চালিয়ে যাও', contWatch: 'দেখা চালিয়ে যাও', watchedN: (a, b) => `${b}টির মধ্যে ${a}টি ভিডিও দেখা হয়েছে`, play: 'পরেরটি চালাও', read: (p) => `${p}% পড়া হয়েছে`, resume: 'চালিয়ে যাও', last: 'শেষ পড়া',
     sLessons: 'শুরু করা পাঠ', sQuiz: 'ঠিক কুইজ', sHelp: 'সম্পন্ন ল্যাব', labDone: 'ল্যাব সম্পন্ন', labBtn: 'ল্যাব', more: (n) => `কোর্সে আরও ${n}টি পাঠ আছে`, sPractice: 'অনুশীলনী প্রশ্ন',
+    ...studyPlanStrings.bn,
     lessons: 'তোমার পাঠ', notStarted: 'শুরু হয়নি', start: 'শুরু করো', open: 'খোলো',
     practice: 'অনুশীলন ও বন্ধ যাচাই', noPractice: 'এখনো অনুশীলন করোনি।', noPracticeSub: 'এআই সহকর্মীর দামের পরামর্শ যাচাই করো, তারপর সাহায্য ছাড়া নতুন প্রশ্নে প্রমাণ দাও।', practiceCta: 'অনুশীলন শুরু করো',
     phase: { practice: 'অনুশীলন চলছে', assessment: 'বন্ধ যাচাই খোলা', complete: 'সম্পন্ন' },
@@ -147,6 +150,7 @@ function render(d) {
   nodes.push(el('div', { class: 'dash-grid' },
     el('div', { style: 'display:grid;gap:20px' }, lessons, practice),
     el('div', { style: 'display:grid;gap:20px' }, focus, receipts)));
+  nodes.splice(1, 0, studyPlan(L));
   main.replaceChildren(...nodes);
 }
 
