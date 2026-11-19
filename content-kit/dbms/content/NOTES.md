@@ -1,3 +1,22 @@
+# DBMS – Bangla edition, part 2 (R6-E)
+
+Package version **0.3.1** completes **41/41 Bangla lesson bodies**. This branch starts from main plus open PR #32 (`codex/dbms-bangla-part-1`); land that prerequisite first. Its nine earlier Bangla bodies are retained. This item adds the remaining 32 bodies across SQL basics/advanced, normalization, internals, beyond and practice-exam.
+
+The complete teaching text is translated, including the fifty SQL tasks, twelve worked exam answers, fifty interview explanations and the university registration project. Code, SQL identifiers, English bodies, examples, shared datasets and captured outputs are unchanged. Heading IDs, topic links, example slots, code blocks and paragraph coverage are checked against each English body. Existing bilingual topic metadata is retained. Review status remains draft for language/subject review.
+
+Validation for this edition: the complete checker runs against a real MySQL Community Server 8.4.7 with `--require-sql`; all 41 topics pass with 0 errors and 0 warnings. The 130 existing platform tests pass with `node --test "tests/*.test.ts"`. No application dependencies, migrations or platform files are changed.
+
+```bash
+# From content-kit/, with mysql on PATH and local MYSQL_HOST/PORT/USER configured:
+node tools/check.mjs dbms/content --require-sql --report dbms/content/CHECK_REPORT.txt
+# From repository root:
+node --test "tests/*.test.ts"
+```
+
+The local validation server listens only on 127.0.0.1:33307. Its temporary binaries, data and configuration are outside the repository. The historical batch notes below describe earlier authoring environments, not the current server.
+
+---
+
 # DBMS – Batch 3
 
 Package version: **0.3.0**, format 1.1. This is the final delivery: **41/41 curriculum topics**, in the fixed curriculum order. Every review status remains `draft` for subject and language review.

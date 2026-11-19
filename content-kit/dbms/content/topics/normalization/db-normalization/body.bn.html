@@ -1,52 +1,52 @@
 <h2 id="introduction">Registration sheet ঠিক করো</h2>
-<p class="lead">শত রো-তে একই বিভাগ নাম রাখলে দেখতে সুবিধা,নাম বদলাতে সব copy খুঁজতে হয়। <dfn>Normalization</dfn> fact গুছিয়ে এক পরিবর্তনের এক বাড়ি দেয়। লক্ষ্য নির্ভরযোগ্য design,সর্বোচ্চ টেবিল সংখ্যা নয়।</p>
-<p>Student(S,নাম,D,DeptName,Courses)-এ Ayesha-র Courses={CSE212,MAT101}। আলাদা registration কোয়েরি-তে collection repeating গ্রুপ। আগে rule:S→নাম,D;D→DeptName;C→Title,Credits;SC→Mark। এখানে কোর্স C আর pair-পিছু এক attempt।</p>
-<p>Shared schema section_id-তে offering আলাদা,শিক্ষার্থী-সেকশন-এ ফল। ছোট SC শুধু design exercise,সমৃদ্ধ schema-র বদলি নয়। Retake-এ attempt/offering ID চাই। ভুল event কী normal form সারায় না।</p>
+<p class="lead">Spreadsheet সুবিধাজনক মনে হলেও একই বিভাগের নাম শত row-তে নকল হতে পারে। নাম বদলালে প্রতিটি কপি খুঁজতে হয়। <dfn>Normalization</dfn> তথ্য এমনভাবে সাজায়, যেন একটি পরিবর্তনের পরিষ্কার একটি জায়গা থাকে। লক্ষ্য নির্ভরযোগ্য ডিজাইন, যত বেশি সম্ভব টেবিল নয়।</p>
+<p>Student(S, Name, D, DeptName, Courses) sheet ধরো। Ayesha-র Courses = {CSE 212, MAT 101}। আলাদা registration query করতে হলে এই collection repeating group। ভাঙার আগে নিয়ম লেখো: S → Name,D; D → DeptName; C → Title,Credits; SC → Mark। C কোর্সের পরিচয়; এখানে প্রতি student-course জোড়ায় এক attempt অনুমোদিত।</p>
+<p>Shared university ডিজাইনে section_id offering আলাদা করে; ফল student-section জোড়ায় থাকে। ছোট SC মডেলটি ডিজাইন অনুশীলন, সমৃদ্ধ স্কিমার বিকল্প নয়। Retake থাকলে attempt বা offering identifier লাগে। ভুল ঘটনার পরিচয় দেওয়া key কোনো normal form সারাতে পারে না।</p>
 
 <h2 id="syntax">Relation আর dependency লেখো</h2>
 <pre><code class="language-sql">-- Design notation, not SQL statements:
 -- R(S, Name, D, DeptName, C, Title, Credits, Mark)
 -- Key: (S,C)
 -- S -&gt; Name,D; D -&gt; DeptName; C -&gt; Title,Credits; SC -&gt; Mark</code></pre>
-<p><dfn>Prime attribute</dfn> অন্তত এক candidate কী-তে,nonprime কোনোটিতে নয়। এখানে S-C prime। শুধু selected primary নয়,সব candidate কী formal test ঠিক করে। Relevant FD আর alternative কী দেখো।</p>
+<p><dfn>Prime attribute</dfn> অন্তত একটি candidate key-তে থাকে; nonprime কোনো key-তেই নেই। এখানে শুধু S ও C prime। শুধু নির্বাচিত primary key নয়, সব candidate key formal normal-form test ঠিক করে। সব প্রাসঙ্গিক dependency ও alternative key দেখো।</p>
 
 <h2 id="how-it-works">1NF থেকে3NF</h2>
-<p>1NF-এ registration-পিছু রো,প্রতি cell chosen domain-এর মান। Courses বদলে C,Title,Credits,Mark। Comma স্ট্রিং নিজে violation নয়,address indivisible হলে এক মান। বহু কোর্স ID-র list আলাদা,কারণ membership,কী,কনস্ট্রেইন্ট কোর্স-পিছু চাই।</p>
+<p>1NF-এ প্রতি registration আলাদা row, প্রতি cell নিজ domain-এর একটি মান। Courses collection-এর বদলে C, Title, Credits, Mark কলাম করো। কমাযুক্ত string নিজে violation নয়: অ্যাপ ভাগ না করলে address একটি মান হতে পারে। কিন্তু একাধিক course identifier-এর list আলাদা; প্রতিটি course-এ membership, key ও constraint কাজ করতে হবে।</p>
 <table class="ref"><thead><tr><th scope="col">S</th><th scope="col">নাম</th><th scope="col">D</th><th scope="col">DeptName</th><th scope="col">C</th><th scope="col">Title</th><th scope="col">Credits</th><th scope="col">Mark</th></tr></thead><tbody><tr><td>101</td><td>Ayesha</td><td>1</td><td>CSE</td><td>21</td><td>DBMS</td><td>3</td><td>85</td></tr><tr><td>101</td><td>Ayesha</td><td>1</td><td>CSE</td><td>23</td><td>Calculus</td><td>3</td><td>72</td></tr><tr><td>102</td><td>Tanvir</td><td>1</td><td>CSE</td><td>21</td><td>DBMS</td><td>3</td><td>65</td></tr></tbody></table>
-<p>Ayesha-তে S repeat,C শিক্ষার্থী-জুড়ে repeat,SC কী। FD-তে closure পুরো heading। Flat1NF হলেও শিক্ষার্থী-কোর্স fact repeat,পরের তিন সমস্যা তাই।</p>
-<p>এক copy-তে বিভাগ নাম বদল আপডেট anomaly। Registration বানানো বা fake কী ছাড়া নতুন কোর্স রাখা যায় না,insertion anomaly। শেষ registration মুছে কোর্স description হারানো deletion anomaly। Fact কোথায় রাখা তার সমস্যা,screen validation নয়।</p>
-<p>2NF মানে1NF আর কোনো candidate কী-র proper subset-এ nonprime dependent নয়। SC-তে S→নাম,D আর C→Title,Credits partial। S→D→DeptName,তাই এই ধাপে শিক্ষার্থী-পক্ষে যায়।</p>
+<p>Ayesha-র জন্য S বারবার আসে, আর আলাদা student-এ C আসে, তাই একা কেউ key নয়; SC key। দেওয়া FD-তে তার closure পুরো heading পায়। Flat relation 1NF হলেও student ও course-এর তথ্য নকল করে। এখান থেকেই পরের তিন সমস্যা।</p>
+<p>Ayesha-র department name-এর একটি কপি বদলালে update anomaly। ভুয়া registration বা key ছাড়া নতুন course রাখা না গেলে insertion anomaly। শেষ registration মুছতে গিয়ে course description-ও হারালে deletion anomaly। সমস্যা তথ্যের অবস্থানে; শুধু screen validation না থাকায় নয়।</p>
+<p>Relation 1NF এবং কোনো nonprime attribute কোনো candidate key-এর proper subset-এর ওপর নির্ভর না করলে 2NF। S → Name,D হলো SC-এর partial dependency; C → Title,Credits-ও তাই। D হয়ে S থেকে DeptName আসে, তাই এই ধাপে student-side তথ্যের সঙ্গেই থাকবে।</p>
 <table class="ref"><thead><tr><th scope="col">2NF component</th><th scope="col">Candidate কী</th><th scope="col">রাখা FD</th></tr></thead><tbody><tr><td>Student2(S,নাম,D,DeptName)</td><td>S</td><td>S → নাম,D আর D → DeptName</td></tr><tr><td>Course(C,Title,Credits)</td><td>C</td><td>C → Title,Credits</td></tr><tr><td>Registration(S,C,Mark)</td><td>SC</td><td>SC → Mark</td></tr></tbody></table>
-<p>প্রথম split-এর common S পুরো Student2 ঠিক করে,lossless। Course split-এ common C পুরো Course। S-C জয়েন-এ ঠিক original registration ফেরে। Partial FD নিজস্ব জায়গা পায়;Mark registration-এ,কোনো এক অংশ যথেষ্ট নয়।</p>
-<p>3NF-এ সব nontrivial X→A-তে X superkey বা A prime চাই। Student2-এ D→DeptName nonkey determinant-nonprime ফল,ভাঙে। Student(S,নাম,D),Department(D,DeptName) করো। Common D বিভাগ ঠিক করে,lossless। Given FD-তে Course-Registration আর বদল নয়।</p>
-<p>চার relation-এ সব FD locally:Student-এS,Department-এD,Course-এC,Registration-এSC। Student→Department আর Registration→Student,Course FK দাও। FK reference মানায়,uniqueness-FD proof-এর বদলি নয়।</p>
-<p>One-কলাম কী-তে ওই কী-র partial নেই,3NF নিশ্চিত নয়। Student2-এ এক-কলাম কী থেকেও nonkey D আরেক fact ঠিক করে। Alternative composite থাকলে সেগুলোও দেখো,chosen PRIMARY KEY-ভিত্তিক shortcut নয়।</p>
+<p>প্রথম split-এ Student2 ও বাকি registration-এর common S, যা পুরো Student2 নির্ধারণ করে; তাই lossless। Course split-এর common C পুরো Course নির্ধারণ করে। S ও C-তে join করে ঠিক পুরোনো registration ফেরে। Partial dependency আলাদা জায়গা পেয়েছে। Mark Registration-এ থাকে, কারণ শুধু S বা C সেটি ঠিক করে না।</p>
+<p>3NF-এ প্রতি nontrivial X → A-তে X superkey অথবা A prime চাই। Student2-তে D → DeptName-এর determinant nonkey এবং ফল nonprime, তাই ভাঙে। Student(S,Name,D) ও Department(D,DeptName) করো। Common D Department নির্ধারণ করায় split lossless। দেওয়া FD-তে Course ও Registration আর বদলাতে হয় না।</p>
+<p>শেষ চার relation-এ মূল FD স্থানীয়ভাবে থাকে। Student-এ S, Department-এ D, Course-এ C এবং Registration-এ SC সংশ্লিষ্ট তথ্য ঠিক করে। Student থেকে Department, Registration থেকে Student ও Course foreign key দাও। Foreign key reference মানায়; uniqueness ও FD যুক্তির বিকল্প নয়।</p>
+<p>এক-column candidate key-তে partial dependency হয় না; তাই বলে 3NF নিশ্চিত নয়। Student2-র এক-column key থেকে nonkey D, তারপর আরেক nonkey fact আসে। Alternative composite key থাকলে সেগুলোও দেখো। Normalization সব candidate key নিয়ে, নির্বাচিত PRIMARY KEY-এর shortcut নয়।</p>
 
 <h2 id="examples">Anomaly আর repair দেখো</h2>
 <h3>Partial আপডেট প্রকাশ</h3>
-<p>এক রো CSE renamed,অন্য দুই old। Flat স্ট্রাকচার না ভেঙেও intended বিভাগ rule ভাঙে।</p>
+<p>এক row-তে CSE-এর নতুন নাম, অন্য দুইটিতে পুরোনো। Flat table-এর structure না ভেঙেও partial update বিভাগের নিয়ম ভাঙে।</p>
 <div data-example="ex-1"></div>
 <h3>Authoritative বিভাগ বদল</h3>
-<p>নাম একবার বদলে তিন joined registration-এ একই। Rollback teaching ডেটা ফেরায়।</p>
+<p>বিভাগের নাম একবার বদলায়। তিনটি joined registration একই নতুন মান দেখায়; rollback-এ আগের ডেটা ফেরে।</p>
 <div data-example="ex-2"></div>
 <h3>শেষ registration গেলেও কোর্স</h3>
-<p>Section31 empty হলেও কোর্স থাকে। আলাদা স্টোরেজ deletion anomaly সরায়;ট্রানজ্যাকশন enrollment আর cascaded ফল ফেরায়।</p>
+<p>Section 31-এর registration না থাকলেও course থাকে। আলাদা course storage deletion anomaly সরায়। Transaction enrollment ও cascaded result ফেরায়।</p>
 <div data-example="ex-3"></div>
-<p>উদাহরণ existing Department,Student,Course,enrollment সম্পর্ক। Section কী বহু offering আলাদা রাখে। Flat disagreement design symptom,জয়েন এক authoritative মান পড়ে—আরও রো বদলানোর আগে তুলনা।</p>
+<p>উদাহরণে আগের Department, Student, Course ও enrollment সম্পর্কই নেওয়া হয়েছে। Section-based key একাধিক offering আলাদা রাখে। আরও row বদলানোর আগে flat ও joined update তুলনা করো। অমিল ডিজাইনের লক্ষণ; joined ফলে একটি authoritative মান পড়া হয়।</p>
 
 <h3>Duplicated রো থেকে migration</h3>
-<p>কনস্ট্রেইন্ট-এর আগে disagreement মেটাও। একই department_id-তে দুই নাম হলে DISTINCT দুটো দেখায়,কোনটি সত্য বাছে না। Business owner-এ নিশ্চিত হয়ে source repair,তারপর কী-পিছু Department।</p>
-<p>Component copy করে কী-তে জয়েন,শুধু সংখ্যা নয় প্রতিটি fact মিলাও। Missing parent,duplicate business কী,এক registration-এ না মেলা mark দেখো। সফল হলেই PK-FK। Switch-এ নতুন inconsistent write আটকাতে ট্রানজ্যাকশন/controlled window। Reader জয়েন/ভিউ নেবে,write authoritative fact-এ।</p>
+<p>বাস্তব migration-এ constraint দেওয়ার আগে অমিল মেটাতে হয়। একই department_id-এর দুই flat registration-এ দুই নাম থাকলে SELECT DISTINCT কোনটি সঠিক বলে না, শুধু দুটো দেখায়। দায়িত্বশীল ব্যক্তির সঙ্গে মান নিশ্চিত করে source ঠিক করো, তারপর Department-এ key-প্রতি এক row রাখো।</p>
+<p>Component copy-এর পরে key-তে join করে প্রতিটি মূল তথ্য মেলাও, শুধু count নয়। Missing parent, duplicate business key ও registration-হীন mark খোঁজো। তারপর primary ও foreign key দাও। বদলের সময় transaction বা controlled migration window দিয়ে নতুন inconsistent write আটকাতে হবে। পরে reader join বা view নিতে পারে; writer তথ্যের authoritative জায়গায় লিখবে।</p>
 <h2 id="common-mistakes">যান্ত্রিক split এড়াও</h2>
 <h3>ID যোগেই সফল বলা</h3>
-<p>Surrogate row_id flat রো চেনালেও S→নাম,D→DeptName থাকে। Duplication-FD যায় না। Business কী unique রেখে অংশের fact decompose।</p>
+<p>Surrogate row_id flat row চেনে, কিন্তু S → Name ও D → DeptName বদলায় না। Duplicate বা dependency দূর হয় না। আসল business key unique রেখেই তার অংশের ওপর নির্ভর করা তথ্য আলাদা করো।</p>
 <h3>সব indirect FD-কে3NF violation</h3>
-<p>Overlap কী-তে prime right-side exception জরুরি। Unqualified “no transitive dependency” নয়,formal definition। <a href="topic:db-bcnf-4nf">BCNF</a> stricter determinant দেখে।</p>
+<p>Candidate key overlap করলে 3NF-এর prime-right-side ছাড় দরকার। শর্ত ছাড়া “transitive dependency নেই” বলার বদলে formal সংজ্ঞা নাও। <a href="topic:db-bcnf-4nf">BCNF</a> আরও কঠোর determinant rule দেখে।</p>
 <h3>Reconstruction ভুলে যাওয়া</h3>
-<p>Arbitrary ছোট heading জয়েন-এ ভুয়ো রো। প্রতি binary step-এর common attribute কেন এক side ঠিক করে বলো। Cross-টেবিল কোয়েরি ছাড়া কোন FD check হয় তাও দেখো।</p>
+<p>ইচ্ছেমতো ছোট heading-এ ভাঙলে join-এ নতুন row তৈরি হতে পারে। প্রতি binary ধাপে common attribute ও কেন এক পাশ নির্ধারণ করে দেখাও। কোন FD cross-table query ছাড়া মানানো যায় তাও দেখো।</p>
 
 <h2 id="version-notes">গাণিতিক rule MySQL-এ</h2>
-<p>Normal form release-নির্ভর নয়। SQL InnoDB-FK,CHECK8.0.16+। বাস্তব migration-এ copy,duplicate repair,reference validate,reconstructed value check-এর পর reader switch।</p>
+<p>Normal-form সংজ্ঞা MySQL release-নির্ভর নয়। SQL-এ InnoDB ও enforced foreign key আছে। CHECK enforcement-এর জন্য MySQL 8.0.16 বা নতুন লাগে। বাস্তব migration-এ data copy, অমিল duplicate repair, reference validation ও reconstructed value মিলিয়ে তারপর reader বদলাতে হবে।</p>
 
 <h2 id="summary">বদলানো fact-এর এক বাড়ি</h2>
-<p>Repeating কোর্স রো-তে,2NF-এ partial আলাদা,3NF-এ nonkey বিভাগ। জয়েন original ফেরায় proof দাও। পরের <a href="topic:db-decomposition">lossless আর dependency preservation</a>।</p>
+<p>Repeating course group-কে row করো, 2NF-এ partial dependency আলাদা করো, 3NF-এ nonkey department dependency সরাও। Join-এ মূল তথ্য ফেরে প্রমাণ করো। এরপর <a href="topic:db-decomposition">lossless decomposition ও dependency preservation</a> পড়ো।</p>
