@@ -42,7 +42,7 @@ function trace(input) {
         visit(left[id],path+'0'); visit(right[id],path+'1');
     }
     visit(root,'');
-    steps.push({op:'set-root',id:root,line:6,note:{en:'All symbols now belong to one prefix-code tree.',bn:'এখন সব প্রতীক একই prefix-code ট্রিতে আছে।'}});
+    steps.push({op:'set-root',id:root,line:6,note:{en:'All symbols now belong to one prefix-code tree.',bn:'এখন সব সিম্বল একই prefix-code ট্রিতে আছে।'}});
     steps.push({op:'list',name:'codes',items:codes,line:6,note:{en:'Root-to-leaf bits identify symbols without separators.'}});
     steps.push({op:'done',line:7,vars:{bits},note:{en:`The encoded message uses ${bits} bits, excluding the codebook.`,bn:`কোডবুক বাদে বার্তায় ${bits} বিট লাগবে।`}});
     return {init:{nodes,left:{},right:{},root:null},steps};

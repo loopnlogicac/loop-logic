@@ -2,7 +2,7 @@
 
 Package version: **0.2.0**, schema **1.1**, track **algorithms**.
 
-This delivery adds all **17 topics and 10 labs** in `divide-conquer`, `greedy` and `dynamic-programming`. The cumulative package contains **33 of 56 topics and 19 of 32 labs**. Earlier lessons are retained. All new topics remain `review.status: draft` for subject and language review.
+This delivery adds all **17 topics and 10 labs** in `divide-conquer`, `greedy` and `dynamic-programming`. The cumulative package contains **33 of 56 topics and 19 of 32 labs**. Earlier lessons are retained, with a Bangla terminology correction in asymptotic notation for the updated style rules. All new topics remain `review.status: draft` for subject and language review.
 
 Batch 2 contains **58 complete C17 examples, 34 code-practice solutions with 68 captured test outputs, 41 worked written exercises, and 175 quiz questions, including 51 compiled output questions**. Titles, summaries and key points are bilingual. Full Bangla lesson bodies are optional and are not included.
 
@@ -51,7 +51,7 @@ Additional independent checks passed **40,563 assertions**:
 - **4,038 lab cases / 26,196 assertions:** repeat-call determinism, valid player operations, exhaustive subset references for strict LIS/LCS and equipment/meeting choices, breadth-first exact payments, separate recursive edit/matrix references, exhaustive tree-partition Huffman costs, and validation of recovered sequences, alignments, payments and matrix plans.
 - **4,402 C executions / 14,367 assertions:** exhaustive short ternary arrays and seeded bounded inputs; comparison of all three maximum-subarray methods; recursive/iterative/modular power against exact integer arithmetic; closest pair against all pairs; meeting/job/knapsack choices against subset enumeration; fractional value against exact rational vertices; Fibonacci variants; minimum/combination payments; LCS and edit recovery; matrix split plans; quadratic/fast LIS witnesses; full-material rod plans; and Huffman prefix validity and optimal bit cost.
 
-The independent runs use seeds 28539 (labs) and 20931 (C). They validate algorithmic results beyond the lesson examples; the committed report remains the result of the exact required command. There are no unreviewed checker warnings.
+The independent runs use seeds 28539 (labs) and 20931 (C). They validate algorithmic results beyond the lesson examples; the committed report remains the result of the exact required command. There are no unreviewed checker warnings. After syncing the latest main branch, the package was checked again with its new BANGLA_STYLE.md enforcement. The earlier asymptotic-notation key point now uses কনস্ট্যান্ট, and new coin/Huffman phrasing avoids ambiguous or translated technical terms.
 
 ## Conventions and reviewer attention for Batch 2
 
