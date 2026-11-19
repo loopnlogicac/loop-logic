@@ -10,9 +10,9 @@ let RUN = { enabled: false, languages: [] };
 
 const T = {
   en: {
-    ...studyPlanStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · every example in these tutorials was compiled and run before publishing',
     title: 'Tutorials', sub: (t, l) => `Step-by-step written lessons with runnable code, interactive labs, quizzes and practice. ${t} topics and ${l} labs so far, with more added every week.`,
+    ...studyPlanStrings.en,
     topics: 'topics', labs: 'labs', of: 'of', soon: 'Coming soon', start: 'Start', open: 'Open', inProgress: 'Being written',
     levels: { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
     kinds: { lesson: 'Lesson', theory: 'Concepts', project: 'Project', 'question-bank': 'Practice sheet' },
@@ -27,9 +27,9 @@ const T = {
     ...masteryStrings.en,
   },
   bn: {
-    ...studyPlanStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · এই টিউটোরিয়ালের প্রতিটি উদাহরণ প্রকাশের আগে কম্পাইল করে চালানো হয়েছে',
     title: 'টিউটোরিয়াল', sub: (t, l) => `ধাপে ধাপে লেখা পাঠ, চালানো যায় এমন কোড, ইন্টারঅ্যাকটিভ ল্যাব, কুইজ আর অনুশীলন। এখন পর্যন্ত ${t}টি টপিক আর ${l}টি ল্যাব; প্রতি সপ্তাহে আরও যোগ হচ্ছে।`,
+    ...studyPlanStrings.bn,
     topics: 'টপিক', labs: 'ল্যাব', of: '/', soon: 'শিগগিরই আসছে', start: 'শুরু করো', open: 'খোলো', inProgress: 'লেখা চলছে',
     levels: { beginner: 'শুরুর স্তর', intermediate: 'মাঝারি', advanced: 'উচ্চতর' },
     kinds: { lesson: 'পাঠ', theory: 'ধারণা', project: 'প্রজেক্ট', 'question-bank': 'অনুশীলন শিট' },

@@ -5,13 +5,13 @@ import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSigned
 
 const T = {
   en: {
-    ...studyPlanStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · answers come only from reviewed notes and approved websites',
     hello: 'Your learning', helloSub: 'Pick up where you left off. Everything here comes from what you did on Loop & Logic.',
     welcome: 'Welcome to Loop & Logic', welcomeSub: 'Start with a five-minute lesson. Select any line you don’t understand — you’ll get a short answer with its source.',
     tryMl: 'Machine-learning lesson', tryBiz: 'Accounting lesson', browse: 'Browse all courses',
     continue: 'Continue reading', contWatch: 'Continue watching', watchedN: (a, b) => `${a} of ${b} videos watched`, play: 'Play next', read: (p) => `${p}% read`, resume: 'Continue', last: 'last read',
     sLessons: 'Lessons started', sQuiz: 'Quizzes correct', sHelp: 'Labs completed', labDone: 'Lab done', labBtn: 'Lab', more: (n) => `${n} more lessons in Courses`, sPractice: 'Practice tasks',
+    ...studyPlanStrings.en,
     lessons: 'Your lessons', notStarted: 'Not started', start: 'Start', open: 'Open',
     practice: 'Practice and sealed check', noPractice: 'You haven’t practised yet.', noPracticeSub: 'Judge an AI coworker’s pricing advice, then prove it on a fresh task with no help.', practiceCta: 'Start practice',
     phase: { practice: 'Practising', assessment: 'Sealed check open', complete: 'Completed' },
@@ -21,13 +21,13 @@ const T = {
     ...masteryStrings.en,
   },
   bn: {
-    ...studyPlanStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
     hello: 'তোমার শেখা', helloSub: 'যেখানে থেমেছিলে সেখান থেকে শুরু করো। এখানের সবকিছু লুপ অ্যান্ড লজিকে তোমার কাজ থেকে।',
     welcome: 'লুপ অ্যান্ড লজিকে স্বাগতম', welcomeSub: 'পাঁচ মিনিটের একটা পাঠ দিয়ে শুরু করো। যে লাইন বোঝোনি তা সিলেক্ট করো — উৎসসহ ছোট উত্তর পাবে।',
     tryMl: 'মেশিন লার্নিং পাঠ', tryBiz: 'অ্যাকাউন্টিং পাঠ', browse: 'সব কোর্স দেখো',
     continue: 'পড়া চালিয়ে যাও', contWatch: 'দেখা চালিয়ে যাও', watchedN: (a, b) => `${b}টির মধ্যে ${a}টি ভিডিও দেখা হয়েছে`, play: 'পরেরটি চালাও', read: (p) => `${p}% পড়া হয়েছে`, resume: 'চালিয়ে যাও', last: 'শেষ পড়া',
     sLessons: 'শুরু করা পাঠ', sQuiz: 'ঠিক কুইজ', sHelp: 'সম্পন্ন ল্যাব', labDone: 'ল্যাব সম্পন্ন', labBtn: 'ল্যাব', more: (n) => `কোর্সে আরও ${n}টি পাঠ আছে`, sPractice: 'অনুশীলনী প্রশ্ন',
+    ...studyPlanStrings.bn,
     lessons: 'তোমার পাঠ', notStarted: 'শুরু হয়নি', start: 'শুরু করো', open: 'খোলো',
     practice: 'অনুশীলন ও বন্ধ যাচাই', noPractice: 'এখনো অনুশীলন করোনি।', noPracticeSub: 'এআই সহকর্মীর দামের পরামর্শ যাচাই করো, তারপর সাহায্য ছাড়া নতুন প্রশ্নে প্রমাণ দাও।', practiceCta: 'অনুশীলন শুরু করো',
     phase: { practice: 'অনুশীলন চলছে', assessment: 'বন্ধ যাচাই খোলা', complete: 'সম্পন্ন' },
