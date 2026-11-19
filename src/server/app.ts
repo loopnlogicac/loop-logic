@@ -1,5 +1,7 @@
 // HTTP layer: routing, JSON, identity, errors and static files. node:http only.
 
+import { Download } from './download.ts';
+import type { ReportService } from '../app/reports.ts';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import type { RunnerService } from '../app/runner.ts';
@@ -47,6 +49,7 @@ export interface AppDeps {
   watch: WatchService;
   extras: VideoExtrasService;
   tutorials: TutorialService;
+  reports?: ReportService;
   admin?: AdminService;
   classes?: ClassService;
   orders?: OrderService;
@@ -136,7 +139,14 @@ export function buildRoutes(d: AppDeps): Route[] {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
     return d.admin;
   };
+  const reports = () => {
+    if (!d.reports) throw new AppError('unavailable', 503, 'Reports are unavailable.');
+    return d.reports;
+  };
   return [
+    route('GET', '/api/admin/export', async () => new Download(JSON.stringify(await reports().backup(), null, 2), 'application/json; charset=utf-8', 'loop-logic-backup.json'), 'admin'),
+    route('GET', '/api/admin/revenue', ({ query }) => reports().revenue(lang(query.get('lang'))), 'admin'),
+    route('GET', '/api/admin/revenue.csv', async ({ query }) => new Download(await reports().revenueCsv(lang(query.get('lang'))), 'text/csv; charset=utf-8', 'revenue.csv'), 'admin'),
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
       authMode: d.auth.mode,
@@ -445,6 +455,10 @@ export function createApp(d: AppDeps) {
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
       const body = await readJson(req, match.r.maxBody);
       const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers, staff });
+      if (result instanceof Download) {
+        res.writeHead(200, { ...headers, 'content-type': result.contentType, 'content-disposition': `attachment; filename="${result.filename}"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+        return res.end(result.body);
+      }
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
       if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details } }, headers);

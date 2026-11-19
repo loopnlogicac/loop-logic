@@ -65,7 +65,8 @@ export interface Store {
   waitlistCount(): Promise<number>;
   listWaitlist(limit?: number): Promise<WaitlistRow[]>;
   // admin content: courses, posts, ads, coupons, members, roles, settings (one JSON document per row)
-  listDocs(kind: string): Promise<DocRow[]>;
+  /** Omit kind to enumerate every document for an admin backup. */
+  listDocs(kind?: string): Promise<DocRow[]>;
   getDoc(kind: string, id: string): Promise<DocRow | undefined>;
   putDoc(row: DocRow): Promise<void>;
   deleteDoc(kind: string, id: string): Promise<void>;
@@ -188,8 +189,8 @@ export class MemoryStore implements Store {
   }
   private docs = new Map<string, DocRow>();
   private audit: AuditRow[] = [];
-  async listDocs(kind: string) {
-    return [...this.docs.values()].filter((d) => d.kind === kind).map((d) => structuredClone(d));
+  async listDocs(kind?: string) {
+    return [...this.docs.values()].filter((d) => kind === undefined || d.kind === kind).map((d) => structuredClone(d));
   }
   async getDoc(kind: string, id: string) {
     const d = this.docs.get(`${kind}\u0000${id}`);
