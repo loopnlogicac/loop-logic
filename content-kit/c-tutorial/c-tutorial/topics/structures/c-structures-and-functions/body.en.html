@@ -1,0 +1,57 @@
+<h2 id="introduction">Decide whether the function edits the original</h2>
+<p class="lead">A teacher can work on a photocopy of a result form or edit the original form. A C function needs the same choice. Passing a structure by value gives the function its own parameter object. Passing a structure pointer gives it a route to an existing object. Returning a structure gives the caller a complete result value.</p>
+<p>An <dfn>interface contract</dfn> states what a function expects and what it may change. For records, the parameter type communicates part of that contract. A Mark value fits a transformation that returns a new result. A Mark pointer fits an update to the caller's existing record. A const Mark pointer fits inspection through a read-only view.</p>
+<p>C still passes every argument by value. When the argument is a pointer, the function receives a copy of that address. Writing through the copied address can modify the caller's record, but reassigning the local pointer does not redirect the caller's pointer. This is the same rule you learned for scalar pointer parameters.</p>
+<p>Returning a record can keep ownership simple. A helper can build a local result and return its value without allocating memory. Returning the address of that local result would instead leave the caller with a dangling pointer. Distinguish the returned value from the address of the temporary object that held it.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>Declare the record type before declaring functions that use it by value. A return type of struct Mark means the function produces a complete Mark value. A parameter of struct Mark input creates a separate parameter record. Inside the function, dot access selects that local copy's members.</p>
+<p>A parameter of struct Mark *record expects an address of a live mutable object. The call passes &amp;original. Inside the helper, arrow access reaches the original members. A const struct Mark * can read those members but cannot assign them through that pointer. Document whether NULL is accepted rather than guessing at each call.</p><pre><code class="language-c">struct Mark boosted(struct Mark input, int bonus);
+void add_bonus(struct Mark *record, int bonus);
+int read_score(const struct Mark *record);
+</code></pre><table class="ref"><thead><tr><th scope="col">Interface</th><th scope="col">Caller effect</th><th scope="col">Natural use</th></tr></thead><tbody><tr><td>Record value parameter</td><td>Scalar members are copied</td><td>Independent transformation</td></tr><tr><td>Record pointer parameter</td><td>Target may be changed</td><td>Update in place</td></tr><tr><td>Const record pointer</td><td>Read through that view</td><td>Inspect a large record</td></tr><tr><td>Record return value</td><td>Caller receives a value</td><td>Factory or selection result</td></tr></tbody></table>
+
+<h2 id="how-it-works">Trace copy, mutation, and return separately</h2>
+<p>The value example passes record to boosted. input receives roll five and score sixty. Adding five changes only input.score. Returning input supplies a new Mark value, so the caller reads sixty-five from that result while record.score remains sixty. There is no malloc and no release responsibility.</p>
+<p>The pointer example passes &amp;record to add_bonus. The parameter receives a copied address selecting record. Updating record->score inside the helper therefore changes main's object to sixty-five. The helper's parameter object ends on return, but that does not undo the earlier write through its pointer.</p>
+<p>The choose example compares two record values and returns one of them. It first prefers a higher score, then a smaller roll when scores tie. Both inputs have seventy-five, so the returned record has roll three. The caller stores that value in winner, independent of the helper's parameter lifetimes.</p>
+<p>Returning a local structure value is safe because the return operation supplies the value to the caller. It does not expose the local object's address. The implementation may optimize copies, but your program's meaning is still value passing. Do not replace a clear value interface with a pointer to a dead local in an attempt to avoid a presumed copy.</p>
+<p>A returned pointer has a different contract. A selection helper may borrow pointers to caller-owned records and return one of those same pointers. That result remains valid only while its chosen caller object remains live. If the caller releases or resizes its storage, the selected pointer must be retired too.</p>
+<p>Passing a pointer is not automatically faster in every situation. A small record can be efficient as a value, and a compiler may optimize away temporary copying. Prefer an interface that expresses the intended mutation and lifetime. Measure meaningful performance before complicating a clear API for assumed speed.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The first two programs deliberately start from the same score so the interface effect is easy to compare. One prints an unchanged original alongside a transformed copy. The other shows an in-place update. The final program returns a selected complete record and makes its tie rule visible in the result.</p>
+
+<h3>Transform a copied result</h3>
+<p>boosted receives a Mark value in its own input parameter. Its update changes only that parameter's scalar member. The returned structure supplies a new score to printf. The other printed score comes from main's unchanged record, giving Copy: 65 Original: 60. Neither evaluation modifies main's record, so the argument evaluation order does not affect the result.</p>
+<div data-example="ex-1"></div>
+
+<h3>Update the caller through a structure pointer</h3>
+<p>The address of main's record is copied into add_bonus's pointer parameter. The arrow expression then names the caller's score member. After the call, main reads the changed value and prints Updated: 65. The helper borrows the record for this operation; it neither allocates nor releases anything and does not return a lasting pointer.</p>
+<div data-example="ex-2"></div>
+
+<h3>Return the selected record value</h3>
+<p>choose receives two value parameters and applies one documented ranking rule. Both scores are seventy-five, so the smaller roll wins. Returning b transfers the record value, not b's local address. main stores an independent winner and prints its fields. The selected result can therefore be used after choose's parameter objects have ended.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Pointer members and borrowed return values</h2>
+<p>Value passing copies member values, including pointer addresses. A structure containing an int * can still share target data with its caller after being passed by value. Changing the local pointer member itself affects only the parameter. Changing the shared target through that member can affect the caller's data. Value passing does not imply an automatic deep copy.</p>
+<p>A const pointer parameter limits writes through that access path, not every reachable object. For a structure containing a mutable pointer member, reading that pointer can still permit target modification unless the interface separately uses a pointer-to-const target. Design nested constness carefully instead of assuming const freezes an entire ownership graph.</p>
+<p>A mutable update helper should state its valid input domain. The bonus examples assume marks and bonuses fit their stated ranges, keeping addition representable. A general helper must guard numeric overflow as well as policy limits. C struct parameters do not automatically validate fields before the function body runs.</p>
+<p>A function returning a borrowed winner must document ties and lifetime. The practice helper returns one of its input pointers, so both arguments must select live records during comparison. The returned pointer does not require free. That is a different contract from a factory returning a freshly allocated record.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Expecting a value parameter to update the caller</h3>
+<p>Writing input.score=90 inside a value-taking helper changes its local parameter. If the caller should receive a changed value, return the record and assign that result. If the caller's existing record should change in place, accept a pointer and pass its address. Make the intended effect explicit in the interface.</p>
+<h3>Returning a local record address</h3>
+<p>The address of a local struct result becomes invalid when its function returns. Return result by value instead. If the API requires dynamic ownership, allocate a record and clearly transfer responsibility, but do not add allocation when a returned value already solves the problem.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Use value parameters for small independent inputs when mutation would surprise the caller. Use const pointers for inspection when copying is unnecessary and a lifetime agreement is clear. Use mutable pointers when the function's purpose is an in-place update. Give update helpers names that signal a change.</p>
+<p>Keep selection rules in one helper so every caller handles ties consistently. Separate parsing from record transformation when practical: validate the input, build a valid record, then apply the operation. State whether a returned pointer is borrowed or owned. A compatible type signature is only part of a usable contract.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Passing and returning structure values are established C features. These examples target C17; the broader lesson uses C99-style initialization where appropriate. C does not have C++ references, methods, or automatic copy constructors. A structure parameter follows C value-passing rules, even when the parameter contains pointers to other objects.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>A record value parameter supports independent scalar changes, a pointer supports updates to an existing record, and a const pointer supports a read-only view. Return complete record values safely; document borrowed pointer returns. Next, shorten type names without changing their meaning in <a href="topic:c-typedef">typedef</a>.</p>
