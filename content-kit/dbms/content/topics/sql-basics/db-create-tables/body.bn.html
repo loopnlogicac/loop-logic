@@ -1,0 +1,57 @@
+<h2 id="introduction">Invalid record রাখা কঠিন করো</h2>
+<p class="lead">100-এর scale-এ 101 নীরবে নয়। Result nonexistent enrollment-এর নয়। Table definition row বদলালে MySQL-কে promise check করতে দেয়।</p>
+<p>CREATE TABLE column,type,constraint বলে। <dfn>Constraint</dfn> stored data-তে enforced rule। Requirement বোঝার বদলি নয়, তবে accidental invalid state অনেক ঠেকায়।</p>
+<p>কোন তথ্য রাখবে তার স্পষ্ট নাম। Attendance row এক student এক date, identity-reference-presence লাগে। এই policy-তে একই student-day দুই record চলবে না।</p>
+<h2 id="syntax">সংজ্ঞা promise হিসেবে পড়ো</h2>
+<pre><code class="language-sql">CREATE TABLE table_name (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    required_value INT NOT NULL,
+    status_code INT NOT NULL DEFAULT 1,
+    UNIQUE (required_value),
+    CHECK (status_code IN (0, 1))
+);</code></pre>
+<p>প্রতি line design-এর অংশ। ID বাদ দিলে generated, required value NULL নয়, omitted status default। UNIQUE known value repeat ঠেকায়, CHECK row condition। Pattern থেকে actual fact-এর নাম-reference বাছো।</p>
+<table class="ref"><caption>Constraint সম্পর্কিত, বিনিময়যোগ্য নয়</caption><thead><tr><th>Rule</th><th>কী নিশ্চিত</th><th>কী নিশ্চিত নয়</th></tr></thead><tbody>
+<tr><td>NOT NULL</td><td>মান চাই</td><td>Text nonblank বা সত্যি</td></tr>
+<tr><td>UNIQUE</td><td>Known key repeat নয়</td><td>Nullable-এ NULL নেই</td></tr>
+<tr><td>PRIMARY KEY</td><td>Unique required identity</td><td>Business number gapless</td></tr>
+<tr><td>DEFAULT</td><td>বাদ দিলে মান</td><td>দেওয়া অন্য মান বৈধ</td></tr>
+<tr><td>CHECK</td><td>Condition FALSE নয়</td><td>UNKNOWN বাদ</td></tr>
+<tr><td>FOREIGN KEY</td><td>Reference-এর valid parent</td><td>সব parent-এর child আছে</td></tr>
+</tbody></table>
+<h2 id="how-it-works">অর্থপূর্ণ domain-এ rule মেলাও</h2>
+<h3>Required আর valid value</h3>
+<p>NOT NULL unknown mark ঠেকায়। 0..100 CHECK invalid known ঠেকায়। Real mark চাইলে দুটোই। CHECK TRUE বা UNKNOWN নেয়, FALSE বাদ; range একা NULL বাদ নয়।</p>
+<p>NOT NULL name empty string হতে পারে। Blank নিষিদ্ধ হলে rule আর input validation। Whitespace-only অর্থপূর্ণ কি না-সহ policy মানো। Type একা সব business rule নয়।</p>
+<h3>Key,reference,default</h3>
+<p>Primary key এক/কয়েক column। student_id-attended_on unique pair একদিন এক attendance, component আলাদা repeat পারে। FK existing Students row নিশ্চিত।</p>
+<p>Column বাদ বা explicit DEFAULT-এ default। Supplied value check-এর বদলি নয়। উপস্থিত ধরে entry হলে default 1 ভালো, অন্য workflow explicit চাইতে পারে।</p>
+<p>AUTO_INCREMENT omitted ID দেয়, gapless নয়। Failure,delete,rollback gap রাখতে পারে। Highest ID row count বা legal receipt count নয়।</p>
+<h3>Structure বুঝে বদলাও</h3>
+<p>ALTER column/constraint যোগের মতো change। NOT NULL/UNIQUE-এর আগে old row দেখো; NULL বা duplicate ভাঙতে পারে। বানানো placeholder নয়, verified তথ্য দিয়ে ঠিক করো।</p>
+<p>DROP definition-row সরায়। TRUNCATE definition রেখে empty, সাধারণত AUTO_INCREMENT reset। DELETE DML, WHERE থাকতে পারে। Transaction-reference আচরণ আলাদা।</p>
+<p>অনেক structural command implicit commit। TRUNCATE-এর পরে ROLLBACK table ফেরায় না। Referenced table truncate-এ InnoDB restriction-ও। Destructive explore-এ private scratch table।</p>
+<h2 id="examples">Definition তৈরি, alter, test</h2>
+<h3>Constrained attendance</h3>
+<p>Generated ID,student FK,unique day,default,range একসঙ্গে। Insert-এ MySQL কোন মান দেয় দেখো।</p>
+<div data-example="ex-1"></div>
+<h3>ALTER-এ capacity</h3>
+<p>Study-group table capacity পায়। Inserted group নতুন default ten seat নেয়।</p>
+<div data-example="ex-2"></div>
+<h3>Empty, তারপর definition সরাও</h3>
+<p>Private label table-এ TRUNCATE-DROP আলাদা। Metadata count-এ DROP-এর পরে নেই।</p>
+<div data-example="ex-3"></div>
+<h3>Range-এর বাইরে mark reject</h3>
+<p>ইচ্ছা করে 101 update। CHECK violation reject করে আগের valid result রাখে।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">দেখতে বেশি শক্ত constraint</h2>
+<h3>UNIQUE মানেই required</h3>
+<p>Nullable unique-এ MySQL বহু NULL নেয়। Optional email-এ ভালো, required candidate ID নয়। Known unique চাইলে NOT NULL।</p>
+<h3>অসংগত নাম</h3>
+<p>Lowercase table, descriptive student_id/enrolled_on। কারণ ছাড়া একই অর্থে StudentID,sid,student_number বদল নয়। OS-এ table-name case আলাদা হতে পারে, lowercase consistency ভালো।</p>
+<h3>Rejection না বুঝে rule off</h3>
+<p>FK error ভুল parent বা operation order জানায়। আগে row-সম্পর্ক দেখো। Check off-এ orphan থাকে। Rejection data-design তদন্তের evidence।</p>
+<h2 id="version-notes">CHECK enforcement-এর version</h2>
+<div class="callout version"><p>MySQL 8.0.16 থেকে CHECK enforced। আগে কিছু syntax নিলেও condition মানাত না। এখানে 8.0.16+ আর FK-transactional row change-এ InnoDB।</p></div>
+<h2 id="summary">পুরো rule বলো</h2>
+<p>Type,required,key,default,check আলাদা সমস্যা মেটায়। বুঝে মেলাও, row আর structural change আলাদা। পরের <a href="topic:db-insert-update-delete">INSERT, UPDATE আর DELETE</a>-এ এগুলো ব্যবহার।</p>
