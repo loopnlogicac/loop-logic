@@ -1,0 +1,513 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-regularization",
+  "module": "regression",
+  "order": 7,
+  "kind": "lesson",
+  "title": {
+    "en": "Regularisation: Ridge and Lasso",
+    "bn": "বড় ওজন কমানো: ridge আর lasso"
+  },
+  "summary": {
+    "en": "Penalise large coefficients, distinguish L2 from L1 and choose penalty strength on held-out validation rows.",
+    "bn": "বড় coefficient-এর জন্য penalty দাও; L2 আর L1 বুঝে validation-এ alpha বেছে নাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "ml-polynomial-regression"
+  ],
+  "related": [],
+  "keywords": [
+    "Regularisation: Ridge and Lasso",
+    "regression",
+    "Python",
+    "prediction"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "NumPy 2.0+, pandas 2.2+, scikit-learn 1.5+; round displayed values only."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A ribbon that pulls too hard"
+    },
+    {
+      "id": "intuition",
+      "title": "Pay for extreme weights"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Balance residuals against coefficient size"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Change strength without changing the ruler units"
+    },
+    {
+      "id": "examples",
+      "title": "Match the objective before comparing solvers"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep penalties comparable"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: ridge equations and L1 geometry"
+    },
+    {
+      "id": "summary",
+      "title": "Control coefficients with a stated objective"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Solve centred ridge equations",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The eight polynomial columns are standardised on training data. The intercept remains the target mean in centred coordinates and receives no penalty.</p>",
+      "requires": [
+        "numpy"
+      ]
+    },
+    {
+      "id": "ex-2",
+      "title": "Match the ridge objective in scikit-learn",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Ridge minimises the residual sum of squares plus alpha times squared weight norm. The direct solve uses the same convention.</p>",
+      "requires": [
+        "numpy",
+        "sklearn"
+      ]
+    },
+    {
+      "id": "ex-3",
+      "title": "Select alpha before testing study predictions",
+      "level": "intermediate",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": false,
+      "explanationHtml": "<p>Validation chooses ridge alpha. The separate lasso fit illustrates sparsity at a stated alpha; it is not an independently tuned final competitor.</p>",
+      "requires": [
+        "pandas",
+        "sklearn"
+      ],
+      "workdirFiles": [
+        "shared/datasets/study.csv"
+      ]
+    },
+    {
+      "id": "ex-4",
+      "title": "See exact zero coefficients in Lasso",
+      "level": "intermediate",
+      "file": "examples/ex-4.py",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The irrelevant second column gets exactly zero weight. The useful first coefficient also shrinks, from 3 to 2.</p>",
+      "requires": [
+        "numpy",
+        "sklearn"
+      ]
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Fit one centred ridge coefficient",
+      "statementHtml": "<p>Read n (1–100), n centred x/y pairs, then positive alpha. Inputs are already centred. Print sum(x*y)/(sum(x*x)+alpha) to three decimals.</p>",
+      "hints": [
+        "Add alpha to the feature-square sum, not the numerator."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Compare L1 and squared L2 charges",
+      "statementHtml": "<p>Read n alpha followed by n weights, excluding any intercept. Print alpha times the absolute-weight sum, then alpha times the squared-weight sum, to three decimals.</p>",
+      "hints": [
+        "Negative weights still contribute positive penalty."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Translate the ridge convention",
+      "statementHtml": "<p>A paper writes MSE+lambda*norm squared with n=20 and lambda=0.5. Which sklearn Ridge alpha matches it?</p>",
+      "hints": [
+        "Multiply the whole objective by n."
+      ],
+      "answerHtml": "<p>Multiplying by 20 gives SSE+10*norm squared. sklearn Ridge therefore needs alpha=10. Do not assume sklearn Lasso uses the same normalisation.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Question a sparse causal claim",
+      "statementHtml": "<p>Lasso removes sleep hours after correlated past marks are included. Does that prove sleep has no causal effect?</p>",
+      "hints": [
+        "Think about substitutable predictors and observational data."
+      ],
+      "answerHtml": "<p>No. The penalty, scaling and correlated alternatives can make one predictor redundant for this fit. A zero coefficient is a model-selection result, not a causal experiment.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What changes in the pictured ridge solution as alpha rises?",
+      "options": [
+        "The combined L2 weight norm decreases",
+        "Every coefficient must become exactly zero",
+        "The number of rows increases",
+        "The intercept is forced to zero"
+      ],
+      "answer": 0,
+      "explanation": "Read the norm curve. Ridge shrinks the combined weight norm for these fixed standardised features.",
+      "figure": {
+        "caption": {
+          "en": "Degree-eight ridge on standardised polynomial columns.",
+          "bn": "স্কেল করা ঘাতের কলামে degree-eight ridge-এর ওজন।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Alpha",
+            "yLabel": "Weight L2 norm",
+            "series": [
+              {
+                "id": "s0",
+                "label": "Weight norm",
+                "type": "line",
+                "points": [
+                  [
+                    0.1,
+                    1.1352840825264912
+                  ],
+                  [
+                    0.2,
+                    1.0525812265505423
+                  ],
+                  [
+                    0.5,
+                    0.9523015927719939
+                  ],
+                  [
+                    1,
+                    0.8708812816117254
+                  ],
+                  [
+                    2,
+                    0.7752266614029146
+                  ],
+                  [
+                    5,
+                    0.6407898692987423
+                  ],
+                  [
+                    10,
+                    0.5473102176257152
+                  ],
+                  [
+                    20,
+                    0.4551239735816376
+                  ],
+                  [
+                    50,
+                    0.31921565165189236
+                  ],
+                  [
+                    100,
+                    0.21578742823491726
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why must the same fitted feature scales be used throughout this penalty comparison?",
+      "options": [
+        "Scaling is unrelated to weight penalties",
+        "Otherwise a norm change could reflect a new measuring unit",
+        "Ridge accepts categories without encoding",
+        "The chart must always be a straight line"
+      ],
+      "answer": 1,
+      "explanation": "Penalty strength has meaning relative to feature units and the chosen objective convention.",
+      "figure": {
+        "caption": {
+          "en": "Degree-eight ridge on standardised polynomial columns.",
+          "bn": "স্কেল করা ঘাতের কলামে degree-eight ridge-এর ওজন।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Alpha",
+            "yLabel": "Weight L2 norm",
+            "series": [
+              {
+                "id": "s0",
+                "label": "Weight norm",
+                "type": "line",
+                "points": [
+                  [
+                    0.1,
+                    1.1352840825264912
+                  ],
+                  [
+                    0.2,
+                    1.0525812265505423
+                  ],
+                  [
+                    0.5,
+                    0.9523015927719939
+                  ],
+                  [
+                    1,
+                    0.8708812816117254
+                  ],
+                  [
+                    2,
+                    0.7752266614029146
+                  ],
+                  [
+                    5,
+                    0.6407898692987423
+                  ],
+                  [
+                    10,
+                    0.5473102176257152
+                  ],
+                  [
+                    20,
+                    0.4551239735816376
+                  ],
+                  [
+                    50,
+                    0.31921565165189236
+                  ],
+                  [
+                    100,
+                    0.21578742823491726
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which penalty can make coefficients exactly zero?",
+      "options": [
+        "Ridge L2 in every fit",
+        "The ordinary intercept",
+        "Lasso L1",
+        "A train/test split"
+      ],
+      "answer": 2,
+      "explanation": "The L1 objective has corners at zero, so its optimum can have exact zero components."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which parameter is left unpenalised in the ridge lab?",
+      "options": [
+        "Every polynomial weight",
+        "Only the largest weight",
+        "Only the final target",
+        "The intercept"
+      ],
+      "answer": 3,
+      "explanation": "Centring isolates the intercept; penalties apply to feature coefficients."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does ridge guarantee that every individual coefficient decreases monotonically with alpha?",
+      "options": [
+        "No; the combined norm shrinks, but correlated columns can redistribute individual weights",
+        "Yes, every component must shrink at every step",
+        "Only the intercept can change",
+        "No coefficient is ever affected"
+      ],
+      "answer": 0,
+      "explanation": "Correlated features can trade contributions. The norm curve describes the whole coefficient vector."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How does sklearn Ridge define its objective here?",
+      "options": [
+        "MSE plus alpha with no weights",
+        "Residual sum of squares plus alpha times squared weight norm",
+        "MAE plus alpha times the intercept",
+        "Accuracy minus alpha"
+      ],
+      "answer": 1,
+      "explanation": "If you write MSE+lambda*norm squared, matching Ridge requires alpha=n*lambda."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Where should alpha be selected?",
+      "options": [
+        "The final test answers",
+        "The largest training coefficient only",
+        "Validation data or cross-validation within development data",
+        "A future flat price revealed after prediction"
+      ],
+      "answer": 2,
+      "explanation": "Selecting alpha on the final test contaminates the final assessment."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What L2 penalty does alpha=2 add to weights [3,4]?",
+      "options": [
+        "14",
+        "25",
+        "100",
+        "50"
+      ],
+      "answer": 3,
+      "explanation": "The squared norm is 9+16=25, multiplied by alpha 2 gives 50.",
+      "code": "alpha, weights = 2, [3, 4]\nprint(alpha*sum(w*w for w in weights))\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What L1 penalty do weights [-3,4] contribute at alpha=2?",
+      "options": [
+        "14",
+        "2",
+        "50",
+        "7"
+      ],
+      "answer": 0,
+      "explanation": "Absolute values sum to 7, so the penalty is 14.",
+      "code": "alpha, weights = 2, [-3, 4]\nprint(alpha*sum(abs(w) for w in weights))\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What ridge slope follows centred x=[-1,1], y=[-2,2] and alpha=2?",
+      "options": [
+        "2.0",
+        "1.0",
+        "0.0",
+        "4.0"
+      ],
+      "answer": 1,
+      "explanation": "The numerator is 4 and denominator 2+2, giving slope one.",
+      "code": "x, y, alpha = [-1, 1], [-2, 2], 2\nw = sum(a*b for a,b in zip(x,y))/(sum(a*a for a in x)+alpha)\nprint(f\"{w:.1f}\")\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Ridge adds a squared-weight penalty.",
+      "bn": "ridge ওজনের বর্গের জন্য penalty যোগ করে।"
+    },
+    {
+      "en": "Lasso uses absolute weights and can make some exactly zero.",
+      "bn": "lasso ওজনের পরম মান নেয়, কিছু ওজন একেবারে শূন্যও করতে পারে।"
+    },
+    {
+      "en": "Scaling decides the relative cost of different weights.",
+      "bn": "স্কেল ঠিক করে ভিন্ন ওজনের penalty কতটা হবে।"
+    },
+    {
+      "en": "The intercept is not penalised in these models.",
+      "bn": "এই মডেলগুলোতে intercept-এর ওপর penalty দিই না।"
+    },
+    {
+      "en": "Alpha must be chosen without consulting final test answers.",
+      "bn": "শেষ টেস্টের উত্তর না দেখে alpha বেছে নিতে হবে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Fit centred ridge to x=-2,-1,0,1,2 and y=2x with alpha=10.",
+      "marks": 5,
+      "answerHtml": "<p>The cross-product sum is 20 and the x-square sum is 10. Ridge slope=20/(10+10)=1. The intercept is zero after centring. Predictions become -2,-1,0,1,2.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Convert MSE+0.5||w||² on twenty rows to sklearn Ridge alpha.",
+      "marks": 5,
+      "answerHtml": "<p>Multiply the objective by twenty. The equivalent SSE objective adds 20*0.5||w||², so Ridge alpha=10. This translation relies on the Ridge convention.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare L1 and L2 penalties and explain why standardisation matters.",
+      "marks": 8,
+      "answerHtml": "<p>L2 penalises squared weights and usually shrinks the combined coefficient norm. L1 penalises absolute weights and can create exact zero components. Units change coefficient magnitudes, so fit scales on training rows before comparing penalties. Neither establishes causal importance.</p>"
+    }
+  ],
+  "labs": [
+    "ridge-shrink"
+  ],
+  "references": [
+    {
+      "title": "scikit-learn linear models",
+      "url": "https://scikit-learn.org/stable/modules/linear_model.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

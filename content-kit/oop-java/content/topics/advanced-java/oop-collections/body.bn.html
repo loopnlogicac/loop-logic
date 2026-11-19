@@ -1,0 +1,57 @@
+<h2 id="introduction">ডেটার কাজ দেখে কাঠামো বেছে নাও</h2>
+<p class="lead">নম্বরের তালিকায় অবস্থান দরকার, রুমের রেজিস্টারে অনন্য নাম, আর ফল খুঁজতে রোলের সঙ্গে নম্বরের জোড়া। <dfn>Collections framework</dfn> অবজেক্টের দল রাখার ইন্টারফেস আর ইমপ্লিমেন্টেশন দেয়। অ্যাপকে কোন প্রশ্ন বেশি করতে হয় দেখে বাছো।</p>
+<p>List ক্রম রাখে। Set ডুপ্লিকেট ছাড়া সদস্য রাখে। Map key-কে value-এর সঙ্গে যুক্ত করে। Map আলাদা ইন্টারফেস hierarchy-তে, Collection-এর subtype নয়। তবে key, value আর entry-এর collection view পাওয়া যায়।</p>
+<p>অ্যারের সঙ্গে পরিচয় হয়েছে। কালেকশনে নিজে স্টোরেজ বড় না করে যোগ, বাদ আর খোঁজার কাজ পাও। সঙ্গে ক্রম, সমতা আর বদলানোর চুক্তিও আসে। ঘোষণায় সেই চুক্তি পরিষ্কার রাখো।</p>
+<h2 id="syntax">দরকারি ইন্টারফেস দিয়ে কাজ করো</h2>
+<pre><code class="language-java">List&lt;Integer&gt; marks = new ArrayList&lt;&gt;();
+Set&lt;String&gt; rooms = new HashSet&lt;&gt;();
+Map&lt;Integer, String&gt; names = new HashMap&lt;&gt;();</code></pre>
+<p>বামে কলারের দরকারি অপারেশন, ডানে স্টোরেজের ইমপ্লিমেন্টেশন। ব্যবহৃত টাইপের স্পষ্ট import দাও। List-এ ArrayList বা LinkedList রাখা যায়, কিন্তু পারফরম্যান্স আলাদা।</p>
+<p>জেনেরিক টাইপ ভুল করে মিশ্র মান ঢোকানো আটকায়। আর্গুমেন্ট রেফারেন্স টাইপ বলে int-এর বদলে Integer লাগে। int দিয়ে লুপে পড়লে unbox হয়; null থাকলে সমস্যা হবে। ডোমেইনে null চলে কি না আগে ঠিক করো।</p>
+<h2 id="how-it-works">কাজের খরচ আর ক্রমের নিয়ম তুলনা করো</h2>
+<table class="ref"><thead><tr><th scope="col">ইমপ্লিমেন্টেশন</th><th scope="col">কাজের বৈশিষ্ট্য</th><th scope="col">খরচ বা সীমা</th></tr></thead><tbody>
+<tr><td>ArrayList</td><td>index-এ O(1) অ্যাক্সেস; শেষে যোগে amortized O(1)</td><td>মাঝে যোগ বা বাদে এলিমেন্ট সরাতে O(n)</td></tr>
+<tr><td>LinkedList</td><td>দুই প্রান্তে O(1) কাজ</td><td>index-এ যেতে লিংক ধরে O(n)</td></tr>
+<tr><td>HashSet / HashMap</td><td>উপযুক্ত hash-এ সাধারণ খোঁজে expected O(1)</td><td>সাজানো বা যোগ করার ক্রমে traversal-এর নিশ্চয়তা নেই</td></tr>
+<tr><td>TreeSet / TreeMap</td><td>সাজানো traversal, কাছের মান খোঁজার অপারেশন</td><td>সাধারণ খোঁজ, যোগ আর বাদে O(log n)</td></tr>
+</tbody></table>
+<p>ArrayList বড় করা যায় এমন ভেতরের অ্যারেতে রেফারেন্স রাখে। কোনো append-এ অ্যারে বাড়াতে O(n) লাগে। অনেক append-এর মোট খরচ ভাগ করলে গড়ে স্থির সময় হয়; একে amortized বলে। প্রতিটি append একই সময় নেবে এমন নয়।</p>
+<p>LinkedList নোডের লিংক রাখে। ঠিক অবস্থানে থাকা iterator দিয়ে বাদ দিলে খোঁজা লাগে না। index খুঁজতে তবু হাঁটতে হয়। লুপে বারবার get(i) করলে মোট কাজ quadratic হতে পারে। iterator বা enhanced for নাও।</p>
+<p>Hash কালেকশন সম্ভাব্য জায়গা পেতে hashCode, key আলাদা করতে equals ব্যবহার করে। সমান মানের hash সমান চাই। সাজানো কালেকশনে comparison শূন্য হলে একই key বা এলিমেন্ট ধরা হয়। সম্ভব হলে ordering আর equals মেলাও।</p>
+<h2 id="examples">স্টোরেজ আর রিপোর্টের ক্রম আলাদা রাখো</h2>
+<h3>ডুপ্লিকেট নম্বর রাখো, বুঝে বাদ দাও</h3>
+<p>60, 70, 60 তালিকার index এক বাদ দিলে 70 যায়। 80 যোগে [60, 60, 80] হয়। পরে boxed মান দিয়ে বাদ দিলে প্রথম সমান 60 যায়। ওভারলোড বাছাইয়ে আর্গুমেন্টের টাইপ জরুরি।</p>
+<div data-example="ex-1"></div>
+<h3>অনন্য রুম সাজিয়ে দেখাও</h3>
+<p>দ্বিতীয়বার Lab যোগে false ফেরে। HashSet-এ Hall না Lab আগে আসবে তার চুক্তি নেই। দেখানোর জন্য TreeSet বানালে ক্রম নির্দিষ্ট হয়। মূল membership set আলাদা থাকে।</p>
+<div data-example="ex-2"></div>
+<h3>কোর্স কোড গুনে রাখো</h3>
+<p>Map-এ প্রতি কোর্সে একটি count। merge না থাকলে এক বসায়, থাকলে আগের সঙ্গে এক যোগ করে। Integer::sum যোগের মেথড বোঝায়। প্রিন্টের আগে TreeMap-এ নিলে CSE নিশ্চিতভাবে MAT-এর আগে আসে।</p>
+<div data-example="ex-3"></div>
+<h3>LinkedList-কে deque হিসেবে নাও</h3>
+<p>Deque-তে দুই প্রান্তে যোগ বা বাদ চলে। জরুরি কাজ সামনে যায়, A আর B-এর আগে। সামনে থেকে খালি হওয়া পর্যন্ত নিলে কাজের ক্রম প্রিন্ট হয়। index খোঁজা লাগে না।</p>
+<div data-example="ex-4"></div>
+<h2 id="iteration">ঠিক view দিয়ে ঘুরে দেখো</h2>
+<p>কাঠামো না বদলে সব এলিমেন্ট চাইলে enhanced for পরিষ্কার। Map রিপোর্টে entrySet একসঙ্গে key আর value দেয়। key ঘুরে আলাদা lookup করা চলে, তবে entry view উদ্দেশ্য স্পষ্ট করে।</p>
+<p>Iterator নিয়ন্ত্রিতভাবে ঘোরে; সমর্থন থাকলে শেষে ফেরানো এলিমেন্ট বাদ দেয়। remove-এর আগে next কল করো, স্টেটের নিয়ম মানো। সাধারণ for-each চলার সময় সরাসরি list.remove করলে traversal ভেঙে ConcurrentModificationException হতে পারে।</p>
+<p>mutable collection থেকে শর্তমতো বাদ দিতে removeIf সহজ। predicate কোন মান বাদ যাবে বলে। সব collection removal সমর্থন করে না; unmodifiable list পরিবর্তন নেয় না। আগে mutation-এর চুক্তি বোঝো।</p>
+<p>Fail-fast iterator যতটা পারে ভুল শনাক্ত করে; এটি debugging-এর সাহায্য, lock নয়। শেয়ার করা পরিবর্তন নিরাপদ করে না। একাধিক থ্রেডে স্পষ্ট নীতি লাগে। <a href="topic:oop-multithreading">থ্রেডের পাঠে</a> সাধারণ unsynchronized collection শেয়ার করার সমস্যা দেখবে।</p>
+<h2 id="edge-cases">খালি ডেটা আর বদলানো key ভাবো</h2>
+<p>খালি list-এর size শূন্য, তাই get(0) ব্যর্থ। রিপোর্টে কোনো লাইন নাও আসতে পারে; মেনুতে EMPTY দেখাতে পারো। বাইরের অপারেশনে নিয়ম ঠিক করো। সবসময় মান আছে ধরে নিও না।</p>
+<p>null অনুমতি দিলে Map.get-এর null মানে key নেই বা তার মান null। containsKey পার্থক্য করে। getOrDefault বিকল্প ফেরায়, সেটি insert করে না। সমান পুরোনো key-তে put করলে মান বদলে যায়।</p>
+<p>রাখার পরে key-এর hash বা সমতার ফিল্ড বদলালে lookup-এ আর নাও পাও। entry স্টোরেজে থাকে, কিন্তু খোঁজ অন্য জায়গায় যায়। immutable ID নাও, বদলানোর আগে সরাও বা key নতুন করে ভাবো।</p>
+<h2 id="selection-walkthrough">একটি রিপোর্টের চাহিদা আবার দেখো</h2>
+<p>রোল 7, 2, 7, 1, 2 এলে List পাঁচটিই রাখে। Set তিনটি আলাদা মান রাখে। TreeSet সেগুলো 1, 2, 7 ক্রমে দেয়। পারফরম্যান্সের আগেই চাওয়া আউটপুট ডুপ্লিকেট আর ক্রমের সিদ্ধান্ত দেয়।</p>
+<h2 id="common-mistakes">সহজ কিন্তু ভুল ধারণা এড়াও</h2>
+<h3>hash-এর ক্রমে ভরসা</h3>
+<p>একবারের HashMap আউটপুট ক্রমের চুক্তি নয়। ডেটা বা JVM বদলালে ক্রম বদলাতে পারে। সাজানো key-তে TreeMap, যোগ করার ক্রমে LinkedHashMap নাও।</p>
+<h3>সব List বদলানো যায় ভাবা</h3>
+<p>List.of unmodifiable আর null নেয় না। Arrays.asList অ্যারেভিত্তিক fixed-size list। new ArrayList আলাদাভাবে বড় করা যায়। একই ইন্টারফেস হলেও নীতি আলাদা।</p>
+<h3>ordering না ভেবে tree নেওয়া</h3>
+<p>TreeSet আর TreeMap-এ Comparable key বা Comparator লাগে। শুধু নম্বর তুললে সমান নম্বরের আলাদা শিক্ষার্থী এক হয়ে যেতে পারে। পরিচয় আলাদা রাখতে tie-breaker যোগ করো।</p>
+<h2 id="best-practices">কালেকশন বেছে নেওয়ার কারণ বলো</h2>
+<ul><li>আগে List-এর অবস্থান, Set-এর সদস্য, না Map-এর সম্পর্ক দরকার ঠিক করো।</li><li>Map key-তে স্থির ID নাও।</li><li>ঘটনাচক্রের ক্রম না ধরে রিপোর্ট বুঝে সাজাও।</li><li>ডুপ্লিকেট আর খালি ইনপুটের আচরণ নথিবদ্ধ করো।</li></ul>
+<h2 id="version-notes">Java 17-এ collection factory</h2>
+<div class="callout version"><p>List.of, Set.of, Map.of Java 9-এ এসেছে। এখানে Java 17-এর সাধারণ জেনেরিকস আছে, পরের sequenced-collection API নেই। পরের ordering পাঠে ছোট ডেটা রাখতে Java 16 থেকে স্থায়ী record ব্যবহার হয়েছে।</p></div>
+<h2 id="summary">কাজের সঙ্গে স্টোরেজ মেলাও</h2>
+<p>ক্রমে List, অনন্য মানে Set, key দিয়ে খোঁজায় Map নাও। ক্রম, সমতা আর পরিবর্তনের নিয়ম দেখো। এবার <a href="topic:oop-comparable-comparator">Comparable আর Comparator</a> দিয়ে নির্দিষ্ট ordering লেখো।</p>

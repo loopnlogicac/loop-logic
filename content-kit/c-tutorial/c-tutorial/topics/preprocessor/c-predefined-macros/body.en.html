@@ -1,0 +1,68 @@
+<h2 id="introduction">Let the translator describe the build</h2>
+<p class="lead">When a diagnostic says a value was unexpected, a source location helps you find the relevant code. Writing the file name and line number by hand is fragile because edits move lines. <dfn>Predefined macros</dfn> supply translation context such as the current source file, the current line, and the selected C standard version.</p>
+<p>Think of a page footer added automatically while a handout is prepared. The footer can identify the source page and the preparation date. That date does not change when a student reads the page later. Likewise, compilation date and time describe the build, not the instant when the executable runs.</p>
+<p>The important standard names include __FILE__, __LINE__, __DATE__, __TIME__, and __STDC_VERSION__. Their leading and trailing underscores mark names supplied by the implementation under standard rules. Use the documented names, but do not invent your own similarly reserved identifiers for ordinary application macros.</p>
+<p>These facilities are useful for debug messages and feature checks. They can also make otherwise stable program output depend on build paths or timestamps. Decide when that context belongs in a message. A numeric calculation should not require a changing date merely because a build stamp is available.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>__FILE__ expands to a character string literal describing the presumed source file. __LINE__ expands to an integer constant for the presumed source line. __DATE__ and __TIME__ expand to string literals for translation date and time. Choose printf conversions from those result types rather than from the macro names.</p>
+<p>__STDC_VERSION__ is a long integer constant identifying the selected standard revision on modern conforming C modes. For C17 it is 201710L. A comparison against that value can select source known to need C17. A version threshold describes the selected language mode, not every optional library or implementation feature.</p><pre><code class="language-c">printf(&quot;%s:%d\n&quot;, __FILE__, __LINE__);
+#if __STDC_VERSION__ &gt;= 201710L
+#define USING_C17 1
+#endif
+</code></pre><table class="ref"><thead><tr><th scope="col">Macro</th><th scope="col">Expansion kind</th><th scope="col">Typical use</th></tr></thead><tbody><tr><td>__FILE__</td><td>String literal</td><td>Locate the source file</td></tr><tr><td>__LINE__</td><td>Integer constant</td><td>Locate a source line</td></tr><tr><td>__DATE__</td><td>Date string, Mmm dd yyyy</td><td>Identify translation date</td></tr><tr><td>__TIME__</td><td>Time string, hh:mm:ss</td><td>Identify translation time</td></tr><tr><td>__STDC_VERSION__</td><td>Long integer constant</td><td>Check selected standard revision</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the location of the macro use</h2>
+<p>The version example compares __STDC_VERSION__ with 201710L. Compiled in C17 mode, the condition is true. __STDC__ is one in the conforming mode used here. The output reports C17 or later: 1 and Conforming indicator: 1. A later mode can also satisfy the threshold; the label intentionally says or later.</p>
+<p>The location example uses #line 100 "lab-demo.c" before a printf line. That directive changes the presumed location of the following source line. __FILE__ and __LINE__ then report lab-demo.c and one hundred. #line is useful in generated source, where diagnostics should point back to an original input location.</p>
+<p>Normally, without #line, the file spelling follows how the toolchain identifies the source. It may include an absolute path, a relative path, or another build-specific form. A message containing __FILE__ can therefore reveal directory information or differ between builds. Toolchain options can remap source prefixes when reproducible or privacy-conscious build paths matter.</p>
+<p>A diagnostic macro containing __LINE__ expands at its call location. REPORT(17) therefore reports the line where REPORT is used, rather than the line where its replacement was defined. The example resets the following location to marks.c line two hundred so that this call-site rule has a predictable visible result.</p>
+<p>The build-stamp example prints __DATE__ and __TIME__. Re-running the same executable later keeps the same stamp because the literals are already inside the compiled program. Recompiling may change them. Use a runtime time API when you actually need the current execution time; compilation macros cannot provide it.</p>
+<p>The date string has eleven characters and the time string has eight, excluding their null terminators. sizeof includes the terminator of each string literal. Subtracting one produces those character lengths without printing a changing stamp. This gives a stable way to inspect the macro result form while avoiding an accidental time-dependent calculation.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>Start with the standard indicator, then follow source locations, then inspect a real build stamp. The stamp's recorded text belongs to one actual compilation. The final length program prints stable properties instead. These examples show how to choose useful context without pretending all predefined macro results are constant across builds.</p>
+
+<h3>Check the selected language revision</h3>
+<p>The comparison tests at least the C17 revision value, not a guessed compiler product version. In this explicitly selected C17 build it prints a true flag. __STDC__ separately reports one for the conforming mode used here. These indicators describe translation mode. They do not validate an application input or promise every optional platform feature.</p>
+<div data-example="ex-1"></div>
+
+<h3>Control a presumed diagnostic location</h3>
+<p>The directive changes the presumed file name and line for the following source. Both macros expand on the printf line after the directive. The output is therefore lab-demo.c:100 even though the physical example file has another name and fewer lines. This is source diagnostic metadata rather than a runtime change of working directory.</p>
+<div data-example="ex-2"></div>
+
+<h3>Print the actual compilation stamp</h3>
+<p>__DATE__ and __TIME__ become string literals during translation. The example prints them once as descriptive build information. A rebuild at another time can produce a different line, and the toolchain's build settings can influence the context. Do not compare this recorded timestamp with the current clock or use it as an execution-time measurement.</p>
+<div data-example="ex-3"></div>
+
+<h3>Capture the diagnostic macro call site</h3>
+<p>The REPORT definition appears earlier in the file, but __LINE__ inside its replacement is expanded where REPORT is used. #line supplies the controlled presumed location for that call. The result is marks.c:200 value=17. The numeric argument appears once in the replacement, so this particular diagnostic does not duplicate its evaluation.</p>
+<div data-example="ex-4"></div>
+
+<h3>Inspect the string lengths without changing stamps</h3>
+<p>Each predefined stamp expands to a string literal with a specified form. sizeof measures its array size, including the final null character. Subtracting one prints lengths eleven and eight. The actual date and time text can differ between builds while these format lengths remain stable. This example observes representation shape without reading a runtime clock.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="edge-cases">Standard selection and reproducible messages</h2>
+<p>C89 does not supply __STDC_VERSION__, so an unrestricted compatibility header should check whether it is defined before comparing it. These complete programs deliberately require C17, where the macro is available. The comparison is appropriate within that selected domain. A source file supporting older C modes needs a wider guard policy.</p>
+<p>A standard-version macro alone does not prove every optional feature exists. C11 and C17 implementations may omit features such as variable-length arrays under their documented conditions. Use the relevant feature indicators or build checks when an optional capability matters. Do not substitute a year comparison for a precise capability requirement.</p>
+<p>The date and time strings reflect translation context rather than a promised UTC timezone. Some toolchains support reproducible-build settings that influence timestamps. An unavailable date or time has standard-defined fallback forms. Their role remains descriptive build information, not a clock or security token.</p>
+<p>The REPORT macro is expression-like and uses its value argument once. Even so, keep its job limited to observation. Printing a diagnostic can have performance and output effects, and arguments may still perform side effects when evaluated. Avoid hiding required mutations in messages that a conditional build might remove.</p>
+<p>Do not redefine standard predefined macros in normal application code. #line is the standard mechanism for adjusting presumed source locations when needed. Invent project-prefixed configuration names for your own build settings. Reserved names are part of the implementation's namespace and should remain available for their specified purpose.</p>
+<p>Absolute source paths in diagnostics may be useful during local development but undesirable in published output. Prefer a controlled label or documented prefix mapping where appropriate. That decision concerns what information the diagnostic reader needs, not whether __FILE__ is a legitimate standard facility.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Treating a compilation stamp as the current time</h3>
+<p>__TIME__ does not advance while the program waits or runs again. It is a string literal supplied during translation. Use it to label a build, and use an actual clock function for execution time. A stale build stamp is not proof that a current run happened at that time.</p>
+<h3>Using the wrong print conversion</h3>
+<p>__FILE__, __DATE__, and __TIME__ are strings, so print them with %s. __LINE__ is an integer suitable for %d in these small line values. __STDC_VERSION__ is long, so %ld is the direct numeric conversion. A macro name does not change printf's type requirements.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Use source locations for diagnostics that lead a developer to an actionable line. Keep build stamps separate from ordinary numeric results. If output must reproduce across machines, consider whether an absolute source path or compile timestamp is necessary. Stable metadata can be more useful than extra changing text.</p>
+<p>Select standard modes explicitly when demonstrating __STDC_VERSION__. Use feature-specific checks for optional facilities. Test a diagnostic macro at more than one call location so the call-site behavior is visible. Include only the source context that helps the reader investigate the reported condition.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>__FILE__, __LINE__, __DATE__, __TIME__, and __STDC__ are available in standard C89. __STDC_VERSION__ appears with C95 and identifies C99, C11, and C17 through their specified revision values. These programs compile in C17 mode. Implementation extensions such as __COUNTER__ are outside this lesson and are not assumed portable.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Predefined macros describe source location, translation stamps, and language mode. Their values can depend on the build, while the executable keeps the literals it received. Match formats and use #line only for intentional presumed-location control. Next, preserve values beyond one run with <a href="topic:c-file-handling-intro">File Handling</a>.</p>

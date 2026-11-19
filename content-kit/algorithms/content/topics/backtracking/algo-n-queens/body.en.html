@@ -1,0 +1,72 @@
+<h2 id="introduction">Place queens without attacks</h2>
+<p class="lead">A queen attacks horizontally, vertically and diagonally. The N-Queens problem asks you to place n queens on an n-by-n board so none attacks another. It is a useful constraint problem because a new piece can invalidate a promising partial arrangement.</p>
+<p>You can remove one source of conflict by design: place exactly one queen per row. Now a state only needs to remember the chosen column of each earlier row. Row r becomes the recursive depth, and <code>col[r]</code> stores that row's choice.</p>
+<p>The aim here is to count all solutions and retain the first one for display. Reflections and rotations count as different boards. For n=4, the answer is two. For n=2 or n=3, there is no solution. An unsuccessful search is still a meaningful result.</p>
+<p>Think of every row as a decision that must agree with all earlier rows. The search tries columns in ascending order, rejects attacks immediately, and returns to change an earlier queen when the next row has no legal choice.</p>
+
+<h2 id="syntax">Columns describe the board</h2>
+<p>The function <code>safe(row, c)</code> compares a candidate column c with every queen in a previous row. Equal columns mean a vertical attack. A diagonal attack occurs when the absolute column gap equals the row gap.</p>
+<p>The row gap is row-prev, which is positive because prev is earlier. We compute the absolute column difference explicitly in the main solver. The independent board validator uses abs from stdlib.h. Neither method needs floating-point slopes.</p>
+<p>The call <code>search(row)</code> assumes earlier queens are safe. At row==n, every row is filled and the counter increases. A separate first array receives a copy only at the first solution. Search then returns normally and continues counting other boards.</p>
+<pre><code class="language-text">search(row):
+    if row == n: count++; save first board; return
+    for c = 0 to n - 1:
+        if safe(row, c):
+            col[row] = c
+            search(row + 1)
+            col[row] = -1</code></pre>
+
+<h2 id="how-it-works">Check both diagonal directions</h2>
+<p>Suppose row zero contains column one. On row one, column one conflicts vertically. Columns zero and two conflict diagonally because their column gap is one, matching the row gap. Column three remains safe.</p>
+<p>After choosing row one column three, row two may take column zero. Row three can then take column two. The complete vector is [1,3,0,2]. To count more boards, remove row three's queen and continue the surrounding loops.</p>
+<p>The lab shows each candidate before deciding whether to place it. A rejected square means an earlier queen attacks it. Placement and removal are separate events. When counting finishes, the working board is empty again, and the saved first solution is restored for viewing.</p>
+<div data-lab="n-queens"></div>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Count boards and keep one witness</h3>
+<p>Input four reports two solutions and first vector 1 3 0 2. The vector uses zero-based columns from top row to bottom row. The counting search itself does not stop at that first witness.</p>
+<div data-example="ex-1"></div>
+<h3>Validate a supplied placement</h3>
+<p>The validator checks every earlier pair. Vector 1 3 0 2 is safe, while 0 1 2 3 has diagonal conflicts. A vector with distinct columns is not automatically a solution.</p>
+<div data-example="ex-2"></div>
+<h3>Draw the saved four-queen board</h3>
+<p>The display uses Q for a queen and a dot for an empty square. Reading the Q position in each row recovers the saved vector. The program reuses the same count-and-save search before drawing.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Reach the first four-queen board</h2>
+<p>Trying row zero column zero eventually blocks the final rows. The solver must finish those failed branches before moving to row zero column one. The following table focuses on the successful prefix after that change.</p>
+<p>A safe choice depends only on the current prefix. It says nothing yet about whether all future rows can be filled. That distinction is why a safe placement may later need to be removed.</p>
+<table class="ref"><caption>A successful route for n=4</caption><thead><tr><th scope="col">Row</th><th scope="col">Tried column</th><th scope="col">Earlier vector</th><th scope="col">Outcome</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>[]</td><td>Place</td></tr><tr><td>1</td><td>0</td><td>[1]</td><td>Diagonal attack</td></tr><tr><td>1</td><td>1</td><td>[1]</td><td>Column attack</td></tr><tr><td>1</td><td>2</td><td>[1]</td><td>Diagonal attack</td></tr><tr><td>1</td><td>3</td><td>[1]</td><td>Place</td></tr><tr><td>2</td><td>0</td><td>[1,3]</td><td>Place</td></tr><tr><td>3</td><td>2</td><td>[1,3,0]</td><td>Place; count board</td></tr></tbody></table>
+
+<h2 id="correctness">Safe prefixes lead to safe boards</h2>
+<p>The invariant says that rows below the current row are undecided and every pair of earlier queens is nonattacking. It holds for the empty prefix. A safe candidate has no attack with any earlier queen, so appending it preserves the invariant.</p>
+<p>When row reaches n, one queen occupies every row. Earlier checks establish different columns and diagonals for every pair, so the board is valid. Conversely, consider any valid board. Its chosen column at each row passes safe because it conflicts with no earlier queen. The loops try that column, so the complete board is eventually counted.</p>
+<p>Each board has one unique row-to-column vector. Two recursive paths cannot yield the same vector because their first differing choice changes a row's column. Thus the count has neither omissions nor duplicates under the stated symmetry convention.</p>
+
+<h2 id="complexity">Count candidates and safety work</h2>
+<p>Column conflicts prevent reusing an earlier column, so the number of viable partial column vectors is bounded by the permutation tree. There are at most n! complete column arrangements before diagonal rejection. The safety check scans at most n earlier rows.</p>
+<p>For this simple code, a conservative bound including failed column tests is O(n^2*n!) time. It uses at most n column trials per visited prefix and an O(n) safety test per trial. Common O(n!) descriptions suppress these polynomial factors or assume faster occupancy checks; state which implementation you analyse.</p>
+<p>You can keep occupied-column and diagonal arrays for constant-time safety. The diagonals have identifiers row-c+n-1 and row+c, each in zero through 2n-2. Mark before recursion and clear on return. The working state, saved board and active stack all use O(n) space, excluding printed output.</p>
+
+<h2 id="edge-cases">No board can be the correct answer</h2>
+<p>A one-by-one board has one solution. Sizes two and three have none. The program accepts one through eight; size eight has ninety-two ordinary solutions, small enough for the demonstration counter.</p>
+<p>An empty board is sometimes defined to have one empty arrangement, but this interface deliberately starts at one. If you extend it to zero, update both the input bounds and the meaning of the displayed witness.</p>
+<p>Counting fundamental solutions requires identifying boards equivalent under reflection and rotation. Dividing the ordinary count by eight is unsafe because some boards have fewer than eight different symmetric images.</p>
+
+<h2 id="common-mistakes">A column test alone misses attacks</h2>
+<p>Using only col[prev]!=c admits diagonal attacks. Add the coordinate-gap test for both diagonal directions. Checking only one signed difference catches one diagonal direction and misses the other.</p>
+<p>Do not return success from search as soon as the first board appears when the task asks for all solutions. Save a copy and let the loops continue. The temporary col array will change again, so retaining only a pointer to it does not preserve that board.</p>
+<p>Another bug prints col after the whole search. Cleanup has removed the queens by then. Print the saved first vector only when saved is true; otherwise no valid witness exists.</p>
+
+<h2 id="best-practices">Separate deciding, counting and drawing</h2>
+<p>Use a small safe function so the geometric rule is visible. Test a complete vector with the independent validator before blaming the recursion for an unexpected drawing.</p>
+<p>Keep symmetry policy beside the problem statement. If you optimise with occupancy flags, check every undo operation carefully. Comparing the fast and slow safety predicates on small boards is a useful development check.</p>
+
+<h2 id="version-notes">Fixed bounds keep the board safe</h2>
+<p>The C17 examples use eight-slot arrays and reject larger board sizes before recursion. Small coordinate differences fit int, including the validator's abs argument. A larger solver needs wider counters and an explicit limit on recursion and runtime; factorial growth arrives long before ordinary display sizes become a memory issue.</p>
+
+<h2 id="summary">One row, one reversible choice</h2>
+<p>N-Queens turns geometry into column and diagonal constraints. Safe prefixes grow one row at a time, and undo lets the search inspect every alternative. The saved witness and the total count answer different questions about the same search.</p>
+
+<p>Revisit the connected idea:</p>
+<p><a href="topic:algo-backtracking-intro">Backtracking Intro</a></p>
