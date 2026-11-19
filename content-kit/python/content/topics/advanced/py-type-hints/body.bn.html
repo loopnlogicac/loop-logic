@@ -1,10 +1,10 @@
 <h2 id="introduction">Caller কী দেবে আর পাবে লিখে দাও</h2>
 <p class="lead">total ফাংশন implementation অনুযায়ী price, mark বা string নিতে পারে। সব type body থেকে আন্দাজ করতে হবে না। <dfn>Type hint</dfn> source-এ উদ্দেশ্য বলে, tool run-এর আগেই call মিলিয়ে দেখে।</p>
 <p>Project বাড়লে কাজে লাগে। Integer result promise-এ caller numeric কাজ বাছে; None-ও হলে missing handle জানে। পরে অপ্রত্যাশিত failure-এর বদলে boundary দৃশ্যমান।</p>
-<p>Python dynamic-ই। Normal run annotation না মিললেই call reject করে না। Static checking আর runtime validation আলাদা। Hint interface, external input-এর rule-এ explicit check।</p>
+<p>Python dynamic-ই। Normal run annotation না মিললেই call reject করে না। Static checking আর runtime validation আলাদা। Hint interface, external ইনপুটের rule-এ explicit check।</p>
 
 <h2 id="syntax">Parameter, return আর container annotate</h2>
-<p>Parameter-এর পরে colon-type, list-এর পরে arrow-result। Inferred type স্পষ্ট করতে variable-এর পরেও colon। Useful result ছাড়া action-এ -&gt; None।</p>
+<p>Parameter-এর পরে colon-type, list-এর পরে arrow-result। Inferred type স্পষ্ট করতে ভেরিয়েবল-এর পরেও colon। Useful result ছাড়া action-এ -&gt; None।</p>
 <pre><code class="language-python">def total(prices: list[int]) -&gt; int:
     return sum(prices)
 
@@ -14,7 +14,7 @@ counts: dict[str, int] = {"lab": 2}</code></pre>
 
 <h2 id="how-it-works">Static analysis আর execution আলাদা</h2>
 <p><dfn>Static type checker</dfn> normal কাজ না চালিয়ে source দেখে। Declared-inferred type expression-এ ধরে। int-এর জায়গায় string বা optional-কে definite integer ব্যবহারে জানায়।</p>
-<p>Interpreter দেওয়া object দিয়েই body চালায়। double(number: int)-এ body দুই দিয়ে গুণ করলে "a"-তে "aa" হতে পারে। Runtime চললেই declared interface মেলে না; run আর check আলাদা প্রশ্ন।</p>
+<p>Interpreter দেওয়া অবজেক্ট দিয়েই body চালায়। double(number: int)-এ body দুই দিয়ে গুণ করলে "a"-তে "aa" হতে পারে। Runtime চললেই declared interface মেলে না; run আর check আলাদা প্রশ্ন।</p>
 <p>Hint convert করে না। "75" int করার আগে string। list[int] সব external element inspect নয়। বাইরে parse-validate করে internal interface-মেলা মান পাঠাও।</p>
 <div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>C declaration compilation rule আর representation-এর অংশ। Python hint মূলত tool-এর জন্য উদ্দেশ্য। int hint machine-size C integer limit বা automatic conversion নয়।</p></div>
 <p>Static tool সব business rule প্রমাণ করে না। Mark nonnegative চাইতেও int-এ -5 চলে। Alias ভালো নাম দেয়, সাধারণ alias runtime range নয়। Bound আর domain documentation-validation-এ।</p>
@@ -42,25 +42,25 @@ counts: dict[str, int] = {"lab": 2}</code></pre>
 <p>Lookup integer mark বা absent-এ None। int | None/Optional[int] দাও। Caller if result is None, অন্য branch-এ অঙ্ক। Static tool তখন int-এ narrow করতে পারে।</p>
 <p>Zero valid হলে if result নয়। Zero আর None দুটো false, present zero হারায়। Identity check আসল প্রশ্ন। Practice-এ তাই zero আছে।</p>
 <p>Default ছাড়া Optional[int] required। def find(limit: int | None)-এ explicit None চলে, find()-এ argument missing। Omission চাইলে = None। Type আর default আলাদা উত্তর।</p>
-<p>উপযুক্ত union-এ isinstance narrowing। isinstance(value, str)-এর পরে string method বোঝে। Condition use-এর কাছে, হঠাৎ narrowed variable অন্য type-এ reassign এড়াও।</p>
+<p>উপযুক্ত union-এ isinstance narrowing। isinstance(value, str)-এর পরে string method বোঝে। Condition use-এর কাছে, হঠাৎ narrowed ভেরিয়েবল অন্য type-এ reassign এড়াও।</p>
 
 <h2 id="mypy-workflow">Project environment-এ checker</h2>
 <p>mypy third-party static tool। Project venv-এর interpreter দিয়ে install। যেমন .venv বানিয়ে তার Python নাও। <a href="topic:py-modules-packages">module-package পাঠে</a> environment selection আছে।</p>
 <pre><code class="language-bash">python -m pip install mypy
 python -m mypy lesson.py
 python -m mypy --strict lesson.py</code></pre>
-<p>ছোট fully annotated function আর caller দিয়ে শুরু। প্রথম diagnostic-এ declared আর supplied type মেলাও, সঙ্গে সঙ্গে suppress নয়। Strict-এ complete annotation চায়, untyped boundary ধরা যায়।</p>
+<p>ছোট fully annotated ফাংশন আর caller দিয়ে শুরু। প্রথম diagnostic-এ declared আর supplied type মেলাও, সঙ্গে সঙ্গে suppress নয়। Strict-এ complete annotation চায়, untyped boundary ধরা যায়।</p>
 <p>Default-এ unannotated code কম check হতে পারে। Clean report মানে সব dependency proved নয়। Any flexible operation দেয়, check দুর্বল করে। ইচ্ছা করেই flexibility চাইলে, error চেপে দিতে নয়।</p>
-<p>Runtime test তবুও চাই। যোগের বদলে বিয়োগেও integer input-output type মেলে। Static tool type দেখে, known-result test ভুল arithmetic ধরে। ভুলের ধরন বুঝে tool মেলাও।</p>
-<p>Exact diagnostic sentence-এ teaching program নির্ভর নয়। Release-এ wording-inference বদলায়। Interface-এ conflicting type-ই মূল শিক্ষা। Repeatable tool behavior চাইলে version pin।</p>
+<p>Runtime টেস্ট তবুও চাই। যোগের বদলে বিয়োগেও integer ইনপুট-আউটপুট type মেলে। Static tool type দেখে, known-result টেস্ট ভুল arithmetic ধরে। ভুলের ধরন বুঝে tool মেলাও।</p>
+<p>Exact diagnostic sentence-এ teaching প্রোগ্রাম নির্ভর নয়। Release-এ wording-inference বদলায়। Interface-এ conflicting type-ই মূল শিক্ষা। Repeatable tool behavior চাইলে version pin।</p>
 
 <h2 id="common-mistakes">হয়নি এমন check promise নয়</h2>
-<h3>Hint input validate ভাবা</h3>
+<h3>Hint ইনপুট validate ভাবা</h3>
 <p>Annotation parser বা range check নয়। Text convert আর invalid reject explicit। Hint internal মান বলে।</p>
 <h3>Omitted argument-এ Optional</h3>
 <p>Optional মানে None allowed। Omit করতে default তবুও চাই। Signature-এ দুটো বোঝাও।</p>
 <h3>Possible None উপেক্ষা</h3>
-<p>অঙ্কের আগে check। Absent roll আর zero mark দুটো test, truthiness আলাদা পারে না।</p>
+<p>অঙ্কের আগে check। Absent roll আর zero mark দুটো টেস্ট, truthiness আলাদা পারে না।</p>
 <h3>সব diagnostic-এ Any</h3>
 <p>Analysis-এর তথ্য হারায়। Interface refine বা known type-এ parse। Focused ignore দরকার হতে পারে, actual limitation বলো।</p>
 
@@ -68,4 +68,4 @@ python -m mypy --strict lesson.py</code></pre>
 <p>list[int] 3.9-এ, int | None 3.10-এ। Optional পুরোনো notation-ও দেয়। পাঠে 3.10–3.12, 3.12-এর type alias statement এড়ানো। পরের release-এ annotation evaluation বদলাতে পারে।</p>
 
 <h2 id="summary">Hint interface-এর tool</h2>
-<p>Annotation intended value, optional absence দেখায়, static tool mismatch ধরে। Runtime test আর validation আলাদা দায়। পরের <a href="topic:py-regex">regular expression</a> text pattern বলে আর খোঁজে।</p>
+<p>Annotation intended value, optional absence দেখায়, static tool mismatch ধরে। Runtime টেস্ট আর validation আলাদা দায়। পরের <a href="topic:py-regex">regular expression</a> text pattern বলে আর খোঁজে।</p>

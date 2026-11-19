@@ -1,46 +1,46 @@
-<h2 id="introduction">Persistent state-এর ছোট tool</h2>
-<p class="lead">কোথায় টাকা গেল? Expense tracker-এ menu CLI দিয়ে expense add, category summary আর CSV export। JSON পরের run-এ রাখে। এক user-এর ছোট local learning project।</p>
-<p>বড় class hierarchy নয়, function-dictionary। Parsing, validation, storage, aggregation, interaction আলাদা দায়। Menu ছাড়া হিসাব, সব command না টাইপ করেও file handling check সহজ।</p>
-<h2 id="data-model">ছোট দরকারি record</h2>
-<p>ঠিক দুই field: category আর paisa। Category strip-casefold-এ normalize, Food-food এক group। পরে এক থেকে চল্লিশ printable character। Space-comma চলে, তাই CSV quoting দরকার।</p>
-<p>paisa positive integer 1..1000000000, প্রতি expense দশ million BDT সীমা। Smallest unit রাখায় যোগে decimal approximation নেই। Display integer division আর দুই-digit remainder-এ 1050 paisa-কে 10.50 করে।</p>
-<p>Amount text digit, optional এক/দুই decimal। 10,10.5,10.50 এক amount। Negative,zero,scientific notation,nonfinite word,fractional paisa reject। Refund ইচ্ছা করে নেই, চাইলে contract বদল।</p>
-<h2 id="menu-flow">Command আর হিসাব আলাদা</h2>
-<p>চার choice: add,summary,export,quit। Add category-amount validate। Summary paisa group করে sorted category। Export JSON-এর পাশে expenses.csv-তে category আর amount_bdt।</p>
-<p>Unknown choice message দিয়ে menu আবার। অসমাপ্ত add-সহ EOF clean exit। পুরো valid record না হলে storage নয়। Expected input-file error ধরে, programming bug দৃশ্যমান।</p>
-<p>Default current folder-এর expenses.json। --path-এ অন্যটি, যেমন পূর্ণ program tracker.py হলে python tracker.py --path records.json। Parent folder আগেই চাই। Export fixed sibling expenses.csv বদলায়, তাই dedicated project folder।</p>
-<h2 id="examples">Total থেকে পুরো interface</h2>
-<h3>Exact paisa summary</h3>
-<p>দশ টাকা পঞ্চাশ আর উনিশ টাকা পঁচাত্তর মিলে 30.25 BDT। Integer-এ প্রতি paisa থাকে।</p>
+<h2 id="introduction">প্রোগ্রাম বন্ধ হলেও হিসাব থাকে এমন ছোট টুল</h2>
+<p class="lead">টাকাগুলো কোথায় খরচ হলো? এই প্রশ্ন ঘিরে কয়েকটি Python দক্ষতা মেলাবে expense tracker। মেনু চালিয়ে খরচ যোগ করবে, খাত ধরে মোট দেখবে আর CSV বের করবে। JSON-এ হিসাব থাকায় পরেরবার চালালেও পাবে। এটি একজনের ব্যবহারের ছোট, নিজের কম্পিউটারে চলা শেখার প্রজেক্ট।</p>
+<p>বড় ক্লাসের কাঠামোর বদলে ফাংশন আর ডিকশনারি ব্যবহার করা হয়েছে। প্রতিটি ফাংশনের এক দায়: ইনপুট বোঝা, যাচাই, সংরক্ষণ, যোগফল বা ব্যবহারকারীর সঙ্গে কথোপকথন। তাই মেনু না চালিয়েও হিসাব পরীক্ষা করা যায়, সব কমান্ড আবার না লিখেও ফাইলের কাজ দেখা যায়।</p>
+<h2 id="data-model">যতটুকু দরকার ততটুকু রেকর্ড</h2>
+<p>প্রতি রেকর্ডে ঠিক দুই ফিল্ড: category আর paisa। category-তে strip আর casefold চালিয়ে একই রূপ করা হয়, তাই Food আর food এক খাত। এরপর এক থেকে চল্লিশটি প্রিন্টযোগ্য অক্ষর থাকতে হবে। স্পেস আর কমা চলে, তাই CSV-তে ফিল্ড ঠিকভাবে quote করা জরুরি।</p>
+<p>paisa হলো এক থেকে 1000000000-এর মধ্যে ধনাত্মক পূর্ণসংখ্যা। অর্থাৎ প্রতি খরচের সীমা এক কোটি BDT। গ্রহণযোগ্য সবচেয়ে ছোট এককে রাখায় যোগের সময় দশমিকের আনুমানিক হিসাব লাগে না। দেখানোর ফাংশন পূর্ণসংখ্যার ভাগ আর দুই অঙ্কের ভাগশেষ দিয়ে 1050 পয়সাকে 10.50 দেখায়।</p>
+<p>টাকার ইনপুটে অঙ্কের পরে চাইলে এক বা দুই দশমিক ঘর থাকতে পারে। তাই 10, 10.5 আর 10.50 একই পরিমাণ। ঋণাত্মক, শূন্য, scientific notation, অসীমের মতো শব্দ আর এক পয়সার ভগ্নাংশ নেওয়া হয় না। Refund ইচ্ছা করে এই নিয়মে নেই; যোগ করতে হলে আগে চুক্তি বদলাতে হবে।</p>
+<h2 id="menu-flow">কমান্ড থেকে হিসাব আলাদা রাখো</h2>
+<p>মেনুর চার পছন্দ: যোগ, মোট, export আর প্রস্থান। যোগ করতে খাত আর পরিমাণ চেয়ে দুটোই যাচাই করে। মোট দেখাতে জমা পয়সা খাত ধরে যোগ করে, খাতের নাম সাজিয়ে দেখায়। Export JSON-এর পাশের expenses.csv-তে category আর amount_bdt কলাম লেখে।</p>
+<p>অজানা পছন্দে ছোট বার্তা দিয়ে মেনু আবার আসে। ইনপুট শেষ হলে পরিচ্ছন্নভাবে বের হয়, এমনকি যোগের কমান্ড অসম্পূর্ণ থাকলেও। পুরো বৈধ রেকর্ড না হওয়া পর্যন্ত সংরক্ষণে যায় না। প্রত্যাশিত ইনপুট আর ফাইলের এরর ধরে, কিন্তু প্রোগ্রামিংয়ের ভুল দৃশ্যমান রাখে।</p>
+<p>ডিফল্ট JSON হলো বর্তমান ফোল্ডারের expenses.json। পুরো প্রোগ্রাম tracker.py নামে রাখলে python tracker.py --path records.json দিয়ে অন্য পথ নিতে পারো। মূল ফোল্ডার আগে থেকেই থাকতে হবে। Export পাশের নির্দিষ্ট expenses.csv প্রতিস্থাপন করে, তাই প্রজেক্টের জন্য আলাদা ফোল্ডার নাও।</p>
+<h2 id="examples">মোট হিসাব থেকে পুরো ইন্টারফেস</h2>
+<h3>প্রতি পয়সা ঠিক রেখে মোট করো</h3>
+<p>দশ টাকা পঞ্চাশ পয়সার সঙ্গে উনিশ টাকা পঁচাত্তর পয়সা যোগে 30.25 BDT। পূর্ণসংখ্যার যোগ প্রতিটি পয়সা রাখে।</p>
 <div data-example="ex-1"></div>
-<h3>JSON round-trip আর CSV category quote</h3>
-<p>JSON integer paisa রাখে। CSV comma-সহ category quote করে, ফিরে এক field।</p>
+<h3>JSON-এ রেখে ফেরাও, CSV-তে খাত quote করো</h3>
+<p>JSON পূর্ণসংখ্যার পয়সা ধরে। CSV writer কমা থাকা খাত পুরোটা quote করে, তাই আবার পড়লে এক ফিল্ড থাকে।</p>
 <div data-example="ex-2"></div>
-<h3>পুরো menu, প্রতি add persist</h3>
-<p>Food-travel যোগ, summary, CSV export, quit। Default file current folder-এ।</p>
+<h3>পুরো মেনু চালিয়ে প্রতিটি যোগ সংরক্ষণ</h3>
+<p>খাবার আর যাতায়াতের খরচ যোগ করো, খাতের মোট দেখো, CSV বের করে প্রস্থান করো। ডিফল্ট ফাইলগুলো বর্তমান ফোল্ডারে থাকবে।</p>
 <div data-example="ex-3"></div>
 
-<h2 id="storage-flow">Saved list বদলানোর আগে validate</h2>
-<p>Startup missing file আর unreadable-invalid আলাদা। Missing empty list। Invalid existing-এ failure print করে stop, তদন্তে bytes থাকে। Corrupt-কে নীরবে empty করলে problem লুকায়, record হারায়।</p>
-<p>JSON decode শুধু syntax। validate_records top-level list, item dictionary, exact দুই key দেখে। Category normalization আর exact integer paisa bound-ও।</p>
-<p>bool int-এর subclass, isinstance(True,int) true। Stored true এক-paisa নয়। type(paisa) is int precise contract দেয়। Domain-specific exact-check কারণ; সাধারণ interface-এ compatible behavior নেওয়াই ভালো।</p>
-<p>Add-এ candidate = records + [new_record], live-এ আগে append নয়। save_records সফল ফেরার পরে records candidate-এ bind। Failed save-এ পুরোনো list summary চালায়।</p>
-<p>save_records destination folder-এই temporary তৈরি। Write-close শেষে replace। পাশে রাখায় সাধারণত cross-filesystem move এড়ায়। Replace না হলে finally leftover সরায়।</p>
-<p>Partial rewritten destination-এর risk কমায়। Concurrent writer coordination বা power-loss survival নিশ্চিত নয়। fsync/transaction নেই। দরকার হলে database আর শক্ত design।</p>
-<h2 id="csv-export">Field বোঝে এমন parser-writer</h2>
-<p>JSON authoritative state, CSV spreadsheet/report export। Line split বা extension পাল্টে interchangeable নয়। প্রতিটির নিজস্ব parser-quote।</p>
-<p>csv.writer food, campus পুরো field quote করে। newline="" module-কে ending দেয়, UTF-8 text রাখে। amount_bdt reader-এর formatted string, JSON-এ exact paisa।</p>
-<p>Empty tracker header export পারে। Export failure file-message দেয়, JSON বদলায় না। Direct write বলে partial CSV হতে পারে। আবার export চলে, authoritative state বদলায় না।</p>
-<h2 id="checking-the-project">আলাদা run-এ transition</h2>
-<p>Empty folder-এ summary No expenses, Total 0.00। Food 10.50 আর 19.75 যোগ, total 30.25; quit-restart-এও।</p>
-<p>1.001,zero,negative reject, record নয়। Empty category আলাদা, amount চাওয়ার আগেই reject। Comma category export csv.reader-এ পড়ে boundary মিলাও।</p>
-<p>Corruption পরীক্ষা আগে disposable folder-এ JSON copy। List-এর বদলে object, missing key বা true amount-এ startup error আর file preserved। Controlled replace failure-এ Added কখনো যেন না আসে।</p>
-<h2 id="common-mistakes">সফল command-এর অর্থ রাখো</h2>
-<h3>Persistence-এর আগে success</h3>
-<p>Write fail হলেও stored promise হয়। save_records সফল হলেই new list আর success।</p>
-<h3>Decimal text float-এ নেওয়া</h3>
-<p>Binary float paisa conversion-এর আগে approximate। Decimal-এ parse, সর্বোচ্চ দুই decimal enforce করে integer।</p>
-<h3>Broad handler-এ storage reset</h3>
-<p>Read failure empty history চাওয়ার প্রমাণ নয়। File রেখে issue বলো। শুধু FileNotFoundError empty start।</p>
-<h2 id="summary">ব্যাখ্যা করা যায় এমন ছোট project</h2>
-<p>Tool exact money, validated record, cleanup আর menu মেলায়। Contract-test ঠিক করে date/delete বাড়াতে পারো। শেষে <a href="topic:py-interview-questions">Python interview question</a>-এ design ছোট ব্যাখ্যায় বলো।</p>
+<h2 id="storage-flow">আগের তালিকা বদলানোর আগে যাচাই</h2>
+<p>শুরুতে JSON নেই আর আছে কিন্তু পড়া যায় না বা ভুল, এই দুই অবস্থা আলাদা। না থাকলে ফাঁকা তালিকা দিয়ে শুরু। আগের ফাইল অবৈধ হলে বার্তা দিয়ে থামে, তদন্তের জন্য আগের বাইট রাখে। নষ্ট ডেটাকে নীরবে ফাঁকা করলে সমস্যা লুকায় আর রেকর্ড হারানোর ঝুঁকি হয়।</p>
+<p>JSON decode সফল হওয়া শুধু syntax ঠিক বলে। validate_records দেখে ওপরের মান লিস্ট, প্রতিটি আইটেম ডিকশনারি এবং key-র সেট ঠিক ওই দুইটি কি না। খাত একই রূপে আছে আর পয়সা ঠিক পূর্ণসংখ্যার সীমায় কি না-ও দেখে।</p>
+<p>Python-এ bool হলো int-এর subclass, তাই isinstance(True, int) সত্য। এখানে জমা true এক পয়সার খরচ নয়। type(paisa) is int দিয়ে নির্দিষ্ট ফিল্ডের চুক্তি মানায়। এটি এই ডোমেইনে exact type দেখার কারণ; সাধারণ Python ইন্টারফেসে সাধারণত উপযুক্ত আচরণ গ্রহণ করাই ভালো।</p>
+<p>যোগের সময় candidate = records + [new_record] বানায়। আগে চলতি তালিকায় append করে না। save_records সফলভাবে ফেরার পরে records নতুন তালিকা পায়। লিখতে ব্যর্থ হলে আগের তালিকাই তখনকার মোট হিসাব চালায়।</p>
+<p>save_records গন্তব্যের নিজের ফোল্ডারে অস্থায়ী ফাইল বানায়। আগে লিখে বন্ধ করে, তারপর গন্তব্য প্রতিস্থাপন। পাশে রাখায় সাধারণ ব্যবহারে আলাদা filesystem-এর মধ্যে সরানো এড়ায়। প্রতিস্থাপন শেষ না হলে finally-তে পড়ে থাকা অস্থায়ী ফাইল সরায়।</p>
+<p>এতে JSON গন্তব্য অর্ধেক লেখা থাকার ঝুঁকি কমে। একসঙ্গে কয়েক লেখকের সমন্বয় বা বিদ্যুৎ গেলে সব সম্পূর্ণ লেখা টিকে থাকার নিশ্চয়তা নেই। প্রজেক্টে fsync বা transaction নেই। সেগুলো লাগলে ডেটাবেস আর শক্ত নকশা নাও।</p>
+<h2 id="csv-export">ফিল্ড বোঝে এমন reader আর writer</h2>
+<p>JSON হলো অ্যাপের জমা অবস্থা। CSV spreadsheet বা রিপোর্টের জন্য বের করা কপি। লাইন ভাগ করে বা নামের extension পাল্টে দুইটিকে এক ভেবো না। প্রতিটির নিজস্ব parser আর quoting-এর নিয়ম।</p>
+<p>food, campus-এর মতো খাত csv.writer পুরো ফিল্ড হিসেবে quote করে। newline=""-এ CSV মডিউল লাইনের শেষ নিয়ন্ত্রণ করে, স্পষ্ট UTF-8-এ টেক্সট থাকে। amount_bdt পড়ার জন্য সাজানো দশমিক স্ট্রিং; জমা JSON-এ ঠিক পূর্ণসংখ্যার পয়সাই থাকে।</p>
+<p>হিসাব ফাঁকা হলেও শুধু header লেখা যায়। Export ব্যর্থ হলে ফাইলের বার্তা দেয়, JSON রেকর্ড বদলায় না। CSV সরাসরি লেখা হয় বলে ব্যর্থতায় আংশিক থাকতে পারে। আবার export করা যায়; মূল JSON অবস্থা এর ফলে বদলায় না।</p>
+<h2 id="checking-the-project">আলাদা run-এ পরিবর্তন পরীক্ষা</h2>
+<p>ফাঁকা প্রজেক্ট ফোল্ডারে শুরু করো। মোট চাইলে No expenses, তারপর Total 0.00 দেখো। food-এ 10.50 আর 19.75 যোগ করো। মোট 30.25 হবে, বেরিয়ে একই পথে আবার চালালেও।</p>
+<p>1.001, শূন্য আর ঋণাত্মক পরিমাণ চেষ্টা করো। কোনো রেকর্ড না যোগ করেই বাদ দেবে। ফাঁকা খাত আলাদা পরীক্ষা করো; পরিমাণ চাওয়ার আগেই বাদ পড়বে। শেষে কমা-সহ খাত export করে csv.reader দিয়ে পড়ে ফিল্ডের সীমা দেখো।</p>
+<p>নষ্ট ডেটা পরীক্ষা করার আগে JSON ফেলে দেওয়া যাবে এমন ফোল্ডারে কপি করো। লিস্টের বদলে অবজেক্ট দাও, required key সরাও বা পরিমাণে true দাও। শুরুতে এরর দেখিয়েও ফাইল রাখবে। নিয়ন্ত্রিত টেস্টে প্রতিস্থাপন ব্যর্থ করে দেখো Added কখনো আসে কি না; আসা চলবে না।</p>
+<h2 id="common-mistakes">সফল কমান্ডের অর্থ রক্ষা</h2>
+<h3>সংরক্ষণ শেষের আগে সাফল্য দেখানো</h3>
+<p>পরে লেখা ব্যর্থ হলেও সেই বার্তা ডেটা রাখা হয়েছে বলে। save_records সফল হলেই নতুন তালিকা আর সাফল্যের বার্তা প্রকাশ করো।</p>
+<h3>দশমিক টেক্সট আগে float করা</h3>
+<p>পয়সায় নেওয়ার আগে binary float দশমিক আনুমানিক করতে পারে। Decimal দিয়ে গ্রহণযোগ্য টেক্সট পড়ে সর্বোচ্চ দুই দশমিক ঘর মানাও, তারপর পূর্ণসংখ্যা করো।</p>
+<h3>এক broad handler-এ সংরক্ষণ ফাঁকা করা</h3>
+<p>পড়তে ব্যর্থ মানে ব্যবহারকারী আগের ইতিহাস ফেলে দিতে চায় না। মূল ফাইল রেখে সমস্যা বলো। শুধু FileNotFoundError ফাঁকা শুরুর অবস্থা বাছে।</p>
+<h2 id="summary">প্রজেক্ট এতটা ছোট রাখো যে বোঝানো যায়</h2>
+<p>পুরো টুলে ঠিক টাকার হিসাব, যাচাই করা রেকর্ড, ফাইল cleanup আর মেনু মেলে। চুক্তি আর টেস্ট ঠিক করে পরে তারিখ বা মুছে ফেলা যোগ করতে পারো। শেষে <a href="topic:py-interview-questions">Python interview প্রশ্নে</a> এই পছন্দগুলো ছোট করে বোঝাও।</p>

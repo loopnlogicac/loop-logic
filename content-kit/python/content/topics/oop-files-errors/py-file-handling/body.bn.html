@@ -1,27 +1,27 @@
 <h2 id="introduction">প্রোগ্রাম শেষেও ডেটা রাখো</h2>
-<p class="lead">Process শেষ হলে ভেরিয়েবল হারায়। ফাইলে marks বা expense পরের run-এর জন্য থাকে। দুই দায়: data format আর open resource সঠিকভাবে সামলানো। Format পরে পড়া সহজ করে, close leak ঠেকায়।</p>
+<p class="lead">Process শেষ হলে ভেরিয়েবল হারায়। ফাইলে marks বা expense পরের run-এর জন্য থাকে। দুই দায়: ডেটা format আর open resource সঠিকভাবে সামলানো। Format পরে পড়া সহজ করে, close leak ঠেকায়।</p>
 <p><dfn>Path</dfn> ফাইলের জায়গা বোঝায়। pathlib string-slash হাতে জোড়ার বদলে অবজেক্ট। নেই এমন ফাইলও Path বোঝাতে পারে; বানালেই create বা open হয় না।</p>
-<p>উদাহরণ নিজের temporary directory করে, ব্যক্তিগত ফাইল ছাড়া read-write-cleanup শেখায়। বাস্তব app-এ location বেছে existing data কখন বদলাবে বলো। Inspect করতে write mode নিরীহ নয়।</p>
+<p>উদাহরণ নিজের temporary directory করে, ব্যক্তিগত ফাইল ছাড়া read-write-cleanup শেখায়। বাস্তব app-এ location বেছে existing ডেটা কখন বদলাবে বলো। Inspect করতে write mode নিরীহ নয়।</p>
 
 <h2 id="syntax">খোলার আগে mode বাছো</h2>
-<p>open file object দেয়। Text file encoding-এ disk byte আর Python string বদলায়। এখানে encoding="utf-8"। Block শেষ বা exception-এ বেরোলে close করতে with।</p>
+<p>open ফাইল অবজেক্ট দেয়। Text ফাইল encoding-এ disk byte আর Python string বদলায়। এখানে encoding="utf-8"। Block শেষ বা exception-এ বেরোলে close করতে with।</p>
 <pre><code class="language-python">from pathlib import Path
 
 path = Path("marks.txt")
 with path.open("r", encoding="utf-8") as stream:
     for line in stream:
         print(line.rstrip("\n"))</code></pre>
-<table class="ref"><thead><tr><th scope="col">Mode</th><th scope="col">অর্থ</th><th scope="col">আগের ডেটা</th></tr></thead><tbody><tr><td>r</td><td>Text read</td><td>থাকে; নেই হলে failure</td></tr><tr><td>w</td><td>Text write</td><td>খোলাতেই truncate</td></tr><tr><td>a</td><td>Text append</td><td>থাকে; শেষে নতুন write</td></tr><tr><td>x</td><td>শুধু নতুন text file</td><td>আগে থাকলে failure</td></tr><tr><td>rb / wb</td><td>Byte read/write</td><td>Text encoding argument নেই</td></tr></tbody></table>
-<p>Relative path process working directory থেকে, script folder নাও হতে পারে। App-এ configured base নাও। Path("data") / "marks.txt" portable join; slash pathlib operator, সংখ্যার ভাগ নয়।</p>
+<table class="ref"><thead><tr><th scope="col">Mode</th><th scope="col">অর্থ</th><th scope="col">আগের ডেটা</th></tr></thead><tbody><tr><td>r</td><td>Text read</td><td>থাকে; নেই হলে failure</td></tr><tr><td>w</td><td>Text write</td><td>খোলাতেই truncate</td></tr><tr><td>a</td><td>Text append</td><td>থাকে; শেষে নতুন write</td></tr><tr><td>x</td><td>শুধু নতুন text ফাইল</td><td>আগে থাকলে failure</td></tr><tr><td>rb / wb</td><td>Byte read/write</td><td>Text encoding argument নেই</td></tr></tbody></table>
+<p>Relative path process working directory থেকে, script folder নাও হতে পারে। App-এ configured base নাও। Path("ডেটা") / "marks.txt" portable join; slash pathlib operator, সংখ্যার ভাগ নয়।</p>
 
 <h2 id="how-it-works">Position, buffering আর lifetime</h2>
-<p>File object current position রাখে। read() বাকি সব নেয়, শেষে আবার নিলে empty string। readline() সাধারণত newline-সহ এক line, শেষে empty string। Blank line আলাদা, newline character থাকে।</p>
-<p>Stream iteration পরের line পড়ে। পুরো file list-এ নয়, তবে processing-এ প্রতিটি line memory-তে। readlines() সব remaining line-এর list। Size আর হিসাব দেখে বাছো।</p>
+<p>ফাইল অবজেক্ট current position রাখে। read() বাকি সব নেয়, শেষে আবার নিলে empty string। readline() সাধারণত newline-সহ এক line, শেষে empty string। Blank line আলাদা, newline character থাকে।</p>
+<p>Stream iteration পরের line পড়ে। পুরো ফাইল list-এ নয়, তবে processing-এ প্রতিটি line মেমরি-তে। readlines() সব remaining line-এর list। Size আর হিসাব দেখে বাছো।</p>
 <p>Text write OS-এ যাওয়ার আগে buffered হতে পারে। Close Python buffer flush করে। Sudden power failure টেকার নিশ্চয়তা নয়, durability-তে আরও লাগে। with প্রধানত নির্ভরযোগ্য lifetime।</p>
 <p>Block-এর পরে closed stream read-write সাধারণত ValueError। Processing ভেতরে বা দরকারি value আগে রাখো। অন্য with একই path নতুন independent read-এর জন্য খুলতে পারে।</p>
-<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>Python stream FILE-এর মতো, তবে string ফেরায় আর অনেক failure-এ exception। with exit-এ close। এখানে text encoding explicit, binary-তে Unicode decode ছাড়া byte read-write।</p></div>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>Python stream ফাইলের মতো, তবে string ফেরায় আর অনেক failure-এ exception। with exit-এ close। এখানে text encoding explicit, binary-তে Unicode decode ছাড়া byte read-write।</p></div>
 
-<h2 id="examples">লেখো, আবার খোলো, structured data পড়ো</h2>
+<h2 id="examples">লেখো, আবার খোলো, structured ডেটা পড়ো</h2>
 <p>Text-এ replacement, append আর line iteration। CSV-JSON delimiter নিজের না বানিয়ে reader নেয়। Reopen-এর আগে writer close, তাই completed Python write পড়ে।</p>
 
 <h3>Text লিখে append আর line read</h3>
@@ -37,7 +37,7 @@ with path.open("r", encoding="utf-8") as stream:
 <div data-example="ex-3"></div>
 
 <h3>JSON-এ Unicode আর সংখ্যা</h3>
-<p>UTF-8 Bangla label রাখে, JSON integer marks সংখ্যায়। Loaded list যোগে 155।</p>
+<p>UTF-8 Bangla লেবেল রাখে, JSON integer marks সংখ্যায়। Loaded list যোগে 155।</p>
 <div data-example="ex-4"></div>
 
 <h3>Exclusive creation-এ overwrite আটকাও</h3>
@@ -47,15 +47,15 @@ with path.open("r", encoding="utf-8") as stream:
 <h2 id="csv-records">CSV-কে comma আর quote সামলাতে দাও</h2>
 <p>CSV row-তে field রাখে। Field-এর comma quote চায়, তাই line comma-তে split নির্ভরযোগ্য নয়। csv.reader-writer format মানে, Lab, East এক field থাকে।</p>
 <p>Encoding-এর সঙ্গে newline="" নাও। csv নিজে newline মানে, কিছু platform-এ extra blank line এড়ায়। Quoted field-এ newline থাকলেও দরকার। Reader-এ দেওয়ার আগে physical line strip কোরো না।</p>
-<p>DictWriter column name আর row dictionary মেলায়। একবার header, তারপর named column-এর row। DictReader header ধরে dictionary দেয়। CSV value string, তাই marks-এ int আর উপযুক্ত boundary-তে invalid data handle।</p>
-<p>Required column আর empty field-এর অর্থ বলো। Missing marks অনুপস্থিত data, zero নাও হতে পারে। Reader syntax জানে, grading rule নয়। Parsing আর domain validation আলাদা।</p>
+<p>DictWriter column name আর row dictionary মেলায়। একবার header, তারপর named column-এর row। DictReader header ধরে dictionary দেয়। CSV value string, তাই marks-এ int আর উপযুক্ত boundary-তে invalid ডেটা handle।</p>
+<p>Required column আর empty field-এর অর্থ বলো। Missing marks অনুপস্থিত ডেটা, zero নাও হতে পারে। Reader syntax জানে, grading rule নয়। Parsing আর domain validation আলাদা।</p>
 
 <h2 id="json-records">সংখ্যা আর nested value-র format</h2>
-<p>JSON object, array, string, number, Boolean, null রাখে। json.dump text stream-এ Python value লেখে, json.load পড়ে। dumps-loads string-এ, file object নয়। জোড়া মেশানো পরিচিত ভুল।</p>
-<p>Object dictionary, array list হয়। true,false,null হয় True,False,None। Tuple array হয়ে list-এ ফেরে, সব Python type থাকে না। Set আর custom instance-এ explicit conversion policy।</p>
-<p>Predictable object-এ string key। Numeric key string হয়ে loaded result বদলায়। Readable Bangla-তে ensure_ascii=False text-এ Unicode রাখে, encoding বাছে না; তবু UTF-8-এ open।</p>
+<p>JSON অবজেক্ট, অ্যারে, string, number, Boolean, null রাখে। json.dump text stream-এ Python value লেখে, json.load পড়ে। dumps-loads string-এ, ফাইল অবজেক্ট নয়। জোড়া মেশানো পরিচিত ভুল।</p>
+<p>অবজেক্ট dictionary, অ্যারে list হয়। true,false,null হয় True,False,None। Tuple অ্যারে হয়ে list-এ ফেরে, সব Python type থাকে না। Set আর custom instance-এ explicit conversion policy।</p>
+<p>Predictable অবজেক্ট-এ string key। Numeric key string হয়ে loaded result বদলায়। Readable Bangla-তে ensure_ascii=False text-এ Unicode রাখে, encoding বাছে না; তবু UTF-8-এ open।</p>
 <p>Invalid JSON-এ JSONDecodeError। Syntax ঠিক হলেও missing field বা wrong domain থাকতে পারে। Trusted marks ধরার আগে structure check। একই path-এ w পুরোনো document বদলায়, আরেক valid document append করে না।</p>
-<p>গুরুত্বপূর্ণ data-তে temporary sibling লিখে destination replace partial-update risk কমাতে পারে। Deliberate error handling আর filesystem assumption লাগে। শুরুর উদাহরণ temporary disposable data, transaction-এর নিশ্চয়তা নেই।</p>
+<p>গুরুত্বপূর্ণ ডেটা-তে temporary sibling লিখে destination replace partial-update risk কমাতে পারে। Deliberate error handling আর filesystem assumption লাগে। শুরুর উদাহরণ temporary disposable ডেটা, transaction-এর নিশ্চয়তা নেই।</p>
 
 <h2 id="common-mistakes">Content আর lifetime রক্ষা</h2>
 <h3>পুরোনো মান পড়ার আগে w</h3>
@@ -63,7 +63,7 @@ with path.open("r", encoding="utf-8") as stream:
 <h3>অর্থপূর্ণ whitespace সরানো</h3>
 <p>strip newline-এর সঙ্গে space-tab-ও সরায়। শুধু line ending চাইলে rstrip("\n")। CSV-তে reader-কে quote আর boundary সামলাতে দাও।</p>
 <h3>Path-কে content ভাবা</h3>
-<p>Path location। read_text পড়ে, write_text managed open-close-এ লেখে। ছোট file-এ ভালো, line-by-line-এ stream।</p>
+<p>Path location। read_text পড়ে, write_text managed open-close-এ লেখে। ছোট ফাইলে ভালো, line-by-line-এ stream।</p>
 <h3>একাধিক JSON document append</h3>
 <p>পরপর দুই complete value এক ordinary JSON document নয়। List রেখে rewrite বা স্পষ্ট line-based format নাও। Append-এর আগে format বলো।</p>
 

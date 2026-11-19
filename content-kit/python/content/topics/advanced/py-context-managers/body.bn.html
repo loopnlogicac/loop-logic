@@ -1,7 +1,7 @@
 <h2 id="introduction">কোডে resource lifetime স্পষ্ট</h2>
 <p class="lead">ফাইল খুললে close-এর দায়। মাঝের হিসাব আগে return বা exception তুলতে পারে। <dfn>Context manager</dfn> block ঘিরে entry-exit গুছিয়ে lifetime দেখায়। with সেই protocol ব্যবহার করে।</p>
 <p>ফাইল ছাড়াও temporary setting, lock বা matching finish লাগে এমন কাজে চলে। জোড়া কাজ: state-এ ঢোকো, কাজ করো, বেরোও। মাঝের কাজ failed হলেও জোড়া একসঙ্গে।</p>
-<p>ভেতরের সব change নিজে undo নয়। File manager stream close করে, overwritten content ফেরায় না। Transaction manager rollback শুধু নিজস্ব contract বললে। with মানে সব reversal না ধরে exit আচরণ বলো।</p>
+<p>ভেতরের সব change নিজে undo নয়। ফাইল manager stream close করে, overwritten content ফেরায় না। Transaction manager rollback শুধু নিজস্ব contract বললে। with মানে সব reversal না ধরে exit আচরণ বলো।</p>
 
 <h2 id="syntax">Manager নিয়ে entered value bind</h2>
 <p>with expression as name-এর পরে indented block। Expression থেকে manager, তারপর entry। as __enter__-এর return পায়, manager নিজে নাও হতে পারে।</p>
@@ -27,10 +27,10 @@ __enter__ সফল --&gt; as target bind --&gt; block চালাও
                                     __exit__
                          false/None: error চালাও
                          true: block error suppress</pre>
-<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>C-তে failure cleanup label-এ যেতে পারে। Python manager paired entry-exit এক জায়গায়। Acquisition তবু সাবধানে, abrupt termination-এর পরে cleanup নিশ্চয়তা নয়।</p></div>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>C-তে failure cleanup লেবেল-এ যেতে পারে। Python manager paired entry-exit এক জায়গায়। Acquisition তবু সাবধানে, abrupt termination-এর পরে cleanup নিশ্চয়তা নয়।</p></div>
 
 <h2 id="examples">Normal আর exceptional exit</h2>
-<p>Class manager entry-exit প্রিন্ট। দ্বিতীয়তে cleanup-এর পরে error চলে। Narrow manager এক category suppress। Generator-based contextlib temporary state ফেরায়।</p>
+<p>ক্লাস manager entry-exit প্রিন্ট। দ্বিতীয়তে cleanup-এর পরে error চলে। Narrow manager এক category suppress। Generator-based contextlib temporary state ফেরায়।</p>
 
 <h3>আলাদা entered value ফেরাও</h3>
 <p>__enter__ Session নয় ready দেয়। Normal completion-এ exception type নেই, exit True প্রিন্ট করে।</p>
@@ -53,28 +53,28 @@ __enter__ সফল --&gt; as target bind --&gt; block চালাও
 <div data-example="ex-5"></div>
 
 <h2 id="generator-managers">এক yield-এ block boundary</h2>
-<p>contextlib.contextmanager generator function-কে manager factory করে। Yield-এর আগে entry, yielded value as target। Block শেষে yield point-এ resume করে exit।</p>
+<p>contextlib.contextmanager generator ফাংশন-কে manager factory করে। Yield-এর আগে entry, yielded value as target। Block শেষে yield point-এ resume করে exit।</p>
 <p>Success-failure দুইটিতে cleanup চাইলে yield try/finally-তে। Block error yield-এ generator-এ ফেরে। Propagate-এর সময়ও finally। শুধু yield-এর পরের code failure-এ বাদ যেতে পারে।</p>
 <p>ঠিক একবার yield চাই। না করলে entry boundary দেয় না, error। দ্বিতীয় yield exit-এ শেষ হয়নি বলে error। আলাদা with-এ আলাদা invocation।</p>
 <p>Generator ভেতরে block exception catch করে normal finish করলে suppress। শুধু log চাইলে re-raise। __exit__-এর মতো suppression contract চাই। Yield ঘিরে broad except caller-এর unrelated bug ঢাকতে পারে।</p>
-<p>Decorator এখানে generator function process করে with-এর protocol object বানায়। আগের <a href="topic:py-iterators-generators">generator</a> আর <a href="topic:py-decorators">decorator</a> ধারণার ব্যবহার।</p>
+<p>Decorator এখানে generator ফাংশন process করে with-এর protocol অবজেক্ট বানায়। আগের <a href="topic:py-iterators-generators">generator</a> আর <a href="topic:py-decorators">decorator</a> ধারণার ব্যবহার।</p>
 
 <h2 id="nesting-and-ownership">খোলার উল্টো ক্রমে close</h2>
 <p>Nested with outer আগে, inner পরে; exit inner আগে outer পরে। এক with-এ কয়েক manager-ও একই nesting। এক resource অন্যটির ওপর নির্ভর করলে জরুরি।</p>
 <p>Inner entry fail হলেও সফল outer exit করে। Failed inner নিজস্ব partial acquisition সামলাবে। কোন entry সম্পূর্ণ হলো অনুযায়ী দায় আলাদা।</p>
 <p>Stream ফাংশনে দিলে ownership স্পষ্ট। Caller খুলে থাকলে আবার ব্যবহার চাইতে পারে। Borrowed stream helper close করলে contract ভাঙে। Transfer document বা opener-ই with সামলাক।</p>
 <p>Manager অন্য resource ফেরাতে পারে: controller bookkeeping own, __enter__ open stream দেয়। as resource, original manager-ই __exit__ পায়। Target-এর API না চাইলে নিজে exit ডেকো না।</p>
-<p>কেউ reusable, কেউ single-use। Generator-based manager object সাধারণত একবার; fresh-এর জন্য factory আবার ডাকো। একই object অন্য নামে দিলে নতুন lifecycle নয়।</p>
-<p>Temporary state-এর test-এ old value ধরে নতুন বসিয়ে finally-তে সেই old ফেরাও, আন্দাজের default নয়। Nested setting প্রতিটি level-এর দেখা state-এ ঠিকমতো ফেরে।</p>
+<p>কেউ reusable, কেউ single-use। Generator-based manager অবজেক্ট সাধারণত একবার; fresh-এর জন্য factory আবার ডাকো। একই অবজেক্ট অন্য নামে দিলে নতুন lifecycle নয়।</p>
+<p>Temporary state-এর টেস্ট-এ old value ধরে নতুন বসিয়ে finally-তে সেই old ফেরাও, আন্দাজের default নয়। Nested setting প্রতিটি level-এর দেখা state-এ ঠিকমতো ফেরে।</p>
 
 <h2 id="failure-boundaries">Cleanup-এর নিশ্চয়তার সীমা</h2>
-<p>with structured control flow। Normal path-এ exit, কিন্তু force kill বা power loss-এর পরে নয়। File close মানেই multi-file update atomic নয়। আলাদা নিশ্চয়তা।</p>
+<p>with structured control flow। Normal path-এ exit, কিন্তু force kill বা power loss-এর পরে নয়। ফাইল close মানেই multi-ফাইল update atomic নয়। আলাদা নিশ্চয়তা।</p>
 <p>Cleanup-ও fail করে। __exit__ নতুন exception তুললে সেটি immediate, original context-এ থাকতে পারে। Exit focused, unrelated হিসাব-format নয়। Independent বহু resource-এ ExitStack সাহায্য করে, পাঠের বাইরে।</p>
 <p>Setting-এর ownership-concurrency অনুমতি থাকলেই temporary manager। এক thread-এর global change অন্যটি দেখতে পারে। এখানে local dictionary আর sequential code-এ restoration স্পষ্ট। Manager নিজে synchronization নয়।</p>
 
 <h2 id="tracing-the-contract">Entry failure আর block failure আলাদা</h2>
-<p>Successful entry-র পরে raise exit পরীক্ষা। Entry raise-এ block শুরু নয়, exit নেই, আলাদা boundary। কয়েক resource নিলে দুইটিই test, কোন acquisition সফল ছিল রাখো, সেগুলোই ছাড়ো।</p>
-<p>Cleanup-only test-এ block-এ পরিচিত ValueError, exit চলেছে record, একই error outer-এ মেলে। Cleanup আর propagation দুটো দেখা। Normal-only test accidental truthy exit-এ সব error লুকানো ধরবে না।</p>
+<p>Successful entry-র পরে raise exit পরীক্ষা। Entry raise-এ block শুরু নয়, exit নেই, আলাদা boundary। কয়েক resource নিলে দুইটিই টেস্ট, কোন acquisition সফল ছিল রাখো, সেগুলোই ছাড়ো।</p>
+<p>Cleanup-only টেস্ট-এ block-এ পরিচিত ValueError, exit চলেছে record, একই error outer-এ মেলে। Cleanup আর propagation দুটো দেখা। Normal-only টেস্ট accidental truthy exit-এ সব error লুকানো ধরবে না।</p>
 <p>Restoring manager-এ ভেতর-পরে মান, তারপর error-সহ আবার। Nested হলে আগে outer temporary, শেষে original। Private local name ছাড়াই public rule যাচাই।</p>
 
 <h2 id="common-mistakes">Exit behavior বলো</h2>
