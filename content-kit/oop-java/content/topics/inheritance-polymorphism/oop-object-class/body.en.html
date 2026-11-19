@@ -1,0 +1,67 @@
+<h2 id="introduction">Give objects a meaningful value contract</h2>
+<p class="lead">Two separately entered course codes may both say CSE212. The program may need to treat them as the same course value even though they are different objects. <code>Object</code> supplies common operations for Java objects, and value classes can override several of them with a deliberate policy.</p>
+<p>The important operations here are toString(), equals(Object), hashCode() and getClass(). They answer different questions: how to describe the object, whether another value is equal, which hash bucket may fit it, and what its exact runtime class is. Do not use one answer as a substitute for another.</p>
+<p>Every ordinary class inherits from Object directly or indirectly. That gives callers a common root reference type. An Object variable can reach a Course object, but the available compile-time operations come from Object. Correctly overriding those operations makes the value usable through that broad view.</p>
+<h2 id="syntax">Override the Object signature exactly</h2>
+<pre><code class="language-java">@Override
+public boolean equals(Object other) {
+    if (this == other) { return true; }
+    if (!(other instanceof Course course)) { return false; }
+    return code.equals(course.code);
+}
+@Override
+public int hashCode() {
+    return code.hashCode();
+}</code></pre>
+<p>The equals parameter is Object, not Course. A Course parameter would add an overload while leaving Object’s identity equality in place. The method is public because the inherited operation is public. @Override helps the compiler catch both signature and access mistakes.</p>
+<p>The demonstrated Course class is final and stores a non-null immutable String code. Its constructor inputs are documented as non-null. The identity check handles the same object quickly. The type pattern rejects null and unrelated types before comparing the chosen value field.</p>
+<h2 id="how-it-works">Separate identity, value and hash</h2>
+<p><dfn>Identity</dfn> asks whether two references reach the very same object. For references, == performs that comparison. Object.equals also uses identity by default. A class overrides equals when its domain needs a different definition, such as equal course codes.</p>
+<pre class="diagram">first  --&gt; Course { code = "CSE212" }
+second --&gt; Course { code = "CSE212" }
+
+first == second        false
+first.equals(second)   true
+hashes must match      true</pre>
+<p><dfn>Value equality</dfn> depends on a selected set of meaningful fields. For a Seat, row and column might identify the value. A display label or cached calculation should not accidentally join equality unless the domain requires it. Choose that policy before writing code.</p>
+<p>A <dfn>hash code</dfn> is an int used to help organize values, especially in hash-based containers. Equal objects must have equal hash codes. Different values may share a hash code, called a collision. A hash is neither a unique identifier nor a memory address promise.</p>
+<table class="ref"><tr><th>Observation</th><th>What follows?</th></tr><tr><td>a == b</td><td>The references share identity</td></tr><tr><td>a.equals(b)</td><td>A correct implementation requires equal hashes</td></tr><tr><td>Hashes match</td><td>Equality still needs checking</td></tr><tr><td>Hashes differ</td><td>A correct equal/hash contract says the values are unequal</td></tr></table>
+<h2 id="examples">Check the contracts on independent objects</h2>
+<h3>Compare identical codes in separate objects</h3>
+<p>The identity result is false while value equality is true. The text description shows the course code without exposing an incidental default identity string.</p>
+<div data-example="ex-1"></div>
+<h3>Reject null and unrelated types</h3>
+<p>Equal Course values have equal hashes. A null reference and a plain String fail the Course type test safely.</p>
+<div data-example="ex-2"></div>
+<h3>Ask for the exact runtime class</h3>
+<p>The Object view does not change what getClass reports. The object is still a Course and also satisfies the broader Object relationship.</p>
+<div data-example="ex-3"></div>
+<h3>Observe a real collision</h3>
+<p>The fixed strings Aa and BB have matching String hashes. Their course values remain unequal, demonstrating why a container still needs equals.</p>
+<div data-example="ex-4"></div>
+<h2 id="equality-rules">Keep equality an equivalence relation</h2>
+<p>The equals contract has several parts. <dfn>Reflexive</dfn> means a non-null value equals itself. <dfn>Symmetric</dfn> means a.equals(b) agrees with b.equals(a). <dfn>Transitive</dfn> means that if a equals b and b equals c, then a equals c.</p>
+<p>Equality must also be consistent across repeated checks while the information used by equality stays unchanged. A non-null object must compare unequal to null. These rules let callers group and search values without results depending on comparison direction or arbitrary timing.</p>
+<p>The hashCode contract requires stable repeated results during an execution while equality-relevant state remains unchanged. It does not require the same hash across separate executions. It also does not require unequal objects to have different hashes. A useful distribution improves performance but is not the equality definition.</p>
+<p>When overriding equals, override hashCode using the same equality-relevant fields. For two int coordinates, 31 * row + column is a simple combination. Int overflow is defined in Java and is acceptable in such hash calculations. The equality method still compares both coordinates directly.</p>
+<h2 id="inheritance-policy">Avoid surprising equality across a hierarchy</h2>
+<p>Value equality becomes harder when subclasses add identity information. A base Point may compare coordinates while ColouredPoint also compares colour. If the base accepts the child but the child rejects the base, symmetry breaks. The compiler cannot diagnose this behavioural error.</p>
+<p>Making a value class final is one straightforward policy. No subclass can add incompatible value state. Another design uses composition: a coloured value contains a Point instead of extending it. More flexible hierarchies need an explicitly shared equality policy and careful reasoning.</p>
+<p>Some classes use an exact getClass comparison in equals to reject different runtime classes. Others use instanceof to accept an agreed family. Neither choice is universally correct. The final Course example makes the distinction harmless because Course has no subclasses.</p>
+<p>Keep equality fields stable when using an object as a hash key. If a course code changes after insertion, later lookup may compute another bucket. The object can remain stored but become difficult to find. Prefer immutable keys, or remove and reinsert around a controlled change.</p>
+<h2 id="descriptions">Describe objects without confusing text with identity</h2>
+<p>toString should give a useful concise description for people reading diagnostics. Course[CSE212] communicates more than the default class-and-hash style. Avoid sensitive data and enormous nested object graphs. Calling println on a non-null object uses its toString representation.</p>
+<p>A readable description is not automatically a storage format. If code later parses that text, harmless formatting edits can break data loading. Define a separate documented serialization format when persistence is required. Equality should not depend on text formatting unless that is the domain’s explicit value definition.</p>
+<p>getClass returns the exact runtime Class object and is final in Object. instanceof tests compatibility with a type and accepts subclasses. These questions differ: a Child is an instance of Parent, while child.getClass() is Child.class rather than Parent.class.</p>
+<div class="callout note"><p>If you know C: Java hashCode does not promise a raw pointer value. Memory management may move objects without changing their logical identity. Compare references with == when identity is the question, and call a well-defined equals when value is the question.</p></div>
+<h2 id="common-mistakes">Check both halves of value equality</h2>
+<h3>Overloading equals by accident</h3>
+<p>equals(Course) is a different signature. An Object reference will still select equals(Object). Use the exact public Object parameter signature and annotate the intended override.</p>
+<h3>Comparing hashes instead of fields</h3>
+<p>A collision can occur for unequal values. Hash equality is only a possible match and never proves value equality. Compare the domain fields in equals.</p>
+<h3>Ignoring mutable equality state</h3>
+<p>A setter on an equality field can disrupt a hash container’s assumptions. A private field is not stable if methods still mutate it. Choose a stable key or explicitly manage its removal and reinsertion.</p>
+<h2 id="version-notes">Patterns simplify the type guard</h2>
+<p>The instanceof variable used in Course.equals became permanent in Java 16 and is available on Java 17. The Object contracts are much older. Records also arrived permanently in Java 16, but this lesson shows the ordinary class implementation explicitly.</p>
+<h2 id="summary">Make value meaning explicit</h2>
+<p>Use equals for the chosen domain value, hashCode for a compatible hash, and toString for a readable description. Keep equality stable and distinguish exact class from compatibility. Next, compare shared implementation and collaborating objects in <a href="topic:oop-composition">Composition vs Inheritance</a>.</p>

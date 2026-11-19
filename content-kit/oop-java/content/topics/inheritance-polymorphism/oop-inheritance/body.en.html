@@ -1,0 +1,74 @@
+<h2 id="introduction">A more specific kind of student</h2>
+<p class="lead">A scholarship student still has a roll number and can register for courses. The scholarship adds information without removing those student abilities. <dfn>Inheritance</dfn> lets a class describe a more specific kind of an existing type. Java writes this relationship with <code>extends</code>.</p>
+<p>Call the general class the <dfn>superclass</dfn> or parent. Call the more specific class the <dfn>subclass</dfn> or child. Student can be the superclass of Scholar. When you use a Scholar where Student is expected, the student promises must still hold.</p>
+<p>Sharing a few lines is not enough reason to inherit. A library stores books, but a library cannot stand in for a book. That relationship needs references between objects. The useful question is whether every child can behave correctly wherever the parent is required.</p>
+<div class="callout note"><p>If you know C: placing one struct inside another does not create Java’s subtype relationship. Java also selects overridden instance methods through the actual object. You do not manage a superclass object with a separate pointer or free its memory manually.</p></div>
+<h2 id="syntax">Declare the relationship and initialize its state</h2>
+<pre><code class="language-java">class Scholar extends Student {
+    private final int award;
+    Scholar(int roll, int award) {
+        super(roll);
+        this.award = award;
+    }
+}</code></pre>
+<p>The class name after extends is the direct superclass. Scholar adds its own award field. The superclass remains responsible for initializing its own roll field. <code>super(roll)</code> invokes a Student constructor with that argument.</p>
+<table class="ref"><tr><th>Form</th><th>Meaning</th></tr><tr><td>extends Student</td><td>Declare Student as the direct class superclass</td></tr><tr><td>super(roll)</td><td>Invoke a direct superclass constructor</td></tr><tr><td>super.label()</td><td>Request the inherited parent implementation explicitly</td></tr><tr><td>this.award</td><td>Access the current object’s award field</td></tr></table>
+<p>Constructors are not inherited. You write the constructors a child needs and arrange the superclass call. Accessible methods may be inherited, but private parent fields cannot be named directly in a separate child class. The child can ask an accessible parent method to operate on that state.</p>
+<h2 id="how-it-works">Trace the constructor chain before the child body</h2>
+<p>A Scholar is one object containing the state required by its class hierarchy. There is no separately created Student object waiting inside it. A Student reference may refer to this same Scholar object. References with different declared types can therefore share one identity.</p>
+<pre class="diagram">+-----------------------+
+| Student               |
+| - roll: int           |
+| + roll(): int         |
++-----------------------+
+            ^
+            | extends
++-----------------------+
+| Scholar               |
+| - award: int          |
+| + award(): int        |
++-----------------------+
+Scholar --|&gt; Student</pre>
+<p>For ordinary construction, Java initializes fields to default values before constructor work begins. Constructor chaining reaches the superclass first. After the superclass constructor returns, the child’s instance field initializers and initializer blocks run in textual order. The rest of the child constructor body then executes.</p>
+<p>If a Java 17 constructor has no explicit constructor invocation, Java supplies <code>super()</code>. This works only when an accessible no-argument superclass constructor exists. Defining Student(int) does not also create Student(). You must pass the needed argument yourself.</p>
+<p>A constructor may delegate to another constructor in its own class through <code>this(...)</code>. That chain must eventually reach a superclass constructor. You cannot write both this(...) and super(...) as separate first calls in one constructor. The chain supplies the parent initialization once.</p>
+<table class="ref"><tr><th>Stage</th><th>For new LabTutor()</th></tr><tr><td>1</td><td>Chain through Student to Person</td></tr><tr><td>2</td><td>Finish Person initialization and constructor body</td></tr><tr><td>3</td><td>Finish Student initialization and constructor body</td></tr><tr><td>4</td><td>Finish LabTutor initialization and constructor body</td></tr></table>
+<h2 id="examples">Follow the parent work in each result</h2>
+<h3>Store the student identity once</h3>
+<p>Scholar passes roll 42 into Student and stores its own award of 6000. The inherited method reads the parent’s private state legally.</p>
+<div data-example="ex-1"></div>
+<h3>Trace a multilevel chain</h3>
+<p>The printed names show when each constructor body runs. Read the result from the general ancestor toward the most specific class.</p>
+<div data-example="ex-2"></div>
+<h3>Add detail to a parent operation</h3>
+<p>CampusPass calls super.label() and adds the department. This is a direct request for parent behaviour, rather than another object allocation.</p>
+<div data-example="ex-3"></div>
+<h3>Let two children specialize independently</h3>
+<p>Bus and Bike share Vehicle as a parent. The wheel results differ because the two branches implement their own behaviour.</p>
+<div data-example="ex-4"></div>
+<h2 id="inheritance-shapes">Read three common hierarchy shapes</h2>
+<p><dfn>Single inheritance</dfn> describes one child directly extending one parent. Scholar extending Student is the smallest picture. A class may have many ancestors indirectly, but it still has only one direct class superclass.</p>
+<p><dfn>Multilevel inheritance</dfn> forms a chain. A LabTutor may extend Student, which extends Person. Methods available from Person can remain available further down the chain, subject to access and overriding rules. Long chains make construction and behaviour harder to follow.</p>
+<p><dfn>Hierarchical inheritance</dfn> describes several children of the same parent. Bus and Bike are separate branches below Vehicle. Neither becomes a subtype of the other merely because they share an ancestor. A Bike reference cannot accept an arbitrary Bus.</p>
+<pre class="diagram">Single:       Scholar --|&gt; Student
+Multilevel:   LabTutor --|&gt; Student --|&gt; Person
+Hierarchical: Bus --|&gt; Vehicle &lt;|-- Bike</pre>
+<p>Most ordinary classes ultimately extend Object. If you omit extends from a normal class declaration, Object is its direct superclass. Object itself has no superclass. Useful Object operations, including equality and text descriptions, receive their own discussion later.</p>
+<h2 id="one-superclass">Why one class parent matters</h2>
+<p>Imagine two class parents both storing balance and both implementing withdraw. A child inheriting both would need rules for choosing state and behaviour. Java avoids this class inheritance ambiguity by allowing only one direct class superclass. The declaration cannot list two classes after extends.</p>
+<p>A class can still offer several capabilities through interfaces. A campus terminal might be both Printable and Scannable. Interfaces describe contracts without creating a second class-state ancestry. The <a href="topic:oop-interfaces">Interfaces</a> lesson explains defaults and how explicit conflict resolution works.</p>
+<p>The one-parent rule does not remove all design choices. A deep hierarchy can still expose unsuitable inherited methods or depend too closely on parent implementation details. Keep inheritance focused on stable behavioural relationships. Use a collaborator when you need a tool rather than a more general identity.</p>
+<h3>Keep extension boundaries explicit</h3>
+<p>Parent implementation changes can affect every child. If a parent method starts calling another overridable method, a child override may now run in an unexpected place. Review inherited workflows when changing shared code. A shallow hierarchy with clear extension points is easier to maintain than a chain built only for line reuse.</p>
+<p>Java 17 also supports sealed classes, which restrict the permitted direct subclasses. This differs from final, which permits no subclasses at all. A sealed hierarchy needs explicit declarations for its permitted children and their extension policy. The examples use ordinary open hierarchies, so their constructor and method traces do not depend on sealed syntax. Choose an extension restriction to express a real model boundary rather than to alter constructor order.</p>
+<h2 id="common-mistakes">Check the relationship before fixing the syntax</h2>
+<h3>Assuming private means missing from the object</h3>
+<p>A private parent field still contributes state to a child object. The restriction concerns access to its declaration. Preserve the boundary by using an appropriate parent operation, rather than making every field protected.</p>
+<h3>Forgetting an argument-taking parent constructor</h3>
+<p>An empty child constructor tries super() implicitly. If the parent offers only an int constructor, compilation fails. Call super with the required value as the first constructor statement.</p>
+<h3>Using inheritance to borrow an unrelated utility</h3>
+<p>A Course should not extend Calculator merely to reuse multiplication. Course does not satisfy a calculator contract. A utility call or contained calculator expresses that use more clearly and avoids inheriting irrelevant operations.</p>
+<h2 id="version-notes">Constructor ordering on Java 17</h2>
+<p>These programs target Java 17. An explicit this(...) or super(...) invocation must come first in the constructor. Newer Java constructor rules are outside this lesson’s baseline. No preview features are needed for the hierarchy shapes shown here.</p>
+<h2 id="summary">Keep the parent promise</h2>
+<p>Inheritance gives a specific type a general contract and shared implementation. Initialize parent state through its constructor and choose hierarchy shapes that reflect real substitutability. Next, study the exact replacement rules in <a href="topic:oop-method-overriding">Method Overriding</a>.</p>

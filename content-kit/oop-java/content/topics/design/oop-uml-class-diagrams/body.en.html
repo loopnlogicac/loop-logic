@@ -1,0 +1,77 @@
+<h2 id="introduction">Sketch the promises before writing the classes</h2>
+<p class="lead">A library system needs books, members and loans. Before choosing field names, you need to decide which objects know about others and how many links are allowed. A <dfn>UML class diagram</dfn> shows types, their members and their relationships in one compact model.</p>
+<p>UML means Unified Modeling Language. A class diagram describes the design of types rather than the current contents of one running program. A Student box is not one student object. Many objects may follow that box’s structure and operation contracts.</p>
+<p>Use diagrams to ask useful questions. Can a student have two lockers? Can a line item belong to two orders? Does an e-book satisfy the Book contract? The drawing should make those choices visible enough to challenge before implementation makes them expensive to change.</p>
+<h2 id="how-it-works">Read boxes, symbols and relationship ends</h2>
+<h3>Class compartments</h3>
+<pre class="diagram">+---------------------------+
+| Student                   |
++---------------------------+
+| - roll: int               |
+| - name: String            |
++---------------------------+
+| + roll(): int             |
+| + rename(name: String): void |
++---------------------------+</pre>
+<p>The upper compartment names the class. The middle lists attributes, which represent stored properties. The bottom lists operations, which represent available behaviour. A colon introduces a type. Operation parentheses contain parameters, and the type after the closing parenthesis is the result.</p>
+<p>Visibility symbols map naturally to Java access. Plus means public, minus means private, hash means protected, and tilde means package visibility. A diagram can omit unimportant members to focus a discussion. Omission does not mean those members can never exist in code.</p>
+<table class="ref"><tr><th>Notation</th><th>Read it as</th><th>Java connection</th></tr><tr><td>-roll: int</td><td>A private integer attribute</td><td>private int roll</td></tr><tr><td>+roll(): int</td><td>A public operation returning an integer</td><td>public int roll()</td></tr><tr><td>#calculate(): int</td><td>A protected calculation operation</td><td>protected int calculate()</td></tr><tr><td>~update(): void</td><td>A package-visible update</td><td>void update()</td></tr></table>
+<h3>Association and direction</h3>
+<p>An <dfn>association</dfn> states that instances can be linked. A Student may have an Advisor reference. A navigability arrow can show that Student can reach Advisor through the model. That arrow does not claim inheritance or exclusive ownership.</p>
+<pre class="diagram">Student "0..*" --&gt; "1" Advisor
+
+For one Student: exactly one Advisor
+For one Advisor: zero or more Students</pre>
+<p>Read each count at the opposite end from the instance you start with. The 1 beside Advisor describes how many advisors one student has. The 0..* beside Student describes how many students one advisor may advise. Reversing that reading changes the model.</p>
+<h3>Multiplicity</h3>
+<p><dfn>Multiplicity</dfn> gives the permitted number of linked instances. A lower bound of zero permits absence. A lower bound of one requires a link. Star means there is no finite upper bound in that model, not that the computer has unlimited memory.</p>
+<table class="ref"><tr><th>Multiplicity</th><th>Meaning</th><th>Possible representation</th></tr><tr><td>1</td><td>Exactly one</td><td>Required non-null reference</td></tr><tr><td>0..1</td><td>Optional single link</td><td>Nullable reference with documented absence</td></tr><tr><td>0..*</td><td>Zero or more</td><td>A collection or bounded teaching array</td></tr><tr><td>1..*</td><td>One or more</td><td>A nonempty collection maintained by operations</td></tr><tr><td>0..30</td><td>At most thirty</td><td>Storage plus a checked live count</td></tr></table>
+<p>A field type alone rarely enforces the entire multiplicity. A reference can still be null unless construction rejects it. An array can contain empty slots. Admission and removal operations must preserve counts, including lower bounds after deletion.</p>
+<h3>Whole-part relationships</h3>
+<p><dfn>Aggregation</dfn> adds a shared whole-part interpretation and uses a hollow diamond at the whole. Its meaning is weaker than exclusive ownership and often needs explanation. Prefer an ordinary association when a diamond adds no useful domain rule.</p>
+<p><dfn>Composition</dfn> uses a filled diamond at the whole and expresses exclusive part ownership. An Order can own LineItems that are not simultaneously owned by another Order. Model lifetime responsibility follows the whole. This does not imply immediate Java memory destruction when a reference is discarded.</p>
+<pre class="diagram">Team "1" o-- "0..*" Player     shared aggregation
+Order "1" *-- "1..*" LineItem  composition
+
+Text keys: o = hollow diamond, * = filled diamond
+Diamonds sit next to the whole.</pre>
+<p>In this notation the symbols are text equivalents of graphical diamonds. Do not confuse the composition star marker with a multiplicity star written inside a count. Position and the explanatory key distinguish them.</p>
+<h3>Inheritance and interface realization</h3>
+<p><dfn>Generalization</dfn> connects a subclass to its superclass with a solid line and hollow triangle at the superclass. A Scholar is a Student. <dfn>Realization</dfn> connects an implementing class to an interface with a dashed line and hollow triangle at the interface.</p>
+<pre class="diagram">Scholar --|&gt; Student
+Scholar ..|&gt; Payable
+
+--|&gt; solid generalization
+..|&gt; dashed realization</pre>
+<p>Java maps these relationships to extends and implements. An association instead maps to references and operations maintaining the link. Do not draw an inheritance triangle merely because one class uses another in a method.</p>
+<div class="callout note"><p>If you know C: drawing a struct inside another describes layout, not automatically a UML subtype. A class diagram focuses on contracts and relationships. Java references, constructors and methods implement those promises without exposing a raw memory layout.</p></div>
+<h2 id="worked-examples">Turn a small model into maintained constraints</h2>
+<h3>Translate a Student box</h3>
+<p>Take a private roll attribute and a public roll operation. The Java class stores the value during construction and exposes the requested observation. A final field adds a stable identity policy beyond the basic attribute notation.</p>
+<div data-example="ex-1"></div>
+<p>The resulting object returns 42 through its public operation. The diagram guides access and type choices, but the constructor still needs a domain policy for invalid roll values. A useful model records such constraints in text rather than expecting every rule to fit an arrow.</p>
+<h3>Maintain a zero-to-two lab association</h3>
+<pre class="diagram">Lab "0..*" --&gt; "0..2" Student
+Lab
+- students: Student[2]
+- size: int
++ add(student: Student): boolean
++ size(): int</pre>
+<p>One Lab may link to at most two Student objects in this small model. The reverse end allows a student to attend several labs. The code therefore does not claim exclusive composition of students. Students are independently created and supplied to add.</p>
+<div data-example="ex-2"></div>
+<p>The first two additions succeed and the third fails. The live size stays two, preserving the upper bound. Rejecting null ensures every counted slot represents a student. Array capacity alone would not establish either guarantee.</p>
+<p>A bidirectional model requires extra coordination. If Student also stores its labs, adding a student must update both sides consistently. A half-completed update creates a disagreement between objects. Choose a single operation responsible for maintaining both links or keep navigation one-way when that is sufficient.</p>
+<h3>State constraints that numbers cannot express</h3>
+<p>Multiplicity says how many links are permitted, but not every rule about their contents. A course may permit thirty students while also forbidding duplicate roll numbers. The upper bound alone does not establish uniqueness. Write that invariant beside the model and make the admission operation check it before changing storage.</p>
+<p>Likewise, two different associations can constrain one another. A loan may require its borrower to be a member of the same library that owns the book. Separate arrows cannot enforce that cross-object rule. Document it and identify the operation responsible for validation, so diagram review leads to an implementable design.</p>
+<h2 id="common-mistakes">Read meaning before copying symbols</h2>
+<h3>Putting the triangle at the specific class</h3>
+<p>The generalization triangle points toward Student, not Scholar. Read the arrow as moving toward the general type. Reverse arrows can make a diagram claim that every student is a scholar.</p>
+<h3>Treating every field as composition</h3>
+<p>A private Printer reference can still be shared by several departments. Exclusive ownership needs a model promise and implementation support. Use association when the printer lives independently.</p>
+<h3>Ignoring the lower multiplicity bound</h3>
+<p>A list that starts empty does not satisfy 1..*. Construction or a controlled initialization stage must establish the required first link. Removal must also prevent an invalid empty state when the lower bound remains one.</p>
+<h3>Confusing diagrams with runtime reachability</h3>
+<p>Garbage collection follows reachable references. UML ownership follows domain rules. External aliases can keep a part alive, so a composition drawing cannot replace a cleanup or invalidation policy.</p>
+<h2 id="summary">Make every arrow a claim you can explain</h2>
+<p>Class compartments describe members, relationships describe contracts and ownership, and multiplicities describe permitted counts. Translate each into code that preserves the model during updates. Apply that reasoning to change-friendly boundaries in <a href="topic:oop-solid-principles">SOLID Principles</a>.</p>

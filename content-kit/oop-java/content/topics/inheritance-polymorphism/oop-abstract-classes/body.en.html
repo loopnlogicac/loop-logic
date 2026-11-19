@@ -1,0 +1,65 @@
+<h2 id="introduction">Share the completed work and require the missing step</h2>
+<p class="lead">Every result report may need a heading and consistent brackets, while its detail depends on the report kind. Rewriting the whole process in each child invites differences. An <dfn>abstract class</dfn> can keep the finished work and require subclasses to supply selected missing operations.</p>
+<p>Abstract means the class is not directly instantiable. You can declare variables and parameters of that type, but cannot create it with new. Concrete subclasses complete the required behaviour. A Plot variable may therefore hold a Rectangle even though new Plot() is forbidden.</p>
+<p>This arrangement is more than a list of empty methods. An abstract class can have private fields, constructors, concrete operations and helper methods. It suits a related family with useful shared state or a common algorithm. Use it only when the family also preserves the parent contract.</p>
+<h2 id="syntax">Mark the incomplete class and operations</h2>
+<pre><code class="language-java">abstract class Plot {
+    abstract int area();
+}
+class Rectangle extends Plot {
+    @Override
+    int area() {
+        return 24;
+    }
+}</code></pre>
+<p>An abstract method ends with a semicolon instead of a body. It specifies the required call and result type. The containing class must also be abstract. A concrete subclass provides a body with the matching signature and valid overriding rules.</p>
+<p>A subclass may implement only part of the inherited requirements and remain abstract itself. A later concrete child must complete all remaining abstract methods. Java does not supply zero, null or an empty operation automatically. The compiler rejects an incomplete class declared concrete.</p>
+<p>An abstract class can contain no abstract methods at all. The modifier may express that callers should instantiate only meaningful specialized forms. Conversely, abstract and final cannot describe the same class. One requires possible completion through extension while the other forbids extension.</p>
+<h2 id="how-it-works">A concrete method can call an abstract hook</h2>
+<p>A <dfn>hook</dfn> is an operation called by a larger algorithm so a subclass can supply a variation. A <dfn>template method</dfn> fixes that larger algorithm while delegating selected steps to hooks. Here render() supplies the report structure and detail() supplies its changing content.</p>
+<pre class="diagram">Report.render() {final}
+       |
+       +-- opening bracket
+       +-- heading()       shared implementation
+       +-- detail()        subclass hook
+       +-- closing bracket
+
+MarkReport --|&gt; Report</pre>
+<p>Calling render() on a MarkReport runs Report’s concrete method. When that method calls detail(), ordinary runtime dispatch reaches MarkReport.detail(). The algorithm remains in one place even though one step varies. A final render method can prevent subclasses from rearranging the sequence.</p>
+<p>The final modifier is a deliberate design choice, not a requirement of the pattern. If subclasses may legitimately replace the whole workflow, leaving the method overridable could be appropriate. If the order protects an important invariant, fixing it makes the promise easier to preserve.</p>
+<p>Keep hook contracts precise. A grade hook might accept only marks from zero to one hundred and return a nonempty grade label. Every subclass should follow those rules. An abstract declaration guarantees a body exists eventually, but it cannot verify the meaning of that body.</p>
+<h2 id="examples">Run the completed algorithms through concrete children</h2>
+<h3>Require a geometric operation</h3>
+<p>Rectangle implements area() using width and height. Plot gives the caller a common request without inventing a meaningless default area.</p>
+<div data-example="ex-1"></div>
+<h3>Fix a report’s outer structure</h3>
+<p>Report.render() keeps the heading, separator and brackets together. MarkReport changes only the detail returned inside that structure.</p>
+<div data-example="ex-2"></div>
+<h3>Initialize shared parent state</h3>
+<p>Grant saves the department in its constructor. MeritGrant supplies the amount and reuses the parent’s label construction.</p>
+<div data-example="ex-3"></div>
+<h2 id="construction">Abstract parents still participate in construction</h2>
+<p>A constructor cannot itself be abstract. It has concrete initialization work to do when a subclass object is created. Grant’s constructor receives the department before MeritGrant’s constructor finishes storing the amount. Abstract status prevents a direct new Grant request, not this parent initialization.</p>
+<p>Private shared fields help the parent preserve its own rules. A subclass can use protected or public operations that expose appropriate behaviour. It should not need every shared field made protected. A small stable interface reduces dependence on the parent’s storage choices.</p>
+<div class="callout warning"><p>Avoid calling overridable hooks from constructors. Java still dispatches such calls to child implementations. The child’s fields may not yet have their intended values. Establish the object first, then run the workflow through a separate operation.</p></div>
+<p>For example, a base constructor calling detail() may reach a child method before its mark field is assigned. That method can observe the default zero rather than the requested mark. Moving render() after construction removes this timing problem without weakening the hook’s contract.</p>
+<p>An abstract method cannot be private because a separate subclass needs to implement it. It cannot be final because final forbids overriding. It also cannot be static: a static operation belongs to a type rather than a runtime receiver requiring subclass completion.</p>
+<h2 id="choosing-hooks">Choose small extension points with clear responsibilities</h2>
+<p>A report algorithm might validate input, calculate a value, then format the result. Keep validation concrete when every member follows the same bounds. Make calculation abstract when policies differ. Keep formatting concrete when the output structure is an agreement across the family.</p>
+<p>Too many hooks create another problem: subclasses must understand internal ordering and hidden dependencies between steps. A hook named step3 says little about its job. Prefer a meaningful operation such as calculateGrade or buildDetail. Document what data it may read and what it must return.</p>
+<p>Hooks can have side effects, but repeated calls then matter. In the Counter quiz, result() calls step() twice. A mutating hook returns different values on each call. If the workflow needs one calculation, call once and save the result instead of silently assuming purity.</p>
+<p>An interface may be a better choice when unrelated classes need the same capability without shared instance state. An abstract class uses the one available class-superclass position. The next lesson compares those choices and shows how a class can implement multiple interface contracts.</p>
+<div class="callout note"><p>If you know C: an abstract Java declaration does not allocate a function pointer field you initialize manually. The compiler checks that a concrete class completes inherited operations. Callers then use ordinary instance calls, and the runtime selects the implementing method.</p></div>
+<h3>Store only genuinely shared state</h3>
+<p>A parent field should represent something every member of the family actually needs. Moving unrelated child data upward forces other children to carry meaningless defaults and complicates validation. Keep department in Grant when every grant has a department, but leave scholarship-specific ranking in its appropriate child. An abstract parent is a shared contract and partial implementation, not a storage drawer for every possible future field.</p>
+<h2 id="common-mistakes">Make incompleteness intentional</h2>
+<h3>Instantiating the general abstract type</h3>
+<p>new Plot() fails even if Plot has a constructor. Construct a concrete shape and store its reference in a Plot variable. The variable type and the constructed class do not need to be identical.</p>
+<h3>Forgetting one inherited requirement</h3>
+<p>Implementing start() does not satisfy an independent stop() requirement. Keep the intermediate class abstract or implement every missing operation. Check parent interfaces and ancestors too, because requirements can arrive indirectly.</p>
+<h3>Calling a hook before child initialization</h3>
+<p>A parent constructor does not delay runtime dispatch until the child is ready. Do not depend on a child field’s initialized value there. Use private or final initialization helpers that depend only on established parent state.</p>
+<h2 id="version-notes">No special runtime mode is needed</h2>
+<p>Abstract classes, constructor chaining and template methods work on Java 17 using ordinary compilation. The examples use no preview syntax. The word template here names an algorithm structure, not C++ templates or Java generic type parameters.</p>
+<h2 id="summary">Require variation at a deliberate boundary</h2>
+<p>An abstract class can preserve state and common work while leaving meaningful operations unfinished. Concrete children complete those hooks, and template methods control the shared sequence. Compare this stateful family model with the capability model in <a href="topic:oop-interfaces">Interfaces</a>.</p>

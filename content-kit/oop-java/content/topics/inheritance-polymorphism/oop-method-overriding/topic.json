@@ -1,0 +1,375 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-method-overriding",
+  "module": "inheritance-polymorphism",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Method Overriding",
+    "bn": "মেথড ওভাররাইডিং"
+  },
+  "summary": {
+    "en": "Replace inherited instance behaviour while preserving a method’s contract.",
+    "bn": "প্যারেন্টের মেথডের চুক্তি বজায় রেখে চাইল্ডে কাজের ধরন বদলান।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "oop-inheritance"
+  ],
+  "related": [],
+  "keywords": [
+    "Method Overriding",
+    "Java",
+    "method overriding"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "Covariant reference returns and @Override are available on Java 17; no preview features are used."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Keep the request, change the response"
+    },
+    {
+      "id": "syntax",
+      "title": "Make the intended override visible"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Separate the callable contract from the receiver"
+    },
+    {
+      "id": "examples",
+      "title": "Compare replacement, extension and a new overload"
+    },
+    {
+      "id": "override-rules",
+      "title": "Preserve what callers were allowed to rely on"
+    },
+    {
+      "id": "comparison",
+      "title": "Overriding and overloading answer different questions"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Look beyond the matching name"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use stable Java language features"
+    },
+    {
+      "id": "summary",
+      "title": "Replace a method without breaking its promise"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "A revised lab fee",
+      "level": "basic",
+      "file": "examples/ex-1.java",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The Fee variable refers to a LabFee object. The overridden instance method returns 750.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Reuse part of the inherited message",
+      "level": "intermediate",
+      "file": "examples/ex-2.java",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The override widens access and appends detail. super.text() calls Slip.text() once.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "A covariant return keeps useful type information",
+      "level": "intermediate",
+      "file": "examples/ex-3.java",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>LabCopy is a subtype of Copy, so the overriding return type may be LabCopy. Primitive return types cannot change this way.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "An overload leaves the inherited signature intact",
+      "level": "intermediate",
+      "file": "examples/ex-4.java",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>label(String) adds another signature. It does not replace label(int), so the first call still uses Report.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Hostel fee override",
+      "statementHtml": "<p>Read base fee (0..10000) and meal fee (0..5000). Store base in HostelFee and override total() in MealPlanFee to include meals. Use a HostelFee reference and print total.</p>",
+      "hints": [
+        "The override has the same parameter list as the parent method."
+      ],
+      "difficulty": "easy",
+      "id": "p-1",
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Format two result labels",
+      "statementHtml": "<p>Read mark (0..100). Result.label(int) returns Mark followed by a space and the mark. HonoursResult overrides it, adding ! when mark is at least 80. Print labels from a Result and an HonoursResult, one per line.</p>",
+      "hints": [
+        "Only the suffix policy belongs in HonoursResult."
+      ],
+      "difficulty": "medium",
+      "id": "p-2",
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "title": "Spot an accidental overload",
+      "statementHtml": "<p>Parent defines public int score(int n). Child defines public int score(long n). Is this overriding? Explain what @Override would reveal.</p>",
+      "answerHtml": "<p>The parameter types differ, so Child adds an overload. Parent.score(int) remains available. Adding @Override to score(long) produces a compile error because no matching superclass signature is being overridden.</p>",
+      "hints": [
+        "Compare parameter types before comparing method names."
+      ],
+      "difficulty": "easy",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Access and return rules",
+      "statementHtml": "<p>A parent declares protected Number value(). Compare public Integer value() and private Number value() as child declarations.</p>",
+      "answerHtml": "<p>public Integer value() is a valid override: access widens and Integer is a subtype of Number. private Number value() is invalid because it reduces access. Neither changes the empty parameter list.</p>",
+      "hints": [
+        "An override must remain usable by callers allowed by the parent."
+      ],
+      "difficulty": "medium",
+      "id": "p-4"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "output",
+      "prompt": "Which fee method runs through the parent variable?",
+      "code": "class Charge { int pay() { return 10; } }\nclass ExtraCharge extends Charge {\n    @Override\n    int pay() { return 18; }\n}\n\nclass Main {\n    public static void main(String[] args) {\n        Charge c = new ExtraCharge();\n        System.out.println(c.pay());\n    }\n}\n",
+      "explanation": "Instance method selection follows the ExtraCharge object.",
+      "id": "q-1",
+      "difficulty": "medium",
+      "options": [
+        "18",
+        "10",
+        "28",
+        "0"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "output",
+      "prompt": "Does super.tag() call the child again?",
+      "code": "class Tag { String tag() { return \"A\"; } }\nclass ChildTag extends Tag {\n    @Override\n    String tag() { return super.tag() + \"B\"; }\n}\n\nclass Main {\n    public static void main(String[] args) {\n        System.out.println(new ChildTag().tag());\n    }\n}\n",
+      "explanation": "super.tag() selects Tag.tag(), producing A before B is appended.",
+      "id": "q-2",
+      "difficulty": "medium",
+      "options": [
+        "B",
+        "AB",
+        "BB",
+        "BA"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "output",
+      "prompt": "Which signature accepts the integer argument here?",
+      "code": "class Base { String pick(int n) { return \"int\"; } }\nclass Child extends Base {\n    String pick(double n) { return \"double\"; }\n}\n\nclass Main {\n    public static void main(String[] args) {\n        Base b = new Child();\n        System.out.println(b.pick(3));\n    }\n}\n",
+      "explanation": "The double overload does not override pick(int). The base signature is selected and inherited.",
+      "id": "q-3",
+      "difficulty": "medium",
+      "options": [
+        "double",
+        "intdouble",
+        "int",
+        "3"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does @Override make the compiler check?",
+      "explanation": "The annotation catches spelling and signature mistakes without changing dispatch.",
+      "id": "q-4",
+      "difficulty": "easy",
+      "options": [
+        "That the method runs before its parent",
+        "That the method is static",
+        "That the method never throws",
+        "That the method overrides or implements a supertype method"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which access change is allowed when overriding protected void save()?",
+      "explanation": "Public widens access. Package-private and private narrow it, while int changes the return type incompatibly.",
+      "id": "q-5",
+      "difficulty": "easy",
+      "options": [
+        "public void save()",
+        "private void save()",
+        "package-private void save()",
+        "protected int save()"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which parent method cannot be overridden?",
+      "explanation": "final prevents subclasses from replacing the instance implementation.",
+      "id": "q-6",
+      "difficulty": "easy",
+      "options": [
+        "A protected instance method",
+        "A final instance method",
+        "An abstract instance method",
+        "A public non-final instance method"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "How are same-signature static methods related across parent and child?",
+      "explanation": "Static method selection uses the named type; it is hiding, not instance dispatch.",
+      "id": "q-7",
+      "difficulty": "easy",
+      "options": [
+        "They use runtime overriding",
+        "They are constructors",
+        "The child hides the parent static method",
+        "They create an overload automatically"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which return change is covariant?",
+      "explanation": "A reference return may narrow to a subtype. Primitive and void returns must match exactly.",
+      "id": "q-8",
+      "difficulty": "easy",
+      "options": [
+        "int to long",
+        "String to Object",
+        "void to int",
+        "Object to String"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which checked-exception rule applies to an override?",
+      "explanation": "Callers compiled against the parent cannot be forced to handle new broader checked exceptions.",
+      "id": "q-9",
+      "difficulty": "easy",
+      "options": [
+        "It may not add broader checked exceptions",
+        "It must throw every parent exception",
+        "It may add any checked exception",
+        "It must never throw runtime exceptions"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "When are overloads distinguished?",
+      "explanation": "Changing only a return type does not create a Java overload.",
+      "id": "q-10",
+      "difficulty": "easy",
+      "options": [
+        "Only by return type",
+        "By their parameter lists at compile time",
+        "By the object address",
+        "By @Override annotations"
+      ],
+      "answer": 1
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An override keeps the inherited parameter signature.",
+      "bn": "ওভাররাইডে প্যারেন্টের প্যারামিটার সিগনেচার একই থাকে।"
+    },
+    {
+      "en": "@Override detects accidental overloads and spelling errors.",
+      "bn": "@Override ভুল বানান এবং অনিচ্ছাকৃত ওভারলোড ধরতে সাহায্য করে।"
+    },
+    {
+      "en": "An override cannot reduce inherited access.",
+      "bn": "ওভাররাইড করে মেথডের অ্যাক্সেস কমানো যায় না।"
+    },
+    {
+      "en": "Reference return types may narrow covariantly.",
+      "bn": "রেফারেন্স রিটার্ন টাইপ সাবটাইপে সীমিত করা যায়।"
+    },
+    {
+      "en": "Static hiding and instance overriding follow different selection rules.",
+      "bn": "স্ট্যাটিক হাইডিং আর ইনস্ট্যান্স ওভাররাইডিংয়ের নির্বাচন নিয়ম আলাদা।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Compare overriding and overloading with signature, selection time and inheritance requirements.",
+      "marks": 5,
+      "answerHtml": "<table class=\"ref\"><tr><th>Property</th><th>Overriding</th><th>Overloading</th></tr><tr><td>Parameters</td><td>Same signature</td><td>Different lists</td></tr><tr><td>Selection</td><td>Runtime instance dispatch</td><td>Compile-time signature choice</td></tr><tr><td>Inheritance</td><td>Supertype relation needed</td><td>Can occur in one class</td></tr></table>"
+    },
+    {
+      "type": "short",
+      "question": "A parent returns Object. A child returns String with the same parameters. Explain legality.",
+      "marks": 3,
+      "answerHtml": "<p>String extends Object, so the reference return is covariant. The child must also keep sufficient access and obey the exception restrictions. The caller may still store the returned String in an Object variable.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why an override that calls this.text() to obtain parent text recurses, and repair it.",
+      "marks": 5,
+      "answerHtml": "<p>this.text() selects the current object’s override again. Use super.text() to call the immediate parent implementation explicitly, then append the child information. Repeated self-calls without a stopping condition eventually exhaust the call stack.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "JLS 17: overriding and hiding",
+      "url": "https://docs.oracle.com/javase/specs/jls/se17/html/jls-8.html#jls-8.4.8"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,78 @@
+<h2 id="introduction">Find the change that makes a design difficult</h2>
+<p class="lead">A marks application may calculate grades correctly and still be painful to change. Editing message delivery might disturb grading. Adding a fee type might require editing many callers. <dfn>SOLID</dfn> names five principles for examining these design pressures and choosing clearer boundaries.</p>
+<p>The letters stand for Single Responsibility, Open-Closed, Liskov Substitution, Interface Segregation and Dependency Inversion. Learn the problem each principle addresses before memorizing its name. A useful explanation identifies a concrete failing interaction, then shows how a design change removes that difficulty.</p>
+<p>These principles are guidance rather than a demand for the largest possible class hierarchy. A tiny stable calculation may need no new interface. Extra types and indirection have costs. Apply a boundary when it separates real responsibilities, protects a contract or isolates useful variation.</p>
+<h2 id="syntax">Express dependencies through narrow contracts</h2>
+<pre><code class="language-java">interface Sink {
+    void send(String text);
+}
+class Notifier {
+    private final Sink sink;
+    Notifier(Sink sink) { this.sink = sink; }
+    void notifyMark(int mark) {
+        sink.send("Mark " + mark);
+    }
+}</code></pre>
+<p>This small fragment demonstrates several design choices. Notifier coordinates the reporting policy. Sink describes the destination capability. A caller supplies a suitable implementation. The constructor assumes a non-null sink, and the operation’s text format is independent of how the destination stores or displays it.</p>
+<p>An interface by itself does not prove good design. If Sink exposed every detail of a particular mail server, the policy would still depend on that server’s representation. Choose operations around what the consumer needs, then let details fulfil that contract.</p>
+<h2 id="how-it-works">Use five questions during a change</h2>
+<table class="ref"><tr><th>Principle</th><th>Question to ask</th><th>Typical repair</th></tr><tr><td>SRP</td><td>Are unrelated change requests mixed together?</td><td>Separate coherent responsibilities</td></tr><tr><td>OCP</td><td>Must each new variant rewrite a stable consumer?</td><td>Introduce a useful extension contract</td></tr><tr><td>LSP</td><td>Does a subtype break a legal parent interaction?</td><td>Preserve promises or redesign the type relation</td></tr><tr><td>ISP</td><td>Does a client depend on unused capabilities?</td><td>Offer focused client-facing interfaces</td></tr><tr><td>DIP</td><td>Does policy depend directly on changeable details?</td><td>Make policy and details depend on abstractions</td></tr></table>
+<p>One change may improve several principles. Splitting read and write capabilities can support both substitution and interface segregation. That does not mean the principles are interchangeable. Explain which failure you observed and which promise the repair restores.</p>
+<pre class="diagram">Application construction
+      | supplies
+      v
+Notifier -- depends on --&gt; Sink
+                            ^
+                            | implements
+                         MemorySink
+
+Policy and detail meet at the contract.</pre>
+<p>The application still needs a place that chooses concrete classes. Dependency inversion does not eliminate construction. It moves detail selection away from the stable policy. A short construction area can assemble the graph while the reporting class remains independent of destination names.</p>
+<h2 id="examples">Compare a specific design problem with its repair</h2>
+<h3>SRP: separate arithmetic from presentation</h3>
+<p>MixedBill owns both multiplication and receipt wording. Changing the currency label and changing the billing calculation are different requests. Bill and ReceiptText put those decisions in separate places while keeping the same displayed result.</p>
+<div data-example="ex-1"></div>
+<p><dfn>Single responsibility</dfn> means a coherent reason to change, not exactly one method. A class can have several methods maintaining one billing policy. Splitting every helper into a new class would add navigation cost without necessarily separating a real responsibility.</p>
+<h3>OCP: extend the policy family</h3>
+<p>BranchFare contains a central student decision. Another category would require editing that calculation. Fare gives consumers a stable operation while StudentFare provides one implementation. Object creation still chooses which policy to use.</p>
+<div data-example="ex-2"></div>
+<p><dfn>Open-closed</dfn> means open for useful extension while an established boundary stays stable. It does not ban all edits forever. The boundary itself may need revision when requirements change fundamentally. Choose the variation you actually expect instead of predicting every possible future feature.</p>
+<h3>LSP: preserve the promised capability</h3>
+<p>Box promises writable storage, while FixedBox removes that ability. Its write method rejects a request that the parent meaning allows. Archive instead implements Reader and offers only the capability it can honestly fulfil.</p>
+<div data-example="ex-3"></div>
+<p><dfn>Liskov substitution</dfn> asks whether a subtype can replace its supertype without breaking the supertype’s behavioural promises. A matching Java signature is necessary but insufficient. The deliberate bad write body shows the broken promise; the main operation observes the mismatch without attempting the rejected write.</p>
+<p>A subtype must not demand stronger preconditions. If Account accepts any positive withdrawal within balance, a child cannot suddenly require at least 500. A subtype also must not weaken postconditions. Returning null where a non-null result was promised breaks callers even when compilation succeeds.</p>
+<h3>ISP: remove irrelevant capabilities from the client contract</h3>
+<p>WideDevice asks a scan-only class to acknowledge printing. ScannerDevice removes that unrelated requirement. A combined machine can implement a separate printing capability too, without forcing all scanning clients to depend on it.</p>
+<div data-example="ex-4"></div>
+<p><dfn>Interface segregation</dfn> groups operations around client needs. It does not require every interface to contain exactly one method. A cohesive reader contract may legitimately need open, read and close together. Split when clients otherwise acquire dependencies or obligations they do not use.</p>
+<h3>DIP: let the caller supply a destination</h3>
+<p>FixedNotifier constructs ConsoleSink internally. Notifier instead depends on Sink and receives MemorySink. Both produce the same mark text, but the policy can now work with another destination without naming that concrete implementation.</p>
+<div data-example="ex-5"></div>
+<p><dfn>Dependency inversion</dfn> makes higher-level policy and lower-level details depend on an abstraction. The abstraction should describe the policy’s need rather than expose one detail’s internal API. Constructor injection makes the dependency visible and supplied from outside.</p>
+<h2 id="contracts">Describe inputs, results and side effects</h2>
+<p>Contracts make SOLID reasoning concrete. For a grade calculation, state the accepted mark range and the permitted grade labels. For a sink, state whether send returns only after recording, whether ordering matters and how failure is reported. Consumers can then depend on something more precise than a method name.</p>
+<p>Consider a FeePolicy whose apply operation accepts nonnegative prices and returns a nonnegative amount no greater than the input. A new implementation returning a negative amount violates that contract. Moving it behind an interface does not make it a valid extension.</p>
+<p>State side effects as well. A read operation promised to leave data unchanged should not remove an item in one subtype. A storage operation promised to retain earlier records should not silently replace them. Substitution concerns observable behaviour, including state transitions, not only the immediate return value.</p>
+<p>Keep validation responsibility clear. If the boundary promises that all inputs are already valid, internal implementations may rely on that promise. If public callers can send arbitrary marks, reject invalid values at an appropriate entry point. Inconsistent assumptions across layers create avoidable surprises.</p>
+<h2 id="tradeoffs">Avoid replacing one difficulty with unnecessary machinery</h2>
+<p>Dependency injection and dependency inversion are related but distinct. Passing a concrete ConsoleSink through a constructor is injection. The consumer still depends on ConsoleSink. Accepting the Sink contract supports inversion when both the policy and adapter depend on that useful abstraction.</p>
+<p>OCP also does not require replacing every if statement. Selecting a policy from a menu naturally involves a choice. The useful goal is to keep that choice out of stable consumers that only need the resulting behaviour. A factory or construction method can own selection.</p>
+<p>Interfaces can become too narrow as well as too broad. Ten nearly identical contracts may make a straightforward workflow harder to understand. Group operations that naturally belong together for the same client. Separate them when different consumers need genuinely different capabilities.</p>
+<p>Measure success through understandable change. Can you add a destination without editing grading? Can a client use any subtype under the same legal inputs? Can a scan-only device implement its contract without fake methods? These questions expose practical value more clearly than counting classes.</p>
+<div class="callout note"><p>If you know C: you may already separate calculation functions from input and output functions. SOLID extends that separation to object contracts, subtype promises and dependency direction. Java interfaces make the boundaries explicit, but the reasoning still starts with the program’s responsibilities.</p></div>
+<h2 id="exam-reasoning">Build an answer around evidence</h2>
+<p>In a university design question, first identify the consumer and its expectation. Next show a legal input or requested change that the design handles badly. Name the relevant principle, draw the repaired relation, and explain which classes now change independently.</p>
+<p>For LSP, a single counterexample is powerful. State that Account permits withdrawing 100, then show a child rejecting that amount despite sufficient balance. The answer demonstrates a stronger precondition. Merely writing “inheritance is wrong” does not explain the broken promise.</p>
+<p>In an interview, also mention the cost. An injected sink adds a constructor dependency and another type but allows isolated policy checks and alternate destinations. If no variation or isolation is useful, a direct stable dependency can be a reasonable smaller design.</p>
+<h2 id="common-mistakes">Avoid turning principles into slogans</h2>
+<h3>Equating SRP with one method per class</h3>
+<p>Several methods may maintain one coherent policy. Split according to independent change reasons, then keep related operations together. Method count alone does not identify a responsibility.</p>
+<h3>Claiming any subclass satisfies LSP</h3>
+<p>The compiler checks structural rules, not every business promise. Check accepted inputs, returned results and state effects. A child may compile and still break a legal parent interaction.</p>
+<h3>Adding abstractions without a consumer</h3>
+<p>An interface copied mechanically from one class may preserve all the original coupling. Begin with a real caller need and a useful substitution boundary. Keep the result understandable enough for the next programmer to follow.</p>
+<h2 id="version-notes">Principles do not depend on a new Java feature</h2>
+<p>The SOLID guidance applies across language versions. These Java 17 implementations use ordinary classes, interfaces and constructors. Runtime exception handling and larger collection designs appear elsewhere; the design examples keep their inputs and collaborations bounded.</p>
+<h2 id="summary">Choose the smallest boundary that solves the observed problem</h2>
+<p>SOLID helps separate change reasons, preserve subtype promises and direct dependencies through useful contracts. Explain the problem and tradeoff each time you apply a principle. Continue to <a href="topic:oop-design-patterns">Design Patterns</a> for recurring arrangements of those collaborating objects.</p>

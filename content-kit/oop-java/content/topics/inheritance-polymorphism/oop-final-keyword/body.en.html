@@ -1,0 +1,65 @@
+<h2 id="introduction">Decide exactly what must stay fixed</h2>
+<p class="lead">A roll number may stay fixed while a student’s marks change. A fare limit may stay fixed while subclasses add other operations. The word <code>final</code> can protect several different boundaries in Java. Its meaning depends on whether it modifies a variable, method or class.</p>
+<p>A final variable restricts assignment. A final method restricts overriding. A final class restricts subclassing. None of these statements alone says that every reachable object becomes immutable. You need to identify the boundary before deciding what guarantee the modifier gives.</p>
+<p>Picture a label attached permanently to one marks register. Fixing the label’s destination does not lock every page in that register. A final reference works similarly: the reference variable stays attached to one target, but that target may still permit changes.</p>
+<h2 id="syntax">Read final with the declaration it modifies</h2>
+<pre><code class="language-java">final int maximum = 100;
+final int[] marks = {70, 80};
+marks[0] = 90;</code></pre>
+<p>The primitive variable maximum cannot receive another value. The reference variable marks cannot receive another array reference. Assigning marks[0] edits an array element rather than reassigning marks, so it remains legal. Array length is fixed independently of the final modifier.</p>
+<table class="ref"><tr><th>Declaration</th><th>Restriction</th></tr><tr><td>final int roll</td><td>The variable cannot be reassigned after initialization</td></tr><tr><td>final int limit()</td><td>A subclass cannot override that method</td></tr><tr><td>final class Roll</td><td>No class can extend Roll</td></tr></table>
+<p>A final parameter also prevents reassigning the parameter variable inside the method. It does not change Java’s pass-by-value rule. If that copied reference reaches a mutable object, permitted mutations remain visible to other aliases. Final on the parameter does not create a defensive copy.</p>
+<h2 id="how-it-works">Assignment rules and object state are separate</h2>
+<p>A <dfn>blank final</dfn> is a final field declared without an initializer. A constructor can assign such an instance field. Every path that completes construction normally must establish the required assignment exactly once. The compiler’s definite-assignment analysis checks those paths.</p>
+<p>If several constructors exist, each must arrange initialization, directly or through constructor delegation. Do not assign the same final field again after this(...) has already initialized it. A setter cannot postpone initialization of a blank final until arbitrary later use.</p>
+<pre class="diagram">final reference marks
+         |
+         v
+     int array
+     +----+----+
+     | 70 | 80 |
+     +----+----+
+       ^
+       |
+marks[0] = 90 changes this element
+marks = anotherArray would reassign the fixed reference</pre>
+<p>Final primitive fields are useful components of immutable values because their stored values cannot change after construction. Final references need a second question: can the referenced object change? String is immutable, but an array or ordinary mutable class may not be.</p>
+<div class="callout note"><p>If you know C: final is not a general equivalent of every const-qualified pointer form. Read Java’s rule at the variable being declared. It prevents reassignment of that variable and does not add recursive read-only access to the target graph.</p></div>
+<h2 id="examples">Observe what each restriction permits</h2>
+<h3>Mutate through a fixed array reference</h3>
+<p>The array reference remains unchanged while the first mark becomes 90. This is legal and exposes the difference between assignment and mutation.</p>
+<div data-example="ex-1"></div>
+<h3>Initialize a stable roll value</h3>
+<p>Roll stores one constructor argument in a private final int. Its final class boundary prevents a subclass from adding a different public state policy.</p>
+<div data-example="ex-2"></div>
+<h3>Capture an unchanged local value</h3>
+<p>The bonus local is assigned once. A lambda uses that saved value as part of a one-operation calculation.</p>
+<div data-example="ex-3"></div>
+<h3>Inherit a rule without replacing it</h3>
+<p>LabAccount inherits the limit operation. The final method remains callable but cannot receive a child override.</p>
+<div data-example="ex-4"></div>
+<h2 id="effectively-final">Some unchanged locals need no keyword</h2>
+<p>A local variable is <dfn>effectively final</dfn> when its assignments satisfy the final-variable rules even though final is omitted. For a local initialized once, the common case is that it is never reassigned. Writing ++ or += still counts as assignment.</p>
+<p>Lambda expressions can capture final or effectively final locals. A lambda is a compact implementation of a functional interface’s operation. IntUnaryOperator takes an int and returns an int; applyAsInt runs that operation. The complete example adds a captured bonus to its argument.</p>
+<p>If you initialize bonus, increment it, and then capture it, bonus is no longer effectively final. Finish calculating first and assign the result to a fresh unchanged local. This expresses which value the later computation should use. Removing an explicit final keyword does not bypass capture restrictions.</p>
+<p>Effective finality fixes the captured local value, not every object it might reach. A captured final array reference can still reach mutable elements. That can be useful, but shared mutation makes reasoning more difficult, especially when callbacks run later or on other threads.</p>
+<h2 id="immutability">Build an immutable value across every boundary</h2>
+<p>An <dfn>immutable object</dfn> exposes no way to change its observable state after construction. A final class with private final primitive fields and no mutators is a straightforward example. The class boundary also prevents a subclass from weakening the visible value behaviour.</p>
+<p>For a marks array, storing a final reference is insufficient. The caller may retain the constructor argument and edit it later. Clone the incoming primitive array before storing it. The private field now reaches independent storage with the original element values.</p>
+<p>A getter returning that internal array would reopen the boundary. Return a fresh clone when a snapshot is necessary, or expose narrower observations such as sum(). An outer array clone copies object references rather than their objects, so mutable element types need further ownership reasoning.</p>
+<p>A final class can still have a mutable counter and an increment method. A non-final class can also be carefully designed with strong restrictions, although extension complicates the proof. Never infer full immutability from one modifier without examining fields, methods and aliases.</p>
+<h2 id="extension-control">Protect behaviour only where the contract needs it</h2>
+<p>A final method may encode an invariant such as a fixed workflow or a validated state transition. Children can inherit it and use other extension points. Marking the whole class final closes every subclass extension instead. Choose the narrowest control that matches the design promise.</p>
+<p>Do not add final everywhere merely to stop thinking about contracts. A stable extension boundary may be valuable for substituting policies or testing. Conversely, a value object may intentionally forbid subclassing to simplify equality and immutability. Explain the reason at the boundary.</p>
+<p>A constant variable has an additional technical meaning. It is a final primitive or String variable initialized with a constant expression. A final value computed during construction is not automatically a compile-time constant. That distinction affects uses such as case labels and constant inlining.</p>
+<h2 id="common-mistakes">Do not promise more than final provides</h2>
+<h3>Calling an array immutable</h3>
+<p>The elements remain writable unless the design prevents all mutation routes. Copy at mutable boundaries and avoid returning live storage. The final reference alone protects only its assignment.</p>
+<h3>Trying to override a fixed operation</h3>
+<p>A matching method in a child cannot replace a final inherited method. Reuse the inherited behaviour or redesign the allowed extension point. Changing the return type does not evade the rule.</p>
+<h3>Capturing an incremented local</h3>
+<p>An increment changes the variable’s value and breaks effective finality. Capture a separate stable value after the calculation. Be explicit about whether later changes should be visible through a shared object instead.</p>
+<h2 id="version-notes">Capture rules on Java 17</h2>
+<p>Java 8 introduced lambda expressions and effectively final local capture. Java 17 retains these rules. Records became permanent in Java 16, but a record containing a mutable array would still need the same careful treatment of aliases.</p>
+<h2 id="summary">Fix the intended boundary, then check sharing</h2>
+<p>Use final to control reassignment, overriding or subclassing. Use ownership and defensive copying to protect mutable state beyond a reference. Next, use stable value fields to implement the contracts in <a href="topic:oop-object-class">The Object Class</a>.</p>
