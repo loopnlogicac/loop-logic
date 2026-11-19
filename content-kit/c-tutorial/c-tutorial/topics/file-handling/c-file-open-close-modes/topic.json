@@ -1,0 +1,405 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-file-open-close-modes",
+  "module": "file-handling",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Opening and Closing Files",
+    "bn": "ফাইল খোলা, মোড ও close"
+  },
+  "summary": {
+    "en": "Choose file access modes without accidentally truncating records, and sequence reads and writes on update streams correctly.",
+    "bn": "পুরোনো রেকর্ড ভুলে মুছে না দিয়ে mode বাছো; update stream-এ read ও write-এর সঠিক ক্রম রাখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "c-file-handling-intro"
+  ],
+  "related": [
+    "c-file-read-write-text",
+    "c-file-positioning"
+  ],
+  "keywords": [
+    "fopen modes",
+    "append",
+    "truncate",
+    "update stream",
+    "fclose"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "C17 mode rules distinguish text/binary access and impose sequencing rules on update streams."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Choose access before touching existing records"
+    },
+    {
+      "id": "syntax",
+      "title": "Compare the six main text modes"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Separate mode effects from stream position"
+    },
+    {
+      "id": "examples",
+      "title": "Watch the contents as the mode changes"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Respect update-stream direction changes"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Protect old data and valid handles"
+    },
+    {
+      "id": "version-notes",
+      "title": "Keep portable modes separate from extensions"
+    },
+    {
+      "id": "summary",
+      "title": "Match preservation, position and direction to the task"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Replace an existing note deliberately",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The previous two lines are replaced, not preserved. Opening with w performs truncation before the later fputs call. The read-back contains only new note.</p>",
+      "standard": "c17",
+      "workdirFiles": [
+        "examples/note.txt"
+      ],
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Append still writes at the end after a seek",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>fseek requests the beginning, but append-mode output is still forced to the end. Both 12 and 34 survive. The positioning request does not turn a into an overwrite mode.</p>",
+      "standard": "c17",
+      "workdirFiles": [
+        "examples/log.txt"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Read and patch through an existing update stream",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The explicit positioning calls separate input from output and output from input. r+ preserves the other characters, so replacing the first character gives XBC rather than a one-character file.</p>",
+      "standard": "c17",
+      "workdirFiles": [
+        "examples/code.txt"
+      ],
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Create an append-update stream and select a read position",
+      "level": "advanced",
+      "file": "examples/ex-4.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The file begins absent in this run. a+ creates it and permits reading. The program explicitly selects the beginning before its read instead of relying on an initial append-update read position.</p>",
+      "standard": "c17",
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Replace or append one daily count",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read mode and value, where mode is 0 for replacement or 1 for append and value is from 0 through 100. First create counts.txt containing 10. Reopen using the chosen mode, add value as one line, close, and print Total: followed by the sum read back. A replacement must discard 10; append must retain it.</p>",
+      "hints": [
+        "Choose w or a from the validated mode.",
+        "Use a new read stream after closing the writer."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Patch a fixed first letter without truncation",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read one uppercase English letter. Create label.txt containing CSE followed by a newline. Reopen with r+, replace only its first character, position back to the beginning, and print Label: followed by the complete resulting line. Reject a nonuppercase character with invalid.</p>",
+      "hints": [
+        "The first write begins at offset zero.",
+        "A checked positioning call separates output from the later input."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Choose modes for three record jobs",
+      "difficulty": "medium",
+      "statementHtml": "<p>Choose modes for inspecting an existing attendance file, making a new replacement report, and reading a journal while forcing new writes to its end. State the missing-file and existing-file behavior of each choice.</p>",
+      "hints": [
+        "Separate permission to read from truncation and append placement."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Use r for inspection: an absent file fails, and an existing file is not truncated. Use w for the replacement: it creates an absent file and truncates an existing one. Use a+ for journal reads plus append writes: it creates an absent file and preserves an existing one. Explicitly position before reading the a+ stream.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Repair an unsafe update sequence",
+      "difficulty": "hard",
+      "statementHtml": "<p>A program opens r+, reads one character, immediately writes another, then immediately reads again. Assume the first read did not reach EOF. Explain two missing transitions and why fflush is not a universal fix.</p>",
+      "hints": [
+        "Input-to-output and output-to-input have different requirements."
+      ],
+      "type": "written",
+      "answerHtml": "<p>After input, use a positioning operation before output unless that input encountered EOF. fflush alone does not meet this input-to-output requirement. After output, use fflush or positioning before input. A checked fseek can provide positioning for both transitions when its requested location is meaningful. Do not use fflush(stdin) as an input-clearing shortcut.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which read mode preserves an existing fee file and fails when it is absent?",
+      "options": [
+        "w",
+        "a",
+        "w+",
+        "r"
+      ],
+      "answer": 3,
+      "explanation": "r requests an existing input file without truncation."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "At what point can opening an existing report with w discard its old contents?",
+      "options": [
+        "Only after fclose",
+        "Only after an explicit remove",
+        "During the successful open",
+        "Only after the first fprintf"
+      ],
+      "answer": 2,
+      "explanation": "Truncation is part of successfully opening in w mode, not a later writing decision."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which mode permits both directions without truncating an existing file?",
+      "options": [
+        "r",
+        "r+",
+        "w+",
+        "w"
+      ],
+      "answer": 1,
+      "explanation": "r+ requires an existing file and permits update operations while retaining its content."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "An a stream seeks to its beginning and then writes. Where must that output go?",
+      "options": [
+        "To the current end of file",
+        "To the beginning",
+        "To a separate unnamed file",
+        "To stdout"
+      ],
+      "answer": 0,
+      "explanation": "Append output is forced to the end despite a positioning request."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does b select in a mode such as rb?",
+      "options": [
+        "Automatic byte reversal",
+        "A bigger buffer guarantee",
+        "Permission to write",
+        "Binary stream handling"
+      ],
+      "answer": 3,
+      "explanation": "b selects binary mode; it does not change r into update access or define a portable record layout."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "After output on an update stream, what is required before input?",
+      "options": [
+        "Always reopening with w",
+        "Assigning the pointer to another variable",
+        "A flush or positioning operation",
+        "Only incrementing a counter"
+      ],
+      "answer": 2,
+      "explanation": "The C update-stream sequencing rule requires a flush or a positioning operation between those directions."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "After input that did not encounter EOF, what is required before output on an update stream?",
+      "options": [
+        "A call to feof before every character",
+        "A positioning operation",
+        "Only fflush on that input stream",
+        "No action when the pointer is non-NULL"
+      ],
+      "answer": 1,
+      "explanation": "Input-to-output requires positioning unless the input encountered EOF. Its rule differs from output-to-input."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Assuming successful I/O, what remains after w reopens the old label?",
+      "options": [
+        "1",
+        "3",
+        "4",
+        "0"
+      ],
+      "answer": 0,
+      "explanation": "The second w open truncates old; only the new N remains.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = fopen(\"label.txt\", \"w\");\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"old\", f);\n    fclose(f);\n    f = fopen(\"label.txt\", \"w\");\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"N\", f);\n    fclose(f);\n    f = fopen(\"label.txt\", \"r\");\n    if (f == NULL) {\n        return 1;\n    }\n    int n = 0;\n    while (fgetc(f) != EOF) {\n        n++;\n    }\n    printf(\"%d\\n\", n);\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Assuming successful I/O, which character order follows an append seek?",
+      "options": [
+        "CBA",
+        "CB",
+        "CAB",
+        "ABC"
+      ],
+      "answer": 3,
+      "explanation": "The append stream writes B then C at the end, even after seeking to the beginning.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = fopen(\"letters.txt\", \"w\");\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"A\", f);\n    fclose(f);\n    f = fopen(\"letters.txt\", \"a\");\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"B\", f);\n    fseek(f, 0L, SEEK_SET);\n    fputs(\"C\", f);\n    fclose(f);\n    f = fopen(\"letters.txt\", \"r\");\n    if (f == NULL) {\n        return 1;\n    }\n    int ch;\n    while ((ch = fgetc(f)) != EOF) {\n        putchar(ch);\n    }\n    putchar('\\n');\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Assuming successful I/O, how does a positioned update preserve its unmodified suffix?",
+      "options": [
+        "XYABCDE",
+        "ABCDE",
+        "XYCDE",
+        "XY"
+      ],
+      "answer": 2,
+      "explanation": "After the initial w+ creation, writes at the selected beginning replace two characters rather than truncating again. The suffix CDE remains.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = fopen(\"tag.txt\", \"w+\");\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"ABCDE\", f);\n    fseek(f, 0L, SEEK_SET);\n    fputs(\"XY\", f);\n    fseek(f, 0L, SEEK_SET);\n    char line[8];\n    fgets(line, sizeof line, f);\n    printf(\"%s\\n\", line);\n    fclose(f);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "r and r+ require an existing file.",
+      "bn": "r ও r+ mode-এ আগের ফাইল থাকতে হবে।"
+    },
+    {
+      "en": "w and w+ truncate an existing file when opened successfully.",
+      "bn": "w বা w+ দিয়ে সফল open-এ আগের ফাইল খালি হয়।"
+    },
+    {
+      "en": "a and a+ force each write to the current file end.",
+      "bn": "a ও a+ mode-এ প্রতিটি write ফাইলের বর্তমান শেষে যায়।"
+    },
+    {
+      "en": "A plus sign permits both input and output but does not remove sequencing rules.",
+      "bn": "Plus sign read ও write দুটো দেয়, কিন্তু পালাবদলের নিয়ম সরায় না।"
+    },
+    {
+      "en": "Use b when binary stream behavior is required.",
+      "bn": "Binary stream-এর আচরণ চাইলে mode-এ b দাও।"
+    },
+    {
+      "en": "Check fclose and never reuse a closed stream pointer.",
+      "bn": "fclose-এর ফল দেখো; বন্ধ স্ট্রিমের পয়েন্টার আবার ব্যবহার করবে না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Construct a six-row table comparing r, w, a, r+, w+ and a+ for a missing or existing file.",
+      "marks": 8,
+      "answerHtml": "<p>r and r+ fail when missing and preserve existing content. w and w+ create when missing and truncate when existing. a and a+ create when missing and preserve existing content, forcing output to the end. Plain r reads only; plain w and a write only. Each plus form permits both directions with the update sequencing rules.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why is a+ not equivalent to r+ followed by an initial seek to the end?",
+      "marks": 5,
+      "answerHtml": "<p>a+ makes every write append at the current end. A later positioning call does not turn its writes into arbitrary overwrites. r+ permits writing at the selected position and requires the file to exist. A chosen initial position cannot reproduce the append guarantee for every later write.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain a legal sequence that reads, changes and rereads a first character through r+.",
+      "marks": 6,
+      "answerHtml": "<p>Open an existing file with r+ and check NULL. Read the first character and check its result. Use a checked fseek to position at the beginning before output. Write the replacement, then position again before reading. Read the full line and close once, checking the close result. The two position changes satisfy both direction transitions.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Does wb make a dumped struct file portable between all C systems?",
+      "marks": 4,
+      "answerHtml": "<p>No. b requests binary stream handling. It does not standardize structure padding, integer widths, byte order or floating representations. Design a documented external encoding when records must move between implementations.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C input/output library reference",
+      "url": "https://en.cppreference.com/w/c/io"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
