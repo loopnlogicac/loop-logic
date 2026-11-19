@@ -1,0 +1,399 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ds-graph-bfs",
+  "module": "graphs",
+  "order": 3,
+  "kind": "lesson",
+  "level": "intermediate",
+  "title": {
+    "en": "Breadth-First Search on a Graph",
+    "bn": "গ্রাফে ব্রেডথ-ফার্স্ট সার্চ"
+  },
+  "summary": {
+    "en": "Use a queue to discover one distance layer at a time and recover an unweighted shortest path.",
+    "bn": "কিউ দিয়ে এক স্তর করে গ্রাফ ঘুরে দেখো, আর কম এজের পথ বের করো।"
+  },
+  "estMinutes": 50,
+  "prerequisites": [
+    "ds-graph-representation",
+    "ds-queue-array"
+  ],
+  "related": [
+    "ds-graph-dfs"
+  ],
+  "keywords": [
+    "graphs",
+    "C17",
+    "Breadth-First Search on a Graph"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The BFS examples use fixed arrays because the graph always has seven vertices. C17 does not supply a built-in queue type. The head and tail variables implement this traversal queue without dynamic allocation."
+    ]
+  },
+  "videos": [],
+  "labs": [
+    "graph-bfs"
+  ],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Explore nearby vertices before distant ones"
+    },
+    {
+      "id": "syntax",
+      "title": "Let distance also mark discovery"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace the queue on the shared diamond"
+    },
+    {
+      "id": "examples",
+      "title": "Read distances and reconstruct a route"
+    },
+    {
+      "id": "comparison",
+      "title": "Why first discovery gives a shortest route"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Separate traversal work from construction work"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Preserve the meaning of first arrival"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 queue and parent arrays"
+    },
+    {
+      "id": "summary",
+      "title": "FIFO order becomes distance order"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Queue traversal with distances and parents",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The queue visits 0,1,2,3,4,5. Vertex six stays unreachable. Vertex five gets parent three because three is processed before four.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "Reverse parent links to recover a route",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Walking parents gives 5,3,1,0. Printing this temporary path backward gives a three-edge route from zero to five.</p>",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "An isolated start still discovers itself",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The start has distance zero and no parent even when its adjacency list is empty. No other vertex enters the queue.</p>",
+      "stdin": "examples/ex-3.in"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Label distances from a chosen source",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read graph 0..3 and start 0..6 using the four graphs in this lesson. Print the graph/start prompt, order: and dequeue IDs, then v distance=D parent=P for IDs 0..6. Use ascending neighbors, -1 for unreachable distance and for the source parent.</p>",
+      "hints": [
+        "Distance minus one also acts as the undiscovered flag."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Recover the BFS route",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read graph, start and target within the same bounds. Print Graph, start and target:, the order: line, then no path or path: followed by source-to-target IDs.</p>",
+      "hints": [
+        "Stop the backward walk at parent -1, not at vertex zero."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace queue layers",
+      "statementHtml": "<p>On graph zero from source zero, give the queue after expanding each reachable vertex.</p>",
+      "hints": [
+        "Mark on enqueue to avoid duplicates."
+      ],
+      "answerHtml": "<p>Initially [0]. Expanding 0 gives [1,2]; expanding 1 gives [2,3,4]; expanding 2 gives [3,4]; expanding 3 gives [4,5]; expanding 4 gives [5]; expanding 5 gives []. Vertex 4 is not added again when reached from 2.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Prove shortest hop distances",
+      "statementHtml": "<p>Why can BFS assign a final distance when a vertex is first enqueued?</p>",
+      "hints": [
+        "Assume a shorter route and inspect its predecessor."
+      ],
+      "answerHtml": "<p>The FIFO queue processes nondecreasing distances. When u first discovers v, every earlier layer has already been expanded. A shorter route to v would have an earlier-layer predecessor, which would already have discovered v. Therefore dist[u]+1 is the minimum hop count.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When should BFS mark a newly found vertex?",
+      "options": [
+        "Before enqueueing it",
+        "Only after all neighbors finish",
+        "Only when dequeuing the second copy",
+        "After the whole search"
+      ],
+      "answer": 0,
+      "explanation": "Early discovery prevents duplicate queue entries from different predecessors."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does BFS use a FIFO queue?",
+      "options": [
+        "It always selects the largest ID",
+        "It expands earlier distance layers before later ones",
+        "It sorts all edge weights",
+        "It recreates recursive return order"
+      ],
+      "answer": 1,
+      "explanation": "New vertices are one layer beyond the vertex currently expanded."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does dist[v]=-1 mean after source BFS?",
+      "options": [
+        "v is the source",
+        "v has a negative-weight route",
+        "v is unreachable from that source",
+        "v must have a self-loop"
+      ],
+      "answer": 2,
+      "explanation": "All reached vertices receive nonnegative hop counts."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Do BFS parent links necessarily give the only shortest path?",
+      "options": [
+        "Yes, shortest paths are always unique",
+        "Only for a complete graph",
+        "Only when IDs are consecutive",
+        "No, ties depend on neighbor order"
+      ],
+      "answer": 3,
+      "explanation": "The first discovery selects one predecessor among possibly equal-length alternatives."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does ordinary BFS find minimum total cost with arbitrary unequal weights?",
+      "options": [
+        "No, it minimizes hops",
+        "Yes, every queue is a priority queue",
+        "Yes, if all vertices are marked",
+        "Only if the source ID is zero"
+      ],
+      "answer": 0,
+      "explanation": "Unequal edge costs require an algorithm that accounts for weights."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can the one-shot example queue hold at most V entries ever?",
+      "options": [
+        "Every graph has only V edges",
+        "Each vertex is enqueued at most once",
+        "A matrix forces a queue of length one",
+        "Vertices are removed before marking"
+      ],
+      "answer": 1,
+      "explanation": "Mark-on-enqueue bounds total append operations as well as active queue size."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must you do with target-to-source parent links before printing a forward route?",
+      "options": [
+        "Sort vertex IDs",
+        "Remove all intermediate vertices",
+        "Reverse the collected vertices",
+        "Add all unreachable vertices"
+      ],
+      "answer": 2,
+      "explanation": "Parents walk backward through the selected BFS tree."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After two FIFO removals, which queued vertex is removed next?",
+      "options": [
+        "0",
+        "1",
+        "3",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "The next removal reads index two.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int queue[4]={0,1,2,3},head=0;\n    head++;head++;\n    printf(\"%d\\n\",queue[head++]);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What distance is assigned to a newly discovered neighbor of a distance-two vertex?",
+      "options": [
+        "3",
+        "1",
+        "2",
+        "-1"
+      ],
+      "answer": 0,
+      "explanation": "A discovery edge adds one hop to its predecessor distance.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int dist[2]={2,-1};\n    if(dist[1]==-1){dist[1]=dist[0]+1;}\n    printf(\"%d\\n\",dist[1]);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many parent links separate vertex three from source zero?",
+      "options": [
+        "0",
+        "2",
+        "1",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "The links are 3 to 1 and 1 to 0.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int parent[]={-1,0,0,1},count=0;\n    for(int v=3;parent[v]!=-1;v=parent[v]){count++;}\n    printf(\"%d\\n\",count);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the BFS helper cost with adjacency lists, excluding the demonstration builder?",
+      "options": [
+        "O(1) total time",
+        "O(V squared) for every representation",
+        "O(V+E) time",
+        "O(E squared) time"
+      ],
+      "answer": 2,
+      "explanation": "Each active neighbor entry is inspected once, and vertex arrays are initialized once."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Mark a vertex when it enters the BFS queue.",
+      "bn": "বিএফএস কিউতে ঢোকানোর সময়ই ভার্টেক্স মার্ক করো।"
+    },
+    {
+      "en": "Each queued vertex has its final unweighted distance.",
+      "bn": "কিউতে ঢোকা ভার্টেক্সের কম এজের দূরত্ব তখনই ঠিক হয়ে যায়।"
+    },
+    {
+      "en": "Parent links form a tree over reachable vertices.",
+      "bn": "প্যারেন্ট লিংকগুলো পৌঁছানো যায় এমন ভার্টেক্স নিয়ে একটা ট্রি বানায়।"
+    },
+    {
+      "en": "Unreachable vertices keep distance minus one.",
+      "bn": "পৌঁছানো যায় না এমন ভার্টেক্সের দূরত্ব মাইনাস এক থাকে।"
+    },
+    {
+      "en": "Adjacency-list BFS scans O(V+E) entries in total.",
+      "bn": "অ্যাডজেসেন্সি লিস্টে বিএফএস মোট O(V+E) এন্ট্রি দেখে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "On graph zero from source zero, give the queue after expanding each reachable vertex.",
+      "answerHtml": "<p>Initially [0]. Expanding 0 gives [1,2]; expanding 1 gives [2,3,4]; expanding 2 gives [3,4]; expanding 3 gives [4,5]; expanding 4 gives [5]; expanding 5 gives []. Vertex 4 is not added again when reached from 2.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Why can BFS assign a final distance when a vertex is first enqueued?",
+      "answerHtml": "<p>The FIFO queue processes nondecreasing distances. When u first discovers v, every earlier layer has already been expanded. A shorter route to v would have an earlier-layer predecessor, which would already have discovered v. Therefore dist[u]+1 is the minimum hop count.</p>"
+    },
+    {
+      "type": "output",
+      "marks": 6,
+      "question": "Trace queue traversal with distances and parents for input: 0 0. Show the intermediate memory or worklist changes.",
+      "answerHtml": "<p>The queue visits 0,1,2,3,4,5. Vertex six stays unreachable. Vertex five gets parent three because three is processed before four.</p><pre class=\"output\">Graph (0..3) and start (0..6):\norder: 0 1 2 3 4 5\n0 distance=0 parent=-1\n1 distance=1 parent=0\n2 distance=1 parent=0\n3 distance=2 parent=1\n4 distance=2 parent=1\n5 distance=3 parent=3\n6 distance=-1 parent=-1\n</pre>"
+    },
+    {
+      "type": "program",
+      "marks": 6,
+      "question": "Write the BFS discovery loop for one vertex u using the arrays in the lesson. Explain why enqueue happens only once per vertex.",
+      "answerHtml": "<pre><code class=\"language-c\">for (int j = 0; j &lt; degree[u]; j++) {\n    int v = adj[u][j];\n    if (dist[v] == -1) {\n        dist[v] = dist[u] + 1;\n        parent[v] = u;\n        queue[tail++] = v;\n    }\n}</code></pre><p>Assigning distance before enqueue marks the discovery. A later predecessor sees a nonnegative value and skips the same vertex. The loop costs O(degree(u)) time and no extra allocation.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT algorithms course materials",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/"
+    },
+    {
+      "title": "C standard library",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

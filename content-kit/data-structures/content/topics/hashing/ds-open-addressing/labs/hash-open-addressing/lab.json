@@ -1,0 +1,222 @@
+{
+  "schemaVersion": "1.1",
+  "id": "hash-open-addressing",
+  "kind": "hash-table",
+  "title": {
+    "en": "Hash Open Addressing",
+    "bn": "লিনিয়ার, কোয়াড্রাটিক আর ডাবল প্রোবিং"
+  },
+  "summary": {
+    "en": "Compare probe paths and see why deleted slots must keep tombstones."
+  },
+  "pseudocode": [
+    "home = bucket(key, 11)",
+    "probe at most eleven times; remember the first reusable slot",
+    "if an equal key exists, reject the duplicate",
+    "otherwise insert into the remembered slot",
+    "if no slot is reachable, report exhausted",
+    "locate removed with its probe sequence",
+    "if found, replace its key with a tombstone",
+    "locate query, crossing tombstones and stopping at empty",
+    "report insertion statuses, removed and found"
+  ],
+  "inputs": [
+    {
+      "name": "values",
+      "label": "Keys to insert",
+      "type": "int-array",
+      "minLength": 0,
+      "maxLength": 12,
+      "min": -99,
+      "max": 99
+    },
+    {
+      "name": "method",
+      "label": "Method: 0 linear, 1 square, 2 double",
+      "type": "int",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "name": "removed",
+      "label": "Key to delete",
+      "type": "int",
+      "min": -99,
+      "max": 99
+    },
+    {
+      "name": "query",
+      "label": "Key to find",
+      "type": "int",
+      "min": -99,
+      "max": 99
+    }
+  ],
+  "presets": [
+    {
+      "name": "Linear cluster and deletion",
+      "input": {
+        "values": [
+          1,
+          12,
+          23,
+          34
+        ],
+        "method": 0,
+        "removed": 12,
+        "query": 34
+      }
+    },
+    {
+      "name": "Distinct homes",
+      "input": {
+        "values": [
+          1,
+          2,
+          3
+        ],
+        "method": 2,
+        "removed": 2,
+        "query": 3
+      }
+    },
+    {
+      "name": "Quadratic exhaustion",
+      "input": {
+        "values": [
+          0,
+          11,
+          22,
+          33,
+          44,
+          55,
+          66
+        ],
+        "method": 1,
+        "removed": 99,
+        "query": 66
+      }
+    },
+    {
+      "name": "Empty table",
+      "input": {
+        "values": [],
+        "method": 0,
+        "removed": 0,
+        "query": 0
+      }
+    },
+    {
+      "name": "Double hash and negative keys",
+      "input": {
+        "values": [
+          -1,
+          10,
+          21,
+          -1
+        ],
+        "method": 2,
+        "removed": 10,
+        "query": 21
+      }
+    }
+  ],
+  "checks": [
+    {
+      "input": {
+        "values": [
+          1,
+          12,
+          23,
+          34
+        ],
+        "method": 0,
+        "removed": 12,
+        "query": 34
+      },
+      "expect": {
+        "buckets": [
+          null,
+          1,
+          "†",
+          23,
+          34,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "vars": {
+          "removed": 1,
+          "found": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "values": [],
+        "method": 2,
+        "removed": 0,
+        "query": 0
+      },
+      "expect": {
+        "buckets": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "vars": {
+          "found": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "values": [
+          0,
+          11,
+          22,
+          33,
+          44,
+          55,
+          66
+        ],
+        "method": 1,
+        "removed": 99,
+        "query": 66
+      },
+      "expect": {
+        "lists": {
+          "insertStatus": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            -1
+          ]
+        },
+        "vars": {
+          "removed": 0,
+          "found": 0
+        }
+      }
+    }
+  ],
+  "complexity": {
+    "time": "Expected O(1) at low load; worst O(m) per operation",
+    "space": "O(m)"
+  },
+  "codeExample": "ex-1"
+}

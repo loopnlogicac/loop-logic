@@ -1,0 +1,377 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ds-rehashing",
+  "module": "hashing",
+  "order": 4,
+  "kind": "lesson",
+  "level": "intermediate",
+  "title": {
+    "en": "Load Factor and Rehashing",
+    "bn": "লোড ফ্যাক্টর আর রিহ্যাশিং"
+  },
+  "summary": {
+    "en": "Grow a hash table before long probe runs become routine, and rebuild every key under the new modulus.",
+    "bn": "প্রোব অনেক লম্বা হওয়ার আগে টেবিল বাড়াও, তারপর নতুন সাইজে সব কী আবার বসাও।"
+  },
+  "estMinutes": 50,
+  "prerequisites": [
+    "ds-open-addressing",
+    "ds-dynamic-array"
+  ],
+  "related": [
+    "ds-graph-terminology"
+  ],
+  "keywords": [
+    "hashing",
+    "C17",
+    "Load Factor and Rehashing"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The growth example uses size_t for capacities and allocation counts. Its twelve-key bound keeps every multiplication representable. An unrestricted C17 container must check size growth and byte-count overflow before malloc."
+    ]
+  },
+  "videos": [],
+  "labs": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Make room before probes become expensive"
+    },
+    {
+      "id": "syntax",
+      "title": "Separate live count from array capacity"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Build the replacement before publishing it"
+    },
+    {
+      "id": "examples",
+      "title": "Trigger growth and inspect new positions"
+    },
+    {
+      "id": "comparison",
+      "title": "Amortized rebuilding and expected probing"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Decide when rebuilding is unnecessary"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not preserve obsolete positions"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 allocation size arithmetic"
+    },
+    {
+      "id": "summary",
+      "title": "Capacity changes require a new layout"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Grow a linear-probing set transactionally",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The fourth distinct key triggers capacity eleven. The seventh triggers twenty-three. Existing keys are inserted again under the new modulus.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "A duplicate does not trigger growth",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Three distinct keys fit at load 0.6. Repeated keys do not cross the threshold because membership is checked first.</p>",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Rebuild changes positions of negative keys too",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Normalized remainders change with capacity. Copying the old cells directly would break lookup after the first empty position.</p>",
+      "stdin": "examples/ex-3.in"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Rebuild a small integer set",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read n (0..12) and n int keys. Print Count and keys to rehash:, each grow A -&gt; B line, keys=N capacity=M, then occupied index:key lines in index order. Start at five, grow to 2*M+1 before load exceeds 0.6, and ignore duplicates.</p>",
+      "hints": [
+        "A second empty table receives the old keys."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Plan a capacity without storing records",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read a distinct-key count 0..1000. Print Number of distinct keys (0..1000): then capacity=M for the growth policy 5, 2*M+1 and a 0.6 maximum load.</p>",
+      "hints": [
+        "Compare integer products instead of rounded loads."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Pay for repeated rebuilds",
+      "statementHtml": "<p>A table doubles capacities 8,16,32,64. Bound how many old cells are scanned by the first three rebuilds.</p>",
+      "hints": [
+        "Sum the geometric series."
+      ],
+      "answerHtml": "<p>The scans inspect 8+16+32=56 old cells. This is less than the final capacity 64. For geometric growth, the sum stays proportional to the final capacity, so rebuilding contributes O(1) amortized work per distinct insertion across a long sequence. Expected probe cost still requires good hashing and spare space.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Recover from allocation failure",
+      "statementHtml": "<p>New table allocation fails during a rebuild. What must remain true of the old table?</p>",
+      "hints": [
+        "Ownership changes only at commit."
+      ],
+      "answerHtml": "<p>Its pointer, capacity, count and keys must remain unchanged. Build the replacement first and publish it only after success. Return failure without inserting the new key. The caller can keep using the original table or release it normally.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why must a grown table reinsert its keys?",
+      "options": [
+        "The modulus and probe routes depend on capacity",
+        "Keys become numerically larger",
+        "The C int type changes size",
+        "Every stored key becomes a duplicate"
+      ],
+      "answer": 0,
+      "explanation": "Old cell positions may lie beyond a new empty stopping point."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "At count three and capacity five, does another copy of an existing key force growth?",
+      "options": [
+        "Yes, every attempt increases load",
+        "No, it does not increase the live count",
+        "Yes, all duplicates allocate slots",
+        "Only if the duplicate is negative"
+      ],
+      "answer": 1,
+      "explanation": "The implementation checks equality before deciding that a new key needs space."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does the 0.6 threshold compare before an insertion?",
+      "options": [
+        "Only the old count divided by capacity",
+        "The key magnitude divided by capacity",
+        "The projected distinct count divided by capacity",
+        "The number of malloc calls"
+      ],
+      "answer": 2,
+      "explanation": "Growth happens before a new distinct key would exceed the limit."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When may the old cell array be freed safely?",
+      "options": [
+        "Before allocating replacement memory",
+        "Immediately after reading the next key",
+        "Only when every possible key is present",
+        "After a complete replacement layout exists"
+      ],
+      "answer": 3,
+      "explanation": "Keeping ownership until success allows allocation failure without data loss."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What growth pattern keeps total rebuild work linear across many insertions?",
+      "options": [
+        "Geometric capacity growth",
+        "Adding one cell each time",
+        "Shrinking after every insertion",
+        "Keeping capacity zero"
+      ],
+      "answer": 0,
+      "explanation": "The sum of geometrically increasing rebuild sizes is proportional to the final size."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does O(1) amortized insertion mean every individual insertion is constant time?",
+      "options": [
+        "Yes, no insertion copies keys",
+        "No, a growing insertion may scan many cells",
+        "Yes, even adversarial collisions disappear",
+        "Only when keys are strings"
+      ],
+      "answer": 1,
+      "explanation": "Amortization spreads occasional rebuild costs across the operation sequence."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why use separated growth and shrink thresholds?",
+      "options": [
+        "To force a rebuild after every deletion",
+        "To remove equality checking",
+        "To avoid repeated resizing near one boundary",
+        "To make all capacities prime"
+      ],
+      "answer": 2,
+      "explanation": "A wide gap prevents alternating operations from undoing each resize."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What capacity follows seven distinct insertions under the 0.6 policy?",
+      "options": [
+        "5",
+        "11",
+        "47",
+        "23"
+      ],
+      "answer": 3,
+      "explanation": "Insertion four grows to eleven; insertion seven grows to twenty-three.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int cap=5;\n    for(int n=1;n<=7;n++){if(n*10>cap*6){cap=cap*2+1;}}\n    printf(\"%d\\n\",cap);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does the fourth projected distinct key exceed a capacity-five load limit of 0.6?",
+      "options": [
+        "1",
+        "0",
+        "4",
+        "5"
+      ],
+      "answer": 0,
+      "explanation": "Forty exceeds thirty, so growth is required.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int count=3,capacity=5;\n    printf(\"%d\\n\",(count+1)*10>capacity*6);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After capacity changes from five to eleven, what is key 15 home?",
+      "options": [
+        "0 0",
+        "0 4",
+        "4 0",
+        "5 11"
+      ],
+      "answer": 1,
+      "explanation": "The old home is zero and the new home is four.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int key=15;\n    printf(\"%d %d\\n\",key%5,key%11);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Capacity changes the bucket calculation for stored keys.",
+      "bn": "ক্যাপাসিটি বদলালে রাখা কীগুলোর বাকেটের হিসাবও বদলে যায়।"
+    },
+    {
+      "en": "Rehashing allocates a new table before releasing the old one.",
+      "bn": "রিহ্যাশিংয়ে পুরোনো টেবিল ফ্রি করার আগে নতুন টেবিল বানানো হয়।"
+    },
+    {
+      "en": "Check duplicates before deciding that another key needs room.",
+      "bn": "নতুন কীয়ের জন্য জায়গা বাড়ানোর আগে ডুপ্লিকেট কি না দেখো।"
+    },
+    {
+      "en": "Geometric growth spreads rebuild work over many insertions.",
+      "bn": "গুণ করে সাইজ বাড়ালে অনেক ইনসার্টের মধ্যে রিবিল্ডের খরচ ভাগ হয়।"
+    },
+    {
+      "en": "A growing insertion can take linear time even with good hashing.",
+      "bn": "ভালো হ্যাশ হলেও টেবিল বাড়ানোর ইনসার্টে লিনিয়ার সময় লাগতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "A table doubles capacities 8,16,32,64. Bound how many old cells are scanned by the first three rebuilds.",
+      "answerHtml": "<p>The scans inspect 8+16+32=56 old cells. This is less than the final capacity 64. For geometric growth, the sum stays proportional to the final capacity, so rebuilding contributes O(1) amortized work per distinct insertion across a long sequence. Expected probe cost still requires good hashing and spare space.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "New table allocation fails during a rebuild. What must remain true of the old table?",
+      "answerHtml": "<p>Its pointer, capacity, count and keys must remain unchanged. Build the replacement first and publish it only after success. Return failure without inserting the new key. The caller can keep using the original table or release it normally.</p>"
+    },
+    {
+      "type": "output",
+      "marks": 6,
+      "question": "Trace grow a linear-probing set transactionally for input: 7\n0 5 10 15 20 25 30. Show the intermediate memory or worklist changes.",
+      "answerHtml": "<p>The fourth distinct key triggers capacity eleven. The seventh triggers twenty-three. Existing keys are inserted again under the new modulus.</p><pre class=\"output\">Count and keys to rehash:\ngrow 5 -&gt; 11\ngrow 11 -&gt; 23\nkeys=7 capacity=23\n0:0\n2:25\n5:5\n7:30\n10:10\n15:15\n20:20\n</pre>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT algorithms course materials",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/"
+    },
+    {
+      "title": "C standard library",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

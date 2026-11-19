@@ -1,0 +1,59 @@
+<h2 id="introduction">Connect the structures to a complete program</h2>
+<p class="lead">A phone book turns list operations into a small application. You add a contact, find it by name, remove it, sort the list and save records for the next session. A menu connects these operations without letting each command invent its own memory rules.</p>
+<p>Each contact node owns a name array, a phone array and a next pointer. The head pointer owns the whole chain. Names are unique and compared case-sensitively, so ContactA and contacta are different keys. All example contacts are invented labels rather than personal records.</p>
+<p>Phone numbers are text. Keeping 01700000001 as an integer would lose the leading zero, while an optional plus sign also belongs to the written identifier. Our format permits one to sixteen phone characters, digits with an optional initial plus. Names use one to twenty-four ASCII letters, digits or underscores. At most thirty-two contacts keep the demonstration bounded.</p>
+<h2 id="design">Write the command contract before the menu</h2>
+<p>The menu reads one complete line at a time. A adds a name and phone, F finds a name, D deletes a name, S sorts, L lists, W writes contacts.txt, R reloads that file, and Q quits. EOF also ends the session and releases all contacts. Command letters are uppercase.</p>
+<table class="ref"><thead><tr><th scope="col">Input</th><th scope="col">Meaning</th><th scope="col">Response</th></tr></thead><tbody><tr><td>A ContactA 0017</td><td>Add a unique contact</td><td>added, rejected or no memory</td></tr><tr><td>F ContactA</td><td>Exact name lookup</td><td>Name and phone, or not found</td></tr><tr><td>D ContactA</td><td>Remove an exact match</td><td>deleted or not found</td></tr><tr><td>S</td><td>Sort names with strcmp</td><td>sorted</td></tr><tr><td>L</td><td>Print current order</td><td>contacts: then zero or more rows</td></tr><tr><td>W or R</td><td>Save or load</td><td>saved/loaded or a failure message</td></tr><tr><td>Q</td><td>End this run</td><td>No additional row</td></tr></tbody></table>
+<p>The parser uses buffers large enough for a complete accepted input line before checking field limits. A truncated name must never silently become another valid contact. Extra tokens make a command invalid. A line too long for the input buffer is drained and reported as invalid line, so its remaining bytes cannot become a second command.</p>
+<p>The program uses a local file named contacts.txt in the working directory. Run it in a scratch folder because W opens that file in write mode and replaces earlier contents. The file contains name-phone pairs separated by spaces, one contact per line. Names cannot contain spaces in this format; adding quoted multiword names would require a different parser.</p>
+<h2 id="how-it-works">Keep ownership through editing and sorting</h2>
+<p>Add first checks field rules, the distinct-name condition and the contact limit. It allocates only after those checks. On success it copies the bounded text into the node and inserts at the head. If allocation fails, the list remains unchanged. Search follows next links until strcmp reports equality or the chain ends.</p>
+<p>Deletion walks a pointer to the incoming link. That link may be head itself or a next field inside a previous node. Replacing it with the matched node's successor removes the record from the owning chain; only then is the node freed. A missing name changes nothing.</p>
+<pre class="diagram">Before adding ContactA:
+head -&gt; [ContactB | 01700000002 | NULL]
+After adding ContactA:
+head -&gt; [ContactA | +8801700000001 | next] -&gt; [ContactB | ... | NULL]
+After deleting ContactA:
+head -----------------------------------&gt; [ContactB | ... | NULL]
+The removed ContactA allocation is released.</pre>
+<p>Sort repeatedly removes the next node from the original chain and inserts it into a separate sorted chain. It compares names until the insertion location is found, then repairs two links. No contact text is exchanged and no node is allocated during sorting. After the original chain becomes empty, head receives the sorted chain.</p>
+<p>The insertion-sort design takes O(n squared) time and O(1) auxiliary pointers. Search, delete and duplicate-checking add take O(n) time in the worst case. Listing and saving take O(n) record visits, plus the amount of text written. Total owned contact storage is O(n), with fixed-size arrays inside each record.</p>
+<h2 id="examples">Try editing and a file round-trip</h2>
+<h3>Run the complete contact menu</h3>
+<p>Names are unique and compared case-sensitively. Sorting changes links, while phone numbers retain zeroes and the optional plus sign.</p>
+<div data-example="ex-1"></div>
+<h3>Save, change and reload the contact list</h3>
+<p>Saving writes sorted rows to contacts.txt in the current folder. Loading rebuilds that order and restores the deleted contact. Use a scratch folder because W replaces this file.</p>
+<div data-example="ex-2"></div>
+<h2 id="file-storage">Load into a temporary list</h2>
+<p>Saving writes each contact in current list order. It checks every fprintf result and the final fclose result, since buffered output can fail at close. A successful W reports saved. An empty list creates an empty file, which is a valid saved phone book.</p>
+<p>Loading has a stronger rollback rule than saving. R opens the file, parses complete bounded rows and adds each validated record to a temporary list. Malformed fields, duplicate names, too many records, read errors or allocation failure reject the load. The temporary list is released and the edited in-memory list remains intact.</p>
+<p>Front insertion reverses file order during temporary construction. After all rows succeed and the file closes successfully, the loader reverses that temporary list again. It then frees the previous list and publishes the restored head. Loading therefore preserves the order saved on disk without pretending that the file was already sorted.</p>
+<p>The W implementation is deliberately a portable basic save, not an atomic storage transaction. Opening with w truncates an earlier file before later writes finish. A failed write may leave partial content, although in-memory contacts remain available. A stronger application writes a temporary file, checks completion and replaces the original after success; power-loss durability needs platform support too.</p>
+<p>Example two writes before reading, so its result does not depend on an earlier contacts.txt. It saves sorted records, deletes one in memory, reloads and lists the restored rows. The practice sequences also create their own file before any read. To try malformed-load behavior manually, keep a contact in memory, place a bad row in the file, then use R and L to verify rollback.</p>
+<h2 id="edge-cases">Test the boundaries of the menu</h2>
+<p>An empty list supports search, delete, sort, list and save. Search and delete report not found; sort returns an empty head; listing prints only its heading. Deleting the last contact makes head NULL. Adding a duplicate rejects the request without silently overwriting a phone number.</p>
+<p>A valid name cannot overflow the node array because validation checks its length before strcpy. Phone validation rejects a bare plus, embedded punctuation and more than sixteen characters. Numbers such as 001 retain their leading zeroes. The example uses byte-oriented ASCII validation rather than a Unicode name policy.</p>
+<p>The menu can continue after a rejected add or malformed command because no partial contact was linked. File loading also bounds the number of records at thirty-two. Reaching EOF exits even without Q, and final cleanup visits every remaining node. File handles are closed on both successful and rejected loads.</p>
+<p>The linked-list approach is easy to edit and teach, but exact-name search remains linear. A larger phone book could add a hash index or a balanced tree while keeping one clear owner for each contact. Updating multiple indexes then needs a consistent success-or-rollback policy, especially when allocations fail.</p>
+<p>Loading n contacts takes O(n squared) time in this implementation because every temporary add scans earlier names for duplicates. It temporarily owns both the edited list and the new list, so peak storage includes both sets of nodes. Sorting uses only link variables beyond those nodes. For a larger application, an additional temporary name index could reduce repeated duplicate searches.</p>
+<pre class="diagram">Before sorting:
+head -&gt; [ContactC] -&gt; [ContactA] -&gt; [ContactB] -&gt; NULL
+After sorting by relinking:
+head -&gt; [ContactA] -&gt; [ContactB] -&gt; [ContactC] -&gt; NULL
+Before a successful load:
+live head -&gt; edited records    temporary head -&gt; parsed records
+After commit:
+live head -&gt; restored parsed records; old edited records released
+On rejected load:
+live head -&gt; original edited records; temporary records released</pre>
+<h2 id="common-mistakes">Protect data before changing interfaces</h2>
+<h3>Loading directly into the live head</h3>
+<p>A bad later row would leave half a phone book. Build separately and replace the live list only after the whole load succeeds.</p>
+<h3>Using unbounded string input</h3>
+<p>A long token could overwrite a node field. Read a bounded line, validate whole-token lengths and copy only after the contract is satisfied.</p>
+<h3>Assuming save failure preserves the old disk file</h3>
+<p>The basic writer reports errors but cannot undo truncation. Keep that limitation visible when designing a safer replacement strategy.</p>
+<h2 id="summary">Use a small application to test ownership</h2>
+<p>The phone book combines list edits, sorting, input validation and file lifetimes under one menu. Each command either preserves a valid list or publishes a complete new one. Finish with the <a href="topic:ds-interview-questions">interview questions</a> to explain these choices aloud.</p>

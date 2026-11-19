@@ -1,0 +1,51 @@
+<h2 id="introduction">Describe connections before choosing code</h2>
+<p class="lead">A campus map can show buildings as dots and walkways as lines. The dot represents a place; the line represents a direct connection. A <dfn>graph</dfn> models this pattern using vertices and edges. The vertices need not be physical places: courses, accounts or program states can also be connected.</p>
+<p>A graph is often written G=(V,E), where V is the vertex set and E is the edge set. An isolated vertex belongs to V even when no edge touches it. Counting only names found in edge records would lose isolated buildings. Our examples therefore read the number of vertices separately from the edge count.</p>
+<p>Vocabulary matters because a small change in the model changes which algorithms are valid. A one-way walkway needs a directed edge. A travel time needs a weight. Reaching a destination, minimizing hops and minimizing total travel time are three different questions, even when they use the same underlying vertices.</p>
+<h2 id="syntax">Choose the meaning of each edge</h2>
+<p>An <dfn>undirected edge</dfn> connects two vertices in either direction. Writing {u,v} describes one connection, regardless of which endpoint is named first. A <dfn>directed edge</dfn>, also called an arc, goes from u to v; the reverse trip requires a separate arc. A directed graph can contain both directions without treating them as one edge.</p>
+<p>A <dfn>weighted graph</dfn> assigns a number to an edge, such as distance, time or fee. The weight belongs to the connection, not to its endpoint ID. A weight of zero can be meaningful. An unweighted graph records connection alone, and its ordinary path length counts edges.</p>
+<p>Our input examples use simple undirected graphs: no self-loops and no duplicate endpoint pairs. That keeps matrix presence values zero or one. More general graphs may allow parallel edges or loops. State the convention before using a counting formula, since a matrix of booleans cannot distinguish multiple parallel edges.</p>
+<p>For an undirected vertex, degree is the number of incident edge ends. With our loop-free convention it equals the number of neighbors. Every edge contributes one at each endpoint, so the degree sum is 2E. For directed graphs, indegree counts arriving arcs and outdegree counts departing arcs; each total equals E. An undirected self-loop, if allowed, contributes two to degree.</p>
+<h2 id="how-it-works">Read paths, cycles and components</h2>
+<p>A walk follows consecutive edges and may repeat vertices. A path, as used here, has no repeated vertex. A cycle returns to its starting vertex without repeating the other vertices. Definitions sometimes use path more loosely, so write your convention when repetition could affect an answer.</p>
+<p>Consider the shared seven-vertex example used later for BFS and DFS. Vertices are 0 through 6. Edges are 0-1,0-2,1-3,1-4,2-4,3-5,4-5. Every connection is undirected. Vertex six has no incident edge and remains part of the graph.</p>
+<pre class="diagram">Before adding a connection:     After adding edge 2-4:
+0 -- 1 -- 3 -- 5                0 -- 1 -- 3 -- 5
+|    |         |               |    |         |
+2    4 --------+               2 -- 4 --------+
+6 isolated                     6 isolated</pre>
+<p>There is a path 0,1,3,5 of length three. There is also a cycle 0,1,4,2,0. Vertices zero through five form one connected component, while six forms another. A connected component is a maximal group in which every pair has an undirected path. Maximal means no further vertex can join without breaking that property.</p>
+<p>In directed graphs, reachability need not be symmetric. If 0 points to 1 and 1 points to 2, zero can reach two but two may not reach zero. Strong connectivity requires directed paths both ways between each pair. Weak connectivity ignores arrow directions. Never apply the undirected component definition to a directed graph without specifying which meaning you want.</p>
+<h2 id="examples">Count degrees and test a graph family</h2>
+<h3>Verify degrees in a simple undirected graph</h3>
+<p>Vertex four has degree zero. Each stored pair adds one to each endpoint, so the degree sum is eight.</p>
+<div data-example="ex-1"></div>
+<h3>Separate incoming and outgoing edges in a DAG</h3>
+<p>Two directed paths reach vertex three. No arrow points back to an earlier layer, so this graph is acyclic.</p>
+<div data-example="ex-2"></div>
+<h3>Check whether two groups can contain every edge</h3>
+<p>The third edge closes an odd cycle. Two adjacent vertices then need the same color, so the graph is not bipartite.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Recognize useful graph families</h2>
+<p>A complete simple undirected graph has an edge between every distinct pair of vertices. With n vertices it has n*(n-1)/2 edges, because each unordered pair is counted once. Every vertex has degree n-1. The notation K7 describes the seven-vertex complete graph used as a dense preset later.</p>
+<p>A bipartite graph divides vertices into two groups so every edge crosses between the groups. Edges within either group are forbidden; not every possible crossing edge has to exist. A graph is bipartite exactly when it has no odd cycle. Our third program tries two colors, giving every newly reached neighbor the opposite color.</p>
+<p>The coloring program uses a queue, which you studied in <a href="topic:ds-queue-array">array queues</a>. It starts again at each uncolored vertex so disconnected pieces are checked too. If an edge connects equal colors, the graph fails the test. A triangle fails; a four-cycle succeeds. An isolated vertex can be assigned either group.</p>
+<p>A directed acyclic graph, or DAG, has arrows and no directed cycle. It can describe prerequisites, where following dependencies must not lead back to the starting course. An undirected tree is connected and acyclic. A nonempty tree with n vertices has n-1 edges; between two vertices it has exactly one simple path.</p>
+<p>A tree is always bipartite: assign a group from the parity of depth from any root. A DAG need not have a bipartite underlying undirected graph. For example, arrows 0 to 1, 1 to 2 and 0 to 2 form a DAG, while ignoring arrows gives a triangle. These categories describe different restrictions.</p>
+<h2 id="edge-cases">Count absent connections too</h2>
+<p>The empty graph in our programs has zero vertices and zero edges. It has zero components and vacuously satisfies the two-color condition. A singleton graph has one component, degree zero and no cycle. Under the nonempty-tree convention it is a tree because it is connected and acyclic.</p>
+<p>A disconnected graph can have n-1 edges and still fail to be a tree. A triangle plus an isolated vertex has four vertices and three edges, but contains a cycle and is not connected. The edge count alone becomes a tree test only when combined with the appropriate connectedness or acyclicity condition.</p>
+<p>Computing degrees from a matrix scans n rows of n cells, taking O(V squared) time and O(1) working space beyond storage. The two-color program also scans full rows, so it takes O(V squared) time and O(V) queue/color space. With adjacency lists the same coloring traversal would take O(V+E) time.</p>
+<p>Adding one simple undirected edge increments the two endpoint degrees and E once. Removing it reverses those changes. In a matrix both symmetric cells must change together. A full complete graph has no legal additional distinct pair; a loop or repeated pair is rejected rather than silently changing the degree meaning.</p>
+<h2 id="common-mistakes">Keep the model consistent</h2>
+<h3>Counting an undirected pair twice as two edges</h3>
+<p>Two symmetric matrix cells represent one connection. Count E from endpoint pairs, then use the degree sum as a consistency check.</p>
+<h3>Calling the fewest hops the least weight</h3>
+<p>A direct expensive edge can use fewer hops than a cheap two-edge route. State which quantity is being minimized before choosing a traversal.</p>
+<h3>Dropping a degree-zero vertex</h3>
+<p>The vertex list defines the graph even when some vertices never appear in an edge list. Keep those vertices when counting components and reporting reachability.</p>
+<h2 id="version-notes">C17 graph counters</h2>
+<div class="callout version"><p>Vertex IDs, degrees and queue indices use int within the stated eight-vertex limit. These graph concepts do not depend on a newer C language feature; C17 provides the array and control-flow rules used here.</p></div>
+<h2 id="summary">A graph model determines valid questions</h2>
+<p>Vertices identify things, edges identify their connections, and direction and weight add meaning. Paths and components describe reachability; graph families impose useful restrictions. Next choose a <a href="topic:ds-graph-representation">memory representation</a> that fits the operations you need.</p>

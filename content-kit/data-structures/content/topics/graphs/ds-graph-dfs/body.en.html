@@ -1,0 +1,62 @@
+<h2 id="introduction">Finish a branch before trying its sibling</h2>
+<p class="lead">Imagine exploring a corridor until no new room remains, then returning to the most recent junction. You remember which doorway to try next. <dfn>Depth-first search</dfn>, or DFS, uses this pattern to explore a graph through nested calls or explicit stack frames.</p>
+<p>DFS gives two useful events for each reached vertex. Discovery happens when exploration enters it for the first time. Finishing happens after all its neighbors have been inspected and every recursive child has returned. The two orders differ because a parent cannot finish before its active descendants.</p>
+<p>A visited array prevents a cycle from causing endless recursion. Mark a vertex at entry, before exploring a neighbor. Our examples examine ascending neighbor IDs, matching the BFS lesson's graph choices. The traversal reaches the same component as BFS from that source, but the route and visit order usually differ.</p>
+<h2 id="syntax">A frame must remember where to resume</h2>
+<p>Recursive DFS stores the current vertex and the loop's next neighbor position in each active call frame. The recursive example prints enter U before its neighbor loop and leave U afterward. When a child returns, the parent's loop continues where it stopped, rather than restarting from its first neighbor.</p>
+<p>The iterative example recreates that state with stack[top] and next[top]. The top index identifies the active frame. If the frame still has a neighbor, advance its saved next index before deciding whether to descend. On an unseen neighbor, mark it and push a fresh frame whose next index begins at zero.</p>
+<pre><code class="language-text">mark start; enter[start] = ++clock; push frame(start,0)
+while frames remain
+    u = top; advance its next neighbor index
+    if neighbor v is unseen: mark v; enter[v] = ++clock
+        push frame(v,0)
+    if no neighbors remain: leave[u] = ++clock
+        pop the exhausted frame and resume its parent
+report discovery order, finish order and times</code></pre>
+<p>The integer clock begins at zero and increases on every entry and exit. Enter and leave arrays begin at zero, so an unreached vertex is distinguishable from any recorded event. Our seven-vertex graph uses at most seven active frames and fourteen event times. The explicit stack stores suspended calls, not arbitrary future visits.</p>
+<h2 id="how-it-works">Follow discovery and return on one graph</h2>
+<p>The graph selector matches the previous lesson: zero is the shared diamond with an isolated six, one is the seven-vertex path, two has no edges, and three is K7. The diamond edges are 0-1,0-2,1-3,1-4,2-4,3-5,4-5. Each undirected neighbor list is sorted.</p>
+<p>Starting at zero, DFS enters 0, then 1, then 3, then 5, then 4, then 2. From two, both neighbors are already discovered. Two finishes, then four resumes its saved neighbor position. Eventually the search returns through five, three, one and zero. Vertex six is never entered.</p>
+<pre class="diagram">Before descending from 1 to 3:
+frames bottom -&gt; top: [0,next=1] [1,next=2]
+After descent:
+frames bottom -&gt; top: [0,next=1] [1,next=2] [3,next=0]
+After 3 and its descendants finish:
+frames bottom -&gt; top: [0,next=1] [1,next=2]
+Resume vertex 1 at its next saved neighbor, vertex 4.</pre>
+<table class="ref"><thead><tr><th scope="col">Vertex</th><th scope="col">Entry</th><th scope="col">Exit</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>12</td></tr><tr><td>1</td><td>2</td><td>11</td></tr><tr><td>3</td><td>3</td><td>10</td></tr><tr><td>5</td><td>4</td><td>9</td></tr><tr><td>4</td><td>5</td><td>8</td></tr><tr><td>2</td><td>6</td><td>7</td></tr><tr><td>6</td><td>0</td><td>0</td></tr></tbody></table>
+<div data-lab="graph-dfs"></div>
+<p>The lab shows the active stack and labels each node entry/exit. An unfinished node has an entry time but no exit yet. When the stack becomes empty, all reachable vertices have both times. Run the path preset to see the largest active depth, then the no-edge preset to see entry and exit with no recursive child.</p>
+<h2 id="examples">Compare frames with real calls</h2>
+<h3>Simulate recursive entry and return with frames</h3>
+<p>Discovery is 0,1,3,5,4,2. Frames remember the next neighbor, so vertex two finishes before four resumes.</p>
+<div data-example="ex-1"></div>
+<h3>See recursive calls and returns directly</h3>
+<p>On a path, entry runs from zero to six. Returns run in reverse because each call waits for its child.</p>
+<div data-example="ex-2"></div>
+<h3>Start another DFS for an unseen component</h3>
+<p>The first tree reaches vertices zero through five. A second root, six, accounts for the isolated component.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Read the information DFS provides</h2>
+<p>A DFS interval [enter[u],leave[u]] contains every descendant's interval. Two completed vertices have either nested or disjoint intervals in the DFS forest. For example, vertex two's interval 6..7 sits inside vertex four's 5..8. This is a relation in the traversal tree, not a claim that the original graph had only tree edges.</p>
+<p>The discovery edges form a tree within one reached component. Other inspected edges can connect vertices already seen. In an undirected cycle, the reverse parent edge must be distinguished from another visited neighbor if you are detecting cycles. In a directed graph, cycle detection needs active-versus-finished states, not only a single visited boolean.</p>
+<p>DFS is a foundation for connected components, topological ordering and cycle analysis. For a DAG, reversing finish order gives a topological order when all vertices are explored. A graph with a directed cycle cannot receive a valid topological ordering, so cycle checks must accompany that use.</p>
+<p>A DFS path does not guarantee the fewest edges. In graph zero, it reaches two through 0,1,3,5,4,2 even though the original graph has edge 0-2. BFS would discover two at distance one. Use DFS for exploration structure and finishing information, and BFS for minimum-hop routes in an unweighted graph.</p>
+<p>A simpler iterative DFS may push vertices in reverse neighbor order and skip them when already visited. That can produce a useful discovery order, but it does not directly reproduce recursive return events. The frame method is necessary when you want exact matching entry/exit times and parent resumption.</p>
+<h2 id="edge-cases">Bound active calls and include other components</h2>
+<p>Adjacency-list DFS takes O(V+E) time over a complete forest: each vertex is entered once and every adjacency entry is inspected once. Visited flags, event arrays and the worst-case active stack use O(V) auxiliary storage. A path can require V simultaneous calls, so recursive depth is not always logarithmic.</p>
+<p>Our fixed graph builder first uses a matrix, with O(V squared) construction work and rectangular storage. Traversal uses active neighbor counts afterward. For a large sparse graph, build compact lists directly and choose an explicit frame stack when the language call stack could overflow.</p>
+<p>A no-edge graph from one source has one entry and one exit. A singleton behaves the same way. A complete graph still marks every vertex once, although it examines many already-seen neighbors. The explicit stack capacity is sufficient because only unseen vertices create new frames.</p>
+<p>To cover disconnected graphs, keep seen across searches and scan vertices in ID order. The first unseen vertex becomes a new forest root. Example three does this and counts components: graph zero gives two, while the empty-edge seven-vertex graph gives seven. Resetting seen between roots would repeat old components and overcount them.</p>
+<h2 id="common-mistakes">Remember suspended work</h2>
+<h3>Restarting the neighbor loop after every pop</h3>
+<p>A parent would repeatedly inspect earlier edges and might descend incorrectly. Store its next index in the frame and advance before pushing a child.</p>
+<h3>Assigning finish time at discovery</h3>
+<p>The child calls have not happened yet. Record finish only when the active frame has no neighbors left to inspect.</p>
+<h3>Calling a traversal forest the original graph</h3>
+<p>Tree edges record first discoveries. The original graph may also contain cycles and extra connections that the forest does not retain.</p>
+<p>Discovery and finish timestamps are often useful when checking an implementation. Every reached vertex must have enter less than leave. Every event number should occur once, and a descendant interval should fit inside its active ancestor. Those facts expose incorrect early pops even when a printed discovery order looks reasonable.</p><p>To reproduce a particular recursive trace, match both neighbor order and marking time. Pushing all unvisited neighbors at once can choose a different parent for a vertex reached from several directions. Saving one active frame and descending one child at a time keeps the iterative program's behavior aligned with the recursive explanation.</p>
+<h2 id="version-notes">C17 calls and explicit frames</h2>
+<div class="callout version"><p>C17 supports recursive function calls but promises no portable maximum recursion depth. The explicit DFS frame array avoids that dependency for the bounded graph and makes each saved neighbor index visible.</p></div>
+<h2 id="summary">A return is part of the trace</h2>
+<p>DFS follows a branch deeply while preserving enough state to resume its parent. Entry and exit events expose the resulting forest structure. Continue with <a href="topic:ds-disjoint-set">union-find</a> to maintain connected groups as edges arrive.</p>

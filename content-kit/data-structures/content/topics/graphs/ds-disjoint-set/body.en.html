@@ -1,0 +1,70 @@
+<h2 id="introduction">Track groups without storing every route</h2>
+<p class="lead">Suppose student clubs begin separately, then merge when joint teams form. You repeatedly ask whether two students now belong to the same merged group. You do not need the order of past meetings to answer that question. A <dfn>disjoint-set</dfn> structure keeps a partition: every item belongs to exactly one nonoverlapping set.</p>
+<p>The common name union-find describes its two central operations. Find returns a representative for an item's current set. Union merges the two sets containing a pair of items. Make-set starts an item alone. These operations are especially useful for connectivity while undirected edges are added.</p>
+<p>A representative is an implementation choice, not necessarily the smallest item. Our tie rule keeps the first root when sizes match. Changing the edge order can therefore change representatives and parent-array shapes without changing which vertices are connected. Compare partitions rather than raw root IDs when checking implementations with different tie policies.</p>
+<h2 id="syntax">Use self-parent roots and root sizes</h2>
+<p>The parent array represents a forest of rooted trees. At initialization parent[i]=i, so every vertex is its own root. The size array begins at one. Only a root's size is meaningful after merges; old sizes at nonroot indices are left in memory but must not answer a component-size query.</p>
+<p>Find follows parent links until reaching a self-parent index. Our iterative implementation uses two passes. The first locates root. The second walks the original path again and rewrites each visited parent to root. It saves the next parent before overwriting the current link, so the rest of the path is not lost.</p>
+<p>Union first finds both roots. If they match, it returns zero and does not change the component count. Otherwise it compares sizes, swaps root variables if necessary, attaches the smaller root under the larger, and adds their sizes at the surviving root. A successful merge returns one, allowing the caller to subtract it from the component count.</p>
+<pre><code class="language-text">make-set: parent[i] = i; size[i] = 1
+find: follow parent links to a self-parent root
+compress each visited parent to that root
+union: if roots match, do nothing
+otherwise attach smaller root below larger; ties keep first
+increase the surviving root size; decrement components
+find query and report its root, size and component count</code></pre>
+<p>The lab array shows parent values, with the current root-search pointer above it. The side list shows sizes, including stale nonroot entries. Use the root index before reading a size. The final variables panel reports the queried root, its valid size and the number of components.</p>
+<h2 id="how-it-works">Build a shallow forest, then compress a path</h2>
+<p>Begin with four singleton vertices. Union(0,1) keeps zero and points one to zero. Union(2,3) keeps two and points three to two. Both roots now have size two. Union(0,2) keeps zero under our equal-size tie rule and makes parent[2]=0.</p>
+<pre class="diagram">After two equal-size merges:
+root 0(size 2)       root 2(size 2)
+       ^                   ^
+       1                   3
+After union(0,2):         After find(3):
+       0(size 4)               0(size 4)
+      / \                     / |      1   2                   1  2  3
+         |
+         3
+parents [0,0,0,2]       parents [0,0,0,0]</pre>
+<p>Find(3) follows 3,2,0 to locate the root. Compression changes parent[3] from two to zero. It may also write parent[2]=0 again, which is harmless. No set merges during this find, so the size and component count remain unchanged. The parent link is an implementation shortcut, not a newly added graph edge.</p>
+<p>Union by size prevents a tall chain from forming through careless attachment. Whenever a vertex's depth increases because its root is attached elsewhere, its new component has at least twice as many members. A component cannot double more than floor(log2 n) times. Thus size balancing alone bounds height by O(log n).</p>
+<div data-lab="union-find"></div>
+<p>The balanced-merge preset creates a path with more than one parent link before the final query. Try query six and then query three. They compress different paths in the same partition. A no-edge preset leaves all seven singleton parents unchanged. The dense preset makes many union attempts that discover both endpoints already connected.</p>
+<h2 id="examples">Compare merging with compression alone</h2>
+<h3>Merge graph edges with union by size</h3>
+<p>The six connected vertices share root zero. The isolated vertex remains a singleton, so there are two components.</p>
+<div data-example="ex-1"></div>
+<h3>Union pairs that create a deeper forest</h3>
+<p>Equal-size groups keep the first root. Finding three follows two links before compression; the later union adds vertex four to the same group.</p>
+<div data-example="ex-2"></div>
+<h3>Flatten a prepared parent chain</h3>
+<p>The prepared chain illustrates compression alone. Every vertex on the path from four now points straight to zero.</p>
+<div data-example="ex-3"></div>
+<h3>Compress a path after balanced merges</h3>
+<p>Vertex six follows four to zero and becomes a direct child of zero. Vertices three and five keep unqueried two-link paths, so compression has not flattened the entire set.</p>
+<div data-example="ex-4"></div>
+<h2 id="comparison">Understand selectors and edge order</h2>
+<p>Examples one and the lab use seven vertices. Selector zero processes the shared diamond pairs in this order: (0,1),(0,2),(1,3),(1,4),(2,4),(3,5),(4,5). Selector one processes path pairs (0,1) through (5,6). Selector two has no pairs. Selector three processes all pairs u&lt;v in lexicographic order.</p>
+<p>Selector four uses a deliberately balanced order: (0,1),(2,3),(0,2),(4,5),(4,6),(0,4). After those unions, querying six compresses its path through four to zero. Vertex three can still point through two, and vertex five through four, because the final find did not visit them. Path compression acts on a visited path, not on every vertex globally.</p>
+<p>Example two accepts custom union pairs with up to twelve vertices and twenty pairs. Repeated edges and self-pairs are allowed: their endpoints already have equal representatives, so they return no merge. The example prints a find result for every vertex after all unions, which may compress additional paths beyond those changed during insertion.</p>
+<p>Example three begins with a prepared long parent chain to isolate the effect of compression. That chain is valid as a forest, but it is not claimed to result from our size-balanced union policy. It demonstrates find's correctness on a deeper starting shape. The node at each index remains in the same set after flattening.</p>
+<p>Neither representative identity nor exact parent shape is a graph path answer. Union-find may directly link zero to four even when no original edge joins them. For an actual route, retain adjacency lists and use <a href="topic:ds-graph-bfs">BFS with parents</a>. Union-find stores enough information for membership, not for reconstructing edge history.</p>
+<h2 id="edge-cases">State the cost model precisely</h2>
+<p>Make-set for n items initializes n parent and size entries, costing O(n) time and O(n) storage. One root check can finish immediately. A deeper find follows the path and compresses it using O(1) extra local variables in this iterative version. A recursive implementation would also use stack frames along that path.</p>
+<p>Combining union by size or rank with path compression gives O(alpha(n)) amortized time per operation over a sequence, where alpha is the inverse Ackermann function. It grows extremely slowly for practical input sizes. This is a sequence bound, not a promise that every individual find performs only one parent access.</p>
+<p>Without compression, size balancing gives O(log n) worst-case find time. Without balancing, arbitrary root attachment can make a chain and require O(n) for one find. Compression helps later queries, but attaching smaller below larger provides the structural bound before those paths are queried.</p>
+<p>Union by rank uses a height-bound estimate instead of exact member counts. Initialize rank to zero, attach lower rank below higher, and increase a surviving rank only when equal ranks merge. After compression, rank is no longer the current height, yet remains useful for future unions. Do not decrease rank to match a flattened picture.</p>
+<p>An empty disjoint-set has no valid find query. Example two permits zero vertices only when no pair references an item. A singleton find returns its own ID and size one. An invalid endpoint is rejected before indexing. A repeated union does not double-count sizes, and the component count never falls below zero.</p>
+<p>For incremental undirected connectivity, union every arriving edge's endpoints. The number of successful merges equals n minus the final component count. An edge whose endpoints are already connected is redundant for connectivity. In a simple undirected graph it closes a cycle relative to the already processed edges. Ordinary union-find cannot undo a deletion; removing an edge requires rebuilding or a more advanced dynamic-connectivity method.</p>
+<h2 id="common-mistakes">Merge representatives, not arbitrary records</h2>
+<h3>Assigning parent[v]=u without finding roots</h3>
+<p>This can detach part of a set or create a cycle in parent links. Find both representatives, then attach one root to the other.</p>
+<h3>Adding sizes when roots already match</h3>
+<p>No new members arrived. Return without changing size or components, even when the input repeats a previous edge.</p>
+<h3>Reading size at the queried vertex</h3>
+<p>A nonroot can hold an old value. Compute root=find(vertex), then read size[root] for the current component size.</p>
+<p>Size balancing can also be explained with a charging argument. Charge a depth increase to a vertex only when its entire component becomes the smaller side of a merge. That vertex then belongs to a group at least twice as large. After k charges the group has at least 2 to the power k members, so k cannot exceed log2 n. This argument does not require random edges or average input order.</p><p>Compression has a different effect: it spends effort on a path now to reduce repeated work later. Finding a root does not necessarily flatten its other branches. A component can therefore contain a mix of direct root children and deeper paths. The balanced preset intentionally keeps such unqueried paths visible after its last operation.</p><p>To answer whether u and v are connected, compare find(u) and find(v), rather than comparing their immediate parents. Two different parent values can still lead to the same representative. If the representatives differ, union joins the groups; if they agree, no additional merge is needed. This distinction is also what makes repeated edges harmless to the component count.</p><p>The fixed lab starts with seven items, so make-set needs seven cells in each array. That constant demonstration size does not change the general O(n) initialization and storage costs. Explain n as the number of items when giving complexity, rather than treating a small classroom bound as an algorithmic constant.</p>
+<h2 id="version-notes">C17 iterative compression</h2>
+<div class="callout version"><p>The find function performs compression with loops and local int variables, avoiding recursive stack use. The parent and size arrays have fixed bounds in these examples; a larger implementation must validate endpoints and capacity before every access.</p></div>
+<h2 id="summary">Shallow links make repeated membership cheap</h2>
+<p>Union-find maintains a partition through representative roots. Size balancing limits depth, and compression shortens paths without changing membership. Use the <a href="topic:ds-exam-questions">exam questions</a> to compare its guarantees with traversal trees and other structures.</p>

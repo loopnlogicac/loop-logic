@@ -1,0 +1,49 @@
+<h2 id="introduction">Turn a key into an array position</h2>
+<p class="lead">Imagine a rack with numbered boxes for student ID cards. If IDs run from zero to ninety-nine, one box per ID works well. Finding card 42 means opening box 42. This is <dfn>direct addressing</dfn>: the key itself selects its cell.</p>
+<p>Now imagine six-digit IDs but only two thousand cards. Reserving a million boxes wastes space. A <dfn>hash function</dfn> calculates a smaller index from each key. A <dfn>hash table</dfn> stores records using these indices. You gain compact storage, but two IDs can choose the same box. That event is a collision, and the next lessons show how to keep both records.</p>
+<p>Hashing is useful when you repeatedly ask whether a key exists or need its associated value. A contact name can lead to a phone number; a course code can lead to a registration record. The hash is a starting address, not proof that two keys are equal. Keep the original key for the final comparison.</p>
+<h2 id="syntax">Three ways to calculate a bucket</h2>
+<p>For integer keys, division hashing uses h(k)=k mod m, where m is the bucket count. Our first program chooses eleven buckets numbered zero through ten. The function returns one valid index; it does not insert the key or resolve collisions. An integer hash calculation uses O(1) time and O(1) additional space for bounded machine integers.</p>
+<p>C remainder can be negative. For example, -1%11 is -1, which cannot index our array. The helper computes the remainder once, then adds eleven only when it is negative. This avoids negating the original key, which could overflow for INT_MIN. It also avoids adding eleven to a large positive key before reduction.</p>
+<p>Multiplication hashing spreads keys by a fractional product. In the mathematical form, choose a fixed fraction A between zero and one, take the fractional part of k*A, then multiply by m and round down. Do not round k*A first: the discarded fraction is exactly what you need. Example two uses a fixed-width integer version with sixteen buckets.</p>
+<p>For strings, combine characters in order. Our rolling rule is h=(31*h+byte)%101, starting with zero. Multiplying the previous value before adding the next byte makes character order matter. Hashing a length-L string costs O(L) time and O(1) extra space; accessing a bucket afterward is a separate operation.</p>
+<h2 id="how-it-works">Watch the mapping before storing records</h2>
+<p>The first example maps 22 and 33 to bucket zero. It maps -1 and 10 to bucket ten. Those pairs have equal indices but unequal keys. With five input keys, only three buckets receive values. The collision count is two because each bucket needs room for every key after its first arrival.</p>
+<pre class="diagram">Before: keys waiting [22] [33] [-1] [10] [7]
+                    |    |     |    |    |
+After mapping:      0    0    10   10    7
+Bucket counts: [0:2] [1:0] ... [7:1] ... [10:2]</pre>
+<p>A bucket count is enough to study distribution, but it cannot answer which ID was stored. To build a dictionary, each occupied position must eventually lead to a record containing the key and its value. Chaining uses a list for that purpose. Open addressing stores records directly in later array slots.</p>
+<p>The multiplication example keeps the low thirty-two bits of key times 2654435761. Treat that word as a fraction divided by 2 to the power 32. Taking its top four bits produces floor(16*fraction). The code uses uint64_t for the product before converting to uint32_t. With our key bound of one million, that wider multiplication cannot overflow.</p>
+<p>For the word cat, the rolling example processes the bytes for c, then a, then t. On an ASCII-compatible execution character set the intermediate remainders are 99,35,90. The final hash is ninety, not the sum of the characters. A different execution encoding may change these numeric values, which is why a byte-hash convention must be shared by producer and reader.</p>
+<h2 id="examples">Compare integer and string mappings</h2>
+<h3>Division hashing and negative keys</h3>
+<p>22 and 33 share bucket zero; -1 and 10 share bucket ten. Three distinct buckets hold five keys.</p>
+<div data-example="ex-1"></div>
+<h3>A 32-bit multiplication hash</h3>
+<p>The low 32 product bits represent a fractional position. Taking its top four bits selects one of sixteen buckets.</p>
+<div data-example="ex-2"></div>
+<h3>A rolling hash for a word</h3>
+<p>Each byte contributes after the previous hash is multiplied by 31. The running remainder keeps multiplication small.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Judge a hash against actual keys</h2>
+<p>A good hash function should be deterministic and cheap relative to the dictionary operation. Equal keys must always produce the same index under the same capacity and encoding. Useful distribution spreads the keys you actually expect across available buckets. No function can promise distinct indices for every possible key when the key universe is larger than the table.</p>
+<p>Prime capacities often help division hashing avoid regular factors in IDs, but primality is not a guarantee of uniformity. All multiples of eleven collide under modulus eleven. Modulus ten performs badly when every ID ends in zero. Try a representative sample and inspect both the number of used buckets and the longest concentration.</p>
+<p>The multiplication rule can use a power-of-two bucket count without merely reading the last few bits of the key. Our sixteen-bucket example mixes through the product first. This version requires exact uint32_t and uint64_t types from stdint.h; implementations without those optional exact-width types need another design. Ordinary C unsigned overflow is defined, but signed overflow is not.</p>
+<p>String keys need an explicit equality policy too. Cat and cat are different byte strings here. UTF-8 names require a consistent byte encoding, and visually equivalent text may still have different byte sequences. This small polynomial hash is for learning distribution. It is not a secure password function or a defense against deliberately chosen collisions.</p>
+<h2 id="edge-cases">Separate capacity from stored size</h2>
+<p>An empty dictionary has zero records even though its bucket array still exists. A single key uses one bucket. A completely occupied direct-address array remains unambiguous if each key has a separate presence flag. With hashing, occupancy and fullness depend on the collision scheme; a count-only picture does not define an insertion policy.</p>
+<p>A stored value of zero cannot double as the empty marker when zero is legitimate data. Keep a used flag or a pointer instead. Duplicate input keys in the first example count as repeated arrivals, so they increase its collision statistic. Later set implementations ignore duplicate insertions; state that difference when comparing counts.</p>
+<p>The eleven-entry count array uses O(m) storage for m buckets. Its total work is O(n+m), because it reads n keys and scans every counter afterward. That cost differs from the O(1) cost of computing one integer hash. Distinguishing the helper from the surrounding program prevents a misleading complexity answer.</p>
+<h2 id="common-mistakes">Do not confuse a hash with an identity</h2>
+<h3>Using a negative remainder as an index</h3>
+<p>A negative subscript accesses outside the array. Normalize the remainder inside the hash helper so every caller receives a valid bucket.</p>
+<h3>Adding character codes without positions</h3>
+<p>A plain sum sends anagrams to the same value. A rolling multiplier keeps order information, although different words can still collide.</p>
+<h3>Comparing only indices</h3>
+<p>The values 22 and 33 both choose zero. A dictionary must compare the full key after locating candidate records, or it will return someone else's value.</p>
+<p>A dictionary lookup still needs a policy for several records in one bucket. Measuring the hash alone tells you where a search starts, but it does not establish its final answer or its total cost.</p>
+<h2 id="version-notes">C17 remainder and exact-width types</h2>
+<div class="callout version"><p>C17 defines integer remainder with the sign of the dividend, so normalize negative results before indexing. The multiplication example requires the optional exact-width uint32_t and uint64_t types. Its numeric string-hash discussion assumes ASCII-compatible character codes.</p></div>
+<h2 id="summary">Use the index as a starting point</h2>
+<p>A hash function narrows a large key space to a manageable array. The distribution, key equality rule and collision policy together determine dictionary behavior. Next, use <a href="topic:ds-collision-chaining">separate chaining</a> to keep colliding records reachable.</p>

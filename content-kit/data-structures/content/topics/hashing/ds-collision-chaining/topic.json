@@ -1,0 +1,381 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ds-collision-chaining",
+  "module": "hashing",
+  "order": 2,
+  "kind": "lesson",
+  "level": "intermediate",
+  "title": {
+    "en": "Collision Resolution: Separate Chaining",
+    "bn": "কলিশন সামলাতে আলাদা লিংকড লিস্ট"
+  },
+  "summary": {
+    "en": "Keep colliding keys in bucket lists, then repair links when deleting a key.",
+    "bn": "একই বাকেটে আসা কীগুলো লিংকড লিস্টে রাখো, আর ডিলিটের সময় লিংক ঠিক করো।"
+  },
+  "estMinutes": 50,
+  "prerequisites": [
+    "ds-hashing-intro",
+    "ds-linked-list-operations"
+  ],
+  "related": [
+    "ds-open-addressing"
+  ],
+  "keywords": [
+    "hashing",
+    "C17",
+    "Collision Resolution: Separate Chaining"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The bucket lists use malloc and free from the standard library. C17 does not permit reading a record after free. Initialize bucket pointers with NULL and construct each node before publishing its incoming link."
+    ]
+  },
+  "videos": [],
+  "labs": [
+    "hash-chaining"
+  ],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give each bucket its own list"
+    },
+    {
+      "id": "syntax",
+      "title": "State ownership and duplicate policy"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Repair one incoming link at a time"
+    },
+    {
+      "id": "examples",
+      "title": "Test ordinary and concentrated buckets"
+    },
+    {
+      "id": "comparison",
+      "title": "Interpret the load factor carefully"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Handle missing nodes and failed allocation"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep equality and lifetime separate"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 allocation and node lifetime"
+    },
+    {
+      "id": "summary",
+      "title": "A bucket narrows a linked-list search"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Insert, remove and find in seven buckets",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Insertion appends to the bucket list. Removing 8 repairs the middle link while the duplicate 1 creates no record.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "Delete the bucket head and the last record",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The same link-based deletion changes a bucket header. The following search sees an empty bucket.</p>",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Measure concentration as well as load",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>A moderate average load hides a five-node chain. The longest bucket reveals this concentration.</p>",
+      "stdin": "examples/ex-3.in"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Repair a collision chain",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read n (0..12), n int keys, a deletion key and a query. Print Count, keys, delete key and query:, removed=0/1, found=0/1, then seven lines i: followed by its keys from head to tail. Use unique keys, modulus 7 and tail insertion.</p>",
+      "hints": [
+        "Walk a pointer to the link being replaced."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Report chain concentration",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (0..12) and n int keys. Keep distinct keys in seven buckets. Print Count and keys for chain lengths:, then keys=N load=L longest=M, with L to three decimals.</p>",
+      "hints": [
+        "Count successful distinct insertions."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Expected cost from load",
+      "statementHtml": "<p>A chained table stores 90 keys in 30 buckets. Give alpha, expected search cost and a worst case.</p>",
+      "hints": [
+        "The average is not a bound on every bucket."
+      ],
+      "answerHtml": "<p>Alpha is 90/30=3. With well-distributed independent hashes, expected search cost is O(1+alpha), including bucket selection and chain traversal. If every key hashes to one bucket, an unsuccessful search scans all 90 records: O(n).</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Draw middle deletion",
+      "statementHtml": "<p>Bucket 3 points to 24 -&gt; 17 -&gt; 10 -&gt; NULL. Delete 17 and state the ownership changes.</p>",
+      "hints": [
+        "Repair the incoming link before freeing."
+      ],
+      "answerHtml": "<p>Before: header -&gt; 24 -&gt; 17 -&gt; 10. Save node 17, set node 24 next to node 10, then free 17. After: header -&gt; 24 -&gt; 10 -&gt; NULL. No pointer in the table may still refer to 17.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where does an empty chained bucket point?",
+      "options": [
+        "NULL",
+        "An arbitrary integer key",
+        "The last bucket",
+        "A freed node"
+      ],
+      "answer": 0,
+      "explanation": "A bucket header is a node pointer and NULL denotes no list."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What changes when the chained set receives an equal key again?",
+      "options": [
+        "A second equal record is appended",
+        "Nothing is allocated or appended",
+        "The old key is deleted",
+        "The capacity doubles automatically"
+      ],
+      "answer": 1,
+      "explanation": "The implementation checks its chain before allocating a unique record."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which location must change when deleting a middle chain node?",
+      "options": [
+        "Every bucket header",
+        "Only the deleted key field",
+        "Its predecessor next link",
+        "The last node next link"
+      ],
+      "answer": 2,
+      "explanation": "The incoming link must skip the matched node before it is freed."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can a chained table with seven buckets hold twenty distinct keys?",
+      "options": [
+        "No, seven is an absolute record limit",
+        "Only if every key is below seven",
+        "Only with tombstones",
+        "Yes, if node allocations succeed"
+      ],
+      "answer": 3,
+      "explanation": "Bucket headers point to external lists, so alpha may exceed one."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What assumption supports expected O(1+alpha) chained search?",
+      "options": [
+        "Keys are well distributed among buckets",
+        "Every chain has exactly alpha nodes",
+        "No equality comparisons occur",
+        "All searches succeed at the head"
+      ],
+      "answer": 0,
+      "explanation": "Expected distribution does not prohibit a worst-case long chain."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is append-based unique insertion not always O(1)?",
+      "options": [
+        "malloc always scans every bucket",
+        "It scans the chain for an existing key",
+        "Updating a link takes O(n)",
+        "Every insertion sorts the whole table"
+      ],
+      "answer": 1,
+      "explanation": "Uniqueness checking takes time proportional to the selected chain length."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which action keeps allocation failure from damaging the chain?",
+      "options": [
+        "Free the bucket first",
+        "Increase count before allocation",
+        "Allocate before writing the incoming link",
+        "Write through a NULL node pointer"
+      ],
+      "answer": 2,
+      "explanation": "The existing structure stays valid until a fully constructed node can be published."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many nodes remain after removing the middle indexed chain node?",
+      "options": [
+        "0",
+        "1",
+        "3",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "The incoming link skips node one, leaving nodes zero and two.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int next[]={1,2,-1}, count=0;\n    next[0]=next[1];\n    for(int cur=0;cur!=-1;cur=next[cur]){count++;}\n    printf(\"%d\\n\",count);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What load is printed for nine distinct keys in three buckets?",
+      "options": [
+        "3.0",
+        "0.3",
+        "1.0",
+        "9.0"
+      ],
+      "answer": 0,
+      "explanation": "Chaining can have load factor three.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int keys=9,buckets=3;\n    printf(\"%.1f\\n\",keys/(double)buckets);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Searching a bucket with keys 1,8,15 for 15 needs how many comparisons?",
+      "options": [
+        "1",
+        "3",
+        "2",
+        "4"
+      ],
+      "answer": 1,
+      "explanation": "The match is the third inspected record.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int a[]={1,8,15}, c=0;\n    for(int i=0;i<3;i++){c++;if(a[i]==15){break;}}\n    printf(\"%d\\n\",c);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Each bucket owns a linked list of colliding keys.",
+      "bn": "প্রতিটা বাকেটে একই ইনডেক্সে আসা কীগুলোর লিংকড লিস্ট থাকে।"
+    },
+    {
+      "en": "Compare full keys after choosing a bucket.",
+      "bn": "বাকেট বাছার পর পুরো কী মিলিয়ে দেখো।"
+    },
+    {
+      "en": "A pointer to a link handles head and middle deletion.",
+      "bn": "লিংকের পয়েন্টার রাখলে হেড আর মাঝের নোড একইভাবে ডিলিট করা যায়।"
+    },
+    {
+      "en": "The load factor may exceed one with chaining.",
+      "bn": "চেইনিংয়ে লোড ফ্যাক্টর একের বেশি হলেও কী রাখা যায়।"
+    },
+    {
+      "en": "Free every remaining node before leaving the table.",
+      "bn": "হ্যাশ টেবিলের কাজ শেষে বাকি সব নোডের মেমরি ফ্রি করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "A chained table stores 90 keys in 30 buckets. Give alpha, expected search cost and a worst case.",
+      "answerHtml": "<p>Alpha is 90/30=3. With well-distributed independent hashes, expected search cost is O(1+alpha), including bucket selection and chain traversal. If every key hashes to one bucket, an unsuccessful search scans all 90 records: O(n).</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Bucket 3 points to 24 -&gt; 17 -&gt; 10 -&gt; NULL. Delete 17 and state the ownership changes.",
+      "answerHtml": "<p>Before: header -&gt; 24 -&gt; 17 -&gt; 10. Save node 17, set node 24 next to node 10, then free 17. After: header -&gt; 24 -&gt; 10 -&gt; NULL. No pointer in the table may still refer to 17.</p>"
+    },
+    {
+      "type": "output",
+      "marks": 6,
+      "question": "Trace insert, remove and find in seven buckets for input: 5\n1 8 15 -1 1\n8 15. Show the intermediate memory or worklist changes.",
+      "answerHtml": "<p>Insertion appends to the bucket list. Removing 8 repairs the middle link while the duplicate 1 creates no record.</p><pre class=\"output\">Count, keys, delete key and query:\nremoved=1\nfound=1\n0:\n1: 1 15\n2:\n3:\n4:\n5:\n6: -1\n</pre>"
+    },
+    {
+      "type": "program",
+      "marks": 6,
+      "question": "Write a function that removes a key from a seven-bucket chained set. Use the Node type and bucket helper from the lesson.",
+      "answerHtml": "<pre><code class=\"language-c\">static int erase_key(Node **table, int key)\n{\n    Node **link = &amp;table[bucket(key, 7)];\n    while (*link != NULL &amp;&amp; (*link)-&gt;key != key) {\n        link = &amp;(*link)-&gt;next;\n    }\n    if (*link == NULL) { return 0; }\n    Node *old = *link;\n    *link = old-&gt;next;\n    free(old);\n    return 1;\n}</code></pre><p>The incoming link may be a bucket header or a predecessor field. Repair it before freeing the node. This uses O(chain length) time and O(1) auxiliary space.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT algorithms course materials",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/"
+    },
+    {
+      "title": "C standard library",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,409 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ds-graph-dfs",
+  "module": "graphs",
+  "order": 4,
+  "kind": "lesson",
+  "level": "intermediate",
+  "title": {
+    "en": "Depth-First Search on a Graph",
+    "bn": "গ্রাফে ডেপথ-ফার্স্ট সার্চ"
+  },
+  "summary": {
+    "en": "Follow one branch deeply, record entry and exit, and reproduce recursion with stack frames.",
+    "bn": "একটা পথ ধরে গভীরে যাও, ঢোকা-বের হওয়ার ক্রম রাখো, আর স্ট্যাক দিয়ে রিকার্শন দেখাও।"
+  },
+  "estMinutes": 50,
+  "prerequisites": [
+    "ds-graph-bfs",
+    "ds-recursion-and-stack"
+  ],
+  "related": [
+    "ds-disjoint-set"
+  ],
+  "keywords": [
+    "graphs",
+    "C17",
+    "Depth-First Search on a Graph"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "C17 supports recursive function calls but promises no portable maximum recursion depth. The explicit DFS frame array avoids that dependency for the bounded graph and makes each saved neighbor index visible."
+    ]
+  },
+  "videos": [],
+  "labs": [
+    "graph-dfs"
+  ],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Finish a branch before trying its sibling"
+    },
+    {
+      "id": "syntax",
+      "title": "A frame must remember where to resume"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow discovery and return on one graph"
+    },
+    {
+      "id": "examples",
+      "title": "Compare frames with real calls"
+    },
+    {
+      "id": "comparison",
+      "title": "Read the information DFS provides"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Bound active calls and include other components"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Remember suspended work"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 calls and explicit frames"
+    },
+    {
+      "id": "summary",
+      "title": "A return is part of the trace"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Simulate recursive entry and return with frames",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Discovery is 0,1,3,5,4,2. Frames remember the next neighbor, so vertex two finishes before four resumes.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "See recursive calls and returns directly",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>On a path, entry runs from zero to six. Returns run in reverse because each call waits for its child.</p>",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Start another DFS for an unseen component",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The first tree reaches vertices zero through five. A second root, six, accounts for the isolated component.</p>",
+      "stdin": "examples/ex-3.in"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Record DFS times without recursion",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read graph 0..3 and start 0..6. Print DFS graph (0..3) and start (0..6):, discover: with entry IDs, then v enter=T leave=T for all seven IDs. Clock begins at zero and advances on every entry or exit; unreachable times are zero.</p>",
+      "hints": [
+        "Store one next-neighbor index per active frame."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Count components with a DFS forest",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read graph 0..3. Print Forest graph (0..3):, enter U and leave U event lines for recursive DFS with ascending neighbors and roots, then components=C.</p>",
+      "hints": [
+        "An isolated root still creates one tree."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Read nested timestamps",
+      "statementHtml": "<p>A DFS records A=(1,10), B=(2,7), C=(3,4), D=(8,9). Which listed vertices descend from B?</p>",
+      "hints": [
+        "Containment describes ancestry."
+      ],
+      "answerHtml": "<p>Only C has both times inside B interval (2,7). A is an ancestor of B. D lies after B has finished, so it is in another branch under A. Entry/exit intervals are either nested or disjoint for a DFS forest.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Stack of vertices versus frames",
+      "statementHtml": "<p>Why does pushing all neighbors onto a stack fail to reproduce recursive finish times by itself?</p>",
+      "hints": [
+        "A return is an event, not a new discovery."
+      ],
+      "answerHtml": "<p>A plain pending-vertex stack records future visits, not suspended calls. It does not say which neighbor a returning call should inspect next. A frame with vertex and next-neighbor index preserves that position, and popping an exhausted frame corresponds to recursive return.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must a DFS frame save besides its vertex?",
+      "options": [
+        "The next neighbor position to inspect",
+        "Every possible shortest path",
+        "The global degree sum",
+        "Only the final output string"
+      ],
+      "answer": 0,
+      "explanation": "The saved index lets the parent resume after a child returns."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is a DFS vertex finished?",
+      "options": [
+        "At first entry",
+        "After all its neighbors and recursive children are processed",
+        "At the first nonmatching neighbor",
+        "When its ID is printed initially"
+      ],
+      "answer": 1,
+      "explanation": "Finish records the return event, not the discovery event."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can DFS from zero choose a longer route to vertex two than edge 0-2?",
+      "options": [
+        "No, all DFS routes minimize hops",
+        "Only with weighted edges",
+        "Yes, neighbor order may lead through a deep branch first",
+        "Only when zero is isolated"
+      ],
+      "answer": 2,
+      "explanation": "Depth-first exploration prioritizes a branch over distance layers."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How do discovery/finish intervals relate for an ancestor and descendant?",
+      "options": [
+        "They always overlap without containment",
+        "They must be identical",
+        "The ancestor finishes first",
+        "The descendant interval lies inside the ancestor interval"
+      ],
+      "answer": 3,
+      "explanation": "The ancestor frame waits until every descendant returns."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens if seen is reset before each proposed component root?",
+      "options": [
+        "Previously reached components are explored again",
+        "Components are counted more accurately",
+        "All cycles disappear",
+        "Every vertex becomes unreachable"
+      ],
+      "answer": 0,
+      "explanation": "A shared seen array is required for a DFS forest."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is a possible recursion depth on a V-vertex path?",
+      "options": [
+        "Always one",
+        "V active calls",
+        "Always log2 V",
+        "Always E squared"
+      ],
+      "answer": 1,
+      "explanation": "Each vertex waits for its next child on the path."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Is a visited boolean alone enough for directed-cycle detection?",
+      "options": [
+        "Yes, every visited neighbor proves a cycle",
+        "Only if IDs start at one",
+        "No, active and finished states must be distinguished",
+        "Only in a complete graph"
+      ],
+      "answer": 2,
+      "explanation": "An edge to an already finished vertex need not close a directed cycle."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which vertex resumes when the deepest frame is popped?",
+      "options": [
+        "0",
+        "2",
+        "3",
+        "1"
+      ],
+      "answer": 3,
+      "explanation": "Popping frame three exposes its parent frame one.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int stack[]={0,1,3},top=2;\n    top--;\n    printf(\"%d\\n\",stack[top]);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What is the finish time of a one-vertex DFS that increments on entry and exit?",
+      "options": [
+        "1 2",
+        "0 1",
+        "1 1",
+        "2 1"
+      ],
+      "answer": 0,
+      "explanation": "The first event is one and the second is two.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int clock=0,enter=++clock,leave=++clock;\n    printf(\"%d %d\\n\",enter,leave);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does interval 3..4 lie inside ancestor interval 1..8?",
+      "options": [
+        "0",
+        "1",
+        "3",
+        "8"
+      ],
+      "answer": 1,
+      "explanation": "Both strict inequalities hold, consistent with descendant nesting.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int a=1,b=8,c=3,d=4;\n    printf(\"%d\\n\",a<c&&d<b);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does reversing finish order give for a fully explored DAG?",
+      "options": [
+        "Minimum weighted distances",
+        "A guaranteed Hamiltonian path",
+        "A topological ordering",
+        "A heap array"
+      ],
+      "answer": 2,
+      "explanation": "Every directed edge respects the DAG finish-order property, provided cycle checks establish acyclicity."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does DFS skip the reverse parent edge during undirected cycle analysis?",
+      "options": [
+        "Every reverse edge proves a new cycle",
+        "The parent is always unreachable",
+        "Undirected edges have no endpoints",
+        "It is the same tree connection viewed from its other endpoint"
+      ],
+      "answer": 3,
+      "explanation": "The parent edge alone is not a second independent route."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "DFS resumes a vertex after its child finishes.",
+      "bn": "চাইল্ডের কাজ শেষ হলে ডিএফএস আগের ভার্টেক্সে ফিরে আসে।"
+    },
+    {
+      "en": "A stack frame remembers the next neighbor to inspect.",
+      "bn": "স্ট্যাক ফ্রেমে পরের কোন নেইবার দেখতে হবে তা রাখা থাকে।"
+    },
+    {
+      "en": "Discovery and finish orders describe different events.",
+      "bn": "ডিসকভারি আর ফিনিশ ক্রমে দুই রকম ঘটনা লেখা হয়।"
+    },
+    {
+      "en": "A DFS tree path need not minimize edge count.",
+      "bn": "ডিএফএস ট্রির পথে এজের সংখ্যা সবচেয়ে কম নাও হতে পারে।"
+    },
+    {
+      "en": "A component loop turns one traversal into a DFS forest.",
+      "bn": "সব কম্পোনেন্ট ঘুরতে বাইরের লুপ দিয়ে ডিএফএস ফরেস্ট বানাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "A DFS records A=(1,10), B=(2,7), C=(3,4), D=(8,9). Which listed vertices descend from B?",
+      "answerHtml": "<p>Only C has both times inside B interval (2,7). A is an ancestor of B. D lies after B has finished, so it is in another branch under A. Entry/exit intervals are either nested or disjoint for a DFS forest.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Why does pushing all neighbors onto a stack fail to reproduce recursive finish times by itself?",
+      "answerHtml": "<p>A plain pending-vertex stack records future visits, not suspended calls. It does not say which neighbor a returning call should inspect next. A frame with vertex and next-neighbor index preserves that position, and popping an exhausted frame corresponds to recursive return.</p>"
+    },
+    {
+      "type": "output",
+      "marks": 6,
+      "question": "Trace simulate recursive entry and return with frames for input: 0 0. Show the intermediate memory or worklist changes.",
+      "answerHtml": "<p>Discovery is 0,1,3,5,4,2. Frames remember the next neighbor, so vertex two finishes before four resumes.</p><pre class=\"output\">DFS graph (0..3) and start (0..6):\ndiscover: 0 1 3 5 4 2\n0 enter=1 leave=12\n1 enter=2 leave=11\n2 enter=6 leave=7\n3 enter=3 leave=10\n4 enter=5 leave=8\n5 enter=4 leave=9\n6 enter=0 leave=0\n</pre>"
+    },
+    {
+      "type": "program",
+      "marks": 6,
+      "question": "Write the return-side action for the iterative DFS frame algorithm. Use stack, next, degree, leave, clock and top.",
+      "answerHtml": "<pre><code class=\"language-c\">int u = stack[top];\nif (next[top] == degree[u]) {\n    leave[u] = ++clock;\n    top--;\n}</code></pre><p>The equality says every neighbor of the active frame has been considered. Assign exit time once, then expose the parent frame whose next position was saved before descent.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT algorithms course materials",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/"
+    },
+    {
+      "title": "C standard library",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
