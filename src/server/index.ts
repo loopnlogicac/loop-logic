@@ -91,7 +91,7 @@ const server = createApp({
   admin,
   classes,
   orders,
-  reports: new ReportService(store, Object.entries(env).filter(([key]) => /KEY|SECRET|TOKEN|PASSWORD/.test(key)).map(([, value]) => value ?? '')),
+  reports: new ReportService(store, Object.entries(env).filter(([key]) => /KEY|SECRET|TOKEN|PASSWORD/.test(key)).map(([, value]) => value ?? '').filter((value) => value.length >= 8)),
   runner,
   search,
   store,
