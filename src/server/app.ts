@@ -146,7 +146,7 @@ export function buildRoutes(d: AppDeps): Route[] {
   return [
     route('GET', '/api/my-notes', (ctx) => notesFor(ctx).list(ctx.learnerId, lang(ctx.query.get('lang'))), 'learner'),
     route('GET', '/api/my-notes/:key', (ctx) => notesFor(ctx).get(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
-    route('PUT', '/api/my-notes/:key', (ctx) => notesFor(ctx).put(ctx.learnerId, ctx.params.key!, ctx.body, lang(ctx.query.get('lang'))), 'learner'),
+    route('PUT', '/api/my-notes/:key', (ctx) => notesFor(ctx).put(ctx.learnerId, ctx.params.key!, ctx.body ?? {}, lang(ctx.query.get('lang'))), 'learner'),
     route('DELETE', '/api/my-notes/:key', (ctx) => notesFor(ctx).delete(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
