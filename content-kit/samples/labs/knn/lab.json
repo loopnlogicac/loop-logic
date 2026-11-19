@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.1",
+  "id": "knn",
+  "kind": "ml",
+  "title": { "en": "k-Nearest Neighbours: ask the closest examples", "bn": "কে-নিকটতম প্রতিবেশী: সবচেয়ে কাছের উদাহরণদের জিজ্ঞেস করো" },
+  "summary": { "en": "Drop a new fruit on the plot, watch KNN measure every distance, pick the k closest examples and let them vote." },
+  "pseudocode": [
+    "for each training point p:",
+    "    d[p] = distance(query, p)",
+    "sort points by d, smallest first",
+    "neighbours = the first k points",
+    "count votes for each class among neighbours",
+    "if two classes tie: the class of the nearest neighbour wins",
+    "predict the class with the most votes"
+  ],
+  "inputs": [
+    { "name": "points", "label": "Training fruits (click to add)", "type": "points", "minLength": 1, "maxLength": 30, "classes": 2, "xRange": [0, 10], "yRange": [0, 10] },
+    { "name": "qx", "label": "New fruit: size", "type": "number", "min": 0, "max": 10, "step": 0.5 },
+    { "name": "qy", "label": "New fruit: sweetness", "type": "number", "min": 0, "max": 10, "step": 0.5 },
+    { "name": "k", "label": "k (how many neighbours vote)", "type": "int", "min": 1, "max": 9 }
+  ],
+  "presets": [
+    { "name": "Apple or mango? (k = 3)", "input": { "qx": 5.5, "qy": 6, "k": 3, "points": [
+      { "x": 2, "y": 3, "cls": 0 }, { "x": 3, "y": 2, "cls": 0 }, { "x": 3, "y": 4, "cls": 0 }, { "x": 4, "y": 3.5, "cls": 0 }, { "x": 5, "y": 5, "cls": 0 },
+      { "x": 6, "y": 7, "cls": 1 }, { "x": 7, "y": 8, "cls": 1 }, { "x": 8, "y": 7, "cls": 1 }, { "x": 7, "y": 6, "cls": 1 }, { "x": 6.5, "y": 8.5, "cls": 1 } ] } },
+    { "name": "k = 1 follows one fruit", "input": { "qx": 5, "qy": 5.5, "k": 1, "points": [
+      { "x": 2, "y": 2, "cls": 0 }, { "x": 3, "y": 3, "cls": 0 }, { "x": 5, "y": 6, "cls": 0 },
+      { "x": 6, "y": 5, "cls": 1 }, { "x": 7, "y": 6, "cls": 1 }, { "x": 8, "y": 8, "cls": 1 }, { "x": 6.5, "y": 7, "cls": 1 } ] } },
+    { "name": "A tie with k = 2", "input": { "qx": 5, "qy": 5, "k": 2, "points": [
+      { "x": 4, "y": 5, "cls": 0 }, { "x": 2, "y": 2, "cls": 0 }, { "x": 6.5, "y": 5, "cls": 1 }, { "x": 8, "y": 8, "cls": 1 } ] } },
+    { "name": "Big k: the majority wins", "input": { "qx": 7, "qy": 7, "k": 9, "points": [
+      { "x": 1, "y": 1, "cls": 0 }, { "x": 2, "y": 1, "cls": 0 }, { "x": 1, "y": 2, "cls": 0 }, { "x": 2, "y": 2, "cls": 0 }, { "x": 3, "y": 1, "cls": 0 }, { "x": 1, "y": 3, "cls": 0 },
+      { "x": 7, "y": 6, "cls": 1 }, { "x": 6, "y": 7, "cls": 1 }, { "x": 8, "y": 7, "cls": 1 } ] } }
+  ],
+  "checks": [
+    { "input": { "qx": 5.5, "qy": 6, "k": 3, "points": [ { "x": 2, "y": 3, "cls": 0 }, { "x": 3, "y": 2, "cls": 0 }, { "x": 3, "y": 4, "cls": 0 }, { "x": 4, "y": 3.5, "cls": 0 }, { "x": 5, "y": 5, "cls": 0 }, { "x": 6, "y": 7, "cls": 1 }, { "x": 7, "y": 8, "cls": 1 }, { "x": 8, "y": 7, "cls": 1 }, { "x": 7, "y": 6, "cls": 1 }, { "x": 6.5, "y": 8.5, "cls": 1 } ] },
+      "expect": { "vars": { "prediction": "Mango", "votesApple": 1, "votesMango": 2 }, "plot": { "shapes": { "query": { "cls": 1 } } } } },
+    { "input": { "qx": 5, "qy": 5, "k": 2, "points": [ { "x": 4, "y": 5, "cls": 0 }, { "x": 2, "y": 2, "cls": 0 }, { "x": 6.5, "y": 5, "cls": 1 }, { "x": 8, "y": 8, "cls": 1 } ] },
+      "expect": { "vars": { "prediction": "Apple", "votesApple": 1, "votesMango": 1 } } },
+    { "input": { "qx": 9, "qy": 9, "k": 5, "points": [ { "x": 1, "y": 1, "cls": 1 } ] },
+      "expect": { "vars": { "prediction": "Mango", "k": 1 } } },
+    { "input": { "qx": 7, "qy": 7, "k": 9, "points": [ { "x": 1, "y": 1, "cls": 0 }, { "x": 2, "y": 1, "cls": 0 }, { "x": 1, "y": 2, "cls": 0 }, { "x": 2, "y": 2, "cls": 0 }, { "x": 3, "y": 1, "cls": 0 }, { "x": 1, "y": 3, "cls": 0 }, { "x": 7, "y": 6, "cls": 1 }, { "x": 6, "y": 7, "cls": 1 }, { "x": 8, "y": 7, "cls": 1 } ] },
+      "expect": { "vars": { "prediction": "Apple", "votesApple": 6, "votesMango": 3 } } }
+  ],
+  "complexity": { "time": "O(n log n) per prediction (n distances, then a sort)", "space": "O(n)" }
+}

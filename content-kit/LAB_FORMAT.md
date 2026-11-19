@@ -1,5 +1,7 @@
 # Lab format 1.1: interactive visualisers and simulators
 
+(Format 1.1 with the `ml` kind and the `number`, `choice` and `points` inputs, added November 2026.)
+
 A **lab** is a step-by-step animation of an algorithm or data-structure operation that students can play, pause, step back through, and re-run on **their own input**. Loop & Logic draws it with one shared lab player. You only write **data and a pure trace function**, never drawing code, HTML or CSS.
 
 The checker (`tools/check.mjs`) runs every lab with its presets, its checks and 25 random inputs, using the same state model as the site's player. A lab that passes the checker plays correctly on the site.
@@ -12,7 +14,7 @@ topics/<module>/<topic>/labs/<lab-id>/
 
 In the topic, place the lab once in `body.en.html` with `<div data-lab="<lab-id>"></div>` (usually in or right after "How it works"), and list it in `topic.json` → `"labs": ["<lab-id>"]`. The lab ids and kinds for each topic are fixed in `spec/curriculum.json` (`topics[].labs`).
 
-Working samples: `samples/labs/bubble-sort` (array) and `samples/labs/bfs` (graph).
+Working samples: `samples/labs/bubble-sort` (array), `samples/labs/bfs` (graph), `samples/labs/knn` and `samples/labs/kmeans` (ml).
 
 ```bash
 node tools/check.mjs --lab samples/labs/bubble-sort --kind array
@@ -26,7 +28,7 @@ node tools/check.mjs --lab samples/labs/bubble-sort --kind array
 |---|---|
 | `schemaVersion` | `"1.1"` |
 | `id` | the folder name; must match the curriculum |
-| `kind` | `array`, `heap`, `linked-list`, `stack`, `queue`, `tree`, `graph`, `grid` or `hash-table`; must match the curriculum |
+| `kind` | `array`, `heap`, `linked-list`, `stack`, `queue`, `tree`, `graph`, `grid`, `hash-table` or `ml`; must match the curriculum |
 | `title` | `{ "en", "bn" }` |
 | `summary` | `{ "en" }`: one sentence, ≤ 220 characters, saying what the student will see |
 | `pseudocode` | 3–30 lines, each ≤ 80 characters. Steps point at these lines with `line` (1-based) so the player highlights them. Use the same pseudocode style as the lesson. |
@@ -47,6 +49,20 @@ node tools/check.mjs --lab samples/labs/bubble-sort --kind array
 ```
 
 `int-array` allows at most 16 values; `string` at most 24 characters, with an optional `alphabet`. The input passed to `trace` is an object keyed by `name`: `{ "values": [...], "target": 7 }`.
+
+At most 6 inputs. Three more types exist, mainly for machine-learning labs:
+
+```json
+{ "name": "lr",     "label": "Learning rate",           "type": "number", "min": 0.01, "max": 1, "step": 0.01 },
+{ "name": "kernel", "label": "Kernel",                  "type": "choice", "options": ["linear", "poly", "rbf"] },
+{ "name": "points", "label": "Training points (click)", "type": "points", "minLength": 1, "maxLength": 40, "classes": 2, "xRange": [0, 10], "yRange": [0, 10] }
+```
+
+- `number` is a slider. Values are multiples of `step` from `min`.
+- `choice` is a drop-down with 2–8 options.
+- `points` lets the student click points onto a plot: `[{ "x": 2.5, "y": 7, "cls": 1 }, …]`. `classes` is the number of labels the student can pick from (0 means unlabelled points, no `cls`). At most 60 points.
+
+The checker fuzzes these too: random slider positions, every choice, and random point clouds (including the smallest and largest allowed).
 
 Graphs, trees and other structured inputs are **not** typed by students. Build them inside `trace.js`, and use an `int` input to let the student choose the start vertex, the key to insert, and so on (see the BFS sample). Several fixed graphs can be offered as presets by an `int` input such as `"graph"` (0, 1, 2).
 
@@ -169,6 +185,56 @@ function trace(input) {
   - `insert {index, key}`. With open addressing, inserting into an occupied slot is an error, so `probe` first.
   - `remove {index, key}`. Open addressing leaves a tombstone, shown as `†`.
 - **final:** `buckets`
+
+### `ml` (machine learning: plots, charts, trees, tables, neural networks)
+
+An `ml` lab is made of **panels**. `init` holds the panels the lab uses (the curriculum lists them in `labs[].panels`); each panel starts with the same fields shown below.
+
+| panel | init | what it draws |
+|---|---|---|
+| `plot` | `{ xRange: [min, max], yRange, xLabel?, yLabel?, classes?: [{ id: 0, label }, …] (≤ 6), points?: [{ id, x, y, cls?, size?, label? }] (≤ 150), shapes?: { id: shape }, regions? }` | a 2-D scatter plot in data coordinates. `cls` picks the class colour (`null` = grey, unlabelled). `size` 0–10 scales a dot (AdaBoost weights). |
+| `chart` | `{ xLabel?, yLabel?, xRange?, yRange?, series?: [{ id, label, type: "line" \| "bar" \| "scatter", tone?, points: [[x, y], …] }] (≤ 6 series, ≤ 300 points each), vlines?: [{ x, label }] }` | line, bar or scatter series: loss curves, accuracy vs k, ROC, elbow, bars of probabilities. Bar x values may be short category names. |
+| `tree` | the `tree` kind's init | a decision tree or dendrogram; node values are short strings like `"size ≤ 5?"` or `"Mango (4)"` (≤ 24 chars) |
+| `tables` | `{ name: grid init, … }` (1–3 named grids) | tables of numbers: a confusion matrix, word counts, an image and its convolution, a fold table |
+| `network` | the `graph` kind's init; `edge.weight` is shown on the edge | a neural network laid out by hand: input nodes at x ≈ 10, hidden at 50, output at 90 |
+
+**Shapes** (inside `plot.shapes`, or added with the `shape` op). Every shape may have `tone`, `dash: true` and a `label` (≤ 24 chars).
+
+| type | fields | used for |
+|---|---|---|
+| `line` | `w: [w1, w2]`, `b` meaning **w1·x + w2·y + b = 0** (drawn across the whole plot) | regression lines, logistic/perceptron/SVM boundaries, vertical tree splits (`w: [1, 0], b: -t` is x = t) |
+| `segment` | `from: [x, y]`, `to: [x, y]` | residuals, distance lines, a split that only covers part of the plot |
+| `arrow` | `from`, `to` | vectors, centre movements, gradient direction, PCA axes |
+| `circle` | `center: [x, y]`, `r` | the KNN neighbourhood, the DBSCAN eps, support vectors |
+| `rect` | `from`, `to`, `cls?` | shaded decision-tree regions |
+| `curve` | `points: [[x, y], …]` (2–200) | polynomial fits, sigmoid, a boosting step function |
+| `marker` | `at: [x, y]`, `symbol: star \| cross \| diamond \| plus \| square`, `cls?` | the query point, cluster centres |
+
+**Regions** (decision boundary maps): `{ rows, cols (2–50 each), mode: "class" | "value", cells }`. Row 0 is the **top** of the plot (largest y), column 0 the left. In `class` mode a cell holds a class id or `null`; in `value` mode a number 0–1 (a probability, drawn as a colour scale). Compute the cell centres from `xRange` and `yRange` and run the real model on each one. At most 30 `regions` steps per trace, because they are large.
+
+**ops**
+
+- plot:
+  - `point-add {id, x, y, cls?, size?, label?}`, `point-set {id, x?, y?, cls?, size?, label?}`, `point-remove {id}`
+  - `point-mark {targets: [ids], tone}`, `point-unmark {targets}`, `point-clear-marks`
+  - `shape {id, type, …}` adds or replaces a shape; `shape-remove {id}`, `shapes-clear`
+  - `regions {rows, cols, mode, cells}`, `regions-clear`
+- chart: `series {id, label, type, tone?, points?}` (creates or restyles), `series-add {id, x, y}` (appends a point), `series-set {id, points}`, `vline {x, label?}`, `vlines-clear`
+- tree: the `tree` kind's ops with a `tree-` prefix: `tree-create`, `tree-set-child`, `tree-add-child`, `tree-set-root`, `tree-set-value`, `tree-visit`, `tree-mark`, …
+- tables: the `grid` kind's ops with a `table-` prefix and the table name: `table-set {table, r, c, value}`, `table-mark {table, targets, tone}`, `table-compare`, `table-arrow`, …
+- network: the `graph` kind's ops with a `net-` prefix (`net-visit`, `net-edge`, `net-label` for activations), plus `net-weight {id, value}` to change an edge's weight
+- `list {name, items}` and `vars` work as usual.
+
+**Final state you can `expect`:** `vars`, `lists`, `plot.points` (id → `{x, y, cls, size}`), `plot.shapes`, `plot.regions`, `plot.marks`, `chart.series` (id → `{points, …}`), `tree.inorder` / `tree.root` / …, `tables.<name>.cells`, `network.labels`, `network.weights`.
+
+**Rules that matter for ML labs**
+
+- **Show the model working, not a cartoon of it.** KNN really measures every distance; a tree really tries the thresholds; gradient descent really computes the gradient. The final answer must equal what the topic's Python example prints for the same data (round both the same way).
+- **Randomness:** `Math.random` is not available. When an algorithm needs randomness (bootstrap samples, coin flips, shuffles), write a small seeded generator in the trace (a linear congruential generator is fine) and give the student a `seed` input.
+- **Numbers in notes and vars:** round to 2–3 decimals with `Math.round(v * 100) / 100`. Never show `0.30000000000000004`.
+- **Sliders are the point.** An ML lab should let the student change the thing the lesson is about (k, depth, C, gamma, learning rate, threshold, eps) and see the result change. Put that input first.
+- **Size:** 20–400 steps on the presets. For iterative training (gradient descent, epochs), show every step for the first few iterations, then every 5th or 10th with a note saying so, then the final state.
+- **Quiz and practice figures** use the same panels (see `samples/figures/quiz-examples.json`): `"figure": { "caption"?: {en, bn}, "panels": { … } }`. The checker validates them with the same rules.
 
 ---
 

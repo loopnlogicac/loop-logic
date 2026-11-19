@@ -70,12 +70,22 @@ Run every program, write every .out file from real runs, and from inside content
 Change only files in content-kit/compiler-design/content/. Open a pull request titled "Compiler Design – Batch 1".
 ```
 
+### H. Machine Learning: Batch 1 (Module 1 for children + the course datasets)
+```
+Work inside the folder content-kit/. Read CODEX_TASK_ML.md in full (it is the master brief for this subject), then CODEX_TASK_2.md, c-tutorial/CODEX_PROMPT.md, LAB_FORMAT.md (especially the "ml" kind), samples/labs/knn, samples/labs/kmeans, samples/figures/quiz-examples.json and machine-learning/spec/curriculum.json.
+First install the packages: python3 -m pip install "numpy>=2.0" "pandas>=2.2" "scikit-learn>=1.5" "matplotlib>=3.8"
+Write Machine Learning Batch 1 into a new package folder machine-learning/content/: all course datasets in shared/datasets/ (with make_datasets.py and README.md), then all 9 topics of module ml-for-everyone with their 3 labs, their picture questions and full Bangla bodies.
+Run every program, write every .out file from real runs, and from inside content-kit/ run: node tools/check.mjs machine-learning/content --require-packages --report machine-learning/content/CHECK_REPORT.txt until it reports 0 errors. packageVersion 0.1.0.
+Change only files in content-kit/machine-learning/content/. Open a pull request titled "Machine Learning – Batch 1".
+```
+Later Machine Learning batches follow the table in section 8 of `CODEX_TASK_ML.md` (11 batches). Use the "later batches" message below with `--require-packages`.
+
 ---
 
 ## Later batches (after the previous batch of that subject is merged)
 
 ```
-Work inside the folder content-kit/. Re-read CODEX_TASK_2.md. Continue <SUBJECT> with Batch <N> exactly as section 5 lists, keeping every earlier topic unchanged unless the checker or the review notes in NOTES.md ask for a fix. Bump packageVersion to 0.<N>.0. Run the same check command as before until it reports 0 errors. Change only files in content-kit/<FOLDER>/. Open a pull request titled "<SUBJECT> – Batch <N>".
+Work inside the folder content-kit/. Re-read CODEX_TASK_2.md (and CODEX_TASK_ML.md for Machine Learning). Continue <SUBJECT> with Batch <N> exactly as section 5 of CODEX_TASK_2.md lists (section 8 of CODEX_TASK_ML.md for Machine Learning), keeping every earlier topic unchanged unless the checker or the review notes in NOTES.md ask for a fix. Bump packageVersion to 0.<N>.0. Run the same check command as before until it reports 0 errors. Change only files in content-kit/<FOLDER>/. Open a pull request titled "<SUBJECT> – Batch <N>".
 ```
 
 | Subject | Folder | Batches | Check command extras |
@@ -87,3 +97,4 @@ Work inside the folder content-kit/. Re-read CODEX_TASK_2.md. Continue <SUBJECT>
 | Python | `python/content` | 2–4 | |
 | DBMS | `dbms/content` | 2–3 | `--require-sql` (start MySQL first) |
 | Compiler Design | `compiler-design/content` | 2–3 | |
+| Machine Learning | `machine-learning/content` | 2–11 (see `CODEX_TASK_ML.md` §8) | `--require-packages` |

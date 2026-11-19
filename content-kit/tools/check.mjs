@@ -10,6 +10,7 @@
 //   --no-run            format checks only (the package cannot be accepted this way)
 //   --sanitize          C: also run with -fsanitize=address,undefined
 //   --require-sql       fail instead of skipping SQL when MySQL is not reachable
+//   --require-packages  fail instead of skipping Python examples whose "requires" packages are missing
 //   --cc <compiler>     C compiler (default: gcc, then clang)
 //   --report <file>     also write the report to a file
 //   --curriculum <f>    default: <package-dir>/../spec/curriculum.json
@@ -23,7 +24,7 @@ import { join, dirname, resolve, relative, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { LAB_KINDS, loadTrace, playTrace, partialMatch, checkInputSpec, validInput, fuzzInputs, LabError } from './labs.mjs';
+import { LAB_KINDS, loadTrace, playTrace, partialMatch, checkInputSpec, validInput, fuzzInputs, checkFigure, LabError } from './labs.mjs';
 
 export const FORMAT_VERSIONS = ['1.0', '1.1'];
 const here = dirname(fileURLToPath(import.meta.url));
@@ -44,7 +45,7 @@ const COUNTS = {
 };
 const QUIZ_LIMITS = { prompt: 1000, option: 300, explanation: 1500, options: [2, 6], codeLines: 40 };
 const APPROVED_HOSTS = ['en.cppreference.com', 'www.open-std.org', 'open-std.org', 'gcc.gnu.org', 'www.gnu.org', 'man7.org', 'clang.llvm.org', 'valgrind.org',
-  'docs.oracle.com', 'openjdk.org', 'dev.java', 'docs.python.org', 'peps.python.org', 'numpy.org', 'pandas.pydata.org', 'matplotlib.org',
+  'docs.oracle.com', 'openjdk.org', 'dev.java', 'docs.python.org', 'peps.python.org', 'numpy.org', 'pandas.pydata.org', 'matplotlib.org', 'scikit-learn.org', 'developers.google.com', 'pytorch.org',
   'dev.mysql.com', 'www.postgresql.org', 'sqlite.org', 'www.sqlite.org', 'ocw.mit.edu', 'openstax.org', 'www.gnu.org', 'westes.github.io'];
 const DEMONSTRATES = ['compile-error', 'warning', 'undefined-behavior', 'runtime-error'];
 const BANNED = {
@@ -65,7 +66,7 @@ const TAGS = {
 const VOID = new Set(['br', 'hr', 'img']);
 const CLASSES = {
   p: ['callout-title', 'lead'], pre: ['diagram', 'output'], code: ['language-c', 'language-java', 'language-python', 'language-sql', 'language-bash', 'language-text'], table: ['ref'],
-  div: ['callout note', 'callout tip', 'callout warning', 'callout danger', 'callout version', 'callout exam'],
+  div: ['callout note', 'callout tip', 'callout warning', 'callout danger', 'callout version', 'callout exam', 'callout story', 'callout try-it', 'callout unplugged', 'callout deeper', 'callout math'],
 };
 const ENTITIES = new Set(['amp', 'lt', 'gt', 'quot', 'apos', 'nbsp', 'ndash', 'mdash', 'hellip', 'rarr', 'larr', 'uarr', 'darr', 'harr', 'rArr', 'lArr', 'hArr', 'times', 'divide', 'le', 'ge', 'ne', 'plusmn', 'deg', 'middot', 'bull', 'copy', 'epsilon', 'empty', 'isin', 'notin', 'cup', 'cap', 'sub', 'sube', 'sup', 'supe', 'forall', 'exist', 'and', 'or', 'not', 'sigma', 'Sigma', 'pi', 'lambda', 'alpha', 'beta', 'theta', 'Theta', 'Omega', 'omega', 'infin', 'sum', 'prod', 'radic', 'lfloor', 'rfloor', 'lceil', 'rceil', 'prime', 'Prime']);
 const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -201,7 +202,7 @@ function build(lang, src, { std = 'c17', flags = [], werror = true, sanitize = f
 function run(b, { stdin = '', args = [], files = [] } = {}) {
   for (const f of files) copyFileSync(f, join(b.dir, basename(f)));
   const [cmd, ...rest] = b.cmd;
-  const r = spawnSync(cmd, [...rest, ...args], { input: stdin, cwd: b.dir, encoding: 'utf8', timeout: 10000, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, ASAN_OPTIONS: 'detect_leaks=1', PYTHONHASHSEED: '0' } });
+  const r = spawnSync(cmd, [...rest, ...args], { input: stdin, cwd: b.dir, encoding: 'utf8', timeout: 10000, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, ASAN_OPTIONS: 'detect_leaks=1', PYTHONHASHSEED: '0', MPLBACKEND: 'Agg', OMP_NUM_THREADS: '1' } });
   return { status: r.status, signal: r.signal, stdout: r.stdout ?? '', stderr: firstLines(r.stderr ?? '', 8), timedOut: r.error?.code === 'ETIMEDOUT' };
 }
 
@@ -275,7 +276,7 @@ function missingPythonPackages(requires) {
 }
 
 // ── labs ────────────────────────────────────────────────────────────────────
-export function checkLab(dir, where, { kind, topicExamples = null }) {
+export function checkLab(dir, where, { kind, topicExamples = null, panels = null }) {
   const lw = `${where}/lab.json`;
   if (!existsSync(join(dir, 'lab.json'))) { err(lw, 'missing'); return; }
   const lab = readJson(join(dir, 'lab.json'), lw); if (!lab) return;
@@ -303,6 +304,7 @@ export function checkLab(dir, where, { kind, topicExamples = null }) {
     try { return playTrace(lab.kind, trace(input), { lines }); } catch (e) { err(`${where}/trace.js`, `${label}: ${e instanceof LabError ? e.message : `crashed: ${e.message}`}`); return null; }
   };
   lab.presets.forEach((p, n) => play(p.input, `preset "${p.name ?? n}"`));
+  if (panels && lab.kind === 'ml' && lab.presets[0]) { try { const init = trace(lab.presets[0].input)?.init ?? {}; for (const pn of panels) if (!init[pn]) err(`${where}/trace.js`, `the curriculum asks for the "${pn}" panel; init has ${Object.keys(init).join(', ') || 'none'}`); } catch { /* reported above */ } }
   lab.checks.forEach((c, n) => { const s = play(c.input, `check ${n + 1}`); if (s) { const d = partialMatch(s, c.expect); if (d) err(`${where}/trace.js`, `check ${n + 1}: ${d}`); } });
   if ((lab.inputs ?? []).length) { let k = 0; for (const input of fuzzInputs(lab.inputs)) { if (!play(input, `random input ${JSON.stringify(input)}`)) break; if (++k > 25) break; } }
 }
@@ -345,7 +347,7 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
   if (!Array.isArray(t.references)) err(tw, 'references must be an array');
   else for (const r of t.references) { try { const h = new URL(r.url).host; if (!APPROVED_HOSTS.includes(h)) err(tw, `reference host ${h} is not approved`); } catch { err(tw, `reference url invalid: ${r?.url}`); } }
   if (!t.review || t.review.status !== 'draft') err(tw, 'review.status must be "draft" (Loop & Logic reviewers change it)');
-  const C = COUNTS[kind] ?? COUNTS.lesson;
+  const C = { ...(COUNTS[kind] ?? COUNTS.lesson), ...(planned?.counts ?? {}) };
   const texts = []; // for writing-quality rules
 
   // body
@@ -361,8 +363,8 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     const ids = (t.sections ?? []).map((s) => s.id);
     if (!Array.isArray(t.sections) || t.sections.some((s) => !isStr(s?.id) || !isStr(s?.title))) err(tw, 'sections must be [{id, title}]');
     if (JSON.stringify(ids) !== JSON.stringify(body.h2)) err(tw, `sections ${JSON.stringify(ids)} must match the <h2> ids in body.en.html, in order: ${JSON.stringify(body.h2)}`);
-    for (const s of REQUIRED_SECTIONS[kind] ?? []) if (!body.h2.includes(s)) err(rel(bodyFile), `missing required section <h2 id="${s}">`);
-    for (const s of RECOMMENDED_SECTIONS[kind] ?? []) if (!body.h2.includes(s)) warn(rel(bodyFile), `consider a "${s}" section`);
+    for (const s of ctx.sections?.[kind]?.required ?? REQUIRED_SECTIONS[kind] ?? []) if (!body.h2.includes(s)) err(rel(bodyFile), `missing required section <h2 id="${s}">`);
+    for (const s of ctx.sections?.[kind]?.recommended ?? RECOMMENDED_SECTIONS[kind] ?? []) if (!body.h2.includes(s)) warn(rel(bodyFile), `consider a "${s}" section`);
     if ((kind === 'lesson' || kind === 'theory') && t.level) {
       const [lo, hi] = WORDS[t.level] ?? [0, 1e9];
       if (body.words < lo * 0.6) err(rel(bodyFile), `${body.words} words — far below the ${lo}–${hi} target for ${t.level}`);
@@ -382,6 +384,7 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     }
   }
   const bnFile = join(dir, 'body.bn.html');
+  if (planned?.banglaBody && !existsSync(bnFile)) err(rel(bnFile), 'the curriculum asks for a full Bangla body for this topic (body.bn.html with the same sections)');
   if (existsSync(bnFile) && body) {
     const bnHtml = readFileSync(bnFile, 'utf8');
     const bn = checkHtml(bnHtml, rel(bnFile));
@@ -418,11 +421,11 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     if (e.output) { if (!existsSync(join(dir, e.output))) err(w, `output file ${e.output} missing`); else expected = readFileSync(join(dir, e.output), 'utf8'); }
     else if (!e.demonstrates && e.deterministic !== false && e.runMode !== 'compile-only') err(w, 'output file required (or set "deterministic": false with outputNote)');
     if (e.deterministic === false && !isStr(e.outputNote)) err(w, 'deterministic:false needs outputNote explaining why output varies');
-    const files = (e.workdirFiles ?? []).map((f) => join(dir, f));
+    const files = (e.workdirFiles ?? []).map((f) => (f.startsWith('shared/') ? join(pkg, f) : join(dir, f)));
     for (const f of files) if (!existsSync(f)) err(w, `workdirFile ${f} missing`);
     const setup = (e.setup ?? []).map((f) => { const p = join(pkg, f); if (!existsSync(p)) { err(w, `setup file ${f} missing (paths are relative to the package root)`); return ''; } return readFileSync(p, 'utf8'); });
     const missing = lang === 'python' ? missingPythonPackages(e.requires) : [];
-    if (missing.length) { warn(rel(src), `not run: Python package(s) ${missing.join(', ')} not installed here`); continue; }
+    if (missing.length) { (opts.requirePackages ? err : warn)(rel(src), `not run: Python package(s) ${missing.join(', ')} not installed here`); continue; }
     checkProgram({ where: rel(src), lang, src: text, std: e.standard ?? 'c17', flags: e.compilerFlags ?? [], stdin, args: e.args ?? [], files, expected: e.deterministic === false ? null : expected, demonstrates: e.demonstrates, exitCode: e.exitCode, runMode: e.runMode, setup, opts });
   }
   if (body) {
@@ -441,7 +444,7 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     if (!pl) { err(tw, `lab "${id}" is not in the curriculum for this topic`); continue; }
     const ld = join(dir, 'labs', id);
     if (!existsSync(ld)) { err(tw, `labs/${id}/ folder missing`); continue; }
-    checkLab(ld, rel(ld), { kind: pl.kind, topicExamples: exIds });
+    checkLab(ld, rel(ld), { kind: pl.kind, topicExamples: exIds, panels: pl.panels ?? null });
     if (body && body.labs.filter((x) => x === id).length !== 1) err(rel(bodyFile), `lab ${id} must be placed exactly once with <div data-lab="${id}"></div>`);
   }
   if (body) for (const id of body.labs) if (!labs.includes(id)) err(rel(bodyFile), `lab placeholder ${id} has no lab in topic.json`);
@@ -459,6 +462,7 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     if (!isStr(p.title)) err(w, 'title missing');
     if (!isStr(p.statementHtml)) err(w, 'statementHtml missing'); else { checkHtml(p.statementHtml, `${w}.statementHtml`); texts.push(textOf(p.statementHtml)); }
     if (!Array.isArray(p.hints) || p.hints.length < 1) err(w, 'at least one hint');
+    if (p.figure !== undefined) { const fe = checkFigure(p.figure); if (fe) err(`${w}.figure`, fe); }
     const type = p.type ?? 'code';
     if (!['code', 'written'].includes(type)) { err(w, 'type must be code or written'); continue; }
     if (type === 'written') { if (!isStr(p.answerHtml)) err(w, 'written practice needs answerHtml (a full worked answer)'); else checkHtml(p.answerHtml, `${w}.answerHtml`); continue; }
@@ -474,7 +478,10 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
       const tout = join(dir, tc.output ?? '');
       if (tin && !existsSync(tin)) { err(w, `tests[${k}].stdin missing`); continue; }
       if (!existsSync(tout)) { err(w, `tests[${k}].output missing`); continue; }
-      checkProgram({ where: `${rel(sol)} test ${k + 1}`, lang, src: text, std: p.standard ?? 'c17', flags: p.compilerFlags ?? [], stdin: tin ? readFileSync(tin, 'utf8') : '', args: [], files: [], expected: readFileSync(tout, 'utf8'), setup, opts });
+      const pmiss = lang === 'python' ? missingPythonPackages(p.requires) : [];
+      if (pmiss.length) { (opts.requirePackages ? err : warn)(rel(sol), `not run: Python package(s) ${pmiss.join(', ')} not installed here`); break; }
+      const pfiles = (p.workdirFiles ?? []).map((f) => (f.startsWith('shared/') ? join(pkg, f) : join(dir, f)));
+      checkProgram({ where: `${rel(sol)} test ${k + 1}`, lang, src: text, std: p.standard ?? 'c17', flags: p.compilerFlags ?? [], stdin: tin ? readFileSync(tin, 'utf8') : '', args: [], files: pfiles, expected: readFileSync(tout, 'utf8'), setup, opts });
     }
   }
 
@@ -484,7 +491,7 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
   if (!between(qs.length, C.quiz)) err(tw, `quiz: ${qs.length} questions, need ${C.quiz[0]}–${C.quiz[1]}`);
   const outQ = qs.filter((q) => q?.type === 'output').length;
   if (outQ < C.outputQuiz) err(tw, `quiz: ${outQ} output questions, need at least ${C.outputQuiz}`);
-  const qIds = new Set(); const prompts = new Set();
+  const qIds = new Set(); const prompts = new Set(); let figureQ = 0;
   const answerAt = [0, 0, 0, 0, 0, 0];
   for (const [n, q] of qs.entries()) {
     const w = `${tw} quiz[${n}]`;
@@ -509,6 +516,7 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     answerAt[q.answer]++;
     if (!isStr(q.explanation) || q.explanation.length > QUIZ_LIMITS.explanation) err(w, `explanation required, ≤ ${QUIZ_LIMITS.explanation} characters`); else texts.push(q.explanation);
     if (q.code !== undefined && (!isStr(q.code) || q.code.split('\n').length > QUIZ_LIMITS.codeLines)) err(w, `code: a string of ≤ ${QUIZ_LIMITS.codeLines} lines`);
+    if (q.figure !== undefined) { const fe = checkFigure(q.figure); if (fe) err(`${w}.figure`, fe); else figureQ++; }
     if (q.type === 'output') {
       const lang = q.language ?? trackLang;
       if (!isStr(q.code)) { err(w, 'output questions need code: a complete program'); continue; }
@@ -534,6 +542,8 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
       if (dup >= 0) err(w, `option ${dup} also matches the real output`);
     }
   }
+  const needFig = planned?.visualQuiz ?? 0;
+  if (figureQ < needFig) err(tw, `quiz: ${figureQ} questions with a figure, the curriculum asks for at least ${needFig} (read-the-picture questions)`);
   if (qs.length >= 6 && Math.max(...answerAt) > qs.length * 0.5) warn(tw, `quiz answers bunch on one position (${answerAt.slice(0, 4).join('/')}) — vary them`);
 
   // the rest
@@ -545,6 +555,7 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     if (!isStr(q.question)) err(w, 'question missing');
     if (!['short', 'long', 'output', 'program', 'design', 'numerical'].includes(q.type)) err(w, 'type must be short|long|output|program|design|numerical');
     if (!isStr(q.answerHtml)) err(w, 'answerHtml missing'); else checkHtml(q.answerHtml, `${w}.answerHtml`);
+    if (q.figure !== undefined) { const fe = checkFigure(q.figure); if (fe) err(`${w}.figure`, fe); }
   }
 
   // writing quality: meta phrases and sentence length; repeated sentences are checked across topics
@@ -565,7 +576,7 @@ export function checkPackage(pkg, opts = {}) {
   const curriculum = readJson(opts.curriculum ?? findSpec(), 'curriculum.json');
   const videosSpec = readJson(opts.videos ?? join(here, '..', 'spec', 'videos.json'), 'videos.json');
   if (!curriculum || !videosSpec) return out;
-  const ctx = { topics: new Map(), modules: new Map(), allTopics: new Set(), videos: new Set(videosSpec.videos.map((v) => v.videoId)), language: curriculum.language ?? 'c', sentences: new Map(), promptCounts: new Map() };
+  const ctx = { topics: new Map(), modules: new Map(), allTopics: new Set(), videos: new Set(videosSpec.videos.map((v) => v.videoId)), language: curriculum.language ?? 'c', sections: curriculum.sections ?? null, sentences: new Map(), promptCounts: new Map() };
   for (const m of curriculum.modules) { ctx.modules.set(m.id, m); for (const t of m.topics) ctx.topics.set(t.id, { ...t, module: m.id }); }
   // cross-track links (topic:ds-stack-array from an algorithms topic) are allowed
   for (const d of readdirSync(join(here, '..'))) { const f = join(here, '..', d, 'spec', 'curriculum.json'); if (existsSync(f)) try { for (const m of JSON.parse(readFileSync(f, 'utf8')).modules) for (const t of m.topics) ctx.allTopics.add(t.id); } catch { /* ignore */ } }
@@ -642,8 +653,8 @@ export function main(a) {
     r = { ...out, rows: [], track: 'lab', toolchain: 'node', delivered: 0, planned: 0 };
   } else {
     const pkg = a.find((x, i) => !x.startsWith('--') && !valued.includes(a[i - 1]));
-    if (!pkg) { console.error('usage: node content-kit/tools/check.mjs <package-dir> [--topic id] [--no-run] [--sanitize] [--require-sql] [--report file]\n       node content-kit/tools/check.mjs --lab <lab-dir> --kind <kind>'); return 2; }
-    r = checkPackage(pkg, { topic: opt('--topic'), noRun: a.includes('--no-run'), sanitize: a.includes('--sanitize'), requireSql: a.includes('--require-sql'), cc: opt('--cc'), curriculum: opt('--curriculum'), videos: opt('--videos') });
+    if (!pkg) { console.error('usage: node content-kit/tools/check.mjs <package-dir> [--topic id] [--no-run] [--sanitize] [--require-sql] [--require-packages] [--report file]\n       node content-kit/tools/check.mjs --lab <lab-dir> --kind <kind>'); return 2; }
+    r = checkPackage(pkg, { topic: opt('--topic'), noRun: a.includes('--no-run'), sanitize: a.includes('--sanitize'), requireSql: a.includes('--require-sql'), requirePackages: a.includes('--require-packages'), cc: opt('--cc'), curriculum: opt('--curriculum'), videos: opt('--videos') });
   }
   const text = formatReport(r);
   console.log(text);

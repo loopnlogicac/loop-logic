@@ -4,10 +4,10 @@
 
 import vm from 'node:vm';
 
-export const LAB_KINDS = ['array', 'heap', 'linked-list', 'stack', 'queue', 'tree', 'graph', 'grid', 'hash-table'];
+export const LAB_KINDS = ['array', 'heap', 'linked-list', 'stack', 'queue', 'tree', 'graph', 'grid', 'hash-table', 'ml'];
 export const TONES = ['active', 'compare', 'sorted', 'found', 'pivot', 'min', 'max', 'discarded', 'window', 'visited', 'current', 'frontier', 'done', 'path', 'considered', 'tree', 'rejected', 'relaxed', 'error'];
 const MAX_STEPS = 3000;
-const FORBIDDEN = /\b(require|import|process|globalThis|Function|eval|fetch|XMLHttpRequest|setTimeout|setInterval|setImmediate|queueMicrotask|Date|window|document|Atomics|SharedArrayBuffer|WebAssembly)\b|Math\.random/;
+const FORBIDDEN = /\b(require|import|process|globalThis|Function|eval|fetch|XMLHttpRequest|setTimeout|setInterval|setImmediate|queueMicrotask|Date|(?<!['"])window(?!['"])|document|Atomics|SharedArrayBuffer|WebAssembly)\b|Math\.random/;
 
 const isInt = (v) => Number.isInteger(v);
 const isId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(v)) || isInt(v);
@@ -226,6 +226,173 @@ const REDUCERS = {
   },
 };
 REDUCERS.heap = REDUCERS.array;
+
+// ── ml: a lab made of panels (plot, chart, tree, tables, network) ───────────
+// Used by machine-learning labs and by quiz/practice figures. Spec: LAB_FORMAT.md §3, "ml".
+const SHAPES = ['line', 'segment', 'circle', 'rect', 'curve', 'marker', 'arrow'];
+const SYMBOLS = ['star', 'cross', 'diamond', 'plus', 'square'];
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+const isXY = (p) => Array.isArray(p) && p.length === 2 && isNum(p[0]) && isNum(p[1]);
+const isRange = (r) => Array.isArray(r) && r.length === 2 && isNum(r[0]) && isNum(r[1]) && r[0] < r[1];
+const shortText = (v, n = 24) => v === undefined || (typeof v === 'string' && v.length <= n);
+const MAX_POINTS = 150, MAX_SHAPES = 80, MAX_REGION_OPS = 30, MAX_SERIES = 6, MAX_SERIES_POINTS = 300, MAX_TABLES = 3;
+
+function checkShape(sh) {
+  need(sh && SHAPES.includes(sh.type), `shape type must be one of ${SHAPES.join(', ')}`);
+  if (sh.tone !== undefined) tone(sh.tone);
+  need(sh.dash === undefined || typeof sh.dash === 'boolean', 'dash must be true or false');
+  need(shortText(sh.label), 'shape label ≤ 24 characters');
+  switch (sh.type) {
+    case 'line': need(Array.isArray(sh.w) && sh.w.length === 2 && sh.w.every(isNum) && (sh.w[0] !== 0 || sh.w[1] !== 0) && isNum(sh.b), 'line needs w: [w1, w2] (not both 0) and b, meaning w1·x + w2·y + b = 0'); break;
+    case 'segment': case 'arrow': need(isXY(sh.from) && isXY(sh.to), `${sh.type} needs from: [x, y] and to: [x, y]`); break;
+    case 'circle': need(isXY(sh.center) && isNum(sh.r) && sh.r > 0, 'circle needs center: [x, y] and r > 0'); break;
+    case 'rect': need(isXY(sh.from) && isXY(sh.to), 'rect needs from: [x, y] and to: [x, y]'); need(sh.cls === undefined || sh.cls === null || (isInt(sh.cls) && sh.cls >= 0 && sh.cls <= 5), 'rect cls: a class id 0–5 or null'); break;
+    case 'curve': need(Array.isArray(sh.points) && sh.points.length >= 2 && sh.points.length <= 200 && sh.points.every(isXY), 'curve needs 2–200 points [[x, y], …]'); break;
+    case 'marker': need(isXY(sh.at) && SYMBOLS.includes(sh.symbol ?? 'star'), `marker needs at: [x, y] and symbol: ${SYMBOLS.join(' | ')}`); need(sh.cls === undefined || sh.cls === null || (isInt(sh.cls) && sh.cls >= 0 && sh.cls <= 5), 'marker cls: a class id 0–5 or null'); break;
+  }
+  return clone(sh);
+}
+
+function checkRegions(r) {
+  need(r && isInt(r.rows) && isInt(r.cols) && r.rows >= 2 && r.cols >= 2 && r.rows <= 50 && r.cols <= 50, 'regions: rows and cols 2–50');
+  const mode = r.mode ?? 'class';
+  need(mode === 'class' || mode === 'value', 'regions mode: class | value');
+  const okCell = mode === 'class' ? (v) => v === null || (isInt(v) && v >= 0 && v <= 5) : (v) => v === null || (isNum(v) && v >= 0 && v <= 1);
+  need(Array.isArray(r.cells) && r.cells.length === r.rows && r.cells.every((row) => Array.isArray(row) && row.length === r.cols && row.every(okCell)), `regions.cells: rows × cols of ${mode === 'class' ? 'class ids 0–5 (or null)' : 'values 0–1'}; row 0 is the top (largest y)`);
+  return { rows: r.rows, cols: r.cols, mode, cells: clone(r.cells) };
+}
+
+function point(p) {
+  need(p && isId(p.id) && isNum(p.x) && isNum(p.y), 'point needs id, x, y');
+  need(p.cls === undefined || p.cls === null || (isInt(p.cls) && p.cls >= 0 && p.cls <= 5), `point ${p.id}: cls must be a class id 0–5 or null`);
+  need(p.size === undefined || (isNum(p.size) && p.size > 0 && p.size <= 10), `point ${p.id}: size 0–10 (1 = normal)`);
+  need(shortText(p.label, 12), `point ${p.id}: label ≤ 12 characters`);
+  return { x: p.x, y: p.y, cls: p.cls ?? null, size: p.size ?? 1, ...(p.label ? { label: p.label } : {}) };
+}
+
+function initPlot(p) {
+  need(isRange(p.xRange) && isRange(p.yRange), 'plot needs xRange and yRange: [min, max]');
+  need(shortText(p.xLabel, 30) && shortText(p.yLabel, 30), 'xLabel / yLabel ≤ 30 characters');
+  const classes = p.classes ?? [];
+  need(Array.isArray(classes) && classes.length <= 6 && classes.every((c, i) => c && c.id === i && typeof c.label === 'string' && c.label.length >= 1 && c.label.length <= 16), 'plot.classes: up to 6 { id: 0, 1, 2…, label ≤ 16 }');
+  const s = { xRange: [...p.xRange], yRange: [...p.yRange], xLabel: p.xLabel ?? null, yLabel: p.yLabel ?? null, classes: clone(classes), points: {}, shapes: {}, regions: null, marks: {}, regionOps: 0 };
+  need(Array.isArray(p.points ?? []) && (p.points ?? []).length <= MAX_POINTS, `plot.points: up to ${MAX_POINTS}`);
+  for (const q of p.points ?? []) { need(!(String(q.id) in s.points), `duplicate point ${q.id}`); s.points[String(q.id)] = point(q); }
+  for (const [id, sh] of Object.entries(p.shapes ?? {})) { need(isId(id), `shape id ${id}`); s.shapes[id] = checkShape(sh); }
+  need(Object.keys(s.shapes).length <= MAX_SHAPES, `plot.shapes: up to ${MAX_SHAPES}`);
+  if (p.regions) s.regions = checkRegions(p.regions);
+  for (const q of Object.values(s.points)) need(q.cls === null || !classes.length || q.cls < classes.length, `point class ${q.cls} has no plot.classes entry`);
+  return s;
+}
+
+function initChart(c) {
+  need(shortText(c.xLabel, 30) && shortText(c.yLabel, 30), 'chart xLabel / yLabel ≤ 30 characters');
+  need(c.xRange === undefined || isRange(c.xRange), 'chart.xRange: [min, max]');
+  need(c.yRange === undefined || isRange(c.yRange), 'chart.yRange: [min, max]');
+  const s = { xLabel: c.xLabel ?? null, yLabel: c.yLabel ?? null, xRange: c.xRange ?? null, yRange: c.yRange ?? null, series: {}, vlines: [] };
+  for (const sr of c.series ?? []) addSeries(s, sr);
+  for (const v of c.vlines ?? []) { need(isNum(v.x) && shortText(v.label), 'vline needs x and an optional label'); s.vlines.push({ x: v.x, label: v.label ?? null }); }
+  return s;
+}
+function addSeries(s, sr) {
+  need(sr && isId(sr.id) && typeof sr.label === 'string' && sr.label.length >= 1 && sr.label.length <= 24, 'series needs id and label ≤ 24');
+  need(['line', 'bar', 'scatter'].includes(sr.type ?? 'line'), 'series type: line | bar | scatter');
+  if (sr.tone !== undefined) tone(sr.tone);
+  const pts = sr.points ?? (s.series[String(sr.id)]?.points ?? []);
+  need(Array.isArray(pts) && pts.length <= MAX_SERIES_POINTS && pts.every((p) => Array.isArray(p) && p.length === 2 && (isNum(p[0]) || (typeof p[0] === 'string' && p[0].length <= 16)) && isNum(p[1])), `series points: up to ${MAX_SERIES_POINTS} [x, y] (x may be a short category name for bars)`);
+  s.series[String(sr.id)] = { label: sr.label, type: sr.type ?? 'line', tone: sr.tone ?? null, points: clone(pts) };
+  need(Object.keys(s.series).length <= MAX_SERIES, `chart: up to ${MAX_SERIES} series`);
+}
+
+const ML_PANELS = ['plot', 'chart', 'tree', 'tables', 'network'];
+function initMl(s) {
+  need(s && typeof s === 'object', 'init must be an object of panels');
+  const unknown = Object.keys(s).filter((k) => !ML_PANELS.includes(k) && !['vars', 'lists'].includes(k));
+  need(!unknown.length, `unknown panel(s) ${unknown.join(', ')} — use ${ML_PANELS.join(', ')}`);
+  need(ML_PANELS.some((k) => s[k]), `init needs at least one panel: ${ML_PANELS.join(', ')}`);
+  const st = common({ ...pick(s, ['vars', 'lists']) });
+  if (s.plot) st.plot = initPlot(s.plot);
+  if (s.chart) st.chart = initChart(s.chart);
+  if (s.tree) st.tree = REDUCERS.tree.init(s.tree);
+  if (s.tables) {
+    need(typeof s.tables === 'object' && Object.keys(s.tables).length >= 1 && Object.keys(s.tables).length <= MAX_TABLES, `tables: 1–${MAX_TABLES} named grids`);
+    st.tables = {};
+    for (const [name, g] of Object.entries(s.tables)) { need(/^[a-z][a-zA-Z0-9]{0,15}$/.test(name), `table name "${name}": camelCase ≤ 16`); st.tables[name] = REDUCERS.grid.init(g); }
+  }
+  if (s.network) { st.network = REDUCERS.graph.init(s.network); st.network.weights = Object.fromEntries(Object.entries(st.network.edges).map(([id, e]) => [id, e.weight])); }
+  return st;
+}
+
+function applyMl(s, st) {
+  const op = st.op;
+  if (op === 'list') { markOps(s, st, () => {}); return; }
+  const panel = (name) => { need(s[name], `op ${op} needs the ${name} panel in init`); return s[name]; };
+  if (op.startsWith('point') || op.startsWith('shape') || op.startsWith('regions')) {
+    const p = panel('plot');
+    const pt = (id) => need(String(id) in p.points, `point ${id} does not exist`);
+    const clsOk = (q) => { need(q.cls === null || !p.classes.length || q.cls < p.classes.length, `class ${q.cls} is not in plot.classes`); return q; };
+    switch (op) {
+      case 'point-add': need(!(String(st.id) in p.points), `point ${st.id} already exists`); need(Object.keys(p.points).length < MAX_POINTS, `up to ${MAX_POINTS} points`); p.points[String(st.id)] = clsOk(point(st)); return;
+      case 'point-set': { pt(st.id); const q = p.points[String(st.id)]; const next = point({ id: st.id, x: st.x ?? q.x, y: st.y ?? q.y, cls: st.cls === undefined ? q.cls : st.cls, size: st.size ?? q.size, label: st.label ?? q.label }); p.points[String(st.id)] = clsOk(next); return; }
+      case 'point-remove': pt(st.id); delete p.points[String(st.id)]; delete p.marks[String(st.id)]; return;
+      case 'point-mark': need(Array.isArray(st.targets) && st.targets.length, 'point-mark needs targets[]'); tone(st.tone); for (const t of st.targets) { pt(t); p.marks[String(t)] = st.tone; } return;
+      case 'point-unmark': need(Array.isArray(st.targets), 'point-unmark needs targets[]'); for (const t of st.targets) delete p.marks[String(t)]; return;
+      case 'point-clear-marks': p.marks = {}; return;
+      case 'shape': need(isId(st.id), 'shape needs an id'); { const { op: _o, note: _n, line: _l, vars: _v, id, ...sh } = st; p.shapes[String(id)] = checkShape(sh); } need(Object.keys(p.shapes).length <= MAX_SHAPES, `up to ${MAX_SHAPES} shapes`); return;
+      case 'shape-remove': need(String(st.id) in p.shapes, `shape ${st.id} does not exist`); delete p.shapes[String(st.id)]; return;
+      case 'shapes-clear': p.shapes = {}; return;
+      case 'regions': need(++p.regionOps <= MAX_REGION_OPS, `at most ${MAX_REGION_OPS} regions steps per trace (they are large)`); p.regions = checkRegions(st); return;
+      case 'regions-clear': p.regions = null; return;
+      default: fail(`unknown op "${op}" for an ml plot`);
+    }
+  }
+  if (op === 'series' || op === 'series-add' || op === 'series-set' || op === 'vline' || op === 'vlines-clear') {
+    const c = panel('chart');
+    switch (op) {
+      case 'series': addSeries(c, st); return;
+      case 'series-add': { need(String(st.id) in c.series, `series ${st.id} does not exist (create it with op "series")`); const sr = c.series[String(st.id)]; need((isNum(st.x) || (typeof st.x === 'string' && st.x.length <= 16)) && isNum(st.y), 'series-add needs x and y'); need(sr.points.length < MAX_SERIES_POINTS, `up to ${MAX_SERIES_POINTS} points per series`); sr.points.push([st.x, st.y]); return; }
+      case 'series-set': need(String(st.id) in c.series, `series ${st.id} does not exist`); addSeries(c, { ...c.series[String(st.id)], id: st.id, points: st.points }); return;
+      case 'vline': need(isNum(st.x) && shortText(st.label), 'vline needs x and an optional label ≤ 24'); c.vlines.push({ x: st.x, label: st.label ?? null }); return;
+      case 'vlines-clear': c.vlines = []; return;
+    }
+  }
+  if (op.startsWith('tree-')) { REDUCERS.tree.apply(panel('tree'), { ...st, op: op.slice(5) }); return; }
+  if (op.startsWith('table-')) {
+    const ts = panel('tables');
+    need(typeof st.table === 'string' && st.table in ts, `${op} needs table: one of ${Object.keys(ts).join(', ')}`);
+    REDUCERS.grid.apply(ts[st.table], { ...st, op: op.slice(6) });
+    return;
+  }
+  if (op.startsWith('net-')) {
+    const n = panel('network');
+    if (op === 'net-weight') { need(String(st.id) in n.edges, `edge ${st.id} does not exist`); need(isNum(st.value), 'net-weight needs a number value'); n.weights[String(st.id)] = st.value; return; }
+    REDUCERS.graph.apply(n, { ...st, op: op.slice(4) });
+    return;
+  }
+  fail(`unknown op "${op}" for ml (see LAB_FORMAT.md, kind "ml")`);
+}
+
+function finalMl(s) {
+  const r = { vars: s.vars, lists: s.lists };
+  if (s.plot) { const { regionOps: _r, ...p } = s.plot; r.plot = p; }
+  if (s.chart) r.chart = s.chart;
+  if (s.tree) r.tree = REDUCERS.tree.final(s.tree);
+  if (s.tables) r.tables = s.tables;
+  if (s.network) r.network = s.network;
+  return r;
+}
+REDUCERS.ml = { init: initMl, apply: applyMl, final: finalMl };
+
+/** A static figure for a quiz question, practice problem or exam question: { panels, caption? }. Returns an error message or null. */
+export function checkFigure(fig) {
+  try {
+    need(fig && typeof fig === 'object' && fig.panels && typeof fig.panels === 'object', 'figure needs panels: { plot | chart | tree | tables | network }');
+    need(JSON.stringify(fig).length <= 40000, 'figure is too large (keep it under 40 KB)');
+    need(fig.caption === undefined || (fig.caption && typeof fig.caption.en === 'string' && fig.caption.en.length <= 200), 'figure.caption: { en ≤ 200, bn }');
+    initMl(fig.panels);
+    return null;
+  } catch (e) { if (e instanceof LabError) return e.message; throw e; }
+}
 function pick(o, keys) { const r = {}; for (const k of keys) if (o[k] !== undefined) r[k] = clone(o[k]); return r; }
 
 // ── running a trace ─────────────────────────────────────────────────────────
@@ -272,18 +439,24 @@ export function partialMatch(actual, expected, path = '') {
 }
 
 // ── inputs ──────────────────────────────────────────────────────────────────
+const INPUT_TYPES = ['int-array', 'int', 'string', 'number', 'choice', 'points'];
 export function checkInputSpec(inputs) {
   need(Array.isArray(inputs), 'inputs must be an array (empty = presets only)');
+  need(inputs.length <= 6, 'at most 6 inputs');
   for (const f of inputs) {
     need(typeof f.name === 'string' && /^[a-z][a-zA-Z0-9]*$/.test(f.name), 'input name: camelCase');
     need(typeof f.label === 'string' && f.label.length <= 40, 'input label ≤ 40 chars');
-    need(['int-array', 'int', 'string'].includes(f.type), 'input type: int-array | int | string');
-    if (f.type !== 'string') need(isInt(f.min) && isInt(f.max) && f.min <= f.max, `${f.name}: min/max whole numbers`);
+    need(INPUT_TYPES.includes(f.type), `input type: ${INPUT_TYPES.join(' | ')}`);
+    if (f.type === 'int' || f.type === 'int-array') need(isInt(f.min) && isInt(f.max) && f.min <= f.max, `${f.name}: min/max whole numbers`);
     if (f.type === 'int-array') need(isInt(f.minLength) && isInt(f.maxLength) && f.minLength >= 0 && f.maxLength <= 16 && f.minLength <= f.maxLength, `${f.name}: minLength/maxLength, at most 16`);
     if (f.type === 'string') need(isInt(f.maxLength) && f.maxLength >= 1 && f.maxLength <= 24 && (f.alphabet === undefined || (typeof f.alphabet === 'string' && f.alphabet.length >= 2)), `${f.name}: maxLength ≤ 24, optional alphabet`);
+    if (f.type === 'number') need(isNum(f.min) && isNum(f.max) && f.min < f.max && isNum(f.step) && f.step > 0 && (f.max - f.min) / f.step <= 10000, `${f.name}: number needs min < max and step > 0 (a slider, at most 10 000 positions)`);
+    if (f.type === 'choice') need(Array.isArray(f.options) && f.options.length >= 2 && f.options.length <= 8 && f.options.every((o) => typeof o === 'string' && o.length >= 1 && o.length <= 24) && new Set(f.options).size === f.options.length, `${f.name}: choice needs 2–8 different options ≤ 24 characters`);
+    if (f.type === 'points') need(isInt(f.minLength) && isInt(f.maxLength) && f.minLength >= 0 && f.minLength <= f.maxLength && f.maxLength <= 60 && isInt(f.classes) && f.classes >= 0 && f.classes <= 6 && isRange(f.xRange) && isRange(f.yRange), `${f.name}: points needs minLength ≤ maxLength ≤ 60, classes 0–6 (0 = unlabelled) and xRange, yRange`);
   }
 }
 
+const onStep = (v, f) => Math.abs((v - f.min) / f.step - Math.round((v - f.min) / f.step)) < 1e-6;
 export function validInput(inputs, input) {
   if (!inputs.length) return null;
   if (!input || typeof input !== 'object') return 'input must be an object';
@@ -291,6 +464,15 @@ export function validInput(inputs, input) {
     const v = input[f.name];
     if (f.type === 'int') { if (!isInt(v) || v < f.min || v > f.max) return `${f.name} must be a whole number ${f.min}–${f.max}`; }
     else if (f.type === 'int-array') { if (!Array.isArray(v) || v.length < f.minLength || v.length > f.maxLength || v.some((x) => !isInt(x) || x < f.min || x > f.max)) return `${f.name} must be ${f.minLength}–${f.maxLength} whole numbers ${f.min}–${f.max}`; }
+    else if (f.type === 'number') { if (!isNum(v) || v < f.min - 1e-9 || v > f.max + 1e-9 || !onStep(v, f)) return `${f.name} must be a number ${f.min}–${f.max} in steps of ${f.step}`; }
+    else if (f.type === 'choice') { if (!f.options.includes(v)) return `${f.name} must be one of ${f.options.join(', ')}`; }
+    else if (f.type === 'points') {
+      if (!Array.isArray(v) || v.length < f.minLength || v.length > f.maxLength) return `${f.name} must have ${f.minLength}–${f.maxLength} points`;
+      for (const p of v) {
+        if (!p || !isNum(p.x) || !isNum(p.y) || p.x < f.xRange[0] || p.x > f.xRange[1] || p.y < f.yRange[0] || p.y > f.yRange[1]) return `${f.name}: each point needs x in ${f.xRange} and y in ${f.yRange}`;
+        if (f.classes > 0 ? !(isInt(p.cls) && p.cls >= 0 && p.cls < f.classes) : (p.cls !== undefined && p.cls !== null)) return `${f.name}: ${f.classes > 0 ? `each point needs cls 0–${f.classes - 1}` : 'points are unlabelled (no cls)'}`;
+      }
+    }
     else if (typeof v !== 'string' || v.length > f.maxLength || (f.alphabet && [...v].some((ch) => !f.alphabet.includes(ch)))) return `${f.name} must be a string of up to ${f.maxLength}${f.alphabet ? ` characters from "${f.alphabet}"` : ''}`;
   }
   return null;
@@ -306,6 +488,13 @@ export function* fuzzInputs(inputs, count = 25, seed = 12345) {
     for (const f of inputs) {
       if (f.type === 'int') input[f.name] = int(f.min, f.max);
       else if (f.type === 'int-array') input[f.name] = Array.from({ length: n === 0 ? f.minLength : n === 1 ? f.maxLength : int(f.minLength, f.maxLength) }, () => int(f.min, f.max));
+      else if (f.type === 'number') { const k = Math.floor((f.max - f.min) / f.step + 1e-9); input[f.name] = Number((f.min + f.step * (n === 0 ? 0 : n === 1 ? k : int(0, k))).toFixed(10)); }
+      else if (f.type === 'choice') input[f.name] = f.options[n < f.options.length ? n : int(0, f.options.length - 1)];
+      else if (f.type === 'points') {
+        const len = n === 0 ? f.minLength : n === 1 ? f.maxLength : int(f.minLength, f.maxLength);
+        const coord = ([lo, hi]) => Math.round((lo + rnd() * (hi - lo)) * 10) / 10;
+        input[f.name] = Array.from({ length: len }, () => ({ x: coord(f.xRange), y: coord(f.yRange), ...(f.classes > 0 ? { cls: int(0, f.classes - 1) } : {}) }));
+      }
       else { const a = f.alphabet ?? 'abcdefghij'; input[f.name] = Array.from({ length: n === 0 ? 0 : int(0, f.maxLength) }, () => a[int(0, a.length - 1)]).join(''); }
     }
     yield input;
