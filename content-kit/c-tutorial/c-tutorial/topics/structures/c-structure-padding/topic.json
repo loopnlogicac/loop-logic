@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-structure-padding",
+  "module": "structures",
+  "order": 10,
+  "kind": "lesson",
+  "title": {
+    "en": "Structure Padding and Alignment",
+    "bn": "স্ট্রাকচারের প্যাডিং আর অ্যালাইনমেন্ট"
+  },
+  "summary": {
+    "en": "Inspect sizeof, offsetof, and _Alignof while keeping record values separate from platform-specific layout.",
+    "bn": "sizeof, offsetof আর _Alignof দিয়ে লেআউট দেখো আর রেকর্ডের মান থেকে প্ল্যাটফর্মের মেমরি গঠন আলাদা রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "c-bit-fields"
+  ],
+  "related": [
+    "c-structures",
+    "c-nested-structures",
+    "c-array-of-structures"
+  ],
+  "keywords": [
+    "Structure Padding and Alignment",
+    "C17",
+    "structures"
+  ],
+  "standards": {
+    "minimum": "c11",
+    "notes": [
+      "The alignment operator _Alignof requires C11; every complete program is compiled as C17. Exact sizes and offsets are implementation-dependent observations."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "The spaces between labeled boxes"
+    },
+    {
+      "id": "syntax",
+      "title": "Read the C notation"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace one common layout, then measure your own"
+    },
+    {
+      "id": "examples",
+      "title": "Worked programs"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Layout bytes are not a stable data format"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Mistakes and repairs"
+    },
+    {
+      "id": "best-practices",
+      "title": "Habits to use in your programs"
+    },
+    {
+      "id": "version-notes",
+      "title": "C versions and portability"
+    },
+    {
+      "id": "summary",
+      "title": "What you can now do"
+    }
+  ],
+  "examples": [
+    {
+      "title": "Measure two member orders",
+      "explanationHtml": "<p>The recorded size and offsets describe the current GCC target; another implementation may differ.</p>",
+      "deterministic": false,
+      "outputNote": "Exact sizes and offsets depend on the target ABI; the .out records the verified GCC/Linux run.",
+      "id": "ex-1",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true
+    },
+    {
+      "title": "Print only portable layout relationships",
+      "explanationHtml": "<p>All three comparisons are true: first at zero, no member overlap, and enough total space.</p>",
+      "id": "ex-2",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true
+    },
+    {
+      "title": "Inspect alignment and array stride",
+      "explanationHtml": "<p>The output records the actual int alignment, record alignment, and record size on this target.</p>",
+      "deterministic": false,
+      "outputNote": "Alignment and stride are target-dependent; the .out is a real C17 run on the documented toolchain.",
+      "id": "ex-3",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true
+    },
+    {
+      "title": "Compare fields rather than padding",
+      "explanationHtml": "<p>The two separately initialized records compare equal under the field-based rule.</p>",
+      "id": "ex-4",
+      "level": "advanced",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true
+    }
+  ],
+  "practice": [
+    {
+      "title": "Compare meaningful fields",
+      "statementHtml": "<p>Read two integers from -100 to 100. Print Two numbers: then 1 if two records with those numbers and shared character fields A and Z have equal fields, otherwise 0.</p>",
+      "hints": [
+        "Padding is not part of the value comparison."
+      ],
+      "difficulty": "easy",
+      "id": "p-1",
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Calculate a record-array byte count",
+      "statementHtml": "<p>Read count from 0 to 20. Print Record count: then count*sizeof(struct Spread). The numeric byte result follows the current platform layout.</p>",
+      "hints": [
+        "Use sizeof the entire record, including trailing padding."
+      ],
+      "difficulty": "medium",
+      "id": "p-2",
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Convert between member orders",
+      "statementHtml": "<p>Read number from -100 to 100. Print Number: then A, the number, and Z separated by spaces after copying fields from Spread into Grouped.</p>",
+      "hints": [
+        "Different structure types require field-wise conversion, not direct assignment."
+      ],
+      "difficulty": "easy",
+      "id": "p-3",
+      "solution": "practice/p-3.c",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Serialize values as text",
+      "statementHtml": "<p>Read count from 0 to 10, then count numbers from -100 to 100. Print Count and numbers: then one line A N Z per record. Use field-based text output rather than raw structure bytes.</p>",
+      "hints": [
+        "Printing member values avoids padding and layout dependence."
+      ],
+      "difficulty": "hard",
+      "id": "p-4",
+      "solution": "practice/p-4.c",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "Why can sizeof(struct Spread) exceed the sum of its member sizes?",
+      "explanation": "Padding lets the implementation meet alignment requirements.",
+      "difficulty": "medium",
+      "id": "q-1",
+      "options": [
+        "Member names occupy bytes",
+        "Every structure has a hidden malloc pointer",
+        "The dot operator is stored",
+        "Internal and trailing padding may be present"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which header declares offsetof?",
+      "explanation": "offsetof is supplied by stddef.h.",
+      "difficulty": "medium",
+      "id": "q-2",
+      "options": [
+        "stddef.h",
+        "stdio.h",
+        "string.h",
+        "math.h"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which standard first provides _Alignof?",
+      "explanation": "_Alignof is available in C11 and the C17 target used here.",
+      "difficulty": "medium",
+      "id": "q-3",
+      "options": [
+        "C89",
+        "C11",
+        "C99",
+        "C23 only"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What determines the stride of an ordinary array of Spread records?",
+      "explanation": "Each array element occupies the full structure size including trailing padding.",
+      "difficulty": "medium",
+      "id": "q-4",
+      "options": [
+        "The sum of member sizes only",
+        "offsetof the last member only",
+        "sizeof(struct Spread)",
+        "The longest member name"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why is memcmp unreliable for structure value equality?",
+      "explanation": "Padding is representation without meaningful record-value equality rules.",
+      "difficulty": "medium",
+      "id": "q-5",
+      "options": [
+        "memcmp compares only names",
+        "Structure fields never have equal values",
+        "Padding always contains zero",
+        "Equal fields can have different padding bytes"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Does reordering members guarantee a smaller size on every implementation?",
+      "explanation": "Layout follows target alignment and ABI rules.",
+      "difficulty": "medium",
+      "id": "q-6",
+      "options": [
+        "No, measure the actual layout",
+        "Yes, put char first",
+        "Only if the source file is small",
+        "Yes, all implementations share one ABI"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which technique best creates a stable external record representation?",
+      "explanation": "Serialization must define more than the current compiler's object layout.",
+      "difficulty": "medium",
+      "id": "q-7",
+      "options": [
+        "Dump raw structure bytes",
+        "Encode documented fields with explicit value formats",
+        "Assume no padding after memset",
+        "Cast any byte buffer to a structure pointer"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "output",
+      "prompt": "Which guaranteed layout relationships hold for Spread?",
+      "code": "#include <stdio.h>\n#include <stddef.h>\n\nstruct Spread { char first; int number; char last; };\nstruct Grouped { int number; char first; char last; };\n\nint main(void)\n{\n    printf(\"First at zero: %d\\n\", offsetof(struct Spread, first) == 0);\n    printf(\"No overlap: %d\\n\", offsetof(struct Spread, last)\n           >= offsetof(struct Spread, number) + sizeof(int));\n    printf(\"Enough space: %d\\n\", sizeof(struct Spread)\n           >= offsetof(struct Spread, last) + sizeof(char));\n    return 0;\n}\n",
+      "explanation": "Named ordinary members preserve these relationships regardless of exact offsets.",
+      "difficulty": "medium",
+      "id": "q-8",
+      "options": [
+        "First at zero: 1\nNo overlap: 0\nEnough space: 1",
+        "First at zero: 0\nNo overlap: 1\nEnough space: 1",
+        "First at zero: 1\nNo overlap: 1\nEnough space: 1",
+        "First at zero: 1\nNo overlap: 1\nEnough space: 0"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "output",
+      "prompt": "What equality result comes from comparing named members only?",
+      "code": "#include <stdio.h>\n\nstruct Spread { char first; int number; char last; };\nstruct Grouped { int number; char first; char last; };\n\nint main(void)\n{\n    struct Spread a = {.first = 'A', .number = 7, .last = 'Z'};\n    struct Spread b = {.first = 'A', .number = 7, .last = 'Z'};\n    int equal = a.first == b.first && a.number == b.number && a.last == b.last;\n    printf(\"Equal fields: %d\\n\", equal);\n    return 0;\n}\n",
+      "explanation": "Both records have the same three meaningful member values.",
+      "difficulty": "medium",
+      "id": "q-9",
+      "options": [
+        "Equal fields: 0",
+        "Equal fields: 7",
+        "Equal fields: 3",
+        "Equal fields: 1"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "output",
+      "prompt": "What record value survives assignment without relying on padding?",
+      "code": "#include <stdio.h>\n\nstruct Spread { char first; int number; char last; };\nstruct Grouped { int number; char first; char last; };\n\nint main(void)\n{\n    struct Spread first = {'A', 12, 'Z'};\n    struct Spread second = first;\n    second.number = 20;\n    printf(\"%d %d\\n\", first.number, second.number);\n    return 0;\n}\n",
+      "explanation": "Structure assignment copies member values, and changing the copy leaves the source value twelve.",
+      "difficulty": "medium",
+      "id": "q-10",
+      "options": [
+        "12 20",
+        "20 20",
+        "12 12",
+        "20 12"
+      ],
+      "answer": 0
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Structure size includes internal and trailing padding.",
+      "bn": "স্ট্রাকচারের সাইজে ভেতরের আর শেষের প্যাডিংও থাকে।"
+    },
+    {
+      "en": "offsetof reports the byte offset of an ordinary member.",
+      "bn": "offsetof দিয়ে সাধারণ মেম্বারের বাইট অফসেট জানা যায়।"
+    },
+    {
+      "en": "_Alignof reports a type alignment requirement from C11 onward.",
+      "bn": "C11 থেকে _Alignof দিয়ে টাইপের অ্যালাইনমেন্টের দরকার জানা যায়।"
+    },
+    {
+      "en": "Array stride uses the complete structure size.",
+      "bn": "অ্যারের পরের রেকর্ডে যেতে পুরো স্ট্রাকচারের সাইজ লাগে।"
+    },
+    {
+      "en": "Padding bytes should not define value equality or external formats.",
+      "bn": "মান তুলনা বা বাইরের ফরম্যাট ঠিক করতে প্যাডিং বাইটের ওপর ভরসা কোরো না।"
+    },
+    {
+      "en": "Reordering members changes layout and can affect binary interfaces.",
+      "bn": "মেম্বারের ক্রম বদলালে লেআউট বদলায় আর বাইনারি ইন্টারফেসে প্রভাব পড়তে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Explain internal and trailing structure padding.",
+      "marks": 4,
+      "answerHtml": "<p>Internal padding places later members at suitable aligned offsets. Trailing padding makes the complete structure stride suitable for successive elements in an array. Both contribute to sizeof the structure. Exact gaps depend on the implementation.</p>"
+    },
+    {
+      "type": "long",
+      "question": "On a target with one-byte char and four-byte int aligned to four, explain possible Spread and Grouped layouts.",
+      "marks": 7,
+      "answerHtml": "<p>Spread can place char at zero, int at four after three gap bytes, and final char at eight, then end at twelve after trailing padding. Grouped can place int at zero and chars at four and five, then end at eight. These are target-specific layouts, not universal C sizes. Use sizeof, offsetof, and _Alignof to inspect the actual implementation.</p>"
+    },
+    {
+      "type": "output",
+      "question": "Evaluate the portable layout relationships.\n\n#include <stdio.h>\n#include <stddef.h>\n\nstruct Spread { char first; int number; char last; };\nstruct Grouped { int number; char first; char last; };\n\nint main(void)\n{\n    printf(\"First at zero: %d\\n\", offsetof(struct Spread, first) == 0);\n    printf(\"No overlap: %d\\n\", offsetof(struct Spread, last)\n           >= offsetof(struct Spread, number) + sizeof(int));\n    printf(\"Enough space: %d\\n\", sizeof(struct Spread)\n           >= offsetof(struct Spread, last) + sizeof(char));\n    return 0;\n}\n",
+      "marks": 4,
+      "answerHtml": "<pre class=\"output\">First at zero: 1\nNo overlap: 1\nEnough space: 1</pre><p>The first member starts at zero; later ordinary members do not overlap; the whole object contains its last member.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Structure Padding and Alignment — C reference",
+      "url": "https://en.cppreference.com/w/c/language/object"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

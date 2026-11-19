@@ -1,0 +1,62 @@
+<h2 id="introduction">Share an interface without repeating its definitions</h2>
+<p class="lead">Several lab programs may use the same record type and pass rule. Copying their declarations into every source file makes updates hard to keep consistent. A <dfn>header file</dfn> holds shared interface declarations and related definitions that source files can include. The .h suffix is a convention, not a magic language boundary.</p>
+<p>Think of a shared reference page attached to several lab sheets. Every sheet should see the same type and function declarations. The preprocessor brings in that page's contents where #include appears. It does not create a separate runtime object merely because a header is included.</p>
+<p>A header can be reached more than once. One source file might include it directly and also include another header that includes it again. Repeated declarations are sometimes legal, but repeated structure definitions are not. An <dfn>include guard</dfn> uses a macro to ensure the guarded contents are processed once per translation unit.</p>
+<p>A translation unit is the source after preprocessing has included its headers and selected its tokens. A guard protects within that unit. It does not merge several independently compiled source files or solve every linker duplication problem. Understanding that boundary helps you decide what belongs in a header and what belongs in an implementation file.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>A portable guard uses #ifndef, #define, and #endif around the header contents. Choose a descriptive project-prefixed name such as LOOP_LOGIC_LAB_RECORD_H. Avoid reserved identifiers with double underscores or leading underscore-capital forms. The guard name should not accidentally match an unrelated header.</p>
+<p>The header below defines a record type and a small static inline helper. static gives the helper internal linkage in each including translation unit, which avoids a shared external function-definition conflict. For a larger ordinary function, the header would normally provide a declaration while one .c file supplies its external definition.</p><pre><code class="language-c">#ifndef LOOP_LOGIC_LAB_RECORD_H
+#define LOOP_LOGIC_LAB_RECORD_H
+struct LabRecord { int roll; int score; };
+static inline int lab_passed(const struct LabRecord *record)
+{
+    return record-&gt;score &gt;= 40;
+}
+#endif
+</code></pre><table class="ref"><thead><tr><th scope="col">Include form</th><th scope="col">Intended use</th><th scope="col">Search details</th></tr></thead><tbody><tr><td>#include &lt;stdio.h&gt;</td><td>System or implementation header</td><td>Implementation-defined search</td></tr><tr><td>#include "lab-record.h"</td><td>Project header</td><td>Quoted search first, then implementation rules</td></tr><tr><td>#ifndef guard</td><td>Skip repeated contents</td><td>Macro state within one translation unit</td></tr></tbody></table>
+
+<h2 id="how-it-works">Trace the first and second inclusion</h2>
+<p>On the first encounter, LOOP_LOGIC_LAB_RECORD_H is not defined. The #ifndef condition is true, so the preprocessor defines that macro and keeps the record and helper definitions. The closing #endif ends this conditional group. The C compiler can then use the LabRecord type and lab_passed declaration.</p>
+<p>On the second encounter in the same translation unit, the macro is already defined. The #ifndef condition is false, and the guarded contents are skipped. The structure is therefore defined once instead of twice. The guard does not remove the file from your project; it controls token inclusion for that one translation.</p>
+<p>The repeated-content example shows that mechanism in a single source so the result is easy to inspect. It contains the same guarded interface twice. Only the first copy survives preprocessing. The third example can instead include the real lab-record.h twice when compiled with USE_LAB_HEADER defined.</p>
+<p>To try the real header mode from this topic directory, run gcc -std=c17 -Wall -Wextra -Wpedantic -Werror -O2 -DUSE_LAB_HEADER examples/ex-3.c -o header-demo. GCC finds the quoted lab-record.h beside that source file. Running ./header-demo prints Pass: 1. Without USE_LAB_HEADER, the example embeds the same guarded interface for a self-contained run.</p>
+<p>The quoted and angle-bracket forms express different lookup intentions. Exact search rules belong to the implementation. With GCC, quoted includes commonly search the including file's directory first, while -I adds project search directories. Do not describe the current shell directory as a universal first search location. Relative include lookup follows the toolchain's documented rules.</p>
+<p>A header should work when included on its own before unrelated project headers. If it uses size_t, include the header that declares size_t rather than relying on the caller's earlier includes. This self-contained-interface habit prevents fragile include-order dependencies. The small LabRecord header needs only built-in int and its own type declaration.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The first program uses one guarded interface. The second repeats the interface text to expose guard behavior. The third has an actual quoted-include mode and also supports a single-file version with identical declarations. Both routes compile the same pass rule and must agree at the forty-mark boundary.</p>
+
+<h3>Use one guarded record interface</h3>
+<p>The type and helper appear before main, just as included header contents would. The guard macro is established before either definition. main creates one ordinary record and calls the static inline helper. The helper reads the supplied record through a const pointer and reports true. There is no allocation or cross-file shared state.</p>
+<div data-example="ex-1"></div>
+
+<h3>Repeat guarded declarations safely</h3>
+<p>The first guarded block defines the macro and the interface. The repeated block finds the macro already present and contributes no second structure definition. main therefore compiles without a redefinition error. The score is thirty-nine, so the helper prints zero. The guard changes source inclusion, not the pass threshold.</p>
+<div data-example="ex-2"></div>
+
+<h3>Choose the real quoted header or its embedded interface</h3>
+<p>USE_LAB_HEADER selects two actual include directives for lab-record.h. The header's guard protects against that repeated inclusion. Without the build definition, the equivalent guarded interface appears directly in the source. Both modes create roll five with score forty. The actual header is supplied beside the example, and forty meets its pass threshold.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Include guards and pragma once</h2>
+<p>#pragma once is widely supported by GCC, Clang, and other toolchains as a request to process a file once. It is concise, but C17 does not require that specific pragma behavior. A macro-based guard uses standard directives and is the portable choice here. Neither technique replaces thoughtful header contents.</p>
+<p>A guard cannot prevent duplicate external definitions across translation units. If a header defines int total=0 and two source files include it, each unit may supply an external definition. The guard is fresh in each preprocessing run. Declare shared storage with extern in the header and define it once in a .c file when the later multi-file design requires it.</p>
+<p>Likewise, an ordinary non-static function body in a shared header may create repeated external definitions. Small static inline helpers can intentionally live in headers, as shown here. Larger implementation functions normally belong in source files with a matching prototype in the header. Keep the distinction about linkage separate from repeated-inclusion protection.</p>
+<p>A header is not usually compiled as a separate runnable program. Its declarations become part of the including translation unit. Compile and link the .c files, ensuring the needed headers are found during their preprocessing. The next module on multi-file programs will extend this interface-and-implementation pattern beyond the single-file examples used here.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Putting the definition outside the guard</h3>
+<p>If the struct definition appears before #ifndef or after #endif, repeated includes can still define it twice. Enclose the actual reusable contents, not merely a comment or empty region. Check the guard's opening and closing placement whenever a repeated-definition error appears.</p>
+<h3>Reusing a short guard name</h3>
+<p>Two unrelated headers using a generic name such as RECORD_H can accidentally suppress one another. The first header defines that macro, causing the second header's contents to disappear. Use a project and purpose prefix. A guard collision is a preprocessing naming problem, not an absent source file.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Write the header's public vocabulary first: type definitions, necessary constants, and function declarations. Include its own dependencies. Test including it twice and including it first in a small client. Those checks detect missing guards and hidden include-order assumptions before a larger program obscures the cause.</p>
+<p>Keep ordinary implementation details in source files when callers do not need them. Use guard names that remain stable and unique as folders grow. Prefer the portable guard unless your project deliberately requires a toolchain with pragma once support. Protecting a header is one part of a consistent interface design.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Macro-based include guards use directives available since C89. The header's static inline helper requires C99, and the examples target C17. #pragma once is a common extension with implementation-specific support. The quoted include mode is verified with GCC, while exact search directories and command-line options remain toolchain details.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Headers share source interfaces, and include guards prevent repeated contents within a translation unit. Use quoted includes for project headers, keep dependencies explicit, and distinguish guard protection from external-definition rules. Next, inspect compiler-supplied context with <a href="topic:c-predefined-macros">Predefined Macros</a>.</p>

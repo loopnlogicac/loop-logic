@@ -1,0 +1,71 @@
+<h2 id="introduction">The spaces between labeled boxes</h2>
+<p class="lead">A record containing a char, an int, and another char may occupy more bytes than those members appear to require. The compiler can leave gaps between members or at the end. These unused layout bytes are called <dfn>padding</dfn>. They help place members at addresses suitable for their types.</p>
+<p>Think of arranging desks so each larger desk begins on a floor tile boundary. A small chair between large desks may leave an empty tile. Rearranging the objects can reduce gaps without changing what each object means. Structure layout follows a similar idea, though the exact rules come from the C implementation and its platform interface.</p>
+<p><dfn>Alignment</dfn> is the boundary requirement for storing a type's objects. Some machines require aligned access; others merely execute it more efficiently. C gives the implementation room to satisfy those requirements. You should use the layout the implementation supplies rather than assuming every member follows the previous one with no gap.</p>
+<p>The important distinction is between values and representation. Two records can hold identical member values even when padding bytes differ. A record's meaning comes from its fields, not from every raw byte in its storage. That distinction matters for equality, serialization, security, and performance work.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>sizeof(struct Spread) reports the full structure size, including padding. offsetof(struct Spread, number), from stddef.h, reports the byte offset of an ordinary member from the start of the structure. _Alignof(struct Spread), introduced in C11, reports the type's alignment requirement as a size_t value.</p>
+<p>Use %zu to print all three kinds of size results. offsetof applies to a normal addressable member, not a bit field. The first named member of an ordinary structure has no padding before it. Later members appear in declaration order, but gaps may occur between them and after the last member.</p><pre><code class="language-c">struct Spread { char first; int number; char last; };
+struct Grouped { int number; char first; char last; };
+
+size_t bytes = sizeof(struct Spread);
+size_t offset = offsetof(struct Spread, number);
+</code></pre><table class="ref"><thead><tr><th scope="col">Expression</th><th scope="col">Question it answers</th></tr></thead><tbody><tr><td>sizeof(struct Spread)</td><td>How many bytes does one complete record occupy?</td></tr><tr><td>offsetof(struct Spread, number)</td><td>How far from the start is number?</td></tr><tr><td>_Alignof(struct Spread)</td><td>What alignment does this record type require?</td></tr><tr><td>sizeof records[0]</td><td>What is the stride between adjacent array records?</td></tr></tbody></table>
+
+<h2 id="how-it-works">Trace one common layout, then measure your own</h2>
+<p>On a common 64-bit GCC platform, char occupies one byte, int occupies four, and int alignment is four. A Spread record can place first at offset zero, leave three padding bytes, place number at offset four, then place last at offset eight. Three trailing padding bytes make the full structure size twelve.</p>
+<p>Those numbers describe a common implementation, not a universal C17 promise. The first measurement program records the actual platform results. If another machine gives different int size or alignment, its offsets and full sizes can differ while the program remains correct. Read the output together with that platform's type properties.</p>
+<p>Trailing padding matters for arrays. If a Spread array has adjacent elements, every element's int member must still meet its alignment requirement. The full structure stride includes trailing padding so that the second record begins at another suitable boundary. Multiplying an element count by sizeof(struct Spread) includes those gaps automatically.</p><pre class="diagram">illustrative layout only: int size 4, alignment 4
+Spread:  [char][pad pad pad][ int ][char][pad pad pad]  size 12
+Grouped: [ int ][char][char][pad pad]                 size 8
+
+array: [complete record stride][complete record stride]
+        trailing padding is part of each stride</pre><p>Grouped places the int first and the two chars together. On that common platform, fewer gaps are needed and the size becomes eight. Reordering can therefore reduce an array's storage cost. The standard does not promise a particular improvement for every reordering on every implementation, so measure before making a layout claim.</p>
+<p>The second program prints only guaranteed relationships. The first member starts at zero. The last member does not overlap the earlier int. The whole structure is large enough to include that last member. These facts remain true when exact offsets vary. They make better portable quiz questions than a hard-coded twelve-byte answer.</p>
+<p>_Alignof accepts a type name in standard C11 and C17 syntax. It reports the requirement, not the address of a particular object. The structure's ordinary members must be accommodated at suitable offsets. For stronger requested alignment, C has additional facilities, but the examples here inspect naturally laid-out record types without extensions.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The measurement programs deliberately expose platform facts. Their recorded output is one real execution, while their notes state what may vary. The relationship and field-equality programs instead give portable true results. Compare what each program proves before turning one machine's output into a general rule.</p>
+
+<h3>Measure two member orders</h3>
+<p>This program reports actual sizes for two declarations containing the same member types. It then reports the Spread member offsets. On the verified target, Spread is twelve bytes and Grouped is eight. Treat those numbers as measurements, not language constants. Reordering changes representation while preserving the ability to name and store the same kinds of values.</p>
+<div data-example="ex-1"></div>
+
+<h3>Print only portable layout relationships</h3>
+<p>The first named member cannot have leading padding. Later non-bit-field members occupy distinct storage in their declared order. sizeof the full record includes the last member and any trailing padding. These relationships do not require fixed numeric offsets. The output therefore remains three true flags on targets with different natural alignments.</p>
+<div data-example="ex-2"></div>
+
+<h3>Inspect alignment and array stride</h3>
+<p>_Alignof reports type requirements using standard C11 syntax. sizeof the record gives the stride used for an array of those records, including trailing padding. On the verified target the alignments are four and the stride is twelve. Another implementation can report different values. The program's purpose is observation of the chosen layout, not a portable numeric prediction.</p>
+<div data-example="ex-3"></div>
+
+<h3>Compare fields rather than padding</h3>
+<p>The expression compares first, number, and last using their value types. It does not inspect any gap bytes left by layout. Both records contain A, seven, and Z, so the output is Equal fields: 1. The result would remain meaningful even if their padding bytes differed or the structure size changed on another platform.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Layout bytes are not a stable data format</h2>
+<p>Do not compare whole structures with memcmp to establish value equality. Padding bytes can hold unspecified values and need not match between equal records. A whole-structure assignment preserves member values but need not preserve every padding byte's prior contents. Compare named fields using their own value rules instead.</p>
+<p>Do not write an external record format by copying the entire structure to a file or network stream. Layout can vary with type sizes, alignment, compiler options, and ABI conventions. Byte order and numeric representation add further differences. Write a documented sequence of fields instead, using explicit encoding for each value.</p>
+<p>Padding may also expose unrelated old bytes if raw structure storage is sent outside the process. Initializing members is not a portable promise that every padding byte has a specific value. A serialization routine that writes only the intended values avoids depending on unused representation. Consider this during interface design rather than after a raw-byte format is deployed.</p>
+<p>Compiler-specific packing directives can reduce or remove some padding, but they are outside portable C17. A packed member can require unaligned access. Taking its address and using it as an ordinary aligned pointer can break assumptions on some targets. Packing also does not settle byte order or integer width for an external protocol.</p>
+<p>A cast from an arbitrary byte buffer to a structure pointer can fail several requirements at once. The buffer may have unsuitable alignment, the object representation may be invalid, and the effective-type rules may not allow the intended access. Decode bytes into properly declared member objects instead of assuming layout matching is enough.</p>
+<p>For ordinary int-containing records, malloc returns suitably aligned storage. Over-aligned types may require aligned allocation and its additional size rules. This lesson's Spread and Grouped types do not request extended alignment. Do not generalize the ordinary allocation guarantee to every custom alignment requirement.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Adding member sizes to predict sizeof</h3>
+<p>The sum of sizeof members omits internal and trailing padding. Use sizeof the complete structure for allocation, array strides, and copies. Guessing a six-byte Spread layout on a platform that needs twelve bytes can underallocate an entire record array.</p>
+<h3>Using byte equality for record equality</h3>
+<p>Two Spread records with the same first, number, and last members are value-equal under a member-based rule. Their padding does not contribute useful domain data. Compare those fields directly rather than reading raw bytes as an equality test. String members would need text comparison rather than pointer comparison.</p>
+<h3>Reordering a public layout casually</h3>
+<p>Changing member order can change offsets and break an ABI used by separately compiled code. A smaller measured size is not sufficient justification for altering a public binary interface. Review compatibility and rebuild dependent components when a shared layout changes.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Measure layout when storage or interoperability matters. Record the compiler, target, and relevant options with the measurements. Group naturally aligned larger members when an internal record can be reordered safely, then verify the actual effect. Preserve semantic field names so performance changes do not obscure meaning.</p>
+<p>Keep portable behavior tests separate from platform observations. A portable assertion can verify non-overlap or field equality. A platform-specific assertion may verify a documented ABI size when that ABI is truly required. Name the requirement so future readers understand why a particular byte count matters.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>sizeof and offsetof are long-standing C facilities; _Alignof requires C11. All complete programs run as C17. Exact record measurements are implementation-dependent and are labeled accordingly. Compiler packing attributes and pragma pack are extensions rather than a universal C17 layout tool. The examples use no packed structures or assumed raw-byte serialization.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Padding helps align members and successive array records. Inspect size, offsets, and alignment with the right operators, and label measured numbers as platform facts. Compare and serialize meaningful fields rather than padding bytes. Next, see what happens before C compilation in <a href="topic:c-preprocessor-intro">The C Preprocessor</a>.</p>

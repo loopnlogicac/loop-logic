@@ -1,0 +1,70 @@
+<h2 id="introduction">টাইপ ঠিক রেখে একই কাঠামো ব্যবহার করো</h2>
+<p class="lead">এক বাক্সে রুমের নাম, অন্যটিতে আসনসংখ্যা রাখতে চাও। একই কোড লাগবে, তবে নামটি String হিসেবেই কাজ করুক। <dfn>জেনেরিকস</dfn>-এ ক্লাস বা মেথড type parameter ব্যবহার করে, কলার তার টাইপ দেয়। কম্পাইলার পুরো কাজে সেই সম্পর্ক ধরে রাখে।</p>
+<p>জেনেরিকস ছাড়া বাক্স Object ফেরালে String মেথডের আগে cast লাগত। ভুল cast চলার সময় ধরা পড়তে পারে। Box&lt;String&gt; ঘোষণাতেই এলিমেন্টের চুক্তি দেয়, অমিল আগে ধরা পড়ে।</p>
+<p>টাইপ প্যারামিটার একটি সম্পর্ক; সবখানে যেকোনো কিছু নেওয়ার ছাড় নয়। T নিয়ে T ফেরালে ফল সেই কলের নির্বাচিত টাইপ মেনে চলে। অন্য কলে অন্য রেফারেন্স টাইপ নেওয়া যায়, মেথড নতুন করে লিখতে হয় না।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>void pointer আলাদা অ্যাড্রেস নিতে পারে, কিন্তু কলারের জন্য আগের টাইপের সম্পর্ক ধরে রাখে না। Java জেনেরিকসে সোর্সের স্তরে সম্পর্ক যাচাই হয়। নিজে মেমরি নেওয়া বা প্রতি টাইপে আলাদা ক্লাস তৈরি লাগে না।</p></div>
+<h2 id="syntax">ক্লাস বা মেথডের প্যারামিটার ঘোষণা করো</h2>
+<pre><code class="language-java">class Box&lt;T&gt; {
+    private final T value;
+    Box(T value) { this.value = value; }
+    T get() { return value; }
+}
+static &lt;T&gt; T first(List&lt;T&gt; values) {
+    return values.get(0);
+}</code></pre>
+<p>ক্লাসের T তার ইনস্ট্যান্স ফিল্ড, কনস্ট্রাক্টর আর ইনস্ট্যান্স মেথডে পাও। মেথডের টাইপ প্যারামিটার শুধু সেই কলের। static হলেও রিটার্ন টাইপের আগে লিখতে হয়। static মেম্বার বাইরের ক্লাসের T ব্যবহার করতে পারে না; সব ইনস্ট্যান্সের টাইপ এক নয়।</p>
+<p>new Box&lt;&gt;(...)-এর diamond কম্পাইলারকে আশপাশের প্রসঙ্গ থেকে টাইপ বুঝতে বলে। যাচাই বন্ধ হয় না, dynamic typing-ও হয় না। জটিল inferred টাইপ বোঝা কঠিন হলে স্পষ্ট ঘোষণা দাও।</p>
+<p>টাইপ আর্গুমেন্ট রেফারেন্স টাইপ হতে হবে। Box&lt;int&gt; চলে না, Box&lt;Integer&gt; চলে। আলাদা যাচাই না করলে null-ও রাখা যায়। জেনেরিকস null আটকায় না।</p>
+<h2 id="how-it-works">এক প্যারামিটার কোথায় যায় দেখো</h2>
+<p>Box&lt;String&gt;-এর কনস্ট্রাক্টর String নেয়, get থেকে সোর্সের কলার String পায়। Box&lt;Integer&gt;-এ Integer। দুই বাক্স মিশিয়ে চুপিচুপি String-কে Integer করা যায় না। কম্পাইলার সম্পর্ক পরীক্ষা করে।</p>
+<pre class="diagram">Box&lt;String&gt;  -- get() --&gt; String operations
+Box&lt;Integer&gt; -- get() --&gt; Integer operations
+          same generic source implementation</pre>
+<p><dfn>Bound</dfn> প্যারামিটারের ন্যূনতম ক্ষমতা জানায়। T extends Number দিলে ভেতরে Number-এর মেথড চলে। ইন্টারফেস bound-এও extends লেখো। ক্লাস আর ইন্টারফেস &amp; দিয়ে যোগ করলে ক্লাসটি আগে থাকে।</p>
+<p>Bound যতটুকু দেয় ততটুকুই ব্যবহার করা যায়। Number-এ doubleValue আছে, যেকোনো T-এর জন্য সাধারণ + নেই। বেছে নেওয়া সংখ্যার টাইপে বদলে হিসাব করো, সীমাও বলো। double যোগে বড় পূর্ণসংখ্যা বা দশমিক round হতে পারে; নির্ভুল টাকার হিসাব নয়।</p>
+<p>larger মেথডে T extends Comparable&lt;? super T&gt; আছে। এতে T বা তার supertype নেওয়া ordering দিয়ে তুলনা চলে। শুধু Comparable&lt;T&gt;-এর চেয়ে বেশি টাইপ নিরাপদে ব্যবহার করা যায়।</p>
+<h2 id="examples">পুরো কলে টাইপ অনুসরণ করো</h2>
+<h3>টাইপযুক্ত বাক্সে cast লাগে না</h3>
+<p>নামের বাক্স থেকে তিন অক্ষরের String আসে। আসনের বাক্সের Integer unbox করে দুই যোগ হয়। আউটপুট 3 আর 32। কোনো cast লাগে না।</p>
+<div data-example="ex-1"></div>
+<h3>Number bound দিয়ে সংখ্যা পড়ো</h3>
+<p>total, Number-এর subtype-এর list নেয়। Integer আর Double কলে টাইপ আলাদা, ভেতরে দুটোই doubleValue ব্যবহার করে। ফল 5.0 আর 4.0। Bound অপারেশন দেয়, একই সংখ্যার স্টোরেজ চাপায় না।</p>
+<div data-example="ex-2"></div>
+<h3>নির্দিষ্ট source থেকে সাধারণ destination-এ কপি</h3>
+<p>Integer মান Number list-এ রাখা যায়। T-তে যুক্ত দুটি wildcard সেই দিক বোঝায়। এলিমেন্টের টাইপ বা ক্রম না বদলে পড়ে শেষে যোগ হয়।</p>
+<div data-example="ex-3"></div>
+<h3>তুলনা করা যায় এমন দুই আর্গুমেন্টের একটি ফেরাও</h3>
+<p>larger, String আর Integer দুটোতেই চলে। Object না ফিরিয়ে T ধরে রেখে আগের একটি আর্গুমেন্ট ফেরায়। তুলনার ফল শূন্য হলে চুক্তি অনুযায়ী বামেরটি বেছে নেয়।</p>
+<div data-example="ex-4"></div>
+<h2 id="wildcard-direction">অজানা টাইপে পড়া আর লেখার নিয়ম আলাদা</h2>
+<p>List&lt;Integer&gt;, List&lt;Number&gt;-এর subtype নয়। তা হলে Number রেফারেন্স দিয়ে Double ঢুকিয়ে Integer list-এর চুক্তি ভাঙা যেত। সাধারণভাবে জেনেরিক আর্গুমেন্ট invariant; subtype সম্পর্ক বাইরের টাইপে এভাবে ছড়ায় না।</p>
+<p>List&lt;? extends Number&gt; মানে Number বা নিচের কোনো অজানা টাইপের list। Number হিসেবে পড়া নিরাপদ। Integer যোগ করা নিরাপদ নয়; আসল list Double-এর হতে পারে। collection অনুমতি দিলে সাধারণভাবে শুধু null নতুন মান হিসেবে যোগ করা যায়।</p>
+<p>List&lt;? super Integer&gt;-এ এলিমেন্ট Integer বা তার supertype। Integer যোগ নিরাপদ। পড়লে শুধু Object নিশ্চিত; আসল list-এ অন্য Object-ও থাকতে পারে। মনে রাখো: producer extends, consumer super।</p>
+<table class="ref"><thead><tr><th scope="col">প্যারামিটার</th><th scope="col">নিরাপদ সাধারণ রিড</th><th scope="col">কাজের রাইট</th></tr></thead><tbody>
+<tr><td>List&lt;? extends Number&gt;</td><td>Number</td><td>ইচ্ছেমতো non-null সংখ্যা নয়</td></tr>
+<tr><td>List&lt;? super Integer&gt;</td><td>Object</td><td>Integer</td></tr>
+<tr><td>List&lt;?&gt;</td><td>Object</td><td>ইচ্ছেমতো non-null মান নয়</td></tr>
+</tbody></table>
+<p>নিয়মগুলো এই রেফারেন্স দিয়ে কাজের। ভেতরের list immutable হয় না। অন্য রেফারেন্স দিয়ে বদলানো যেতে পারে। T পড়ে আবার বসাতে হলে বিচ্ছিন্ন wildcard-এর চেয়ে নাম দেওয়া type parameter ভালোভাবে সম্পর্ক বোঝায়।</p>
+<h2 id="erasure">রানটাইমে কী থাকে বোঝো</h2>
+<p><dfn>Type erasure</dfn>-এ টাইপ প্যারামিটার তার bound-এ, প্রায়ই Object-এ, বদলে যায়। কম্পাইলার দরকারি cast আর bridge method বসায়। Box&lt;String&gt; আর Box&lt;Integer&gt; আলাদা বিশেষ JVM ক্লাস হয় না। রানটাইমে সাধারণত টাইপ আর্গুমেন্টের ট্যাগ না থাকলেও সোর্সের যাচাই কাজে আসে।</p>
+<p>Erasure-এর কারণে শুধু List&lt;String&gt; আর List&lt;Integer&gt; প্যারামিটার দিয়ে ওভারলোড হয় না; দুটোই List হয়। তৈরির উপায় না দিলে new T() চলে না। instanceof List&lt;String&gt;-ও চলে না; শুধু list-এর রানটাইম ধরন দেখতে List&lt;?&gt; নাও।</p>
+<p>অ্যারে রানটাইমে component class মনে রাখে, বেশির ভাগ parameterized টাইপ তা রাখে না। তাই new T[10] হয় না। unchecked array cast চাপানোর বদলে typed collection নাও। raw আর parameterized collection মেশালে যাচাই দুর্বল হয়ে heap pollution হতে পারে, অর্থাৎ ঘোষিত টাইপের সঙ্গে বাস্তব মান আর মেলে না।</p>
+<h2 id="api-design">নাম দেওয়া প্যারামিটার না wildcard বাছো</h2>
+<p>শুধু list-এর size প্রিন্ট করলে List&lt;?&gt; যথেষ্ট। শেষ এলিমেন্ট ফেরালে &lt;T&gt; T last(List&lt;T&gt; values) ইনপুট থেকে ফলের সম্পর্ক রাখে। Object ফেরালে কলারের জানা টাইপের তথ্য হারায়।</p>
+<p>এক list-এর দুই অবস্থান বদলাতে নাম দেওয়া T দিয়ে পড়ে আবার T রাখা যায়। দুটি আলাদা wildcard list-এর অজানা টাইপ একই তা প্রমাণ হয় না। সম্পর্কটাই আসল; wildcard সবসময় ভালো বা খারাপ নয়।</p>
+<p>last-এ খালি list-এর কথা ভাবো। অনুশীলনে অন্তত এক এলিমেন্ট আছে, তাই size minus one চলে। সাধারণ API-তে খালি ইনপুটে নথিবদ্ধ এক্সেপশন বা মান নেই এমন ফল দাও। জেনেরিকস ফল থাকলে তার টাইপ বলে, এই সিদ্ধান্ত নেয় না।</p>
+<p>ভালো ঘোষণা দেখে কলার বডি না পড়েই কাজ বুঝবে। angle bracket কমানোর চেয়ে এই স্পষ্টতা জরুরি।</p>
+<h2 id="common-mistakes">টাইপের চুক্তি ধরে রাখো</h2>
+<h3>কঠিন ঘোষণা এড়াতে raw টাইপ</h3>
+<p>raw Box যাচাই বাদ দেয়। unchecked warning আর পরে ClassCastException হতে পারে। warning চাপা না দিয়ে সম্পর্ক ঠিক করো। অকারণ cast-এর চেয়ে ছোট স্পষ্ট type argument সহজ।</p>
+<h3>Bound মানেই অবজেক্ট বানানো যাবে ভাবা</h3>
+<p>T extends SomeClass no-argument কনস্ট্রাক্টরের চুক্তি নয়। বানাতে হলে Supplier&lt;T&gt;-এর মতো factory পাঠাও। তৈরির নির্ভরতা স্পষ্ট রাখো।</p>
+<h3>wildcard-কে মালিকানা ভাবা</h3>
+<p>extends wildcard এক রেফারেন্সের লেখা সীমিত করে। collection কপি, মালিকানা বদল বা freeze করে না। ভেতরের স্টেট রক্ষা করতে defensive copy বা নথিবদ্ধ unmodifiable view দাও।</p>
+<h2 id="best-practices">যতটুকু দরকার ততটুকু সম্পর্ক লেখো</h2>
+<ul><li>ছোট ভূমিকায় পরিচিত T, E, K/V নাম নাও।</li><li>মেথডের দরকারি অপারেশন দেয় এমন bound বাছো।</li><li>নমনীয় ইনপুটে wildcard, কলারের জন্য স্পষ্ট রিটার্ন টাইপ রাখো।</li><li>খালি ইনপুট আর null চলে কি না বলো।</li></ul>
+<h2 id="version-notes">Java 17-এ জেনেরিকস</h2>
+<div class="callout version"><p>জেনেরিকস Java 5-এ, diamond inference Java 7-এ এসেছে। Java 17-এও erasure আর invariant আর্গুমেন্ট আছে। এখানে unchecked conversion লাগে না। primitive আর্গুমেন্ট বা Box&lt;Integer&gt;-এর স্বয়ংক্রিয় specialization নেই।</p></div>
+<h2 id="summary">পুনর্ব্যবহারযোগ্য কোডে টাইপের সম্পর্ক বলো</h2>
+<p>জেনেরিক ঘোষণা সম্পর্ক রাখে, bound অপারেশন দেয়, wildcard নিরাপদ ডেটার দিক বোঝায়। এবার <a href="topic:oop-collections">কালেকশনে</a> ক্রম, অনন্য মান আর key দিয়ে খোঁজায় এই নিয়ম লাগাও।</p>

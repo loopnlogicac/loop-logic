@@ -1,0 +1,49 @@
+<h2 id="introduction">Key থেকে অ্যারের অবস্থান বের করো</h2>
+<p class="lead">শিক্ষার্থীর ID card রাখার নম্বর দেওয়া ঘরের rack ভাবো। ID শূন্য থেকে নিরানব্বই হলে প্রতিটির জন্য একটা ঘর ভালো কাজ করে। Card 42 খুঁজতে ঘর 42 খোলো। এটি <dfn>direct addressing</dfn>: key নিজেই ঘর বেছে নেয়।</p>
+<p>এবার ছয় digit ID, কিন্তু card মাত্র দুই হাজার ভাবো। দশ লাখ ঘর রাখা অপচয়। <dfn>Hash ফাংশন</dfn> প্রতিটি key থেকে ছোট index হিসাব করে। <dfn>Hash table</dfn> সেই index দিয়ে record রাখে। জায়গা কম লাগে, তবে দুই ID একই ঘর বাছতে পারে। সেটি collision; পরের পাঠে দুই record-ই রাখার উপায় আসবে।</p>
+<p>বারবার key আছে কি না বা তার সঙ্গে থাকা মান দরকার হলে hashing কাজে লাগে। Contact name থেকে phone number, course code থেকে registration record পাওয়া যায়। Hash শুরুর address, দুই key সমান তার প্রমাণ নয়। শেষ তুলনার জন্য আসল key রাখো।</p>
+<h2 id="syntax">Bucket হিসাবের তিন উপায়</h2>
+<p>Integer key-তে division hashing হলো h(k)=k mod m, যেখানে m bucket count। প্রথম প্রোগ্রামে শূন্য থেকে দশ নম্বরের এগারো bucket। ফাংশন বৈধ index দেয়; key insert বা collision resolve করে না। সীমিত machine integer-এ এক hash হিসাব O(1) সময় আর বাড়তি O(1) জায়গা নেয়।</p>
+<p>C-তে remainder negative হতে পারে। যেমন -1%11 হলো -1, অ্যারে index হয় না। Helper একবার remainder বের করে শুধু negative হলে এগারো যোগ করে। এতে INT_MIN-এ overflow করতে পারে এমন মূল key negate করা লাগে না। Reduction-এর আগে বড় positive key-তে এগারো যোগও এড়ায়।</p>
+<p>Multiplication hashing ভগ্নাংশের গুণফল দিয়ে key ছড়ায়। গাণিতিক রূপে শূন্য আর একের মধ্যে নির্দিষ্ট A নিয়ে k*A-এর ভগ্নাংশ নাও, m দিয়ে গুণ করে নিচের পূর্ণসংখ্যা নাও। আগে k*A round কোরো না: ওই বাদ পড়া ভগ্নাংশই দরকার। দ্বিতীয় উদাহরণে ষোলো bucket-এর fixed-width integer রূপ।</p>
+<p>String-এ ক্রম ধরে character মেলাও। Rolling rule h=(31*h+byte)%101, শুরু শূন্য। পরের byte যোগের আগে আগের মান গুণ করায় character order গুরুত্বপূর্ণ। দৈর্ঘ্য L-এর string hash করতে O(L) সময় আর বাড়তি O(1) জায়গা; পরে bucket access আলাদা কাজ।</p>
+<h2 id="how-it-works">রাখার আগে mapping দেখো</h2>
+<p>প্রথম উদাহরণে 22 আর 33 bucket শূন্যে, -1 আর 10 bucket দশে যায়। জোড়ার index সমান, key আলাদা। পাঁচ ইনপুট key-তে মাত্র তিন bucket ব্যবহৃত। Collision count দুই, কারণ প্রতি bucket-এ প্রথম আগমনের পরের প্রতিটি key-রও জায়গা লাগে।</p>
+<pre class="diagram">আগে: অপেক্ষার key [22] [33] [-1] [10] [7]
+                    |    |     |    |    |
+Mapping-এর পরে:     0    0    10   10    7
+Bucket count: [0:2] [1:0] ... [7:1] ... [10:2]</pre>
+<p>Bucket count দিয়ে distribution বোঝা যায়, কোন ID ছিল বলা যায় না। Dictionary-তে প্রতিটি ভরা অবস্থান থেকে key আর value-সহ record-এ পৌঁছাতে হবে। Chaining তালিকা ব্যবহার করে, open addressing পরের অ্যারে slot-এ সরাসরি record রাখে।</p>
+<p>Multiplication উদাহরণ key গুণ 2654435761-এর নিচের বত্রিশ bit রাখে। Word-টিকে 2-এর 32 ঘাত দিয়ে ভাগ করা fraction ধরো। ওপরের চার bit নিলে floor(16*fraction) হয়। কোড uint32_t-তে নেওয়ার আগে product-এ uint64_t নেয়। Key সর্বোচ্চ দশ লাখ বলে বড় এই গুণে overflow হয় না।</p>
+<p>cat-এর rolling উদাহরণে আগে c, তারপর a, t-এর byte আসে। ASCII-compatible execution character set-এ মাঝের remainder 99,35,90। শেষ hash নব্বই, character-এর যোগফল নয়। অন্য encoding-এ সংখ্যা বদলাতে পারে, তাই লেখক আর পাঠককে একই byte-hash নিয়ম মানতে হবে।</p>
+<h2 id="examples">Integer আর string mapping তুলনা</h2>
+<h3>Division hashing আর negative key</h3>
+<p>22 আর 33 bucket শূন্য, -1 আর 10 bucket দশ ভাগ করে। তিনটি আলাদা bucket-এ পাঁচ key।</p>
+<div data-example="ex-1"></div>
+<h3>32-bit multiplication hash</h3>
+<p>Product-এর নিচের 32 bit ভগ্নাংশের অবস্থান বোঝায়। তার ওপরের চার bit ষোলো bucket-এর একটি বাছে।</p>
+<div data-example="ex-2"></div>
+<h3>শব্দের rolling hash</h3>
+<p>আগের hash 31 দিয়ে গুণের পরে প্রতিটি byte যোগ হয়। চলতি remainder গুণফল ছোট রাখে।</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">আসল key দিয়ে hash বিচার করো</h2>
+<p>ভালো hash deterministic আর dictionary operation-এর তুলনায় সস্তা হবে। একই capacity আর encoding-এ সমান key সবসময় একই index দেবে। যে key সত্যিই আশা করো সেগুলো bucket জুড়ে ছড়ানো ভালো distribution। Key universe টেবিলের বড় হলে সব key-তে আলাদা index কোনো ফাংশন দিতে পারে না।</p>
+<p>Prime capacity division hashing-এ ID-র নিয়মিত factor এড়াতে সাহায্য করে, কিন্তু uniformity নিশ্চিত নয়। এগারোর সব গুণিতক modulus এগারোতে collide করে। সব ID শূন্যে শেষ হলে modulus দশ খারাপ। বাস্তবসম্মত sample নিয়ে ব্যবহৃত bucket আর সবচেয়ে বেশি জমা দুটোই দেখো।</p>
+<p>Multiplication rule শুধু key-র শেষ কয়েক bit না পড়েও power-of-two bucket count নিতে পারে। ষোলো bucket-এর উদাহরণ আগে product দিয়ে mix করে। stdint.h-এর exact uint32_t আর uint64_t লাগে; ওই optional type না থাকলে অন্য নকশা চাই। সাধারণ unsigned overflow C-তে নির্ধারিত, signed overflow নয়।</p>
+<p>String key-র equality rule-ও স্পষ্ট চাই। এখানে Cat আর cat আলাদা byte string। UTF-8 নামের consistent encoding দরকার; দেখতে একই text-ও আলাদা byte হতে পারে। ছোট polynomial hash distribution শেখার জন্য; নিরাপদ password ফাংশন বা ইচ্ছা করে বানানো collision-এর প্রতিরক্ষা নয়।</p>
+<h2 id="edge-cases">Capacity আর রাখা size আলাদা</h2>
+<p>ফাঁকা dictionary-তে record শূন্য, bucket অ্যারে তবুও আছে। এক key এক bucket নেয়। আলাদা presence flag থাকলে পুরো ভরা direct-address অ্যারে-ও স্পষ্ট। Hashing-এ occupancy আর full হওয়া collision scheme-এর ওপর; শুধু count-এর ছবি insertion policy বলে না।</p>
+<p>শূন্য বৈধ ডেটা হলে stored zero-কে empty marker করা যাবে না। Used flag বা পয়েন্টার রাখো। প্রথম উদাহরণে duplicate ইনপুট-ও বারবার আগমন, তাই collision statistic বাড়ায়। পরের set implementation duplicate insertion বাদ দেয়; count তুলনায় পার্থক্য বলো।</p>
+<p>m bucket-এর এগারো-entry count অ্যারের storage O(m)। n key পড়ে শেষে সব counter scan করে বলে মোট কাজ O(n+m)। এক integer hash-এর O(1) খরচ থেকে আলাদা। Helper আর পুরো প্রোগ্রাম আলাদা করলে ভুল complexity উত্তর এড়াবে।</p>
+<h2 id="common-mistakes">Hash-কে পরিচয় ভেবো না</h2>
+<h3>Negative remainder index করা</h3>
+<p>Negative subscript অ্যারের বাইরে যায়। Hash helper-এই remainder normalize করো, যাতে সব caller বৈধ bucket পায়।</p>
+<h3>অবস্থান ছাড়া character code যোগ</h3>
+<p>শুধু যোগে anagram একই মান পায়। Rolling multiplier ক্রমের তথ্য রাখে, যদিও অন্য শব্দ তখনও collide করতে পারে।</p>
+<h3>শুধু index তুলনা</h3>
+<p>22 আর 33 দুইটিই শূন্য বাছে। Candidate record পাওয়ার পরে পুরো key তুলনা না করলে dictionary অন্যের value ফেরাবে।</p>
+<p>এক bucket-এ কয়েক record রাখার নিয়ম lookup-এ এখনও লাগে। শুধু hash মাপলে search কোথায় শুরু বোঝা যায়, শেষ উত্তর বা মোট খরচ জানা যায় না।</p>
+<h2 id="version-notes">C17 remainder আর exact-width type</h2>
+<div class="callout version"><p>C17 integer remainder dividend-এর sign মানে, তাই index-এর আগে negative ফল normalize করো। Multiplication উদাহরণে optional exact-width uint32_t আর uint64_t দরকার। String-hash-এর সংখ্যার আলোচনা ASCII-compatible character code ধরে।</p></div>
+<h2 id="summary">Index-কে শুরুর স্থান ধরো</h2>
+<p>Hash ফাংশন বড় key space-কে সামলানোর মতো অ্যারে-তে নামায়। Distribution, key equality আর collision policy মিলে dictionary-র আচরণ ঠিক করে। পরের <a href="topic:ds-collision-chaining">separate chaining</a> দিয়ে collide করা record-এ পৌঁছানোর পথ রাখো।</p>
