@@ -1,0 +1,77 @@
+<h2 id="introduction">Visit every node with a purpose</h2>
+<p class="lead">Suppose you want to list courses in a department tree, copy its structure, or release its memory. All three tasks visit nodes, but they need different orders. A <dfn>traversal</dfn> supplies a precise rule for when a node's action happens relative to its children.</p>
+<p>Keep the tree fixed while comparing orders. Moving a printed key is not the same as moving a node in memory. The examples build the complete shape described in <a href="topic:ds-binary-tree">binary tree representation</a>. The lab uses that same level-order input convention.</p>
+<p>For a root with left and right subtrees, there are three natural places to perform its action. Visit before both children, between them, or after both. These give preorder, inorder and postorder. Level order instead processes all nodes at one depth before moving deeper.</p>
+
+<h2 id="syntax">Place the visit in the right position</h2>
+<pre><code class="language-text">preorder(root): visit root; preorder(left); preorder(right)
+inorder(root): inorder(left); visit root; inorder(right)
+postorder(root): postorder(left); postorder(right); visit root
+For each recursive routine: return immediately when root is NULL.</code></pre>
+<p>The names describe where the root appears: pre means before, in means between, and post means after. A visit can print a key, add a value, write a copied record, or free a node. Only the printing action is shown in the traversal lab.</p>
+<pre class="diagram">          [8]
+         /   \
+       [3]   [10]
+       / \   / \
+     [1] [6] [9] [14]
+Before any visit: order=[]; all links fixed
+After preorder: order=[8,3,1,6,10,9,14]; same links
+After inorder:  order=[1,3,6,8,9,10,14]; same links
+After postorder:order=[1,6,3,9,14,10,8]; same links
+After level:    order=[8,3,10,1,6,9,14]; same links</pre>
+<p>This particular tree also obeys BST ordering, which explains its sorted inorder result. Change the root key to -5 without changing links, and inorder no longer sorts. A traversal follows structure; it does not repair key placement or compare values.</p>
+
+<h2 id="how-it-works">Recursive calls, queues and explicit stacks</h2>
+<p>Preorder visits 8 immediately. Its left call visits 3, then 1, returns, and visits 6. Only when the complete left subtree finishes does the call for 10 begin. Each recursive call has its own current root pointer, while the tree records remain shared.</p>
+<p>Inorder delays the visit of 8 until its left call returns. That left call also delays 3 until the call for 1 returns. The first printed key is therefore 1. Postorder delays both 3 and 8 until all their descendants have completed their actions.</p>
+<table class="ref"><caption>When root 3 is visited</caption><thead><tr><th scope="col">Order</th><th scope="col">Before visiting 3</th><th scope="col">After visiting 3</th></tr></thead><tbody><tr><td>Preorder</td><td>No child traversal</td><td>Visit 1 then 6</td></tr><tr><td>Inorder</td><td>Visit 1</td><td>Visit 6</td></tr><tr><td>Postorder</td><td>Visit 1 and 6</td><td>Return to 8</td></tr></tbody></table>
+<p>Level order uses a queue of pointers. Enqueue the root when it exists. Repeatedly dequeue cur, visit it, then enqueue cur.left and cur.right if present. FIFO order keeps all earlier arrivals ahead of the next level's children.</p>
+<pre class="diagram">Before processing 8: queue=[8], order=[]
+After processing 8:  queue=[3,10], order=[8]
+After processing 3:  queue=[10,1,6], order=[8,3]
+After processing 10: queue=[1,6,9,14], order=[8,3,10]</pre>
+<p>The queue example reserves twelve pointer slots because its input has at most twelve nodes. A larger application needs a growing queue or a proven width bound. Its maximum live queue length is related to tree width, not height. A wide shallow tree may therefore need more queue storage than recursive depth-first traversal.</p>
+<p>Iterative inorder replaces the call stack with an explicit stack. Push cur and move left until cur becomes NULL. Pop the most recent waiting ancestor, visit it, then move into its right subtree. Repeat until both cur is NULL and the stack is empty.</p>
+<p>The stack invariant explains the method: every saved ancestor is waiting for its own visit after its left descent. A popped node is ready because its left subtree has finished. Moving right then starts the same procedure on that subtree. Each pointer enters and leaves the stack once.</p>
+<div data-lab="tree-traversals"></div>
+<p>In the lab, mode zero selects preorder, one inorder, two postorder and three level order. Supply exactly the same count, keys and mode to example one. The order panel then matches the C order line. Duplicate values are allowed here because positions, rather than unique keys, identify nodes.</p>
+<p>All four traversals take O(n) time, since every node is visited once. Recursive depth-first traversals and iterative inorder need O(h+1) working space. Level order needs O(w) live queue space for maximum width w. Recording the entire output adds O(n) storage separately from the traversal machinery.</p>
+
+<h2 id="examples">Run the four visit rules</h2>
+<p>The recursive and iterative inorder programs should print identical key sequences for the same positional input. Use the reconstruction program only with distinct keys. It solves a different problem: recovering links from visit sequences rather than receiving level-order positions.</p>
+
+<h3>Choose a traversal of a complete input tree</h3>
+<p>The tree is built without sorting. Mode 1 visits the left subtree, root, and right subtree, in that order.</p>
+<div data-example="ex-1"></div>
+
+<h3>Walk inorder without recursive calls</h3>
+<p>The explicit stack remembers ancestors waiting for their visit. Each pointer is pushed and popped once.</p>
+<div data-example="ex-2"></div>
+
+<h3>Reconstruct from preorder and inorder</h3>
+<p>Preorder selects 8 as the root. Its inorder position splits off the left subtree; the reconstructed postorder ends with 8.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="variations">Reconstruct from preorder and inorder</h2>
+<p>Preorder begins with a subtree root. Find that key inside the subtree's inorder interval. Keys before the split belong to the left subtree; keys after it belong to the right subtree. Consume the next preorder keys to construct those intervals in left-then-right order.</p>
+<p>For preorder 8,3,1,6,10 and inorder 1,3,6,8,10, root 8 splits off 1,3,6 on the left. The next preorder key 3 becomes that left root. Its inorder split leaves 1 and 6 as children. The remaining key 10 forms the right leaf.</p>
+<pre class="diagram">Before reconstruction: pre=[8,3,1,6,10], in=[1,3,6,8,10], pos=0
+After root split:       left interval=[1,3,6], root=[8], right interval=[10]
+After allocation:       root ---&gt; [8 | left ---&gt; 3 | right ---&gt; 10]
+                                       3.left ---&gt; 1; 3.right ---&gt; 6</pre>
+<p>The demonstration searches linearly for each inorder split. In the worst case, reconstruction takes O(n squared) time. An index map can reduce lookup work to O(n) total when distinct keys map efficiently to positions. Recursion still needs O(h+1) space, and the built tree occupies O(n) records.</p>
+<p>Reject duplicate inorder keys because they make a root's location ambiguous. Also reject a preorder key absent from its current interval. The ok flag carries failure back through partially built subtrees. Cleanup releases those records whether the sequences were inconsistent or an allocation failed.</p>
+<p>For empty sequences, reconstruction returns an empty tree and prints an empty postorder line. One key creates a leaf. A full traversal pair determines an arbitrary distinct-key binary tree, but preorder alone usually cannot. Extra shape assumptions would be needed to remove that ambiguity.</p>
+
+<p>Reconstruction should also verify that every preorder key was consumed. A valid inorder split alone cannot excuse leftover input. In the implementation, pos advances only when a nonempty interval creates a root. At the end, pos must equal n, and every recursive interval must have found its chosen root.</p><p>A tiny invalid pair is preorder 2,3,1 with inorder 1,2,3. Root 2 requires its next preorder key to belong to left interval [1], but 3 is outside it. Reject that pair immediately instead of attaching 3 in the wrong subtree.</p>
+
+<h2 id="common-mistakes">Keep visits and returns distinct</h2>
+<h3>Using stack emptiness as the only inorder loop condition</h3><p>The initial stack is empty even when cur points to the root. Continue while cur exists or saved ancestors remain. Stop only when neither source can supply another node.</p>
+<h3>Enqueuing NULL children</h3><p>NULL is a missing position, not a node waiting to be printed. Test both child pointers before enqueueing. Otherwise later queue removals may dereference invalid pointers.</p>
+<h3>Freeing nodes in preorder</h3><p>After freeing a root, its child fields cannot be read. Use postorder to destroy owned subtrees first. Printing preorder is safe because printing does not release the current record.</p>
+
+<h2 id="version-notes">C17 traversal conventions</h2>
+<div class="callout version"><p>C17 defines function calls and pointer access used here, but does not guarantee a particular maximum recursion depth. The twelve-node input limit bounds these demonstrations. Larger skewed trees may require explicit stacks to avoid exhausting the execution stack.</p></div>
+
+<h2 id="summary">Choose order from the task</h2>
+<p>Visit before children to describe roots first, between children for inorder, and after children for dependency completion. Use a queue when levels matter. Next, <a href="topic:ds-binary-search-tree">binary search trees</a> add key bounds that make one-path searches possible.</p>

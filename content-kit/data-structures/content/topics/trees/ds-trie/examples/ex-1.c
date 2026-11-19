@@ -1,0 +1,124 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct Trie {
+    struct Trie *child[26];
+    int terminal, count;
+} Trie;
+Trie *make_node(void)
+{
+    Trie *p = malloc(sizeof *p);
+    if (p != NULL) {
+        *p = (Trie){0};
+    }
+    return p;
+}
+void destroy(Trie *r)
+{
+    if (r != NULL) {
+        for (int i = 0; i < 26; i++) {
+            destroy(r->child[i]);
+        }
+        free(r);
+    }
+}
+Trie *find(Trie *r, const char *word)
+{
+    for (int i = 0; word[i] != '\0' && r != NULL; i++) {
+        r = r->child[word[i] - 'a'];
+    }
+    return r;
+}
+int valid_word(const char *word)
+{
+    size_t n = strlen(word);
+    if (n < 1 || n > 6) {
+        return 0;
+    }
+    for (size_t i = 0; i < n; i++) {
+        if (word[i] < 'a' || word[i] > 'z') {
+            return 0;
+        }
+    }
+    return 1;
+}
+int insert(Trie *root, const char *word)
+{
+    Trie *old = find(root, word);
+    if (old != NULL && old->terminal) {
+        return 1;
+    }
+    Trie *cur = root, *path[7];
+    int length = 1;
+    path[0] = root;
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = word[i] - 'a';
+        if (cur->child[index] == NULL) {
+            cur->child[index] = make_node();
+            if (cur->child[index] == NULL) {
+                return 0;
+            }
+        }
+        cur = cur->child[index];
+        path[length++] = cur;
+    }
+    cur->terminal = 1;
+    for (int i = 0; i < length; i++) {
+        path[i]->count++;
+    }
+    return 1;
+}
+void autocomplete(const Trie *cur, char text[], int length)
+{
+    if (cur == NULL) {
+        return;
+    }
+    if (cur->terminal) {
+        text[length] = '\0';
+        printf(" %s", text);
+    }
+    for (int i = 0; i < 26; i++) {
+        if (cur->child[i] != NULL) {
+            text[length] = (char)('a' + i);
+            autocomplete(cur->child[i], text, length + 1);
+        }
+    }
+}
+
+int main(void)
+{
+    Trie *root = make_node();
+    char word[32];
+    const char *base[] = {"car", "cat", "do"};
+    if (root == NULL) {
+        return 1;
+    }
+    for (int i = 0; i < 3; i++) {
+        if (!insert(root, base[i])) {
+            destroy(root);
+            return 1;
+        }
+    }
+    puts("Word (a-z, 0..6 letters):");
+    if (fgets(word, sizeof word, stdin) == NULL) {
+        destroy(root);
+        return 1;
+    }
+    word[strcspn(word, "\n")] = '\0';
+    if (word[0] != '\0' && !valid_word(word)) {
+        destroy(root);
+        return 1;
+    }
+    if (word[0] != '\0' && !insert(root, word)) {
+        destroy(root);
+        return 1;
+    }
+    char text[7];
+    printf("words:");
+    autocomplete(root, text, 0);
+    puts("");
+    printf("count=%d\n", root->count);
+    destroy(root);
+    return 0;
+}

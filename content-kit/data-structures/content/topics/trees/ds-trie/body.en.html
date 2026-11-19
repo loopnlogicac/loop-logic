@@ -1,0 +1,93 @@
+<h2 id="introduction">Share the beginning of many words</h2>
+<p class="lead">A small course-search box might offer car, cart and cat after you type ca. These words share their first two letters. A <dfn>trie</dfn>, also called a prefix tree, stores that shared beginning once and branches only when the next characters differ.</p>
+<p>A trie does not compare entire words to decide left or right. It consumes one character on each edge. The path from the root spells a prefix. A terminal flag says that a stored word ends at the current node.</p>
+<p>The distinction between a path and a word matters. Storing cart creates paths for c, ca and car, but it does not necessarily store those shorter strings as words. You must mark each intended endpoint separately. A terminal node may still have children for longer words.</p>
+<p>You will build lowercase-word dictionaries, search for exact words, count matching prefixes and produce autocomplete results. The C examples use letters a through z and words of length one through six. The lab begins with car, cat and do, then lets you add one short word using a through z.</p>
+
+<h2 id="syntax">One child slot for each letter</h2>
+<pre><code class="language-c">typedef struct Trie {
+    struct Trie *child[26];
+    int terminal;
+    int count;
+} Trie;</code></pre>
+<p>A child slot corresponds to one lowercase letter: a uses zero, b one, and z twenty-five. After validating a word, compute its slot as word[i]-'a'. A NULL child means that the required character path is missing. Every new node starts with all slots NULL, terminal zero and count zero.</p>
+<p>The examples allocate a node with malloc and initialize it using the C initializer <code>(Trie){0}</code>. Pointer members then receive proper null pointer values, while flags and counters become zero. That is more portable than assuming zero-filled allocation bytes always represent a null pointer.</p>
+<pre class="diagram">Before storing car:
+root --c--&gt; c --a--&gt; a --t--&gt; t*
+After storing car:
+root --c--&gt; c --a--&gt; a --t--&gt; t*
+                           \
+                            r*
+* means terminal, not a separate child node.
+Before adding cart: r* has no t child
+After adding cart:  r* --t--&gt; t*; car remains a stored word</pre>
+<p>Count records the number of distinct stored words beginning with the path to that node. The root's path is empty, so its count is the whole dictionary size. A terminal node contributes its own word to its count. Descendant terminal nodes contribute the longer words.</p>
+
+<h2 id="how-it-works">Insert, search and count prefixes</h2>
+<p>Insertion first checks whether the full word already ends at a terminal node. If so, return success without changing counts. This dictionary uses set semantics, so repeated input does not create multiple copies. Existing nonterminal paths still need their endpoint marked when a new shorter word is inserted.</p>
+<p>Begin cur at root and retain the nodes on the path. For each letter, follow its child if that child exists. Otherwise allocate a zero-initialized node and attach it in that slot. Move cur to the selected child and continue with the next letter.</p>
+<p>After the last character, set cur.terminal to one. Increment the count of the root and every node on the retained path once. The path array has seven entries because a six-letter word includes seven visited nodes when the root is counted. The update happens only after the word is fully constructed.</p>
+<p>If allocating a later character fails, the program reports failure and destroys the whole dictionary. Earlier newly created path nodes remain attached and are therefore reachable by cleanup. Their counters may still be zero, but no successful query is reported after that failure. A reusable library could instead roll back those nodes or define a recoverable failure contract.</p>
+<table class="ref"><caption>Distinct words car, cart, cat and dog</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Exact word?</th><th scope="col">Count</th></tr></thead><tbody><tr><td>Empty root path</td><td>No</td><td>4</td></tr><tr><td>ca</td><td>No</td><td>3</td></tr><tr><td>car</td><td>Yes</td><td>2</td></tr><tr><td>cart</td><td>Yes</td><td>1</td></tr><tr><td>do</td><td>No</td><td>1</td></tr></tbody></table>
+<p>Exact search follows the requested word's characters without allocating anything. If a required child is missing, return absent immediately. If the final node exists, inspect its terminal flag. Reaching a nonterminal node proves only that the query is a prefix of something stored.</p>
+<p>Prefix counting follows the same path but returns the reached node's count. It does not require terminal to be true. A missing prefix yields zero. With car, cart and cat stored, ca has count three even though ca itself is not a word.</p>
+<div data-lab="trie-insert"></div>
+<p>The lab reuses the fixed dictionary's shared paths and highlights every missing-letter allocation. A star in a node label means terminal. Adding ca can mark an existing endpoint without adding any node. Adding do changes neither the nodes nor the distinct count, because do is already stored.</p>
+<p>The lab's empty input means skip insertion, keeping its three-word dictionary unchanged. It is not a request to store an empty string. Example one accepts the same optional word line and prints all resulting words and the distinct count. The other examples read one through six-letter tokens after a count.</p>
+
+<h2 id="examples">Separate whole words from shared paths</h2>
+<p>The exact-search program prints both word status and prefix count so you can see the difference. The autocomplete program reads a prefix and lists matching words in alphabet order. Repeated dictionary words appear only once. The fourth example demonstrates an allocated but empty dictionary root.</p>
+
+<h3>Insert a user word into a small dictionary</h3>
+<p>The c and a nodes already exist. Inserting cab creates only b, marks its endpoint, and raises the distinct-word count to four.</p>
+<div data-example="ex-1"></div>
+
+<h3>Exact search differs from prefix search</h3>
+<p>The path for ca exists but is not terminal. Three distinct stored words share that prefix.</p>
+<div data-example="ex-2"></div>
+
+<h3>Autocomplete in alphabet order</h3>
+<p>Children are visited from a through z. The duplicate car is stored once, so results are car, cart and cat.</p>
+<div data-example="ex-3"></div>
+
+<h3>An empty dictionary has no completions</h3>
+<p>The root is allocated even when no words are stored. Its terminal flag and prefix count both remain zero.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="variations">Autocomplete and longest stored prefix</h2>
+<p>Autocomplete begins by following the chosen prefix to its node. If that path is absent, the result is empty. Otherwise recursively enumerate descendants while extending a character buffer. Print the current buffer whenever terminal is true.</p>
+<p>Visit child indices zero through twenty-five to obtain lexicographic order. Print a terminal prefix before visiting its children. This puts car before cart, because a word precedes a longer word beginning with it. Then visit cat after the entire r branch finishes.</p>
+<pre class="diagram">Before autocomplete ca: buffer="ca", cur=node a
+Explore r: terminal -&gt; emit car
+Explore r.t: terminal -&gt; emit cart
+Return to a, explore t: terminal -&gt; emit cat
+After: matches=[car,cart,cat]; no child link changed
+Before cleanup: root owns every child subtree
+After cleanup: each child subtree released, then root released</pre>
+<p>The buffer is reused across recursive calls. Each extension overwrites the next character, and a terminal visit writes the ending zero byte before printing. The maximum stored word length is six, so a seven-byte buffer includes the terminator. Larger dictionaries need a buffer bound derived from their allowed maximum word length.</p>
+<p>A longest-stored-prefix query solves the reverse problem. Follow a full query while remembering the latest terminal position. For stored words ca and car with query carton, the last stored prefix is car. A path continuing beyond car does not replace that answer unless a later terminal is reached.</p>
+<p>Prefix counting and autocomplete are related but have different costs. A cached count answers after following the prefix path. Enumerating completions must actually visit the relevant nodes and write the output. A prefix matching most of the dictionary can therefore produce a long autocomplete run.</p>
+<p>Let L be the query or inserted word length and P the number of allocated trie nodes. Exact search and prefix lookup take O(L) time. New insertion takes O(L) time with the fixed alphabet, including path-count updates. It may allocate at most L new nodes and uses O(L) temporary path storage.</p>
+<p>Every node reserves twenty-six child pointers, even when few children exist. Total storage is O(26P), which is O(P) for this fixed alphabet but has a substantial constant. Autocomplete scans twenty-six slots per visited node and also writes every result character. Its time is O(26V+R), with V visited nodes and R output characters.</p>
+<p>The maximum autocomplete recursion depth is the remaining word length. Cleanup scans all twenty-six slots of every node, taking O(26P) time and O(Lmax) call depth. No node is shared between different parents, even though many words share prefixes. Each allocated record therefore has exactly one owner and can be freed once.</p>
+
+<p>Longest-stored-prefix lookup also follows at most L character links. It takes O(L) time and O(1) working storage beyond the query, using a current pointer and the last terminal position. It never enumerates sibling branches or changes stored words.</p>
+
+<h2 id="edge-cases">Alphabet, empty input and capacity</h2>
+<p>The dictionary programs accept n zero through eight, followed by n lowercase words. Zero words leaves a live nonterminal root with count zero. Exact search then fails for every nonempty word, and enumeration prints only its label. Destroy still releases that root record.</p>
+<p>The general dictionary routines reject uppercase letters, punctuation and words longer than six. Validating before indexing prevents negative or too-large child indices. A real Bangla autocomplete system needs Unicode-aware tokenization and a different child mapping. It cannot index UTF-8 bytes by subtracting the English letter a.</p>
+<p>There is no fixed full state in the linked trie; allocation failure limits further growth. The example input limits instead bound total nodes, buffer sizes and trace length. For eight six-letter words, the root plus all newly created character nodes cannot exceed forty-nine records. Shared prefixes usually reduce that count.</p>
+<p>A repeated word uses no new nodes and does not increment counts. A new word equal to an existing nonterminal prefix adds no new nodes but changes terminal and all prefix counts. A word extending a stored word preserves the old terminal flag. Those three cases deserve separate checks.</p>
+<p>Deleting words is not required by this topic. A future deletion routine would clear a terminal, decrement affected counts and prune only unused nonterminal nodes. It must not remove a shared prefix still needed by another word. A node with count greater than zero remains useful even if its terminal flag is zero.</p>
+
+<h2 id="common-mistakes">A reachable node is not always a word</h2>
+<h3>Accepting every existing prefix as an exact match</h3><p>Storing cart creates the path ca, but not the word ca. Check terminal only after every query character has been consumed. Prefix queries deliberately use a different endpoint condition.</p>
+<h3>Counting a duplicate again</h3><p>Blindly increasing every path count turns a distinct dictionary into a frequency dictionary. Check the existing terminal first. If frequencies are intended, rename and document the counters rather than mixing two meanings.</p>
+<h3>Writing outside the child array</h3><p>A character outside a through z does not yield a safe slot under letter minus a. Validate the whole input before using find or insert. The routines assume that alphabet contract rather than performing silent conversion.</p>
+<h3>Freeing a shared prefix for one removed word</h3><p>The node for ca can serve car, cart and cat. Its lifetime belongs to the trie structure, not to a single displayed result. Cleanup releases the complete structure only after queries finish.</p>
+
+<h2 id="version-notes">C17 initialization and text</h2>
+<div class="callout version"><p>The trie uses C17 pointers and explicit lowercase character validation. The examples target the toolchain's contiguous English letter encoding. C guarantees contiguous digit codes but does not require every execution character set to number letters contiguously; another encoding needs a lookup mapping.</p></div>
+
+<h2 id="summary">Characters choose the search path</h2>
+<p>Tries share prefixes, terminal flags identify whole words, and cached counts avoid enumerating every completion. Alphabet-order traversal produces suggestions while preserving those same links. Later, <a href="topic:ds-hashing-intro">hashing</a> offers another way to organize dictionary lookup by computed positions.</p>

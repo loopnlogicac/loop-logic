@@ -1,0 +1,68 @@
+<h2 id="introduction">Describe the shape before writing code</h2>
+<p class="lead">Think about a university folder containing departments, courses and individual class notes. You can reach each note by following one route downward. A <dfn>tree</dfn> describes that kind of hierarchy using nodes and connecting edges. You will use its vocabulary to explain memory pictures before choosing an implementation.</p>
+<p>A tree does not require sorted numbers. The folder example has relationships, but no rule saying a smaller name belongs on the left. A binary search tree adds that ordering later. First learn to describe a shape without making assumptions about its stored values.</p>
+<p>In this track, a rooted tree has a chosen starting node. Every other node has exactly one parent, and every node is reachable from the root. There are no cycles. Following child links must eventually reach a node with no children.</p>
+
+<h2 id="syntax">Names for nodes and paths</h2>
+<pre class="diagram">           [72] root
+          /    \
+       [64]    [85]
+       /  \       \
+    [58] [69]     [91]
+Before adding 80: 85.left = NULL
+After adding 80:  85.left ---&gt; [80], with two NULL child links</pre>
+<p>A <dfn>parent</dfn> sits one edge above its child. Here 64 is the parent of 58 and 69. Those two children are siblings. Node 72 is an ancestor of every other node; 91 is a descendant of both 85 and 72.</p>
+<table class="ref"><caption>Measurements in this picture before adding 80</caption><thead><tr><th scope="col">Term</th><th scope="col">Meaning</th><th scope="col">Example</th></tr></thead><tbody><tr><td>Root</td><td>Node without a parent</td><td>72</td></tr><tr><td>Leaf</td><td>Node without children</td><td>58, 69, 91</td></tr><tr><td>Degree</td><td>Number of children</td><td>64 has degree 2</td></tr><tr><td>Depth</td><td>Edges from root to node</td><td>91 has depth 2</td></tr><tr><td>Height</td><td>Longest downward path in edges</td><td>Root height is 2</td></tr></tbody></table>
+<p>A node can have degree zero, one or two in a binary tree. The degree of the whole tree is the largest node degree. Do not count a node's parent as one of its children. That would measure a different quantity used for undirected graphs.</p>
+
+<h2 id="how-it-works">Levels, heights and binary shapes</h2>
+<p>A <dfn>binary tree</dfn> gives each node two named positions: left and right. A position may be empty. A node with only a right child differs from one with only a left child, even when both store the same keys.</p>
+<p>Depth starts at zero for the root. Moving through one child link increases depth by one. Height works in the opposite direction: a leaf has height zero. An internal node has one plus the larger child height.</p>
+<p>Our measurement examples give an empty subtree height -1. That makes a leaf calculation read one plus the maximum of -1 and -1. Some implementations count nodes on the longest path instead. Under that convention, empty height is zero and leaf height is one.</p>
+<p>A <dfn>full binary tree</dfn> has either zero or two children at every node. A <dfn>complete binary tree</dfn> fills every earlier level and packs its final level from left to right. These describe different facts. A root with only a left child is complete but not full.</p>
+<p>A <dfn>perfect binary tree</dfn> fills every level completely. All its leaves share one depth, and each internal node has two children. A <dfn>skewed tree</dfn> forms a chain. Its height can become nearly its total number of nodes.</p>
+<pre class="diagram">full, not complete:       complete, not full:
+        [A]                      [A]
+       /   \                    /
+     [B]   [C]                 [B]
+           / \
+         [D] [E]
+perfect height 1:         right-skewed height 2:
+        [A]                [A]
+       /   \                 \
+     [B]   [C]                [B]
+                                 \
+                                  [C]</pre>
+<p>At depth d, a binary tree has at most 2<sup>d</sup> nodes. Start with one root; every node can supply at most two children. Adding the level capacities through edge height h gives at most 2<sup>h+1</sup>-1 nodes. A perfect tree reaches that bound.</p>
+<p>A nonempty tree with n nodes has n-1 edges. Count one incoming edge for every node except the root. In a full binary tree with I internal nodes, those same edges number 2I. Therefore n=2I+1 and the leaf count is I+1.</p>
+<p>For a binary tree with n positive nodes, the minimum possible edge height is ceil(log<sub>2</sub>(n+1))-1. Its maximum is n-1, achieved by a chain. These limits explain why shape affects search time. The same node count can occupy a short broad tree or a long narrow one.</p>
+
+<h2 id="examples">Measure real C trees</h2>
+<p>The first program builds a complete tree from level-order keys. The second uses ordered insertion to deliberately create a chain. Compare their heights rather than judging height from the number of printed values.</p>
+
+<h3>Measure a complete marks tree</h3>
+<p>Seven nodes occupy three levels: the edge height is two, and four nodes have no children.</p>
+<div data-example="ex-1"></div>
+
+<h3>A chain is tall but narrow</h3>
+<p>Increasing insertions create a right chain. Its height is three; internal nodes have one child, so it is not full.</p>
+<div data-example="ex-2"></div>
+
+<h3>Count a perfect tree level by level</h3>
+<p>Each complete level doubles the previous width. Through depth four, a perfect binary tree contains 31 nodes.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Empty and single-node trees</h2>
+<p>The empty tree has zero nodes and no root record. Its leaf count is zero. A single-node tree has one leaf, degree zero and edge height zero. It is full, complete and perfect under the usual empty-child definitions.</p>
+<p>Counting nodes, leaves or height visits every existing node, so each takes O(n) time. Recursive measurement uses O(h+1) active calls. On a chain, that can be O(n) extra space. A fixed maximum of twelve nodes keeps the instructional programs small; general applications need deeper-input safeguards.</p>
+
+<h2 id="common-mistakes">Avoid ambiguous descriptions</h2>
+<h3>Calling every leaf a bottom-level node</h3><p>A leaf has no children, even if another branch extends farther down. In the full, noncomplete picture, B is a leaf above D and E. Test its links instead of comparing its depth with the tree height.</p>
+<h3>Mixing height conventions</h3><p>Writing height two without a convention can lose a mark in a tracing answer. State whether you count edges or nodes. This lesson uses edges; the later AVL cache and lab player use node height.</p>
+<h3>Applying the perfect formula to every shape</h3><p>Six nodes can have height two, but a perfect tree of that height needs seven. Use the formula as an upper bound unless perfection is given. For a full tree, use the internal-node relationship instead.</p>
+
+<h2 id="version-notes">C17 arithmetic and measurements</h2>
+<div class="callout version"><p>These examples use C17 without compiler extensions. Small bounded heights keep repeated doubling within the chosen unsigned type. Do not translate 2 raised to h into <code>2 ^ h</code>: C uses that operator for bitwise XOR.</p></div>
+
+<h2 id="summary">Read the tree before storing it</h2>
+<p>You can now name relationships, measure paths and distinguish four binary shapes. Draw the root and missing links before calculating counts. Next, <a href="topic:ds-binary-tree">binary tree representation</a> turns those pictures into array positions and allocated records.</p>

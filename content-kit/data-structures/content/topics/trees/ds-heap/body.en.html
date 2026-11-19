@@ -1,0 +1,83 @@
+<h2 id="introduction">Keep the next maximum at the front</h2>
+<p class="lead">A contest organizer repeatedly awards the highest remaining score. Sorting every score after every new arrival wastes work. A <dfn>binary heap</dfn> keeps the most extreme key at a known location while allowing efficient insertion and removal. You only order each parent against its children.</p>
+<p>A max heap places the greatest key at its root. A min heap reverses every comparison to keep the smallest there. Both require a complete binary shape, so an array can store the active nodes without gaps. This lesson implements a max heap and keeps duplicate scores as separate entries.</p>
+<p>The <a href="topic:ds-priority-queue">priority queue</a> is the interface; the heap is one implementation. A heap does not provide the BST rule about all left keys being smaller. You should not choose left or right to search for an arbitrary key based on a single root comparison.</p>
+
+<h2 id="syntax">Two rules make an array heap</h2>
+<p>Rule one is shape: active positions occupy indices zero through n-1. Rule two is max ordering: every parent key is at least each child key. With zero-based numbering, parent(i)=(i-1)/2 for positive i. Left and right child positions are 2*i+1 and 2*i+2.</p>
+<pre class="diagram">Before insertion: array=[10,7,8], n=3
+           [10]
+          /    \
+        [7]    [8]
+Append 12: array=[10,7,8,12], next complete position is 3
+Sift up:  [10,12,8,7] -&gt; [12,10,8,7]
+After insertion:
+           [12]
+          /    \
+        [10]   [8]
+        /
+      [7]</pre>
+<pre><code class="language-text">sift_up(heap, i): compare with parent and swap while larger
+sift_down(heap, n, i): choose larger child and swap while needed
+build_heap(heap, n): sift_down indices n/2-1 through 0
+insert: append at n, sift_up, then increase active size
+remove_max: save root, move last key to root, shrink, sift_down</code></pre>
+<p>The C insertion line stores the key at heap[n], calls sift_up with that index, then increments n. Sift-up needs only the index and ancestors, so it does not require the new count. The lab array reducer increases its active length when it appends. Both perform the same comparisons and swaps.</p>
+
+<h2 id="how-it-works">Repair only the disturbed path</h2>
+<p>Appending preserves completeness but may break ordering between the new leaf and its parent. Compare those keys. If the parent is already at least as large, stop. Otherwise swap them and continue at the parent index.</p>
+<p>Only the upward path can be wrong. Existing child subtrees were heaps before insertion. When a larger key rises, it still dominates those child roots. Sift-up therefore needs at most the tree height, O(log n), comparisons and O(1) working storage.</p>
+<p>Removing the maximum starts by saving heap[0]. Move the last active key to that root position and shrink n. This preserves the complete shape, but the replacement may be smaller than either child. Compare existing children and choose the larger one.</p>
+<pre class="diagram">Before remove: array=[12,10,8,7], n=4
+Save 12; replace root with last 7; shrink
+Temporary:     array=[7,10,8], n=3
+Choose 10; swap root and index 1
+After remove:  array=[10,7,8], removed=12</pre>
+<p>Swap only when the chosen child is greater than the current key. If the parent already dominates the greater child, it also dominates the other child, so stop. When child keys tie, the code chooses the left child. That tie rule helps the lab and C example produce the same array layout.</p>
+<p>Sift-down visits one downward path and uses O(log n) time with O(1) auxiliary space. Peek reads the root in O(1), after checking that n is positive. Searching for an arbitrary non-root key may require O(n) inspection because heaps do not order sibling subtrees against each other.</p>
+<p>To build a heap from an arbitrary array, begin at the last internal index n/2-1. Sift that node down, then process earlier indices backward. Every child subtree is already a heap when its parent is processed. Leaves need no work because they have no child comparisons to violate.</p>
+<table class="ref"><caption>Build [1,2,3,4,5,6,7] bottom up</caption><thead><tr><th scope="col">Index</th><th scope="col">Array after sift-down</th></tr></thead><tbody><tr><td>2</td><td>1,2,7,4,5,6,3</td></tr><tr><td>1</td><td>1,5,7,4,2,6,3</td></tr><tr><td>0</td><td>7,5,6,4,2,1,3</td></tr></tbody></table>
+<div data-lab="heap-operations"></div>
+<p>The lab first builds the input heap, then inserts key, then optionally removes the maximum. Example one reads the same values, key and remove-max flag. Watch array positions and tree levels together: they describe one structure. An internal swap changes keys at fixed positions rather than moving child links.</p>
+
+<h2 id="examples">Build once and change one path</h2>
+<p>The build example prints a valid heap array, which need not be globally descending. The extraction example repeatedly removes the maximum to print descending values. Those are different outcomes: a heap supports the next extreme query without fully sorting every remaining key.</p>
+
+<h3>Build, insert and remove the maximum</h3>
+<p>Bottom-up construction makes a max heap. Inserting 12 moves it to the root; removing it repairs the replacement path.</p>
+<div data-example="ex-1"></div>
+
+<h3>Extract descending values</h3>
+<p>Each extraction removes the greatest remaining key. This output is sorted, even though the internal heap array is not.</p>
+<div data-example="ex-2"></div>
+
+<h3>Build a heap in place</h3>
+<p>Leaves already satisfy the heap property. Processing internal indices backward ensures each child subtree is a heap before its parent.</p>
+<div data-example="ex-3"></div>
+
+<h3>A min heap for smallest-first service</h3>
+<p>The comparison directions are reversed throughout build, sift-up and sift-down. Inserting -3 makes it the minimum; removing it leaves the original six values in a valid min heap.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="variations">Linear construction and reversed comparisons</h2>
+<p>It is tempting to multiply n nodes by a log n height bound and call bottom-up construction O(n log n). That is an upper bound but misses the actual distribution of work. About half the nodes are leaves and move zero levels. About a quarter can move only one level.</p>
+<p>At increasing heights, the number of eligible nodes falls geometrically. The total downward distance is bounded by n times the series 1/4+2/8+3/16 and further terms. That series has a constant sum. Including leaf and comparison overhead gives O(n) construction time.</p>
+<p>Repeated insertion is a separate construction method. It has O(n log n) worst-case time because later inserted leaves may rise through many levels. It is useful for a stream, where values arrive gradually. Bottom-up construction is preferable when the whole initial array is already available.</p>
+<p>For a min heap, choose the smaller child during sift-down and swap upward when a key is smaller than its parent. The shape and index formulas stay the same. The root then supplies delete-min rather than delete-max. Do not reverse only one routine and leave the rest using max comparisons.</p>
+<p>A priority queue may attach an arrival sequence to each entry to break equal-priority ties. This integer heap does not promise FIFO ties. Equal values remain valid entries but carry no separate identity. Use a compound comparator if your application needs stable service among equal priorities.</p>
+
+<h2 id="edge-cases">Empty, singleton and full storage</h2>
+<p>An empty heap has no root to inspect or remove. A singleton removal saves its only key and makes n zero; no downward comparison follows. If the input array has fixed capacity and n equals that capacity, insertion must report full before writing heap[n]. That boundary belongs to storage, not to the abstract priority rule.</p>
+<p>These examples reserve sixteen cells, read at most twelve initial keys and append at most one key. That proves capacity before insertion. The zero-length input still accepts the one inserted key. Removing it immediately produces an empty active array.</p>
+<p>The final inactive cell may still contain an old value in C. Only indices below n belong to the heap. The lab removes that displayed slot entirely, so its active values match the C prefix. No logic uses a spare cell's contents as an emptiness marker.</p>
+
+<h2 id="common-mistakes">Preserve both shape and ordering</h2>
+<h3>Taking a BST-style deletion path</h3><p>A heap cannot replace its root with an inorder successor and leave an arbitrary hole. Move the last active value and shrink the end. This keeps complete-tree indexing valid.</p>
+<h3>Always swapping with the left child</h3><p>The right child may be larger. Swapping with the smaller child can leave the new parent below its sibling immediately. Select the greater existing child before testing the current key.</p>
+<h3>Using an unsigned backward build loop</h3><p>An unsigned index can wrap after zero. The example counts i down while positive and repairs i-1. That handles n zero or one without computing a negative active index.</p>
+
+<h2 id="version-notes">C17 array bounds</h2>
+<div class="callout version"><p>The heap routines use portable C17 integer indices. Their small fixed bounds keep child arithmetic safe. In a much larger heap, ensure that computing 2*i+1 cannot overflow the index type before you compare it with n.</p></div>
+
+<h2 id="summary">A partial order is enough for extremes</h2>
+<p>Complete shape packs a heap into an array, while parent dominance keeps its maximum at the root. Sift operations repair one path, and bottom-up construction shares work across levels. Next, <a href="topic:ds-expression-tree">expression trees</a> use children to represent evaluation dependencies.</p>

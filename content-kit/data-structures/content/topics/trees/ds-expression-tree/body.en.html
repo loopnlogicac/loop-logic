@@ -1,0 +1,82 @@
+<h2 id="introduction">Make grouping visible as child links</h2>
+<p class="lead">The expressions (8-2)*3 and 8-(2*3) contain the same digits and operators, but produce different answers. Their grouping determines which work must happen first. An <dfn>expression tree</dfn> stores that grouping directly: operands become leaves, and operators become parents of the values they combine.</p>
+<p>Instead of memorizing precedence while evaluating, follow the links. Each binary operator has a left operand subtree and a right operand subtree. Those positions matter for subtraction. A multiplication node may combine two whole expressions rather than only two digit leaves.</p>
+<p>This lesson starts with postfix input, which you saw in <a href="topic:ds-postfix-evaluation">postfix evaluation</a>. A stack now holds subtree roots instead of computed integers. You also use <a href="topic:ds-tree-traversals">postorder</a> reasoning to evaluate children before parents.</p>
+
+<h2 id="syntax">Define a small expression language</h2>
+<p>The examples accept one line with at most fifteen symbols, including any spaces. Operands are single digits zero through nine. Operators are binary plus, minus and multiplication. There are no variables, multi-digit literals, unary minus or division in this particular parser.</p>
+<pre><code class="language-text">parse(postfix):
+    digit: create a leaf and push its root
+    binary operator: require two roots
+        right = pop; left = pop
+        create operator with those children; push its root
+    finish only if exactly one root remains</code></pre>
+<pre class="diagram">Input 82-3*:
+After 8:  stack=[root of 8]
+After 2:  stack=[8,2]
+After -:  stack=[(- with left=8, right=2)]
+After 3:  stack=[(-),3]
+After *:  stack=[(*)]
+                 [*]
+                /   \
+              [-]   [3]
+             /   \
+           [8]   [2]</pre>
+<p>The Expr record contains a token and two child pointers. A digit record has two NULL links. An operator record receives both children before it is pushed. Because the accepted operators are binary, every valid internal node has exactly two children.</p>
+
+<h2 id="how-it-works">Build first, then compute</h2>
+<p>Read postfix from left to right. A digit creates an independent one-node tree. An operator combines the two most recently completed trees into one larger tree. Its right tree is on top of the stack, so pop right before left.</p>
+<p>For 82-, the stack contains root 8 below root 2. The minus node must point left to 8 and right to 2. Reversing those assignments computes 2-8 instead of 8-2. Addition and multiplication examples can hide this bug because swapping their operands leaves the value unchanged.</p>
+<p>The stack invariant is that every entry owns one complete expression tree for an already read fragment. Entries own disjoint records. When an operator pops two entries, ownership moves into its two child links. Pushing the new parent gives the stack one combined owner for those same records.</p>
+<p>Before allocating an operator, check that two roots exist. If allocation fails, the two operand roots must still be owned somewhere. The example allocates before popping, so failure leaves the stack ownership unchanged. Cleanup can then dispose of every partial tree still on the stack.</p>
+<table class="ref"><caption>Building 82-3*</caption><thead><tr><th scope="col">Token</th><th scope="col">Roots after processing</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>8</td><td>8</td><td>Operand leaf</td></tr><tr><td>2</td><td>8, 2</td><td>Second operand leaf</td></tr><tr><td>-</td><td>(8-2)</td><td>Combine two roots</td></tr><tr><td>3</td><td>(8-2), 3</td><td>Independent operand</td></tr><tr><td>*</td><td>((8-2)*3)</td><td>One completed tree</td></tr></tbody></table>
+<p>Evaluation recursively obtains the left value and right value, then applies the stored operator. A digit returns token minus the character zero. C guarantees consecutive codes for decimal digits, so this conversion is portable. An operator cannot run until both operand values are available.</p>
+<p>The first tree evaluates its left minus to six and its right digit to three. The root multiplication therefore returns eighteen. For 823*-, multiplication produces six inside the right subtree, and the root returns two. The different links, rather than token frequency, explain the changed result.</p>
+<p>The parser takes O(m) time for m input symbols and stores one record per non-space token. Its root stack needs O(m) space. Evaluation visits each record once, taking O(m) time and O(h+1) recursive space. Printing and final disposal have the same traversal-time bound.</p>
+
+<h2 id="examples">Observe grouping and invalid input</h2>
+<p>The first two programs print different parenthesized forms for expressions with identical digits. The third deliberately supplies too few operands. It reports invalid and releases the already built digit tree, rather than trying to use a nonexistent second operand.</p>
+
+<h3>Build and evaluate a postfix tree</h3>
+<p>The first popped tree becomes the right child. The expression is (8-2)*3, so its value is 18.</p>
+<div data-example="ex-1"></div>
+
+<h3>Parentheses preserve the shape</h3>
+<p>The tree groups 2*3 before subtraction. Infix prints (8-(2*3)), while preorder produces -8*23.</p>
+<div data-example="ex-2"></div>
+
+<h3>Reject an operator without two children</h3>
+<p>The plus sign finds only one subtree. The parser frees that subtree and reports invalid rather than popping past the stack.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="variations">Print infix, prefix and postfix</h2>
+<p>An inorder walk can print the left expression, operator and right expression. Without parentheses, that sequence loses some grouping information. To preserve the exact binary tree, print an opening parenthesis before each operator's left subtree and a closing parenthesis after its right subtree. Digit leaves need no parentheses.</p>
+<pre class="diagram">Before infix print: tree root=*; output empty
+Visit *: print (
+Visit -: print (8-2)
+Print * and right leaf 3
+After infix print: ((8-2)*3); tree links unchanged
+Before disposal: root ---&gt; * with two owned child subtrees
+After disposal:  all five records released; no root is used again</pre>
+<p>Preorder prints the operator before its operands and gives prefix notation. Postorder prints operands before their operator and recovers postfix notation. Our one-character token grammar needs no separators for those forms. A multi-digit or named-variable grammar would need explicit token boundaries.</p>
+<p>Full parentheses may look longer than ordinary handwritten arithmetic, but they are unambiguous. Removing only unnecessary parentheses requires precedence and associativity rules. For subtraction, even equal-precedence child expressions need care on the right. The introductory printer keeps all grouping instead of guessing.</p>
+<p>Because every operator has two children, a valid tree with I operators has I+1 operands. The fifteen-symbol bound permits at most eight digits in a complete expression. With digits at most nine and these three operators, intermediate magnitudes remain within signed long's required range. A larger language should check arithmetic overflow explicitly.</p>
+
+<p>A zero leaf is ordinary data. It does not mark an absent expression, because absence is represented by a NULL pointer. The valid one-token input 0 therefore evaluates to zero and still owns one allocated record. Distinguishing those two cases prevents an empty expression from being mistaken for a successful zero result.</p>
+
+<h2 id="edge-cases">Reject malformed forests</h2>
+<p>An empty line is not a complete expression, so this parser reports invalid. One digit is a valid leaf tree and evaluates to that digit. An operator arriving before two roots is invalid. Two leftover operand roots, such as input 82, are also invalid even though neither individual root is malformed.</p>
+<p>A full stack cannot occur within the accepted line bound: twenty-four root slots exceed the maximum fifteen non-space tokens. The parser still relies on that stated input limit. Do not enlarge the input line without reconsidering its stack capacity and arithmetic bound.</p>
+<p>Spaces are ignored after the total line-length check. Unknown characters trigger cleanup. Allocation failure follows the same partial-tree release path. Since stack entries own disjoint trees, disposing each one releases every allocated record once.</p>
+<p>The mirror practice problem swaps both child links at every node. Its output can change subtraction results because left and right roles are semantic. That exercise tests structure, not a valid algebraic simplification. Compare its fully parenthesized output before evaluating the new tree.</p>
+
+<h2 id="common-mistakes">Respect operand order and ownership</h2>
+<h3>Popping left first</h3><p>The top subtree belongs on the right of a binary operator. Name the local variables right and left to make that decision visible. Test subtraction before trusting an implementation that works only for addition.</p>
+<h3>Accepting any nonempty final stack</h3><p>More than one root describes several expressions with no operator joining them. Require exactly one root. Dispose of every root when rejecting the leftover forest.</p>
+<h3>Printing raw inorder as equivalent arithmetic</h3><p>A tree for (8-2)*3 would become 8-2*3 without parentheses. That text follows a different grouping. Surround internal expressions with parentheses to preserve the stored dependencies.</p>
+
+<h2 id="version-notes">C17 tokens and long arithmetic</h2>
+<div class="callout version"><p>The expression code uses C17 character operations and signed long values. Its fixed grammar and fifteen-symbol limit bound arithmetic. C does not define a universal safe result for overflowing signed arithmetic, so larger operands require checked operations or a larger-number library.</p></div>
+
+<h2 id="summary">A tree records what must happen first</h2>
+<p>Postfix builds complete subtrees on a stack, evaluation combines child results, and parentheses preserve grouping when printing. Those same ownership rules make invalid-input cleanup safe. Continue to <a href="topic:ds-b-tree-intro">B-trees and B+ trees</a> to see why storage devices favor wider nodes.</p>

@@ -1,0 +1,80 @@
+<h2 id="introduction">Turn comparisons into directions</h2>
+<p class="lead">Suppose you keep roll numbers in a tree and want to find one quickly. At each box, a smaller target sends you left and a larger target sends you right. A <dfn>binary search tree</dfn>, or BST, makes that decision safe by keeping every subtree within known key bounds.</p>
+<p>The rule applies to whole subtrees. Every key below a node's left link must be smaller than that node's key. Every key below its right link must be larger. This lesson stores unique integer keys, so inserting an equal key leaves the tree unchanged.</p>
+<p>A BST is a binary tree with an extra ordering rule. It does not promise a complete shape or a small height. You should already know <a href="topic:ds-tree-traversals">inorder traversal</a> and linked child pointers. Here you will connect those ideas to search, insertion and neighboring-key queries.</p>
+
+<h2 id="syntax">State the key policy and ownership</h2>
+<pre><code class="language-text">search(root, key):
+    while root exists and root.key differs from key:
+        root = root.left if key is smaller, otherwise root.right
+    return root
+insert(root link, key):
+    follow the same comparisons
+    equal: keep the existing node
+    empty link: allocate and initialize a leaf, then publish it</code></pre>
+<p>The root link belongs to the caller. Recursive insertion receives its address, so it can fill an empty root as well as a child link. Iterative insertion uses a pointer to the current owner link. Moving that pointer does not move tree nodes; it chooses which link may receive a new leaf.</p>
+<pre class="diagram">Before inserting 6:         After inserting 6:
+        [8]                         [8]
+       /   \                       /   \
+     [3]   [10]                   [3]   [10]
+       \                            \
+       NULL                         [6]
+Path bounds at new leaf: 3 &lt; key &lt; 8
+New record: [key=6 | left=NULL | right=NULL]</pre>
+<p>The new key 6 must be greater than 3 and smaller than 8. Checking only its immediate parent would miss the upper bound. Following comparisons from the root preserves both constraints automatically. A later arbitrary key change could break them, so ordinary BST insertion never rewrites unrelated keys.</p>
+
+<h2 id="how-it-works">Search and insert along one path</h2>
+<p>Start a search at the root and compare the target with its key. Equality finishes successfully. For a smaller target, discard the entire right subtree because all of its keys are larger than the root. A larger target similarly discards the left subtree.</p>
+<p>In the example tree, searching for 6 visits 8, then 3, then 6. Searching for 7 shares that path, then reaches 6's empty right link. The missing link proves absence within the surviving interval. It does not mean the whole tree was empty.</p>
+<table class="ref"><caption>Searching for 6</caption><thead><tr><th scope="col">Current key</th><th scope="col">Comparison</th><th scope="col">Next action</th></tr></thead><tbody><tr><td>8</td><td>6 is smaller</td><td>Follow left</td></tr><tr><td>3</td><td>6 is larger</td><td>Follow right</td></tr><tr><td>6</td><td>Equal</td><td>Return this node</td></tr></tbody></table>
+<p>Recursive search expresses those same cases as function calls. Its base case handles NULL or equality. The recursive case passes exactly one child, so it never scans both subtrees. Iterative search avoids recursive call storage and keeps only a current pointer.</p>
+<p>Insertion follows a search for the new key. An existing match requires no allocation because this tree represents a set. At an empty link, allocate a Node and initialize both child pointers to NULL. Publish that pointer only after initialization succeeds.</p>
+<p>If allocation fails, insertion reports failure and preserves every previously stored key. The program then destroys its existing tree before returning. A failed attempt does not justify overwriting the owner link with a partly initialized record. The C examples check each insertion result.</p>
+<div data-lab="bst-insert-search"></div>
+<p>The lab inserts input.values in the supplied order and then searches input.key. Its comparison path matches example one's recursive insertion and iterative search. The found value is one for a match and zero for absence. The comparison count includes the matching node when a search succeeds.</p>
+<p>For edge height h, search and insertion visit at most h+1 stored nodes. Their time is O(h+1). Recursive versions require O(h+1) call space; iterative versions use O(1) extra space. A successful insertion adds one record, while a duplicate adds no storage.</p>
+<p>Building n keys through repeated insertion can take O(n squared) time on increasing unique input. With a reasonably balanced shape it takes O(n log n). Do not claim the second bound for every ordinary BST. The structure itself has no rotation rule to guarantee balance.</p>
+
+<h2 id="examples">Run both implementation styles</h2>
+<p>The first program reads a bounded insertion sequence, prints its inorder keys, then reports the search result and edge height. The second uses an owner-link loop for insertion and recursive search. Compare their behavior on equal keys rather than assuming duplicates must form a new branch.</p>
+
+<h3>Insert recursively, then search iteratively</h3>
+<p>The search follows 8, 3, then 6. Inorder is sorted because every left subtree holds smaller keys.</p>
+<div data-example="ex-1"></div>
+
+<h3>Insert iteratively and search recursively</h3>
+<p>A pointer to a child link lets the loop publish a new node without a separate parent case. The duplicate 3 adds nothing.</p>
+<div data-example="ex-2"></div>
+
+<h3>Find extrema and the next larger key</h3>
+<p>The successor of 8 is 9, the minimum of its right subtree. No assumption about numeric adjacency is needed.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="variations">Minimum, maximum and strict successor</h2>
+<p>The minimum stored key lies at the farthest reachable left link. If a node has a left child, that entire subtree contains smaller keys. Continue until the left link is NULL. A maximum query follows right links by the symmetric argument.</p>
+<p>An empty tree has neither minimum nor maximum. Return NULL and let the caller print a clear empty result. Do not use zero or -1 as a missing key because either may be valid data. The examples inspect returned pointers before reading their keys.</p>
+<p>A <dfn>successor</dfn> is the smallest stored key strictly greater than a query. The query need not already be present. Whenever the current key is larger, save it as a candidate and continue left. When the current key is not larger, move right without replacing the candidate.</p>
+<pre class="diagram">Successor of 8:
+        [8] --right--&gt; [10] --left--&gt; [9]
+Before descent: candidate=NULL
+At 10: candidate=10, move left
+At 9:  candidate=9, move left to NULL
+After descent: result=9; no links changed</pre>
+<p>For a stored node with a right subtree, its successor is that subtree's minimum. Without a right subtree, a larger ancestor may supply the answer. The candidate method handles both situations using the root path. If the query is at least the maximum key, the candidate remains NULL.</p>
+<p>Minimum, maximum and successor each take O(h+1) time and O(1) extra space in these loops. Range counting can visit many nodes because it may need both children. Pruning helps when an entire subtree falls outside the interval, but worst-case work is still O(n).</p>
+
+<h2 id="edge-cases">Shape is part of the performance answer</h2>
+<p>An empty search performs zero stored-node comparisons. A singleton matches in one comparison or follows one missing link. There is no fixed full state for the linked BST; available memory limits growth. The twelve-key input bound belongs to these programs, rather than to the BST definition.</p>
+<p>Try inserting 1,2,3,4,5. Each new key follows every previous key to the right, producing edge height four. Inserting 3,1,5,2,4 gives a shorter shape with the same set. Inorder prints 1 through 5 in both cases, so sorted output alone cannot reveal performance.</p>
+<p>A search result pointer refers to an owned tree record. It stays usable while that record remains alive. Later deletion can invalidate it. This is one reason a key-returning interface may be easier for callers that do not need direct access to node fields.</p>
+
+<h2 id="common-mistakes">Do not weaken the subtree rule</h2>
+<h3>Placing duplicates without a declared policy</h3><p>Some BSTs count equal keys in a record; others consistently put them on one side. This lesson instead ignores duplicates. Mixing policies makes search and deletion disagree, so keep set semantics in every routine here.</p>
+<h3>Allocating before detecting equality</h3><p>A duplicate should not leave an unused allocated record. Search first and allocate at the empty endpoint. If you choose early allocation in another design, every no-insert path must release the spare node.</p>
+<h3>Assuming one comparison halves the remaining nodes</h3><p>A chain can discard an empty subtree at every step. Halving depends on shape, not merely on the word binary. State the height before converting O(h+1) into a bound in n.</p>
+
+<h2 id="version-notes">C17 pointer updates</h2>
+<div class="callout version"><p>The recursive and iterative routines are portable C17. Passing a pointer by value cannot change the caller's root variable. Use a returned root or a pointer to the actual owner link when an operation can replace it.</p></div>
+
+<h2 id="summary">Ordering narrows the work</h2>
+<p>A BST turns ancestor bounds into safe search directions. Insertions preserve those bounds, while shape determines the path length. Continue with <a href="topic:ds-bst-deletion">BST deletion</a> to remove records without losing their surviving subtrees.</p>
