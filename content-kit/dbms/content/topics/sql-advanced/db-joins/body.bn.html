@@ -1,0 +1,69 @@
+<h2 id="introduction">শুধু table নয়, সম্পর্ক জোড়ো</h2>
+<p class="lead">Department noticeboard-এ code, student register-এ প্রত্যেকের department ID। Join-এ নাম প্রতি student row-তে না রেখেও একসঙ্গে পড়ো। কোন pair মেলে আর একপাশে না মিললে কী হবে, তুমি বাছো।</p>
+<p><dfn>Join</dfn> condition মেনে row মেলায়। পরিচিত নিয়ম foreign key-কে referenced key-তে মেলানো, যাতে সঠিক department আসে। অন্য column-ও তুলনা চলে; নাম কাছাকাছি বলেই SQL সম্পর্ক বাছে না।</p>
+<p>আগে বলো এক output row কী: student,enrollment নাকি payment? একে result-এর grain বলে। অপ্রত্যাশিত grain বদলালে syntax ঠিক report-ও ভুল প্রশ্নের উত্তর দেয়।</p>
+<p>University-তে আট student, বারো enrollment। Fahim 108-এর enrollment নেই, Sadia 107-এর enrollment আছে result নেই। মানুষ রাখা আর recorded activity রাখার ফারাক দেখায়।</p>
+<h2 id="syntax">Pair rule আর কোন পাশ থাকবে বাছো</h2>
+<p><code>INNER JOIN</code> ON true pair নেয়। <code>LEFT JOIN</code> partner না পাওয়া left row-ও রাখে, right column NULL হয়। <code>RIGHT JOIN</code> right input-কে একইভাবে রাখে।</p>
+<p><code>students AS s LEFT JOIN enrollments AS e ON e.student_id = s.student_id</code> বাম থেকে পড়ো। Students রাখার population, enrollment optional match। ON বর্তমান student-এর registration চেনায়। ছোট alias-এ column-এর owner স্পষ্ট।</p>
+<p><code>CROSS JOIN</code> সব possible pair। আট student ছয় section-এ 48, কখনো না হওয়া registration-ও। <code>Self join</code> এক table দুই alias-এ, যেমন প্রথম-দ্বিতীয় classmate-এর role।</p>
+<p>MySQL native FULL OUTER JOIN নেই। Left join-এর সঙ্গে শুধু unmatched right row-এর branch মেলাও। Legitimate duplicate রাখতে UNION ALL। দ্বিতীয় branch-এ left-এর non-null key পরীক্ষা, optional description নয়; নইলে matched-ও missing মনে হয়।</p>
+<pre><code class="language-sql">SELECT &lt;columns&gt;
+FROM &lt;left_table&gt; AS l
+LEFT JOIN &lt;right_table&gt; AS r ON &lt;matching_condition&gt;
+WHERE &lt;result_filter&gt;
+ORDER BY &lt;display_keys&gt;;</code></pre>
+<h2 id="how-it-works">গোনার আগে pair trace</h2>
+<p>Ayesha 101-এর তিন enrollment, তাই তিন pair। Tanvir তিন, Nabila দুই, 104..107 প্রত্যেকে এক। Inner join সেখানেই থেমে বারো row।</p>
+<p>Fahim-এর match নেই বলে left join NULL enrollment-সহ padded row দেয়। মোট তেরো row, distinct student আট। দুটির কোন count report চায় নিজে ঠিক করো।</p>
+<p>Student group-এ <code>COUNT(e.section_id)</code> actual registration, কারণ enrollment-এ এটি NULL নয়। <code>COUNT(*)</code> padded-ও গোনে। Fahim-এ zero বনাম one। Aggregate কী গোনার কথা তার সঙ্গে মেলাও।</p>
+<p>Enrollment-result সম্পর্কে দুই column। 101-এর বহু result, section 31-এ বহু student। শুধু student_id-তে section, শুধু section_id-তে student মিশে যায়। Composite identity রাখতে দুটোই তুলনা।</p>
+<p>তিন-table chain-এ enrollment section বলে, section course। Department membership এর বদলি নয়। CSE student MAT 101 নিতে পারে; department মিলিয়ে join করলে real registration হারায়, ভুয়ো আসে।</p>
+<p>Self join-এ direction জরুরি কি না ঠিক করো। Ayesha-Tanvir এক unordered pair হলে প্রথম ID ছোট চাই। Equality নিজেকেই pair করে, শুধু inequality দুই দিকই দেয়।</p>
+<table class="ref">
+<caption>কয়েক student-এর registration pair</caption>
+<thead><tr><th scope="col">Student</th><th scope="col">Actual enrollment</th><th scope="col">INNER row</th><th scope="col">LEFT row</th></tr></thead>
+<tbody>
+<tr><td>101 Ayesha</td><td>3</td><td>3</td><td>3</td></tr>
+<tr><td>107 Sadia</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>108 Fahim</td><td>0</td><td>0</td><td>1 padded row</td></tr>
+</tbody>
+</table>
+<h2 id="examples">রাখা row আর আসল pair দেখো</h2>
+<p>প্রথমে guaranteed parent match, পরে absent enrollment আর missing result রাখা। কোন column NULL, কোনটি preserved input থেকে খেয়াল করো।</p>
+<p>Full-join-এ আসল enrollment-result সম্পর্ক। FK orphan result আটকায় বলে right-only branch empty। Semantics right-only নিলেও বর্তমান schema সেই data state হতে দেয় না, পার্থক্যটি জরুরি।</p>
+<h3>Department code-সহ student</h3>
+<p>আটজনেরই department মেলে। FK coverage বোঝায়, join department বানায় না।</p>
+<div data-example="ex-1"></div>
+<h3>Enrollment নেই তাকেও রাখো</h3>
+<p>108 zero enrollment-এ থাকে। COUNT(*) তার padded row one ধরত।</p>
+<div data-example="ex-2"></div>
+<h3>RIGHT JOIN-এ একই report</h3>
+<p>ডানে students। Sadia section 35 পায়, Fahim match না পেয়ে NULL।</p>
+<div data-example="ex-3"></div>
+<h3>Pair আর classmate তুলনা</h3>
+<p>Self join MAT pair 104-108 একবার দেয়। Cross join দুটো planning combination, course ownership দাবি নয়।</p>
+<div data-example="ex-4"></div>
+<h3>Enrollment-result full outer join</h3>
+<p>সব result enrollment reference করে, তাই anti-match branch empty। 107-এর pending enrollment NULL marks-এ থাকে।</p>
+<div data-example="ex-5"></div>
+<h3>Section হয়ে course ধরো</h3>
+<p>Ayesha CSE 212,CSE 213,MAT 101 নেয়। Section identity সঠিক course মেলায়।</p>
+<div data-example="ex-6"></div>
+<h3>Match filter আর result filter</h3>
+<p>ON 106,107,108-কে NULL marks-এ রাখে। Marks condition WHERE-এ নিলে তিনজনই বাদ।</p>
+<div data-example="ex-7"></div>
+<h2 id="common-mistakes">সঠিক ধাপে filter রাখো</h2>
+<h3>Outer filter preserved row বাদ দেয়</h3>
+<p>ON pair মেলে কি না, WHERE পরে joined row বাছে। Inner-এ সাধারণ filter সরালে প্রায়ই একই ফল; outer-এ যাদের বাঁচাতে চাও তারাই বাদ পড়ে।</p>
+<p>সব student আর থাকলে অন্তত 80 mark চাইলে condition ON-এ। এমন result নেই হলে NULL column। <code>r.marks &gt;= 80</code> WHERE-এ দিলে padded row comparison unknown, বাদ। তখন শুধু high-mark student।</p>
+<h3>দুই child list টাকার হিসাব গুণ করে</h3>
+<p>Order 202-এ দুই item দুই payment। সরাসরি দুই child join-এ চার combination, প্রতিটি amount দুবার, SUM double। আলাদা ON ঠিক হলেও ভুল হয়।</p>
+<p>প্রতি child আগে order-পিছু এক summary, তারপর join। SUM(DISTINCT amount) সাধারণ সমাধান নয়, আসল দুই payment একই amount হতে পারে। সমস্যা repeated row identity, একই সংখ্যা নয়।</p>
+<h2 id="best-practices">সম্পর্কের শর্ত দেখাও</h2>
+<p>Explicit ON আর shared column qualify। NATURAL JOIN schema-তে নতুন matching column পেলে নীরবে বদলায়, সাধারণ JOIN ভালো। Promised column-ই নাও, grain দেখা সহজ।</p>
+<p>জটিল report-এর আগে count আন্দাজ। নতুন সম্পর্ক one-to-one,many নাকি optional? Row অপ্রত্যাশিত বাড়লে DISTINCT-এর আগে match দেখো। Dedup ভুল condition লুকাতে পারে।</p>
+<h2 id="version-notes">MySQL outer-join সীমা</h2>
+<p>8.0 আর 8.4-তে চলে, FULL OUTER এখনও emulation। Shared schema-য় enforced CHECK 8.0.16+। পুরো result-এর ORDER BY display ঠিক করে, index বা branch order নয়।</p>
+<h2 id="summary">Report population স্পষ্ট</h2>
+<p>কাকে রাখবে, matching key আর row-পিছু partner count ঠিক করো। Missing data আর duplicate total বোঝা সহজ। পরের <a href="topic:db-subqueries">subquery</a>-তে সব pair নয়, comparison,membership বা existence প্রশ্ন করবে।</p>
