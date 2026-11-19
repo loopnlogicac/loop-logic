@@ -1,0 +1,59 @@
+<h2 id="introduction">Prepare the source before compiling C</h2>
+<p class="lead">When you compile a C program, the compiler does not immediately translate every source character into machine instructions. It first performs preprocessing work such as including header contents and expanding macros. The <dfn>preprocessor</dfn> handles this source preparation before ordinary declarations and expressions are compiled.</p>
+<p>Think of preparing a lab handout before printing it. You can insert a shared page, replace a short label with its full text, or choose one of two exercise sections. The final handout is what the printer receives. Likewise, the compiler sees the resulting C tokens after preprocessing has selected and expanded the source.</p>
+<p>A preprocessor directive begins with # at the start of a logical line, allowing whitespace before it. The familiar #include line is one such directive. It makes declarations from a header available before the compiler checks calls such as printf. A #define can give a replacement token sequence a short name.</p>
+<p>Preprocessing is not a runtime function call. An inactive #if branch does not wait for execution to choose it. The source selection happens while translating the program. A macro name inside a C expression is replaced before that expression's types and operators are analyzed. Understanding this timing explains both useful patterns and common surprises.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>An object-like macro gives a name to replacement tokens. The definition #define LAB_CAPACITY 24 makes later uses of LAB_CAPACITY expand to 24. Do not add a semicolon unless that token is intentionally part of the replacement. A macro is not an ordinary C variable declaration.</p>
+<p>Directives generally occupy their own logical lines. A backslash immediately followed by a newline continues a logical line. Ordinary statements in main still need their C semicolons after expansion. Keep directive spelling and the resulting C syntax separate when diagnosing an error.</p><pre><code class="language-c">#include &lt;stdio.h&gt;
+#define LAB_CAPACITY 24
+#if LAB_CAPACITY &gt; 20
+#define ROOM_LABEL &quot;large&quot;
+#endif
+</code></pre><table class="ref"><thead><tr><th scope="col">Directive</th><th scope="col">Purpose</th></tr></thead><tbody><tr><td>#include</td><td>Bring in a header</td></tr><tr><td>#define / #undef</td><td>Create or remove a macro definition</td></tr><tr><td>#if / #elif / #else / #endif</td><td>Select source according to a condition</td></tr><tr><td>#ifdef / #ifndef</td><td>Test whether a macro is defined</td></tr><tr><td>#error</td><td>Stop translation with a diagnostic</td></tr><tr><td>#line</td><td>Adjust reported source location</td></tr><tr><td>#pragma</td><td>Request an implementation-defined action</td></tr></tbody></table>
+
+<h2 id="how-it-works">Observe the compiler input with gcc -E</h2>
+<p>The preprocessing phase works with tokens and directives. Included headers can themselves contain more includes, declarations, and macros. Comments are removed during earlier translation processing, with whitespace preserving token separation. Macros expand where their names occur as preprocessing tokens, not as arbitrary substrings inside larger identifiers.</p>
+<p>The capacity example begins with a definition and a later printf call. Before the expression is compiled, LAB_CAPACITY becomes 24. The resulting call prints Capacity: 24. Nothing assigns a variable named LAB_CAPACITY at runtime; the compiler instead sees the numeric token where the name appeared.</p>
+<p>To inspect this stage with GCC, run gcc -std=c17 -E examples/ex-1.c -o preprocessed.c from the topic directory. The -E option stops after preprocessing. The result is not an executable. It includes expanded header content and line markers, so it may be much longer than the short program you wrote.</p>
+<p>Search near main in that result to see the replacement. GCC's -P option suppresses line markers when you want a cleaner text view: gcc -std=c17 -E -P examples/ex-1.c. Use this output as a diagnostic view rather than a file you manually maintain. Your original source and headers remain the intended editing locations.</p>
+<p>The conditional example defines GROUP_SIZE as three. The preprocessor evaluates the #if condition, retains the matching puts line, and removes the alternative branch. The C compiler then compiles one call. A runtime if would instead compile both valid branches and choose one during execution.</p>
+<p>A #define is active from its position onward until #undef or the end of the translation unit. It does not obey C block scope. A definition written visually inside a function can affect later source outside that function. Keep reusable definitions near headers or configuration sections to avoid this misleading appearance of locality.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The three small programs isolate replacement in a print call, replacement within arithmetic, and source selection. Inspecting the preprocessed version makes their timing visible. The middle example still uses an ordinary runtime comparison after macro expansion: replacing a constant does not move every surrounding calculation into preprocessing.</p>
+
+<h3>Replace one capacity label</h3>
+<p>The definition gives a preprocessing name to the numeric token 24. In the printf argument, that name is replaced before C expression analysis. The program prints Capacity: 24. There is no runtime assignment to a variable with the macro name. Preprocessing does not replace the words inside the separate string literal.</p>
+<div data-example="ex-1"></div>
+
+<h3>Expand a pass threshold in ordinary arithmetic</h3>
+<p>PASS_MARK appears in both initialization and comparison. Each occurrence supplies the same numeric replacement. The surrounding C expressions still follow ordinary arithmetic and relational rules. The output is 45 1. Macro expansion is source preparation; it does not create a special integer type or change the comparison's meaning.</p>
+<div data-example="ex-2"></div>
+
+<h3>Select a group message before compilation</h3>
+<p>GROUP_SIZE expands to three in the #if condition. That condition is true, so the alternative puts line is excluded before compilation. The executable prints three-person group once. This choice is fixed for that build. To choose a group based on a student's runtime input, write an ordinary if instead.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Preprocessing versus ordinary C execution</h2>
+<p>An ordinary C const object has a type and follows C scope rules. An object-like macro has replacement tokens and follows preprocessing definition rules. A macro can stand for an integer, a string literal, a type fragment, or more complicated text. That flexibility also means type checking happens only after the replacement is inserted.</p>
+<p>Preprocessor conditions cannot read a student's entered mark or call a runtime function. They work with permitted preprocessing integer expressions and macro definitions. An unrecognized identifier in #if is replaced with zero after macro processing, which can hide a misspelled configuration name. Compiler options such as -Wundef can help reveal that mistake.</p>
+<p>The include directive does not itself link a library implementation. It provides declarations and related source definitions for compilation. Linking is a later stage. Including math.h can make a function declaration visible while a platform still requires a separate linker option for its implementation. Keep header inclusion and library linking as distinct steps.</p>
+<p>Not every directive is portable in meaning. A recognized #pragma may control implementation-specific behavior. #pragma once is common but not guaranteed by C17. Standard macro-based include guards, taught in <a href="topic:c-header-files-guards">Header Files and Include Guards</a>, express repeated-inclusion protection using portable directives.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Adding a statement semicolon to a numeric macro</h3>
+<p>#define PASS_MARK 40; expands inside an expression as extra punctuation. A later comparison can become syntactically invalid. Define the replacement as 40 and leave semicolons at the ends of ordinary C statements. Inspect -E output when the error points at an apparently harmless macro use.</p>
+<h3>Expecting a runtime value in #if</h3>
+<p>#if mark>=40 cannot select source based on a value read by scanf. mark is not a macro carrying that runtime value. Use an ordinary if inside the function for student input. Use #if for build configuration that is known during translation.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Keep configuration macros few, clearly named, and easy to locate. Prefer ordinary typed values or functions when preprocessing does not add a needed capability. Use -E to inspect confusing expansion rather than guessing from the macro's name. Keep generated intermediate text outside your maintained source files.</p>
+<p>Document any required build flags near the interface they configure. If several files depend on the same macro, ensure they use a consistent configuration. A mismatch can create incompatible declarations or layouts even when each file compiles separately. Source preparation is part of the program's design, not decorative syntax.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>The core include, define, undef, and conditional directives are present in C89 and later. All programs here run as C17. GCC's -E and -P options are compiler tools rather than C syntax. C23 adds preprocessing facilities such as #embed; they are not part of this C17 lesson's executable examples.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>The preprocessor prepares tokens before C compilation through inclusion, replacement, and conditional source selection. Use gcc -E to see what reaches the compiler, and distinguish build choices from runtime input. Next, expand this idea into safer reusable expressions in <a href="topic:c-macros">Macros</a>.</p>

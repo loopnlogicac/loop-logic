@@ -1,0 +1,5 @@
+train = list(map(float, input().split()))
+test = list(map(float, input().split()))
+mean = sum(train[1:])/int(train[0])
+mae = sum(abs(y-mean) for y in test[1:])/int(test[0])
+print(f"{mean:.3f} {mae:.3f}")

@@ -1,5 +1,6 @@
 // HTTP layer: routing, JSON, identity, errors and static files. node:http only.
 
+import { Download } from './download.ts';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import type { RunnerService } from '../app/runner.ts';
@@ -9,6 +10,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
 import type { ReadingService } from '../reading/service.ts';
+import type { NoteService } from '../app/notes.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
 import type { WatchService } from '../app/watch.ts';
@@ -16,9 +18,11 @@ import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
+import type { MasteryService } from '../app/mastery.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
+import type { ReportService } from '../app/reports.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
@@ -45,11 +49,14 @@ export interface AppDeps {
   learner: LearnerService;
   labs: LabService;
   watch: WatchService;
+  notes?: NoteService;
   extras: VideoExtrasService;
   tutorials: TutorialService;
+  mastery?: MasteryService;
   admin?: AdminService;
   classes?: ClassService;
   orders?: OrderService;
+  reports?: ReportService;
   runner?: RunnerService;
   search?: SearchService;
   store?: Store;
@@ -124,9 +131,17 @@ export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   const search = d.search ?? (d.search = new SearchService(tutorials, d.admin));
+  const mastery = () => {
+    if (!d.mastery) throw new AppError('unavailable', 503, 'Mastery checks are unavailable.');
+    return d.mastery;
+  };
   const cls = () => {
     if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
     return d.classes;
+  };
+  const reports = () => {
+    if (!d.reports) throw new AppError('unavailable', 503, 'Reports are unavailable.');
+    return d.reports;
   };
   const ord = () => {
     if (!d.orders) throw new AppError('unavailable', 503, 'Buying is not available on this server.');
@@ -136,7 +151,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
     return d.admin;
   };
+  const notesFor = (ctx: Ctx) => {
+    if (!ctx.signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, lang(ctx.query.get('lang')) === 'bn' ? 'সেভ করতে সাইন ইন করো।' : 'Sign in to save.');
+    if (!d.notes) throw new AppError('unavailable', 503, 'Saved items are unavailable.');
+    return d.notes;
+  };
   return [
+    route('GET', '/api/my-notes', (ctx) => notesFor(ctx).list(ctx.learnerId, lang(ctx.query.get('lang'))), 'learner'),
+    route('GET', '/api/my-notes/:key', (ctx) => notesFor(ctx).get(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
+    route('PUT', '/api/my-notes/:key', (ctx) => notesFor(ctx).put(ctx.learnerId, ctx.params.key!, ctx.body ?? {}, lang(ctx.query.get('lang'))), 'learner'),
+    route('DELETE', '/api/my-notes/:key', (ctx) => notesFor(ctx).delete(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
       authMode: d.auth.mode,
@@ -197,6 +221,11 @@ export function buildRoutes(d: AppDeps): Route[] {
       const added = await d.store.addWaitlist({ email, plan: body.plan === 'live' ? 'live' : 'pro', lang: L, learnerId: learnerId || null, createdAt: new Date().toISOString() });
       return { ok: true, already: !added };
     }),
+    route('GET', '/api/my-mastery', ({ learnerId, query }) => mastery().learner(learnerId, lang(query.get('lang'))), 'learner'),
+    route('GET', '/api/admin/mastery', () => mastery().overall(), 'admin'),
+    route('GET', '/api/learn/:track/:topic/checks', ({ learnerId, params, query }) => mastery().get(learnerId, params.track!, params.topic!, lang(query.get('lang'))), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase', ({ learnerId, params, body }) => mastery().start(learnerId, params.track!, params.topic!, params.phase!, lang(body.lang)), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),
@@ -260,6 +289,9 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/coupons/check', ({ body, email }) => adm().checkCoupon(body.code, String(body.target ?? 'all'), email)),
 
     // admin site (signed in, and an admin)
+    route('GET', '/api/admin/export', async () => new Download(JSON.stringify(await reports().backup(), null, 2), 'application/json; charset=utf-8', 'loop-logic-backup.json'), 'admin'),
+    route('GET', '/api/admin/revenue', ({ query }) => reports().revenue(lang(query.get('lang'))), 'admin'),
+    route('GET', '/api/admin/revenue.csv', async ({ query }) => new Download(await reports().revenueCsv(lang(query.get('lang'))), 'text/csv; charset=utf-8', 'revenue.csv'), 'admin'),
     route('GET', '/api/admin/me', ({ email }) => ({ email, role: adm().roleOf(email), config: adm().config() }), 'admin'),
     route('GET', '/api/admin/overview', () => adm().overview(), 'admin'),
     route('GET', '/api/admin/tutorials', () => adm().tutorialsAdmin(), 'admin'),
@@ -326,6 +358,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/instructor/meta', () => ({ tracks: tutorials.adminTracks().filter((t) => t.delivered && !t.hidden).map((t) => ({ id: t.id, title: t.title })), courses: allCourses().map((c) => ({ id: c.id, title: c.title.en })) }), 'staff'),
     route('GET', '/api/instructor/classes', ({ staff }) => cls().myClasses(staff!), 'staff'),
     route('POST', '/api/instructor/classes', ({ body, staff }) => cls().saveClass(staff!, body), 'staff'),
+    route('GET', '/api/instructor/classes/:id/gradebook.csv', async ({ params, staff, query }) => new Download(await cls().gradebookCsv(staff!, params.id!, lang(query.get('lang'))), 'text/csv; charset=utf-8', 'gradebook.csv'), 'staff'),
     route('GET', '/api/instructor/classes/:id', ({ params, staff, query }) => cls().dashboard(staff!, params.id!, lang(query.get('lang'))), 'staff'),
     route('POST', '/api/instructor/classes/:id', ({ params, body, staff }) => cls().saveClass(staff!, body, params.id!), 'staff'),
     route('DELETE', '/api/instructor/classes/:id', ({ params, staff }) => cls().archiveClass(staff!, params.id!), 'staff'),
@@ -445,6 +478,10 @@ export function createApp(d: AppDeps) {
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
       const body = await readJson(req, match.r.maxBody);
       const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers, staff });
+      if (result instanceof Download) {
+        res.writeHead(200, { ...headers, 'content-type': result.contentType, 'content-disposition': `attachment; filename="${result.filename}"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+        return res.end(result.body);
+      }
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
       if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details } }, headers);

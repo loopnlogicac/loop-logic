@@ -1,0 +1,72 @@
+<h2 id="introduction">Order makes a new answer</h2>
+<p class="lead">Three different presentation groups can speak in six orders. Choosing which groups attend is a subset problem; choosing their speaking order is a permutation problem. Each position must receive one item, and every item must be used once.</p>
+<p>For n distinct items, the first position has n choices, the next has n-1, and so on. Multiplying gives n! possible arrangements. This growth becomes large quickly, so printing every permutation is practical only for short inputs.</p>
+<p>Repeated values change the visible answer count. The word aba has six labelled rearrangements if its two a copies are distinguished. Only three different strings appear: aab, aba and baa. Our programs print each visible word once.</p>
+<p>We will use two representations. A swap-based method fixes a prefix directly inside the word. A used-array method selects characters from a separate sorted candidate array. Both explore a state-space tree, but only the second method naturally guarantees lexicographic output.</p>
+
+<h2 id="syntax">Fix a prefix with a reversible swap</h2>
+<p>The function permute(pos,n) assumes the prefix before pos is fixed. Positions pos through n-1 contain the unused characters. Swap one candidate into pos, recurse, then swap back. At pos==n, the complete word can be printed.</p>
+<p>At each depth, a fresh seen array records which character values have already been tried in that position. It is local to that call. A global seen set would wrongly prevent repeated letters from occupying different positions.</p>
+<p>Our input alphabet is lowercase Latin letters. Casting a character to unsigned char before indexing seen avoids negative indices on systems with signed char. The 256-entry table covers the validated character values. A more general alphabet would need a different representation.</p>
+<pre><code class="language-text">permute(pos):
+    if pos == n: print text; return
+    seen = empty set
+    for i = pos to n - 1:
+        if text[i] not in seen:
+            add text[i] to seen
+            swap(text[pos], text[i]); permute(pos + 1)
+            swap(text[pos], text[i])</code></pre>
+
+<h2 id="how-it-works">Distinct choices at each position</h2>
+<p>For aba at position zero, first choose a from index zero. The suffix ba generates aba and aab. Return and swap b into the first position, yielding baa. The second a in the suffix is skipped at that depth, so baa appears once.</p>
+<p>Finally the root sees its last a candidate. It skips that branch because an a-prefixed subtree was already explored. This does not mean a is forbidden later. The local seen set only merges equivalent choices for the current output position.</p>
+<p>The used-array method sorts the input first. At a position, try each unused candidate from smallest to largest. Skip a later equal copy when its previous equal copy is not yet used. That rule selects a canonical order among identical copies without deleting their multiplicity.</p>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Generate distinct words by swapping</h3>
+<p>Input aba prints aba, aab and baa. This order follows the current suffix arrangement and is not lexicographic. Every child restores its swap so later candidates see the correct remaining word.</p>
+<div data-example="ex-1"></div>
+<h3>Generate in lexicographic order</h3>
+<p>The sorted used-array method prints aab, aba and baa for the same input. Its insertion-sort preparation is deliberately small and explicit. The output buffer receives a terminator before each complete word is printed.</p>
+<div data-example="ex-2"></div>
+<h3>Count arrangements of repeated letters</h3>
+<p>For aabb, the program divides 4! by 2! for the two a copies and 2! for the two b copies. It prints six. This fixed calculation illustrates the formula without attempting large factorial arithmetic.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Compare two valid generation orders</h2>
+<p>A generator's branch order is part of its output convention. Both columns below contain the same three strings. The difference is how candidates are ordered at each state, not which words are valid.</p>
+<p>Sorting the input before swap recursion is not enough by itself to guarantee every deeper suffix remains sorted after arbitrary swaps. Use the sorted-candidate used-array construction when lexicographic order is a requirement.</p>
+<table class="ref"><caption>Same result set, different order</caption><thead><tr><th scope="col">Step</th><th scope="col">Swap generator for aba</th><th scope="col">Sorted used-array generator</th></tr></thead><tbody><tr><td>1</td><td>aba</td><td>aab</td></tr><tr><td>2</td><td>aab</td><td>aba</td></tr><tr><td>3</td><td>baa</td><td>baa</td></tr></tbody></table>
+
+<h2 id="correctness">Undo preserves the unused suffix</h2>
+<p>For swapping, the invariant is that the prefix is fixed and the suffix contains exactly the remaining multiset of characters. Swapping one candidate into the next position preserves that multiset contract for the child. Swapping back restores it for the parent.</p>
+<p>Equal characters chosen at the same position leave the same remaining multiset. Exploring one such choice therefore covers every distinct continuation that any equal copy could produce. A local seen set removes duplicates without removing distinct words.</p>
+<p>For the used-array method, used[i] says whether candidate index i already occupies an earlier output position. The duplicate rule forces identical copies to be consumed in index order. Every distinct word has exactly one such canonical labelled construction. Trying candidate values in increasing order makes the first differing character determine output order.</p>
+
+<h2 id="complexity">Factorial output cannot be cheap</h2>
+<p>With n distinct characters, printing n! words of length n requires at least Omega(n*n!) character writes. The search tree and its candidate loops fit O(n*n!) time for these straightforward generators. Initial O(n^2) insertion sorting is negligible compared with large factorial output.</p>
+<p>The swap method uses O(n) stack depth. Its per-call seen table has constant size for this fixed alphabet, so total auxiliary space remains O(n). The used-array method has candidate, used and result arrays plus the same linear-depth stack.</p>
+<p>With repeated multiplicities c1,c2,..., the number of distinct words is n! divided by the product of their factorials. The lower bound becomes n times that count for printing. Searching can still include rejected candidate checks; an output-count formula alone does not describe every operation.</p>
+
+<h2 id="edge-cases">One letter, all equal, and no letters</h2>
+<p>A one-letter word has one permutation. A word of all equal letters also has one visible permutation, even though many labelled arrangements collapse to it. The local duplicate test prevents those repeated branches.</p>
+<p>The token interface accepts one through eight letters and cannot represent an empty word. Mathematically, an empty sequence has one empty permutation. Supporting it would require an input convention such as a length followed by that many characters.</p>
+<p>Eight distinct letters already produce 40320 words. Increase the limit only when the amount of output is acceptable. If you need only the next ordering, a next-permutation algorithm can avoid enumerating earlier words, but that is a different task.</p>
+
+<h2 id="common-mistakes">Do not delete repeated letters</h2>
+<p>Removing duplicates from the input changes the problem. For aab, the two a copies must both appear in every output. Suppress equivalent branches, not the characters themselves.</p>
+<p>A missing swap-back corrupts the suffix for the next loop iteration. The resulting program may still print the expected number of lines while repeating some words and omitting others. Check sets and counts together.</p>
+<p>The used-array duplicate condition must inspect whether the previous equal copy is unused. Reversing that condition selects a different and often broken rule. Walk through aab on paper before adapting the condition.</p>
+
+<h2 id="best-practices">Check order separately from uniqueness</h2>
+<p>Validate that every output has the original character frequencies. Then verify that no output repeats. If lexicographic order is required, compare each word with its predecessor as a separate property.</p>
+<p>Keep counting arithmetic distinct from generation. Factorials overflow ordinary integers quickly, even when no word is printed. The fixed aabb example is intentionally tiny; a general count needs checked arithmetic or a larger-number method.</p>
+
+<h2 id="version-notes">Characters and buffers in C17</h2>
+<p>The examples reserve nine bytes for up to eight letters plus the zero terminator. The scanf field width protects that buffer under the stated token format. C17 does not define Unicode collation through ordinary char comparisons; these programs use lowercase Latin byte order.</p>
+
+<h2 id="summary">Restore, deduplicate, then order</h2>
+<p>Permutation search fixes one output position per level. A reversible swap preserves the remaining multiset, and a depth-local duplicate rule keeps each visible answer once. Sorted unused candidates provide the additional guarantee of lexicographic order.</p>
+
+<p>Revisit the connected idea:</p>
+<p><a href="topic:algo-backtracking-intro">Backtracking Intro</a></p>

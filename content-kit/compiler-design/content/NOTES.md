@@ -1,7 +1,44 @@
-# Compiler Design — Bangla edition, part 1
+# Compiler Design — Bangla edition, part 2
 
-Package **0.3.1**, schema **1.1**, cumulative delivery **36/36 topics**.
+Package **0.3.2**, schema **1.1**, cumulative delivery **36/36 topics**.
 Review status remains `draft` for all topics.
+
+## Bangla edition, part 2
+
+Full `body.bn.html` lessons now accompany all **13 topics** in `syntax-analysis`
+and `semantic-analysis`: `cd-context-free-grammars`, `cd-left-recursion-factoring`,
+`cd-first-follow`, `cd-ll1-parsing`, `cd-recursive-descent`, `cd-shift-reduce`,
+`cd-lr0-slr`, `cd-clr-lalr`, `cd-operator-precedence`, `cd-bison`,
+`cd-syntax-directed-translation`, `cd-type-checking`, and `cd-symbol-table`.
+
+The lessons follow `BANGLA_STYLE.md` and the spoken classroom tone of part 1.
+Worked tables, derivations, parser traces, attribute dependencies, type rules,
+and scope examples are translated. Technical notation, all inline code and
+complete `<pre>` blocks, HTML tags and attributes, section order, links, and
+example placeholders match the English lessons. All bilingual metadata fields
+in these topics were already populated; no `topic.json` changes were needed.
+English lessons and metadata, example and practice code, quizzes, inputs, and
+expected outputs are unchanged.
+
+Together with part 1, **24/36 topics** now have full Bangla bodies. The remaining
+12 topics in `intermediate-code`, `runtime-codegen`, and `practice-exam` retain
+their earlier partial Bangla coverage, so the manifest still lists `bn-partial`.
+Package version advances to **0.3.2** for this translation delivery.
+
+Validation from `content-kit/`:
+
+```bash
+node tools/check.mjs compiler-design/content --report compiler-design/content/CHECK_REPORT.txt
+```
+
+Result: **0 errors, 0 warnings; READY FOR IMPORT** across all 36 topics, using
+Node.js **v24.22.1** and Python **3.12.14**. A separate comparison of all 13 new
+language pairs verified identical HTML structure and attributes, section order,
+inline code, complete preformatted blocks, links, and example placeholders.
+Nothing in the requested modules is deferred. Human review should focus on
+natural Bangla phrasing and the explanations of FIRST/FOLLOW, LR lookaheads and
+LALR conflicts, Bison recovery, attribute dependencies, conversions, and lexical
+scope.
 
 ## Bangla edition, part 1
 

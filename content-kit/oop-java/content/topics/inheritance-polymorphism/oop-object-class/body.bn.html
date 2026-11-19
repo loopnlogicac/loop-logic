@@ -1,0 +1,67 @@
+<h2 id="introduction">অবজেক্টের মানের অর্থ ঠিক করো</h2>
+<p class="lead">আলাদা করে লেখা দুটি কোর্স কোডই CSE212 হতে পারে। অবজেক্ট আলাদা হলেও প্রোগ্রামে একই কোর্সের মান ধরতে হবে। Java-র <code>Object</code> কিছু সাধারণ অপারেশন দেয়। value ক্লাস নিজেদের নীতি অনুযায়ী সেগুলো ওভাররাইড করতে পারে।</p>
+<p>এখানে toString(), equals(Object), hashCode() আর getClass() দেখবে। এগুলো যথাক্রমে বর্ণনা, মানের সমতা, সম্ভাব্য hash bucket আর হুবহু রানটাইম ক্লাস জানায়। একটি দিয়ে অন্যটির উত্তর ধরে নিও না।</p>
+<p>প্রতিটি সাধারণ ক্লাস সরাসরি বা পরোক্ষভাবে Object থেকে আসে। Object ভেরিয়েবলে Course রাখা যায়, তবে কম্পাইলের সময় Object-এর অপারেশনই পাও। সঠিক ওভাররাইড থাকলে সাধারণ রেফারেন্স দিয়েও মানের কাজ ঠিক হয়।</p>
+<h2 id="syntax">Object-এর signature হুবহু মেলাও</h2>
+<pre><code class="language-java">@Override
+public boolean equals(Object other) {
+    if (this == other) { return true; }
+    if (!(other instanceof Course course)) { return false; }
+    return code.equals(course.code);
+}
+@Override
+public int hashCode() {
+    return code.hashCode();
+}</code></pre>
+<p>equals-এর প্যারামিটার Object। Course দিলে ওভারলোড হবে, Object-এর পরিচয়ভিত্তিক equals থেকে যাবে। মেথড public হতে হবে। @Override দিয়ে signature আর অ্যাক্সেসের ভুল ধরো।</p>
+<p>উদাহরণের Course final; code হলো null নয় এমন immutable String। কনস্ট্রাক্টরের ইনপুট null হবে না, এই চুক্তি আছে। প্রথম পরীক্ষা একই অবজেক্ট দ্রুত ধরে। type pattern null আর সম্পর্কহীন টাইপ বাদ দিয়ে code তুলনা করে।</p>
+<h2 id="how-it-works">পরিচয়, মান আর hash আলাদা করো</h2>
+<p><dfn>Identity</dfn> মানে দুটি রেফারেন্স একই অবজেক্টে পৌঁছায় কি না। রেফারেন্সে == তা দেখে। Object.equals ডিফল্টভাবেও তাই করে। কোর্স কোডের মতো মান মেলাতে হলে equals ওভাররাইড করো।</p>
+<pre class="diagram">first  --&gt; Course { code = "CSE212" }
+second --&gt; Course { code = "CSE212" }
+
+first == second        false
+first.equals(second)   true
+hashes must match      true</pre>
+<p><dfn>Value equality</dfn> বেছে নেওয়া দরকারি ফিল্ড মেলায়। Seat-এর row আর column তার মান চেনাতে পারে। দেখানোর লেবেল বা cache করা হিসাব অকারণে সমতায় ঢুকিয়ো না। কোডের আগে নীতিটি ঠিক করো।</p>
+<p><dfn>Hash code</dfn> একটি int, বিশেষ করে hash-ভিত্তিক container-এ মান সাজাতে সাহায্য করে। সমান অবজেক্টের hash সমান হতেই হবে। আলাদা মানেও একই hash হতে পারে; এটি collision। hash অনন্য পরিচয় বা মেমরি অ্যাড্রেসের নিশ্চয়তা নয়।</p>
+<table class="ref"><tr><th>যা দেখলে</th><th>যা বোঝা যায়</th></tr><tr><td>a == b</td><td>দুই রেফারেন্স একই অবজেক্টের</td></tr><tr><td>a.equals(b)</td><td>সঠিক চুক্তিতে hash-ও সমান হবে</td></tr><tr><td>hash সমান</td><td>সমতা এখনও পরীক্ষা করতে হবে</td></tr><tr><td>hash আলাদা</td><td>সঠিক equals/hash চুক্তিতে মান আলাদা</td></tr></table>
+<h2 id="examples">আলাদা অবজেক্টে চুক্তি যাচাই করো</h2>
+<h3>আলাদা অবজেক্টের একই কোড মেলাও</h3>
+<p>পরিচয়ের ফল false, মানের সমতার ফল true। বর্ণনায় ডিফল্ট পরিচয়ের লেখার বদলে কোর্স কোড দেখা যায়।</p>
+<div data-example="ex-1"></div>
+<h3>null আর সম্পর্কহীন টাইপ বাদ দাও</h3>
+<p>সমান Course-এর hash সমান। null আর সাধারণ String নিরাপদে type test-এ বাদ যায়।</p>
+<div data-example="ex-2"></div>
+<h3>হুবহু রানটাইম ক্লাস জানো</h3>
+<p>Object রেফারেন্স getClass-এর ফল বদলায় না। অবজেক্ট Course-ই থাকে; Object-এর সম্পর্কও মেনে চলে।</p>
+<div data-example="ex-3"></div>
+<h3>আসল collision দেখো</h3>
+<p>Aa আর BB String-এর hash মেলে। তবু কোর্সের মান আলাদা। তাই container-এ equals-ও লাগে।</p>
+<div data-example="ex-4"></div>
+<h2 id="equality-rules">সমতার সম্পর্কের নিয়ম মানো</h2>
+<p>equals-এর <dfn>reflexive</dfn> নিয়মে null নয় এমন মান নিজের সমান। <dfn>Symmetric</dfn> মানে a.equals(b) আর b.equals(a) একমত। <dfn>Transitive</dfn> মানে a ও b সমান, b ও c সমান হলে a ও c-ও সমান।</p>
+<p>সমতার কাজে ব্যবহৃত তথ্য না বদলালে বারবার একই ফল দিতে হবে। null নয় এমন অবজেক্ট null-এর সমান হবে না। এতে তুলনার দিক বা অকারণ সময়ের পার্থক্যে গ্রুপ করা আর খোঁজার ফল বদলায় না।</p>
+<p>এক execution-এ সমতার স্টেট না বদলালে hashCode বারবার একই ফল দেবে। আলাদা execution-এ একই hash দরকার নেই। অসমান মানে আলাদা hash-ও বাধ্যতামূলক নয়। ভালোভাবে ছড়ানো hash পারফরম্যান্স বাড়ায়, সমতার সংজ্ঞা দেয় না।</p>
+<p>equals বদলালে একই প্রাসঙ্গিক ফিল্ড দিয়ে hashCode-ও বদলাও। দুই int স্থানাঙ্কে 31 * row + column সহজ হিসাব। Java-তে int overflow-এর ফল নির্দিষ্ট; এখানে তা চলতে পারে। equals-এ তবু দুটি স্থানাঙ্ক সরাসরি মেলাও।</p>
+<h2 id="inheritance-policy">hierarchy-তে সমতা চমক তৈরি না করুক</h2>
+<p>সাবক্লাস নতুন পরিচয়ের তথ্য যোগ করলে সমতা কঠিন হয়। Point স্থানাঙ্ক মেলায়, ColouredPoint রংও মেলায়। প্যারেন্ট চাইল্ডকে সমান ধরলেও চাইল্ড প্যারেন্টকে না ধরলে symmetry ভাঙে। কম্পাইলার এই কাজের ভুল ধরতে পারে না।</p>
+<p>value ক্লাস final রাখা সহজ একটি নীতি। সাবক্লাস অসামঞ্জস্যপূর্ণ স্টেট যোগ করতে পারে না। অন্য উপায়ে রঙিন মানের ভেতর Point রাখো, extends কোরো না। খোলা hierarchy-তে সবার স্পষ্ট যৌথ সমতার নীতি লাগে।</p>
+<p>কেউ equals-এ getClass দিয়ে আলাদা রানটাইম ক্লাস বাদ দেয়। কেউ instanceof দিয়ে সম্মত পরিবারকে মেনে নেয়। সব ডিজাইনে এক পদ্ধতি সঠিক নয়। final Course-এর সাবক্লাস নেই বলে এখানে পার্থক্যটি সমস্যা করে না।</p>
+<p>hash key হিসেবে রাখলে সমতার ফিল্ড স্থির রাখো। রাখার পরে কোড বদলালে পরের খোঁজ অন্য bucket-এ যেতে পারে। অবজেক্ট থেকে গেলেও খুঁজে পাওয়া কঠিন হয়। immutable key নাও বা নিয়ন্ত্রিত বদলের আগে সরিয়ে পরে আবার রাখো।</p>
+<h2 id="descriptions">বর্ণনাকে পরিচয় ভেবো না</h2>
+<p>toString ডায়াগনস্টিক পড়ার জন্য ছোট, কাজের বর্ণনা দিক। ডিফল্ট class-and-hash লেখার চেয়ে Course[CSE212] পরিষ্কার। সংবেদনশীল ডেটা বা বিশাল ভেতরের অবজেক্টের তালিকা দিও না। null নয় এমন অবজেক্ট println করলে toString ব্যবহার হয়।</p>
+<p>পড়তে সুবিধার লেখা নিজে থেকে স্টোরেজ ফরম্যাট নয়। পরে সেটি parse করলে সামান্য ফরম্যাট বদলেই লোডিং ভাঙবে। স্থায়ীভাবে রাখতে আলাদা নথিবদ্ধ serialization format বানাও। ডোমেইন না চাইলে equals-কে দেখানোর ফরম্যাটের ওপর রেখো না।</p>
+<p>getClass হুবহু রানটাইম Class অবজেক্ট ফেরায়; Object-এ এটি final। instanceof টাইপের সঙ্গে মিল দেখে, সাবক্লাসও নেয়। Child, Parent-এর instance হলেও child.getClass() হয় Child.class, Parent.class নয়।</p>
+<div class="callout note"><p>C জানা থাকলে: hashCode raw pointer-এর মান দেওয়ার চুক্তি করে না। মেমরিতে অবজেক্ট সরলেও তার যৌক্তিক পরিচয় একই থাকতে পারে। পরিচয় চাইলে ==, মান চাইলে ঠিকমতো লেখা equals ব্যবহার করো।</p></div>
+<h2 id="common-mistakes">সমতার দুই দিকই যাচাই করো</h2>
+<h3>ভুল করে equals ওভারলোড করা</h3>
+<p>equals(Course) আলাদা signature। Object রেফারেন্স equals(Object)-ই নেবে। ঠিক public Object প্যারামিটার আর @Override দাও।</p>
+<h3>ফিল্ডের বদলে hash তুলনা</h3>
+<p>অসমান মানেও collision হয়। hash মিল শুধু সম্ভাব্য মিল। equals-এ ডোমেইনের ফিল্ড মেলাও।</p>
+<h3>বদলানো সমতার স্টেট উপেক্ষা</h3>
+<p>সমতার ফিল্ডে setter hash container-এর ধারণা ভেঙে দিতে পারে। private হলেও মেথড বদলালে ফিল্ড স্থির নয়। স্থির key বা সরিয়ে আবার রাখার নীতি নাও।</p>
+<h2 id="version-notes">pattern-এ type guard সহজ হয়</h2>
+<p>Course.equals-এর instanceof ভেরিয়েবল Java 16 থেকে স্থায়ী, Java 17-এ চলে। Object-এর চুক্তি অনেক পুরোনো। record-ও Java 16 থেকে স্থায়ী, তবে এখানে সাধারণ ক্লাসে কাজটি খুলে দেখানো হয়েছে।</p>
+<h2 id="summary">মানের অর্থ স্পষ্ট রাখো</h2>
+<p>ডোমেইনের সমতায় equals, মানানসই hash-এ hashCode, পড়ার বর্ণনায় toString ব্যবহার করো। সমতার স্টেট স্থির রাখো। হুবহু ক্লাস আর টাইপের সঙ্গে মিল আলাদা করো। এবার <a href="topic:oop-composition">কম্পোজিশন আর ইনহেরিট্যান্সে</a> শেয়ার করা কোড আর সহযোগী অবজেক্ট তুলনা করো।</p>

@@ -1,3 +1,70 @@
+# Batch 5 — Predicting Numbers: Regression
+
+Package `machine-learning-tutorial` is now **0.5.0**, format 1.1. This delivery adds all ten `regression` topics, in curriculum order:
+
+1. `ml-what-is-regression`: quantity versus category, a fitted trend, residuals, a training-mean baseline and first `LinearRegression` predictions.
+2. `ml-simple-linear-regression`: least squares, centred slope/intercept derivation, coefficient units and constant-feature identifiability.
+3. `ml-cost-function`: MSE, cancellation of signed errors, fixed-intercept slope slices and the two-parameter convex cost surface.
+4. `ml-gradient-descent`: simultaneous parameter updates, learning-rate stability, scaling, full-batch/stochastic/mini-batch distinctions and NumPy/SGD training.
+5. `ml-multiple-regression`: design matrices, dot products, normal equations, stable solvers, units, correlated features and leakage.
+6. `ml-polynomial-regression`: powers and interactions, degrees 1/3/12, underfitting/overfitting, conditioning and validation-based selection.
+7. `ml-regularization`: ridge/L2, lasso/L1, exact zeros, scaling, unpenalised intercepts, alpha selection and objective-normalisation conventions.
+8. `ml-regression-metrics`: MAE, MSE, RMSE, R², negative/undefined scores, operational baselines and residual patterns.
+9. `ml-regression-project`: a complete invented-rent workflow with development-only EDA, missing-value preparation, district encoding, a mean baseline, validation-selected linear/polynomial candidates, final evaluation and `predict_flat`.
+10. `ml-regression-practice-sheet`: five printable computed pictures, six paper numericals, five runnable code-reading questions, coding, discussion, fairness and a marking guide.
+
+Each lesson starts with its own story and picture before formulas. The eight lessons include hand calculations, unplugged activities, runnable examples, common mistakes and optional university-level mathematics. Bilingual titles, summaries, key points, figure captions and lab notes follow `BANGLA_STYLE.md`. Earlier full Bangla bodies remain unchanged.
+
+## Five interactive labs
+
+Every lab has a descriptive English title, editable controls with the principal parameter first, three named presets, three independent Python-derived checks and `codeExample: ex-1`. Presets have 20–400 meaningful steps. Every default `ex-1` and `ex-2` pair prints identical rounded results.
+
+- **`least-squares` — Fit a line from the gaps:** student slope/intercept guesses and editable observations; guessed residual segments, centred sums, fitted parameters and final residuals. The default line has slope 1.2, intercept 1.4, MSE 1.52. Identical x values explicitly choose slope zero and the target mean.
+- **`cost-explorer` — Trace the cost of each line:** editable slope/intercept/observations; sample slopes -1 through 4 by 0.1 with the intercept held fixed. The default selected slope 1 has MSE 1.96; the sampled minimum is slope 1.2, MSE 1.52. The lesson distinguishes a finite sampled slice from the full continuous optimum.
+- **`gradient-descent` — Move a line down the cost bowl:** learning-rate and update-count controls plus editable observations. Full-batch MSE derivatives update both parameters from the same old predictions. Each iteration draws its line and immediately records its cost in paired plot/chart operations, with no training between those operations; this respects the current single-operation trace format. The preset x=-2,-1,0,1,2 and y=2x+1 reaches rounded slope 2, intercept 1 and MSE 0 after forty updates at rate 0.1. A rate of 0.6 visibly diverges. The line/chart pairing is audited numerically for every iteration.
+- **`polynomial-fit` — Compare straight and wiggly fits:** degree slider and editable training points; real least-squares fits for degrees 1–12 via twice-reorthogonalised modified Gram-Schmidt QR. A residual column norm below 1e-10 is omitted, an explicit rank policy explained in the lesson. The fixed validation targets follow 2+x-2x²+x³ at thirty separate locations; they remain fixed when training points change. The fifteen default measurements add deterministic cosine noise. Degree 3 has training MSE 0.044 and validation MSE 0.002. The finite validation optimum is degree 4, marginally better than 3; picture questions include a six-decimal table so that difference is readable. This is a disclosed teaching validation rule, not a claim about arbitrary edited data.
+- **`ridge-shrink` — Shrink the weights of a curve:** positive alpha slider and editable observations; degree-eight features standardised with training means/population spreads, exact ridge system solve, unpenalised intercept, fitted curve and coefficient-vector norm chart. At default alpha 1, norm=0.871 and training MSE=0.049. Constant columns use divisor one. The lesson distinguishes combined norm shrinkage from individual correlated coefficient behaviour and contrasts ridge with lasso.
+
+No hidden approximate estimator or memorised result is used. The numerical rank threshold, fixed polynomial validation rule, finite cost grid and paired gradient display operations are documented above and in the lessons. Polynomial model selection uses validation terminology so final test answers remain reserved for assessment.
+
+## Programs, pictures and the rent project
+
+New totals: **29 executed examples, 38 practice items (19 coding), 103 quiz items (29 executed output questions, 25 picture questions) and 36 worked exam answers**. The module contains 48 Python example/solution files and 67 `.out` files generated from real runs. Python programs parse using Python 3.10 syntax; actual runs use the toolchain recorded in the manifest: Python 3.12.14, NumPy 2.3.5, pandas 2.2.3, scikit-learn 1.8.0 and Matplotlib 3.10.8.
+
+`shared/make_regression_figures.py` recomputes ten reusable panel figures, including the rent candidate scores from actual pipeline fits. It produces the five worksheet SVGs with deterministic metadata. The catalogue and all five SVGs rebuild byte-identically. All printable figures and the rent EDA PNG were visually inspected. The polynomial worksheet combines its chart with exact validation values; the learning-rate worksheet uses a labelled logarithmic axis to keep all trajectories visible.
+
+The rent example reserves 150/50/50 training/validation/test rows. Validation chooses numeric degree 1 over degree 2; the entire selected pipeline is then refitted on 200 development rows. Final test MAE is 8370.371 BDT/month against a development-mean baseline of 10208.880. The illustrated Mirpur flat receives a rounded 19975 BDT/month estimate. The documented 500000 BDT outlier stays visible. These invented records cannot validate actual rental prices or consequential housing decisions; the report explains coverage, unseen districts, group errors and future/grouped evaluation limits.
+
+## Requested earlier-topic notes
+
+`data-preparation/ml-data-types` now explains that pandas 3 defaults display text as `str` instead of `object`, and the demonstrated parsed dates as `datetime64[us]` instead of `datetime64[ns]`. The same distinction is noted beside dtype/info discussion in `ml-loading-data` and `ml-pandas-basics`. **All pre-existing `.out` files are preserved**, including the pandas 2.2 dtype example. The recorded toolchain uses pandas 2.2.3 and reproduces those outputs.
+
+Earlier audit scripts have only their cumulative package-version assertions updated; the preparation audit's module-count assertion advances from four to five.
+
+## Verification
+
+From `content-kit/`:
+
+```sh
+python3 -I -X utf8 machine-learning/content/shared/make_regression_figures.py
+python3 -I -X utf8 machine-learning/content/shared/verify_regression_module.py
+python3 -I -X utf8 machine-learning/content/shared/verify_content.py
+python3 -I -X utf8 machine-learning/content/shared/verify_python_module.py
+python3 -I -X utf8 machine-learning/content/shared/verify_math_module.py
+python3 -I -X utf8 machine-learning/content/shared/verify_preparation_module.py
+node tools/check.mjs machine-learning/content --require-packages --report machine-learning/content/CHECK_REPORT.txt
+```
+
+Writable temporary `MPLCONFIGDIR` and `XDG_CACHE_HOME` paths were supplied for headless plotting. The new audit independently checks **190 traces** against NumPy/scikit-learn, including every preset/check, thirty seeded random clouds per lab and two constant-feature cases per lab. It checks plotted predictions/residuals, every gradient iteration, all sampled costs, every polynomial curve and both error curves, all ridge norms, deterministic replay, input preservation, default example agreement and figure provenance.
+
+All earlier audits pass: Module 1 content and dataset checks, 110 broadcasting traces, 369 maths traces and 205 preparation traces. All six CSVs rebuild byte-identically twice. No shared dataset or earlier program/output changes are included. `git diff --check` passes.
+
+Required cumulative checker result: **0 error(s), 0 warning(s); RESULT: READY FOR IMPORT**. The package now contains **45 topics and 23 labs**. All changes stay within `content-kit/machine-learning/content/`.
+
+No curriculum changes are proposed, no requested topics are omitted, and no implementation questions remain open. Topic review status remains `draft` for editorial review.
+
+---
+
 # Batch 4 — Getting Data Ready
 
 Current package: `machine-learning-tutorial`, **0.4.0**, format 1.1. This delivery adds all eight `data-preparation` topics in curriculum order:
