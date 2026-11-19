@@ -20,6 +20,7 @@ import { LiveSearch } from '../library/live.ts';
 import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
 import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
+import { NoticeService } from '../app/notices.ts';
 import { ClassService } from '../app/classes.ts';
 import { OrderService } from '../app/orders.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
@@ -59,8 +60,9 @@ const watch = new WatchService(store, extras);
 const tutorials = new TutorialService(store, join(here, '../../content-kit'));
 // Admins: everyone in ADMIN_EMAILS, plus people an admin gives the role in the admin site.
 const admin = new AdminService(store, tutorials, watch, { adminEmails: (env.ADMIN_EMAILS ?? '').split(','), youtubeKey: env.YOUTUBE_API_KEY || null });
-const classes = new ClassService(store, tutorials, extras, { minGroup: Number(env.MIN_GROUP_SIZE ?? 3) });
-const orders = new OrderService(store, admin);
+const notices = new NoticeService(store);
+const classes = new ClassService(store, tutorials, extras, { minGroup: Number(env.MIN_GROUP_SIZE ?? 3), notices });
+const orders = new OrderService(store, admin, { notices });
 // Code runner (an outside sandbox; student code never runs on this server):
 // - JUDGE0_RAPIDAPI_KEY alone → Judge0 CE on RapidAPI
 // - RUNNER_URL (+ RUNNER_KEY) → a self-hosted Judge0, or Piston with RUNNER_KIND=piston
@@ -89,6 +91,7 @@ const server = createApp({
   runner,
   search,
   store,
+  notices,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),
   publicDir: join(here, '../../public'),

@@ -8,6 +8,7 @@
 // brings to zero is unlocked at once.
 
 import { createHash, randomUUID } from 'node:crypto';
+import { NoticeService } from './notices.ts';
 import { AppError } from './service.ts';
 import type { DocRow, Store } from '../store/store.ts';
 import type { AdminService } from './admin.ts';
@@ -22,9 +23,11 @@ export class OrderService {
   private readonly store: Store;
   private readonly admin: AdminService;
   private readonly now: () => Date;
+  private readonly notices: NoticeService;
 
-  constructor(store: Store, admin: AdminService, opts: { now?: () => Date } = {}) {
+  constructor(store: Store, admin: AdminService, opts: { now?: () => Date; notices?: NoticeService } = {}) {
     this.store = store;
+    this.notices = opts.notices ?? new NoticeService(store);
     this.admin = admin;
     this.now = opts.now ?? (() => new Date());
   }
@@ -105,6 +108,7 @@ export class OrderService {
       await this.put(id, order);
       if (order.coupon) await this.admin.useCoupon(order.coupon);
       await this.admin.grantLearner('system (fully discounted)', courseId, learnerId, base.email, { order: id, coupon: order.coupon });
+      await this.notices.emit(learnerId, 'payment_approved', id, { title: c.title.en, courseId });
       return this.publicOrder({ id, ...order });
     }
     const method = body.method === 'nagad' ? 'nagad' : body.method === 'bkash' ? 'bkash' : null;
@@ -159,6 +163,7 @@ export class OrderService {
       await this.admin.grantLearner(actor, d.data.courseId, d.data.learnerId, d.data.email, { order: id, trxId: d.data.trxId, total: d.data.total });
       if (d.data.coupon) await this.admin.useCoupon(d.data.coupon);
     } else await this.admin.logAudit(actor, 'order.reject', id, { reason, trxId: d.data.trxId });
+    await this.notices.emit(d.data.learnerId, approve ? 'payment_approved' : 'payment_rejected', id, { title: d.data.courseTitle, courseId: d.data.courseId });
     return { ok: true, status: data.status };
   }
   async pendingCount() { return (await this.orders((o) => o.status === 'pending')).length; }

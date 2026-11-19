@@ -148,6 +148,8 @@ async function mountAccount(actions, bn) {
   if (!cfg.supabaseUrl || cfg.authMode === 'anonymous') return;
   const user = currentUser();
   if (!user) { actions.insertBefore(el('button', { type: 'button', class: 'btn-signin acct', text: bn ? 'সাইন ইন' : 'Sign in', onclick: () => showSignIn() }), actions.querySelector('.btn-pro')); return; }
+  const { mountNotices } = await import('./notices.js');
+  mountNotices(actions);
   const initials = (user.name || user.email || '?').split(/[\s@.]+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const menu = el('div', { class: 'acct-menu', hidden: true },
     el('div', { class: 'acct-who' }, el('strong', { text: user.name || (bn ? 'সাইন ইন করা আছে' : 'Signed in') }), el('span', { text: user.email ?? '' })),

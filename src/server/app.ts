@@ -16,6 +16,7 @@ import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
+import type { NoticeService } from '../app/notices.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
@@ -53,6 +54,7 @@ export interface AppDeps {
   runner?: RunnerService;
   search?: SearchService;
   store?: Store;
+  notices?: NoticeService;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
   labModelFile: string;
@@ -304,6 +306,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/admin/ai', () => adm().ai(), 'admin'),
     route('GET', '/api/admin/audit', () => adm().auditLog(), 'admin'),
 
+    route('GET', '/api/my-notices', ({ learnerId, signedIn, query }) => {
+      if (!signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, 'Sign in to read notifications.');
+      if (!d.notices) throw new AppError('unavailable', 503, 'Notifications are unavailable.');
+      return d.notices.list(learnerId, lang(query.get('lang')));
+    }, 'learner'),
+    route('POST', '/api/my-notices/read-all', ({ learnerId, signedIn }) => {
+      if (!signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, 'Sign in to read notifications.');
+      if (!d.notices) throw new AppError('unavailable', 503, 'Notifications are unavailable.');
+      return d.notices.readAll(learnerId);
+    }, 'learner'),
     // buying a paid course (bKash / Nagad, checked by an admin)
     route('GET', '/api/buy/:course', ({ params, query, learnerId, email, signedIn }) => ord().page(learnerId, email, Boolean(signedIn) || d.auth.mode === 'supabase', params.course!, lang(query.get('lang')))),
     route('POST', '/api/buy/:course/quote', ({ params, body, learnerId, email }) => ord().quote(learnerId, email, params.course!, body.coupon)),
