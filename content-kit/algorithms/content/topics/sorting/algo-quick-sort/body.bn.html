@@ -1,0 +1,70 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">এক mark divider করে ছোট এক পাশে,বড় অন্য পাশে নাও। তারপর আলাদা করে সাজাও। <dfn>Quick sort</dfn> এই partition করে। Merge sort-এর মতো পরে নয়,children সাজানোর আগেই মূল rearrangement।</p>
+<p>Balanced ভাগে দ্রুত,কিন্তু pivot অসম কাজ বানাতে পারে। Pivot choice-এর মতো partition contract-ও জরুরি। Lomuto ও Hoare-এর boundary আলাদা,recursion নিজ নিয়ম মানবে।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">quick_sort(low, high): if low &gt;= high: return
+pivot = a[high]; i = low
+for j = low to high - 1
+    if a[j] &lt;= pivot: swap a[i], a[j]; i = i + 1
+swap a[i], a[high]; p = i
+quick_sort(low, p - 1)
+quick_sort(p + 1, high)</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>Lomuto একটি pivot final করে</h3>
+<p>Lomuto-তে inclusive [low,high]-এর শেষ a[high] pivot। i=low; j low থেকে high-1 scan। i-এর আগে ≤pivot,i থেকে j-1 >pivot,j থেকে high-1 এখনও unclassified।</p>
+<p>a[j]≤pivot হলে a[i],a[j] swap,i বাড়াও। নইলে greater region-এ থাক। শেষে a[i] ও high-এর pivot swap। p=i এখন final;আগে সব ≤pivot,পরে সব >pivot।</p>
+<p>[low,p-1],[p+1,high] সাজাও,p দুটোতেই বাদ। Empty-singleton closed interval-এ কাজ নেই। Less-than-or-equal-এ tie left-এ যায়। বৈধ হলেও pivot-এর সমান অনেক key-তে খুব unbalanced split।</p>
+<h3>শেষ value pivot-এর trace</h3>
+<p>[7,3,5,3,1]-এ pivot1 সবার ছোট। i বাড়ে না। Final swap-এ [1,3,5,3,7],p0। শুধু right interval nontrivial।</p>
+<p>পরে pivot7-এ সবাই eligible,self-swap-সহ p4। [3,5,3]-এ pivot3 দুই3-কে left-এ নিয়ে index2-তে বসে;ফল [1,3,3,5,7]। বাকি piece singleton।</p>
+<p>দুই index সমান swap-এ array বদলায় না,তবু written rule মেলে। Physical exchange গুনলে skip করতে পারো। Convention না বলে self-swap গোনা version-এর count-এর সঙ্গে তুলনা করবে না।</p>
+<h3>Hoare split boundary দেয়</h3>
+<p>Hoare-এ প্রায়ই middle value pivot,scan দুই প্রান্তের বাইরে। i ডানে গিয়ে ≥pivot,j বামে গিয়ে ≤pivot-এ থামে। Meet/cross হলে j boundary ফেরাও;নইলে swap করে আবার scan।</p>
+<p>পরের value test-এর আগে scan এগোয়। Equal pivot-এও swap-এর পরে দুই scan progress চাই। Interval-এর value pivot হওয়ায় initial stopping value আছে। Recipe বদলালে bound ও pivot একসঙ্গে বিশ্লেষণ করো।</p>
+<p>Returned j boundary,pivot-এর final position হওয়া বাধ্যতামূলক নয়। Recursion [low,j],[j+1,high]। Lomuto p-1 নিলে unsorted value বাদ যেতে পারে। উল্টোতে Lomuto pivot আবার নিলে shrink নাও হয়।</p>
+<p>Hoare প্রায়ই basic Lomuto থেকে কম exchange করে,বিশেষত equal key-তে। তবু distant exchange equal record পার করতে পারে বলে সাধারণত unstable। Partition-এর নাম constant stack বা bad-split immunity দেয় না।</p>
+<h3>Balanced ও unbalanced recurrence</h3>
+<p>Partition Θ(n)। প্রায় সমান দুই ভাগে2T(n/2)+Θ(n),তাই Θ(n log n)। বারবার empty ও n-1-এ T(n-1)+Θ(n),তাই Θ(n²)।</p>
+<p>Final pivot-এ ascending distinct input প্রতিবার largest নেয়। Reverse-ও extreme। All-equal-এ এই ≤Lomuto সবাইকে এক পাশে দেয়। “Sorted” সব sort-এর best case নয়।</p>
+<p>দুই-recursive-call version worst O(n) stack;random pivot-এ expected O(log n) depth। ছোট পাশে recurse,বড়তে loop করলে guaranteed O(log n) stack। Time quadratic হলেও memory নিয়ন্ত্রণ হয়।</p>
+<h3>Random pivot-এ probability model</h3>
+<p>Randomized version active interval-এর uniform index high-এ এনে একই Lomuto চালায়। Distinct key-র প্রতিটি fixed input-এ expected Θ(n log n)। Extreme rank বারবার unlikely,অসম্ভব নয়।</p>
+<p>Worst এখনও Θ(n²)। Fixed seed demo repeatable;usual proof-এ সত্যিকারের uniform source লাগে। C rand()%length bias দিতে পারে। Real implementation-এ উপযুক্ত unbiased choice চাই।</p>
+<p>ছোট reproducible প্রোগ্রামে unsigned generator-এর defined wraparound ও rejection sampling bounded index দিতে পারে। Mechanism দেখায়,cryptographic randomness নয়। Pivot distribution-এর analysis pure partition correctness থেকে আলাদা।</p>
+<p>Duplicate বেশি হলে three-way partition-এ below,equal,above আলাদা;equal group recursion চায় না। Basic Lomuto all-equal degeneration এড়ায়। এটি extra variant;animation stated two-way contract-এ প্রথম C example-এর সঙ্গে মেলে।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>Lomuto আগে1 index0-এ বসায়;পরে final1 3 3 5 7।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা sort করো</h3>
+<p>Signed comparison-এ negative key-তে offset লাগে না। Result সব input value রাখে।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>Partition শেষে equal key পাশাপাশি;এই পাঁচ mark-এ তিন group শুরু।</p>
+<div data-example="ex-3"></div>
+<h3>Hoare boundary-তে sort</h3>
+<p>Hoare-এর left recursion returned split রাখে। ওই split-এ pivot final বলা হয় না।</p>
+<div data-example="ex-4"></div>
+<h3>Repeatable pivot choice নাও</h3>
+<p>Fixed unsigned seed উদাহরণ repeatable। Uniform source হলে rejection modulo bias সরায়;generator নিজে independent uniform pivot-এর প্রমাণ নয়।</p>
+<div data-example="ex-5"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>[0,4]-এ pivot 1</td><td>[1,3,5,3,7], p = 0</td><td>সব scanned key pivot-এর বড়।</td></tr><tr><td>[1,4]-এ pivot 7</td><td>[1,3,5,3,7], p = 4</td><td>সব scanned key left-এ যায়।</td></tr><tr><td>[1,3]-এ pivot 3</td><td>[1,3,3,5,7], p = 2</td><td>Pivot সর্বোচ্চ 3 ও বড় key আলাদা করে।</td></tr></tbody></table>
+<div data-lab="quick-sort"></div>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Invariant:a[low..i)≤pivot,a[i..j)>pivot,a[j..high)unclassified। Eligible key i-তে এনে boundary বাড়ালে থাকে। বড় key reject-এ greater region বাড়ে। Final exchange পর্যন্ত pivot high-এ।</p>
+<p>Swap-এর পরে p final pivot। Length induction-এ দুই ছোট child sorted;সব left≤pivot,সব right>pivot। জোড়া দিলে sorted,সব record অক্ষত। Strictly ছোট interval base-এ নিয়ে stop করে।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Lomuto partition linear,local workspace constant। Balanced tree-তে logarithmic level-এ linear total per level;chain n,n-1,…-এ quadratic। Simple routine unstable,stack potentially linear। Random pivot fixed distinct input-এর expected time ভালো করে,deterministic worst বদলায় না।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>দুই return contract মেশানো</h3>
+<p>Lomuto final index,Hoare boundary ফেরায়। Matching recursive range নাও।</p>
+<h3>Final pivot আবার recurse</h3>
+<p>এক interval repeat হলে নাও থামতে পারে। Final Lomuto pivot দুই child থেকেই বাদ।</p>
+<h3>Randomization-কে worst guarantee বলা</h3>
+<p>Random pivot-এর expectation choice-এর ওপর। Unlucky sequence-এ extreme split এখনও হয়।</p>
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>C17 routine closed interval-এ signed index। Reproducible example exact-width unsigned uint32_t থাকা system-এ চলে।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Lomuto-Hoare contract-এর সঙ্গে recursion মেলাও;pivot quality ও randomization-এর probability বোঝো।</p>
+<p>এরপর <a href="topic:algo-heap-sort">heap sort</a>-এ worst-case growth দেখো।</p>
