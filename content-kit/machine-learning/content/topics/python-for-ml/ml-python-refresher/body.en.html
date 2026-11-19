@@ -1,0 +1,43 @@
+<h2 id="introduction">Keep the cards together</h2>
+<div class="callout story"><p>Nana writes fruit names on one page and sizes on another. A gust blows both pages off the stall. Mina finds the size list, but cannot tell which number belongs to which mango. She proposes one card per fruit, with all its details kept together. Tuktuk needs the same care inside a program.</p></div>
+<p class="lead">Python containers let you keep measurements and labels organised. Loops visit the records, and functions turn repeated calculations into named tools. You do not need every Python feature before starting ML, but these few habits will follow you through the course.</p>
+<p>You will store fruit records, select a few of them and compute a summary. You will also read the shared ten-fruit CSV using Python’s built-in csv module. No additional data library is needed for that first read.</p>
+<h2 id="intuition">Three containers, three useful jobs</h2>
+<p>A <dfn>list</dfn> is an ordered collection that can change. A <dfn>tuple</dfn> groups values in a fixed sequence whose positions cannot be reassigned. A <dfn>dictionary</dfn> connects names or keys to values. Think of a list as a stack of cards, a tuple as the fields on one card, and a dictionary as labelled drawers.</p>
+<table class="ref"><caption>Five selected cards, with two measurements per fruit</caption><thead><tr><th scope="col">Position</th><th scope="col">Size (cm)</th><th scope="col">Sweetness</th><th scope="col">Label</th></tr></thead><tbody>
+<tr><td>0</td><td>2</td><td>3</td><td>apple</td></tr><tr><td>1</td><td>3</td><td>2</td><td>apple</td></tr><tr><td>2</td><td>4</td><td>3</td><td>apple</td></tr><tr><td>3</td><td>6</td><td>7</td><td>mango</td></tr><tr><td>4</td><td>7</td><td>8</td><td>mango</td></tr>
+</tbody></table>
+<p>These positions begin at zero. Position 3 is the fourth card, not a sweetness measurement. The table’s first three rows are apples, and its final two are mangoes. A tuple such as <code>(6, 7, "mango")</code> needs its field order documented. A dictionary such as <code>{"size_cm": 6, "sweetness": 7, "label": "mango"}</code> makes that order less important.</p>
+<h2 id="how-it-works">Visit, select and return</h2>
+<p>A for loop visits each record once in order. You can unpack a tuple into names such as label, size and sweetness. Keep that order consistent with how the tuple was created. The first program uses label first, while the picture places size first; the code documents its own tuple order explicitly.</p>
+<p>To count labels, begin with an empty dictionary. The first apple has no entry, so <code>counts.get("apple", 0)</code> supplies zero; add one and store one. The next apple changes its count to two. With the five pictured records, the finished dictionary has apple:3 and mango:2. No fruit measurement has been moved to a different label.</p>
+<p>A list comprehension is a compact way to create a list from another collection. For the pictured size column [2,3,4,6,7], test whether each entry is at least 4. The tests are false, false, true, true, true. Keeping the passing entries gives [4,6,7]. To preserve complete fruit records, return the record itself after testing its size.</p>
+<pre class="diagram">selected = empty list
+for each fruit record:
+    if its size reaches the cutoff:
+        append the whole record to selected
+return selected</pre>
+<p>A function gives a calculation a name and receives its input through parameters. A mean function first handles an empty collection. Otherwise it adds the values and divides by their count. For the pictured sizes the sum is 22 and the count is five, so the mean is 4.4 cm. Returning that number lets another function compare it or draw it. Printing alone would only show text to a person.</p>
+<p>Use an f-string when mixing text and numbers. Inside <code>f"Mean: {value:.2f}"</code>, the colon introduces formatting and .2f requests two digits after the decimal point. This changes the displayed text, not the measurement stored in value. Label the unit so a reader knows whether the number means centimetres or grams.</p>
+<p>A CSV is a text table with a header and separated fields. Open it with an explicit UTF-8 encoding and <code>newline=""</code> for the csv module. DictReader takes names from the header and gives one dictionary per row. Even size cells arrive as strings. Convert known numeric fields with float or int before arithmetic, and keep labels as text.</p>
+<h2 id="try-it-yourself">Do the selection before coding</h2>
+<p>Use the five pictured cards. Predict which complete records remain for size at least 6, then write the loop. Change the cutoff to 8 and describe the empty result. If you compute a mean, decide what should happen when no card remains rather than dividing by zero.</p>
+<div class="callout unplugged"><p>Ask five classmates to hold cards with size and sweetness on the same sheet. Tell everyone below a size cutoff to sit down. Read both measurements from each standing classmate. Then imitate the error of filtering one measurement list while leaving all labels standing. Explain why the resulting pairs cannot be trusted.</p></div>
+<h2 id="examples">Small Python tools</h2>
+<p>The record-counting program uses five cards with three mangoes to show a different possible label balance. Its printed first tuple also makes its field order visible.</p>
+<div data-example="ex-1"></div>
+<p>The comprehension program filters sizes before converting centimetres to millimetres. Compare the selected list with the original list to see that it creates a new collection.</p>
+<div data-example="ex-2"></div>
+<p>The mean function returns None for an empty input. The caller can then choose a meaningful message or another action instead of formatting a nonexistent mean.</p>
+<div data-example="ex-3"></div>
+<p>The CSV program reads all ten shared fruit cards. Save the shared tiny_fruits.csv beside it and run from that directory. It reports five mangoes; the hand-sized subsets above are not the whole file.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Small syntax, large consequences</h2>
+<h3>Text that looks numeric</h3><p>The expression <code>"6" * 2</code> repeats text to make "66". Convert the CSV cell before doubling a size. If conversion fails, inspect the cell rather than silently treating it as zero.</p>
+<h3>Only printing a function result</h3><p>A function that prints a mean but has no return statement returns None. Keep calculation and display separate when another part of your program needs the numeric answer.</p>
+<h3>Losing record alignment</h3><p>Sorting sizes alone separates them from labels and sweetness. Sort or filter complete records. If separate lists are necessary, apply exactly the same row decisions to every list.</p>
+<h2 id="going-deeper">Optional: count the work</h2>
+<div class="callout deeper"><p>For n records, one loop that counts labels makes n visits, so its time grows proportionally to n. A new selected list can contain as many as n records. An accumulator for the mean needs only a running sum and count, but returning the full selection uses space proportional to its length. These costs help explain why numeric libraries become useful for larger tables.</p></div>
+<h2 id="summary">Records before models</h2>
+<ul><li>Use a list for an ordered collection of fruit cards.</li><li>Document tuple field positions or name them with dictionary keys.</li><li>Filter complete records to preserve their meaning.</li><li>Return results from reusable functions.</li><li>Format numbers when displaying them.</li><li>Convert numeric CSV strings before calculating.</li></ul>
+<p>The next lesson turns numeric records into <a href="topic:ml-numpy-arrays">NumPy arrays</a>.</p>

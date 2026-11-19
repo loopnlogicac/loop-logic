@@ -1,0 +1,47 @@
+<h2 id="introduction">One instruction for every tray</h2>
+<div class="callout story"><p>Mina draws five rows of two boxes. She wants to add 10 to each left box and 20 to each right box. Tuktuk starts copying the same instruction five times. Nana lays one instruction strip across the top. “Can every row borrow this?” Mina asks. NumPy can, when the shapes fit.</p></div>
+<p class="lead">Array arithmetic lets one expression act on many numeric entries. Broadcasting reuses a smaller arrangement across compatible dimensions. Reductions then combine entries into totals or means. These operations are the building blocks inside many later learning methods.</p>
+<p>You will follow every addition before using NumPy’s shorter expression. You will also distinguish an element-wise product from a weighted sum. Both involve multiplication, but they answer different questions and often produce different shapes.</p>
+<h2 id="intuition">A row strip and a column strip</h2>
+<p><dfn>Broadcasting</dfn> reuses entries along compatible dimensions without requiring you to write a repeated matrix. An <dfn>axis</dfn> names a dimension along which a calculation combines entries. A <dfn>dot product</dfn> multiplies matching vector entries and adds the products.</p>
+<table class="ref"><caption>Five fruits receive the same two-entry offset row</caption><thead><tr><th scope="col">Fruit</th><th scope="col">X: size, sweetness</th><th scope="col">Offsets</th><th scope="col">Result</th></tr></thead><tbody>
+<tr><td>0</td><td>2, 3</td><td>10, 20</td><td>12, 23</td></tr><tr><td>1</td><td>3, 2</td><td>10, 20</td><td>13, 22</td></tr><tr><td>2</td><td>4, 3</td><td>10, 20</td><td>14, 23</td></tr><tr><td>3</td><td>6, 7</td><td>10, 20</td><td>16, 27</td></tr><tr><td>4</td><td>7, 8</td><td>10, 20</td><td>17, 28</td></tr>
+</tbody></table>
+<p>Every left entry receives 10 and every right entry receives 20. A five-entry column would have a different meaning: one offset per fruit, shared across that fruit’s two features. The offsets here are arithmetic demonstrations, not plausible changes to physical fruit sizes or sweetness scores.</p>
+<h2 id="how-it-works">Follow the source of each number</h2>
+<p>In row mode, choose the offset by column: offsets[c]. Begin at row 0, column 0. Read 2, borrow offset 10 and write 12. Move right, read 3, borrow offset 20 and write 23. Row 1 starts with 3, so its first result is 13. Continue until every result cell is written.</p>
+<pre class="diagram">choose offsets; result = empty 5x2 matrix; total = 0
+for r in 0..4:
+    for c in 0..1:
+        offset = offsets[c] if mode == "row" else offsets[r]
+        result[r][c] = X[r][c] + offset
+        total = total + result[r][c]
+return result, total</pre>
+<div data-lab="broadcasting"></div>
+<p>The lab restricts X to five rows and two columns so all ten additions remain visible. You can edit every entry. The first two sliders control row-mode offsets; column mode uses the separate five-entry list. In column mode [1,2,3,4,5], the first row becomes [3,4], the second [5,4] and the fifth [12,13]. Both modes perform ordinary exact additions on your supplied integers.</p>
+<p>NumPy checks shapes from the right. Two dimension lengths are compatible if they match or either is one. Missing leading dimensions act as one. Therefore (5,2) plus (2,) acts like (5,2) plus (1,2). A (5,1) column also fits. A (5,) vector does not fit because its final length 5 conflicts with the matrix’s final length 2.</p>
+<p>Element-wise +, -, * and / operate on matching broadcast entries. Division can produce fractional results. Neither * nor + automatically combines feature columns into one answer. For a reduction, name the axis. X.sum(axis=0) removes the row dimension, giving [22,23]. Divide by five to get column means [4.4,4.6]. X.sum(axis=1) combines columns within each row, giving [5,5,7,13,15]. Adding different physical units may have no practical meaning even when the arithmetic is valid.</p>
+<p>To form one illustrative weighted sum per fruit, use weights [2,1]. The first dot product is 2×2 + 3×1 = 7. X @ weights produces [7,8,11,19,22]. In contrast, X * weights leaves two products per row. For a matrix W with shape (2,k), X @ W has shape (5,k); the inner lengths must match.</p>
+<h2 id="try-it-yourself">Change one thing and predict it</h2>
+<p>In row mode, set both offsets to zero. The result must equal X. Then change only the second offset to -3. Predict the last row before playing: [7,5]. Switch to column mode and use five zero offsets. Explain why the row sliders now have no effect.</p>
+<div class="callout unplugged"><p>Draw the five-by-two matrix on paper. Slide a two-number strip above each row and read the ten sums aloud. Now rotate the idea: make a five-number vertical strip and reuse each number across its row. A partner should point to the source offset before you announce any sum.</p></div>
+<h2 id="examples">Compact expressions with visible meanings</h2>
+<p>The loop program shows the exact work performed by the default lab. Its matrix and total are the reference for the NumPy expression that follows.</p>
+<div data-example="ex-1"></div>
+<p>The NumPy program removes explicit Python loops while preserving the same ten sums and total 195. It does not mutate X.</p>
+<div data-example="ex-2"></div>
+<p>The column example contrasts two reduction axes. Minimum and maximum use those same axis rules, so each resulting entry retains a clear feature meaning.</p>
+<div data-example="ex-3"></div>
+<p>The product example separates entrywise products, a vector dot product and matrix multiplication. Check the first result by hand before reading the complete output.</p>
+<div data-example="ex-4"></div>
+<p>A local random generator uses a seed to begin from a known state. Its second draw advances the state; constructing a new generator with the same seed restarts it.</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">Compatible does not always mean intended</h2>
+<h3>Broadcasting along the wrong direction</h3><p>A two-entry row affects columns; a five-by-one column affects rows. Check the result’s shape and two hand-computed cells. A square matrix can hide directional mistakes because both alternatives may fit.</p>
+<h3>Calling every product a dot product</h3><p>The expression X * weights retains products rather than summing them. Use @ when you intend weighted sums, and verify the inner dimensions first.</p>
+<h3>Restarting randomness inside a loop</h3><p>Repeatedly creating default_rng(0) repeats its first draw. Create one generator before the loop for successive draws. A seed helps reproduce a chosen experiment; it does not make the data representative.</p>
+<h2 id="going-deeper">Optional: a weighted combination</h2>
+<div class="callout math"><p>For row r and weights w, the weighted sum is s[r] = Σ over c of X[r,c]w[c]. Here r selects a fruit and c selects a feature; w[c] is its chosen multiplier. Dense multiplication of an n-by-d matrix by a length-d vector takes work proportional to n×d. Broadcasting can avoid explicitly storing repeated offsets, but the full addition result still has n×d entries. NumPy speed comes from numeric storage and compiled loops, not from eliminating the arithmetic.</p></div>
+<h2 id="summary">Name both the operation and the shape</h2>
+<ul><li>Broadcasting compares dimension lengths from the right.</li><li>A singleton dimension can reuse one entry across many positions.</li><li>axis=0 combines rows; axis=1 combines columns.</li><li>Use * for entrywise products and @ for matrix products.</li><li>Keep random seeds and package versions for reproducible experiments.</li><li>Validate both result shapes and small known values.</li></ul>
+<p>Next, give these numeric columns names with <a href="topic:ml-pandas-basics">pandas DataFrames</a>.</p>

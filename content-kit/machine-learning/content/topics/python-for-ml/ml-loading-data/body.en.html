@@ -1,0 +1,47 @@
+<h2 id="introduction">The file opens, but does it make sense?</h2>
+<div class="callout story"><p>Mina opens a table of study records and celebrates when every column appears. Nana notices one pupil supposedly studies for 30 hours each day. Tuktuk reports that 30 is a valid number. “A number can be valid Python and impossible homework,” Mina replies. Opening a file is only the beginning of understanding it.</p></div>
+<p class="lead">Data exploration asks what each row means, which values are present and whether the measurements are plausible. pandas can read the course files and provide useful summaries. Your judgement connects those numbers to their units and collection story.</p>
+<p>You will read fruit and study CSVs, count labels, summarise groups and sort complete records. Finally, you will make the feature matrix X and label vector y expected by many scikit-learn estimators. Model fitting comes in later modules.</p>
+<h2 id="intuition">Read the header as a promise</h2>
+<p>A <dfn>missing value</dfn> is an absent measurement, not a recorded zero. A <dfn>group</dfn> gathers rows that share a chosen key, such as fruit label. A <dfn>target</dfn> is the answer you want a model to predict.</p>
+<table class="ref"><caption>Six illustrative study cards before cleaning</caption><thead><tr><th scope="col">Card</th><th scope="col">Hours studied per day</th><th scope="col">Earlier marks</th></tr></thead><tbody>
+<tr><td>A</td><td>2</td><td>40</td></tr><tr><td>B</td><td>3</td><td>55</td></tr><tr><td>C</td><td>missing</td><td>60</td></tr><tr><td>D</td><td>4</td><td>65</td></tr><tr><td>E</td><td>missing</td><td>50</td></tr><tr><td>F</td><td>7</td><td>80</td></tr>
+</tbody></table>
+<p>The pictured hours column has six rows but only four present measurements. Its present values sum to 16, so its mean over observed values is 4.0. Treating the empty cards as zero would answer a different question. These six hand cards illustrate missingness; the shared study file contains 200 separate invented records.</p>
+<p>Every course dataset is fictional and available locally. Read its README before treating a column as a measurement or a label. A column called customer_id names records; it is not a meaningful numeric distance feature. A column called passed is an answer, not an input for predicting that same answer.</p>
+<h2 id="how-it-works">Explore before separating X and y</h2>
+<p>Place fruits.csv beside the script and read it with <code>pd.read_csv("fruits.csv")</code>. Relative paths are resolved from the current working directory, which can differ from the script’s directory. Check the directory if the file is not found. Keep the header and default comma separator for these supplied files.</p>
+<p>Inspect shape, head and dtypes. fruits.csv has 120 rows and five columns: size_cm, weight_g, sweetness, colour_score and label. Four columns are numeric measurements; label is text. pandas may display text dtype differently across releases. Use the column’s meaning and a numeric-type check rather than assuming every text column must have one exact dtype name.</p>
+<p>Count missing values with isna().sum(). In pandas numeric columns, an empty CSV cell commonly becomes NaN, a marker for missing numeric data. count excludes missing cells, while len counts rows. Many numeric summaries skip missingness by default; check how many values contributed before interpreting a mean.</p>
+<p>Count labels with value_counts. The shared fruits table contains forty apples, forty mangoes and forty lychees. Sort the resulting index when a stable alphabetical display is useful. Equal counts tell you that this invented table is balanced by label. They do not prove equal representation across seasons, farms or fruit varieties.</p>
+<p>To understand grouping by hand, consider five labelled weights: apple 2, mango 6, apple 4, mango 8, apple 3. Put the three apple cards together: their sum is 9 and their mean is 3. The two mango cards sum to 14 and average 7. groupby("label")["weight_g"].mean() performs that gathering before the arithmetic.</p>
+<pre class="diagram">read the course CSV
+inspect columns, units and missing counts
+count labels and summarise relevant groups
+sort or filter complete records when needed
+choose an ordered numeric feature list
+X = those feature columns as a numeric matrix
+y = the target column from exactly the same rows</pre>
+<p>For fruits, choose [size_cm,weight_g,sweetness,colour_score] in that order. X then has shape (120,4), and y has shape (120,). Check finite numeric values with np.isfinite(X).all(). Length equality is necessary but cannot catch independently shuffled labels. Keep row operations in the combined DataFrame until you separate the arrays.</p>
+<p>For study.csv, final marks determine passed. Using marks to predict passed before the examination would leak the answer. Earlier measurements have a different role, though they still need missing-value handling and plausibility checks. The later data-preparation module studies cleaning choices and train/test separation in detail.</p>
+<h2 id="try-it-yourself">Ask one careful question</h2>
+<p>Run the fruit count example and predict the sum of its three counts. It must equal 120. Then inspect the study missingness report. Choose one column and verify that present plus missing equals 200. Find the impossible 30-hour value without deleting it yet.</p>
+<div class="callout unplugged"><p>Give a partner the six study cards above. Ask for the number of pupils, the number with measured study time and the mean measured time. These are three different requests. Replace a missing card with zero and discuss what claim that replacement adds about the pupil.</p></div>
+<h2 id="examples">Four views of the shared tables</h2>
+<p>The first program counts fruit labels and checks numeric columns without downloading any data. It prints a short summary instead of every row.</p>
+<div data-example="ex-1"></div>
+<p>The study example reports absent cells and the maximum study time. A successful numeric calculation can reveal a data problem rather than solve it.</p>
+<div data-example="ex-2"></div>
+<p>Group means answer a descriptive question about these rows. Sorting by weight and tie-breaking columns preserves full records while finding the lightest fruit.</p>
+<div data-example="ex-3"></div>
+<p>The final program creates aligned arrays using an explicit feature order. The first fruit’s label and size provide a quick correspondence check.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">A summary can hide its assumptions</h2>
+<h3>Replacing missing with zero automatically</h3><p>A blank study-time cell means the measurement is absent. Zero means a measured absence of study time. Decide and document a cleaning strategy rather than quietly merging these meanings.</p>
+<h3>Sorting a label vector on its own</h3><p>Alphabetical labels no longer describe the original feature rows. Sort the combined frame or carry one shared row permutation through every array.</p>
+<h3>Using an answer as an input</h3><p>Exclude final marks when the intended prediction happens before marks exist. Ask when each measurement becomes available, not merely whether it is numeric.</p>
+<h2 id="going-deeper">Optional: weighted group summaries</h2>
+<div class="callout math"><p>Suppose one group has three observed weights averaging 3 and another has two averaging 7. The overall mean is (3×3 + 2×7)/(3+2) = 4.6, not the unweighted mean of group means, 5. Group counts matter. With missing cells, use the number of present measurements for the particular column being summarised. A group difference remains descriptive; it does not establish a causal explanation.</p></div>
+<h2 id="summary">Understand the rows before fitting</h2>
+<ul><li>Read local course CSVs with their original headers.</li><li>Inspect types alongside units and plausible ranges.</li><li>Separate row counts from present-value counts.</li><li>Use value_counts for frequencies and groupby for group summaries.</li><li>Keep complete records together during sorting.</li><li>Choose X and y from the same ordered rows.</li></ul>
+<p>Next, make these relationships visible with <a href="topic:ml-plotting">Matplotlib plots</a>.</p>
