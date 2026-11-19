@@ -1,0 +1,76 @@
+<h2 id="introduction">Decide which doors a class should open</h2>
+<p class="lead">A classroom register may be readable by several staff members, while corrections follow a smaller set of permitted actions. A class also needs different levels of access. An <dfn>access modifier</dfn> controls where a declaration can be used in source code.</p>
+<p>Think of a class interface as a set of doors. Public operations are doors intended for callers. Private fields sit behind them so the class can control changes. Opening every door makes a short demonstration convenient, but makes a growing system harder to protect.</p>
+<p>Java provides public, protected and private keywords. Omitting an access modifier gives package-private access. These choices describe source-level visibility, not encryption or a complete security boundary. Choose them to express a design that callers can understand and maintain.</p>
+<h2 id="syntax">Put visibility on the declaration</h2>
+<p>An access modifier comes before the field, constructor or method declaration. The same spelling can have different consequences depending on the member and its enclosing type. A package groups related types under a shared name; <a href="topic:oop-packages">Packages and Imports</a> explains its folders and compilation.</p>
+<pre><code class="language-java">class Account {
+    private int balance;
+    public int getBalance() {
+        return balance;
+    }
+    public boolean deposit(int amount) {
+        // Validate before changing balance.
+        return false;
+    }
+}</code></pre>
+<p>The separate top-level Main class cannot directly name Account's private balance field. Main can call an accessible getter instead. A private member is also accessible within the enclosing top-level class's nest, including its nested classes. Nested-class rules are explained later; private does not mean only one method can read the field.</p>
+<p>Package-private has no keyword. A declaration such as int room; can be used by eligible code in the same package. Do not write default before an ordinary field as an access modifier. The default keyword has other Java uses.</p>
+<h2 id="how-it-works">Read the visibility table with its conditions</h2>
+<table class="ref"><caption>Ordinary member access contexts</caption><thead><tr><th scope="col">Access</th><th scope="col">Same top-level nest</th><th scope="col">Other type in same package</th><th scope="col">Subclass in another package</th><th scope="col">Unrelated type elsewhere</th></tr></thead><tbody>
+<tr><td>private</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Package-private</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>protected</td><td>Yes</td><td>Yes</td><td>Yes, with restrictions</td><td>No</td></tr>
+<tr><td>public</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+</tbody></table>
+<p>The table assumes the declaring type is itself accessible. A public method does not make a package-private top-level class globally accessible. Public access is also subject to module accessibility in modular applications, which are beyond this package-level introduction.</p>
+<p>A top-level class can be public or package-private. It cannot be private or protected. A nested type is a member and has additional choices. Keep these two declaration positions separate when answering a visibility question.</p>
+<p>Constructors also have access levels. A public class with a private constructor cannot be directly constructed by arbitrary outside code. This can be deliberate, as with a utility class whose useful work is static. Access to the type and access to constructing it are separate questions.</p>
+<pre class="diagram">+--------------------------+
+| Account                  |
++--------------------------+
+| - balance: int           |
++--------------------------+
+| + deposit(amount): boolean  |
+| + getBalance(): int      |
++--------------------------+
+caller --&gt; public operation --&gt; private state</pre>
+<p>In a UML class box, plus indicates public, minus private, hash protected and tilde package access. The diagram makes an intended interface visible without showing method bodies. Use it to check whether callers really need each proposed opening.</p>
+<h2 id="examples">Keep the permitted operations usable</h2>
+<p>The Account examples read private state and reject an invalid change through public operations. The Lab example shows package access in a shared unnamed package. The Counter keeps its state hidden while allowing a small interface for useful work.</p>
+<h3>Read private state through a method</h3>
+<p>Main cannot directly name the private balance field of this separate top-level Account. getBalance supplies the permitted read.</p>
+<div data-example="ex-1"></div>
+
+<h3>Reject an invalid deposit</h3>
+<p>The public operation returns false before changing private state, so balance remains zero.</p>
+<div data-example="ex-2"></div>
+
+<h3>Package access in one unnamed package</h3>
+<p>Neither class has a package declaration. The package-private field is accessible because both types share the unnamed package.</p>
+<div data-example="ex-3"></div>
+
+<h3>A public method on a package-private class</h3>
+<p>The count is hidden. The class itself has package access, while its methods form the interface available to accessible callers.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="protected-details">Protected is not a synonym for public</h2>
+<p>A <dfn>subclass</dfn> is a class derived from another class, introduced fully in <a href="topic:oop-inheritance">Inheritance</a>. protected members are accessible to types in the same package. Across packages, access is permitted through subclass code under more specific rules.</p>
+<p>For a protected instance member accessed from a subclass in another package, the receiver must meet the subclass-type restriction. Suppose Child extends Parent. Inside Child, using this.value can be legal, and access through a Child reference can be legal. Access through an arbitrary Parent reference is not generally allowed there.</p>
+<p>That restriction prevents a subclass from becoming a universal doorway into every Parent instance. Being a subclass gives access for implementing that subclass, rather than permission to inspect unrelated parent objects everywhere. Static protected members have no instance receiver but still require the right access context.</p>
+<p>A folder diagram can clarify the situation. Put Parent in campus.base and Child in campus.special. A third unrelated type in campus.other does not gain access by importing Parent. An import resolves a name; it never grants permission to a member.</p>
+<p>The runnable examples here keep their classes together in the unnamed package. They demonstrate private, public and package access without requiring multiple source files. Use the table and separate-package thought experiment to reason about protected across package boundaries.</p>
+<h2 id="design">Why a field should usually be private</h2>
+<p>A public balance field allows every caller to store a negative value. You cannot later guarantee that deposits and withdrawals pass through validation if some callers write directly. Private state gives operations a chance to enforce one consistent rule.</p>
+<p>A getter is not required for every private field. Some values are implementation details that callers should never see. A method such as reserve may answer a caller's need without exposing the internal counter. Start from the actions the class supports, then choose the data it must reveal.</p>
+<p>Smaller visibility also limits the number of callers that depend on a declaration. A private helper can be renamed or reorganised with fewer outside consequences. A public API creates a stronger promise to other code, so make that promise deliberately.</p>
+<p>Visibility does not replace validation. A public method can still store an invalid value if its implementation permits it. Private fields create the boundary; carefully designed operations protect the state inside that boundary.</p>
+<h2 id="common-mistakes">Check names, types and context separately</h2>
+<h3>Assuming an import opens private members</h3><p>An import only lets you use a shorter type or static member name. The compiler still performs access checks. Use a permitted operation rather than trying another import spelling.</p>
+<h3>Making fields protected to prepare for every future subclass</h3><p>Protected state exposes representation to subclass implementations. Those subclasses can then depend on details you hoped to change. Prefer private state and focused methods unless a concrete inheritance design needs wider access.</p>
+<h3>Calling all omitted modifiers public</h3><p>For an ordinary class member, omission means package-private. Some declaration contexts, such as interface members, have special implicit rules. Read the declaration's context rather than relying on one memorised default.</p>
+<h3>Using access as a password mechanism</h3><p>Source access checks help structure programs. They are not a substitute for user authentication, permissions or data protection in an application. Keep the purpose of the language feature clear.</p>
+<h2 id="version-notes">Visibility under the Java 17 model</h2>
+<p>The access levels described here apply to ordinary Java 17 classes. Modern private access includes nested types in one top-level nest. Named modules add another layer for public package accessibility, but do not turn private fields into public state.</p>
+<h2 id="summary">Open the smallest useful interface</h2>
+<p>Choose access according to the callers a declaration should support. Check the declaring type, package and subclass context before judging a member access. Next, use that boundary to protect meaningful rules in <a href="topic:oop-encapsulation">Encapsulation</a>.</p>

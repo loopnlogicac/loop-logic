@@ -1,0 +1,83 @@
+<h2 id="introduction">Keep a rule with the state it protects</h2>
+<p class="lead">A marks register should never hold a mark outside its allowed range. Checking the range only on one input screen is fragile. Another caller might update the same data through a different path. <dfn>Encapsulation</dfn> keeps state and the operations that protect its rules together.</p>
+<p>Imagine a desk accepting correction requests. Callers can ask for a change, but cannot quietly overwrite the official register. The desk checks each request before changing the record. A class can follow the same idea through private state and carefully selected methods.</p>
+<p>An <dfn>invariant</dfn> is a condition that should remain true for a usable object. For Result, the mark stays between zero and one hundred. Encapsulation helps preserve that invariant after construction and after each permitted operation. Merely placing fields in a class does not preserve anything by itself.</p>
+<h2 id="syntax">A setter is an operation with a policy</h2>
+<p>A <dfn>getter</dfn> exposes a value or view. A <dfn>setter</dfn> requests a state change. Neither should be added automatically to every field. A good interface offers the operations callers need and rejects changes the model does not allow.</p>
+<pre><code class="language-java">public boolean setMark(int proposed) {
+    if (proposed &lt; 0 || proposed &gt; 100) {
+        return false;
+    }
+    mark = proposed;
+    return true;
+}</code></pre>
+<p>This setter validates before assignment. A failed request returns false and leaves the old state intact. That is a clear failure policy. Another design might throw an exception, but the caller must understand whichever policy the interface chooses.</p>
+<p>The getter may return the mark as a primitive int. A caller receives a copied number, so changing its local variable cannot rewrite the private field. Returning mutable objects requires more care because the copied reference may still reach internal state.</p>
+<h2 id="how-it-works">Validate the whole transition</h2>
+<pre class="diagram">request: setMark(120)
+          |
+          v
+is 120 within 0..100? -- no --&gt; return false
+          |
+         yes
+          v
+save new mark --&gt; return true
+
+old valid state remains on the rejected path</pre>
+<p>An operation changes an object from one valid state to another. Check everything needed before committing the change. If you partly update several fields and then discover an error, the object can be left inconsistent. Small interfaces make these transitions easier to reason about.</p>
+<p>For a seat pool, reserve is more meaningful than setRemaining. A reservation reduces available seats by one only when a seat exists. Callers cannot arbitrarily increase or make the count negative. The operation expresses the domain action rather than a storage assignment.</p>
+<p>For a wallet, withdraw checks a positive amount and sufficient balance before subtracting. The old balance remains after rejection. A public setBalance method would allow callers to bypass the meaning of deposit and withdrawal. Encapsulation is strongest when operations describe legitimate actions.</p>
+<pre class="diagram">+--------------------------------+
+| Result                         |
++--------------------------------+
+| - mark: int                    |
++--------------------------------+
+| + setMark(proposed): boolean    |
+| + getMark(): int               |
++--------------------------------+
+invariant: 0 &lt;= mark &lt;= 100</pre>
+<p>The minus and plus symbols show the boundary. The invariant is not a separate object; it is the rule the constructor and operations agree to preserve. A reviewer can use the diagram to ask whether any public route bypasses that rule.</p>
+<h2 id="examples">Compare controlled updates and stable values</h2>
+<p>The Result example keeps an accepted mark after rejecting an invalid one. Point removes mutation entirely. SeatPool exposes a meaningful action instead of a raw counter setter. Marks demonstrates why an array needs copying at both sides of an immutable boundary.</p>
+<h3>Validate a mark change</h3>
+<p>80 is accepted. 120 is rejected before assignment, leaving the previously accepted mark intact.</p>
+<div data-example="ex-1"></div>
+
+<h3>An immutable coordinate</h3>
+<p>Private final primitive fields are set at construction. No operation can later change them.</p>
+<div data-example="ex-2"></div>
+
+<h3>An operation instead of a raw setter</h3>
+<p>reserve expresses the intended action and avoids exposing an arbitrary setRemaining operation.</p>
+<div data-example="ex-3"></div>
+
+<h3>Copy mutable data at the boundary</h3>
+<p>The constructor and getter both copy the primitive array. Neither external change reaches the private stored 70.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="immutability">Sometimes the safest update is no update</h2>
+<p>An <dfn>immutable object</dfn> exposes no way to change its observable state after construction. A coordinate or course code can often be a stable value. To represent another coordinate, create another object instead of changing the old one. Sharing the old value then becomes easier to reason about.</p>
+<p>For a simple immutable Point, make the class final, keep primitive fields private and final, set them in the constructor, and provide read operations only. final on the class prevents a subclass from adding surprising mutable behaviour. It does not alone prove that the class itself is immutable.</p>
+<p>final on a field prevents assigning that field again after its permitted initialization. For primitive fields, that fixes the stored value. For a reference field, it fixes the reference while the target may still change. A final int array can still have its elements edited.</p>
+<p>Immutability therefore requires thinking through the entire reachable state. String fields are useful because String objects are already immutable. A field holding a mutable list, array or object needs a different policy. You must avoid both direct mutation and outside aliases that can mutate it.</p>
+<p>An immutable design can make failed updates irrelevant: no operation attempts to update existing state. That is valuable for values shared across calculations. Mutable objects remain appropriate when their identity represents something that changes over time, such as a live seat pool.</p>
+<h2 id="defensive-copying">Protect mutable boundaries with copies</h2>
+<p>A <dfn>defensive copy</dfn> prevents an outside reference from reaching storage that should remain private. If a constructor receives an int array and stores it directly, the caller still holds an alias. The caller can then edit the class state without any setter.</p>
+<p>Copy the incoming array before storing it. An int array clone gives a new array with the same primitive values. Later edits to the caller array do not reach that new array. Copying on construction protects only the incoming boundary, however.</p>
+<p>A getter returning the stored array would create a new outside alias. Return another copy when callers need a snapshot of the values. Alternatively, expose individual derived results such as first or total rather than the full container. Choose the smallest useful view.</p>
+<p>For an array of object references, cloning copies references rather than the referenced objects. Mutable elements may therefore remain shared. The correct copying depth depends on the element types and the promised interface. Never claim deep immutability merely because the outer array was cloned.</p>
+<p>Copying has a cost proportional to the number of elements copied. That cost may be reasonable when it preserves an important contract. Avoid unnecessary snapshots in a tight loop by choosing a better interface, while keeping ownership and mutation rules explicit.</p>
+<h2 id="information-hiding">Hide representation so the implementation can evolve</h2>
+<dfn>Information hiding</dfn> means callers depend on useful behaviour rather than storage choices. A seat pool might later compute availability from several internal counters. If callers only use reserve and remaining, that internal change can preserve the public contract.
+
+A getter named getArray returning the live storage creates a strong dependence on representation. A method named totalMarks gives a result with meaning and more implementation freedom. This does not mean all getters are bad. It means their promises should be chosen consciously.
+
+Encapsulation also improves testing and review. You can list the state transitions exposed by the interface and check each invariant around them. If callers can mutate every field, there may be too many uncontrolled routes to inspect reliably.
+<h2 id="common-mistakes">Avoid holes in the boundary</h2>
+<h3>Saving before checking</h3><p>If setMark writes first and rejects later without restoring state, the invalid mark remains. Check the proposed value before assignment. A false return should match the documented state guarantee.</p>
+<h3>Generating setters for immutable identity</h3><p>A roll or record identifier may be fixed for the life of an object. Adding a setter only because a field exists can create unwanted transitions. Decide what changing that identity would mean.</p>
+<h3>Returning a private array directly</h3><p>Private controls access to the field name, not edits through a reference already returned. A caller holding that array can write elements. Return a safe copy or a narrower observation instead.</p>
+<h2 id="version-notes">Immutability does not require a record</h2>
+<p>The designs here use ordinary Java 17 classes with explicit constructors. Records became permanent in Java 16 and appear later in the track. Their concise syntax also does not automatically make mutable component objects deeply immutable.</p>
+<h2 id="summary">Design the allowed changes first</h2>
+<p>Private fields establish a boundary, and meaningful operations preserve the rules inside it. Immutable values and defensive copies can make sharing safer. Next, distinguish per-object state from shared class state in <a href="topic:oop-static-members">Static Members</a>.</p>

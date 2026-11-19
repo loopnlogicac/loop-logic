@@ -1,0 +1,73 @@
+<h2 id="introduction">Start an object with meaningful values</h2>
+<p class="lead">A ticket should know how many seats it represents when it is created. Making an empty ticket and hoping callers fill every field is easy to get wrong. A <dfn>constructor</dfn> is the special initialization routine used when an object is created.</p>
+<p>Think of a constructor as the opening checklist for a new record. It can receive required values and choose defaults for optional ones. When construction finishes normally, callers should have a usable object rather than an unfinished collection of fields.</p>
+<p>A constructor is not an ordinary method that returns an object. The new expression creates an instance and yields its reference. The constructor initializes that instance as part of the process. Its declaration has the class name and no return type.</p>
+<h2 id="syntax">Declare one starting path or several</h2>
+<p>A parameterised constructor receives values from the new expression. A no-argument constructor takes no explicit arguments. You may write both, provided their parameter lists differ. This is constructor overloading.</p>
+<pre><code class="language-java">class Ticket {
+    int seats;
+    Ticket() {
+        this(1);
+    }
+    Ticket(int seats) {
+        this.seats = seats;
+    }
+}</code></pre>
+<p>this names the current object. In this.seats = seats, the left side is the field and the right side is the parameter. Without this, writing seats = seats would assign the parameter to itself and leave the field unchanged.</p>
+<p>this(1) calls another constructor of the same class. In Java 17, that delegation must be the first statement. It reuses initialization logic for the same object; it does not create a second Ticket.</p>
+<h2 id="how-it-works">Follow initialization in the right order</h2>
+<p>Before instance initialization, the class must be initialized as needed. The object receives default values for its fields. Superclass construction then runs before the current class's field initializers and instance blocks. The class body declarations execute in textual order, followed by the constructor body.</p>
+<pre class="diagram">new expression
+    |
+    v
+allocate object with default fields
+    |
+    v
+superclass construction
+    |
+    v
+instance field initializers and blocks
+    |
+    v
+constructor body finishes
+    |
+    v
+reference becomes the new expression result</pre>
+<p>A <dfn>superclass</dfn> is a parent class, explained in <a href="topic:oop-inheritance">Inheritance</a>. Even an ordinary class with no written parent extends Object. You do not need a custom inheritance design to understand that superclass initialization comes first.</p>
+<p>When this(...) delegates, follow the chain to the constructor that does not delegate to another constructor in the same class. Initialization happens on that path. Returning through the chain then finishes the remaining constructor bodies. Instance field initializers do not repeat for every link.</p>
+<p>The order matters when a field initializer calls a method or prints a message. Read class declarations from top to bottom, then inspect the body of the constructor actually selected. Avoid complicated initialization side effects in everyday models; clear assignments are easier to maintain.</p>
+<h2 id="examples">Compare defaults, parameters and traces</h2>
+<p>The Ticket example shows two supported starting forms. The Result example makes a shadowed field explicit. The initialization trace exposes when a field initializer, instance block and body run. Finally, distinguish a handwritten no-argument constructor from one supplied by the compiler.</p>
+<h3>Two ways to create a ticket</h3>
+<p>The no-argument constructor delegates to the one-argument version with 1. The group ticket starts with 4 seats.</p>
+<div data-example="ex-1"></div>
+
+<h3>Resolve a shadowed name</h3>
+<p>The parameter and field share a name. this.mark identifies the field receiving the parameter value.</p>
+<div data-example="ex-2"></div>
+
+<h3>Trace initialization order</h3>
+<p>The field initializer prints field, then the instance block prints block, and finally the constructor prints body.</p>
+<div data-example="ex-3"></div>
+
+<h3>A declared no-argument constructor</h3>
+<p>This no-argument constructor is written explicitly. It is not a compiler-provided default constructor.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="default-constructor">What the compiler supplies</h2>
+<p>A <dfn>default constructor</dfn> is the no-argument constructor supplied when a class declares no constructors. It is not a general name for every no-argument constructor. Once you declare any constructor, Java stops supplying that automatic constructor.</p>
+<p>Suppose Student declares only Student(int roll). A call to new Student() then fails unless you also write a suitable no-argument constructor. The compiler does not guess a roll or invent missing overloads. Callers must use one of the constructors that actually exists.</p>
+<p>A compiler-provided constructor also needs an accessible no-argument superclass constructor. Inheritance can therefore add another constraint even when the child declares none. The later inheritance material explains explicit super(...) calls and their relationship to this(...).</p>
+<p>Constructor overloading should express sensible defaults, not arbitrary ways to bypass required values. A zero-argument Wallet may reasonably mean a zero opening balance. A student roll may instead be required. Choose the starting paths according to what a valid object means.</p>
+<h2 id="validation">Decide what invalid construction means</h2>
+<p>A constructor can reject, normalise or otherwise handle an invalid proposed value. These are different policies. Clamping a mark into the range is easy to demonstrate, but it can hide a data-entry error. A real result system may prefer to reject the change and report the problem.</p>
+<p>Be explicit about the policy in the class interface. Constructors cannot return a boolean success result like an ordinary setter. Throwing an exception is one possible rejection mechanism, covered in <a href="topic:oop-exceptions">Exception Handling</a>. Until then, use stated input bounds or a clearly described normalization rule.</p>
+<p>Keep shared validation logic in one place when overloads represent the same invariant. Delegating from a convenient overload to a complete one avoids maintaining two slightly different checks. A change to the rule should have one obvious home.</p>
+<h2 id="common-mistakes">Recognise declarations that are not constructors</h2>
+<h3>Writing void before the class name</h3><p>void Student() declares a method, not a constructor. It will not automatically run during new Student(). Remove the return type when the intended declaration is a constructor.</p>
+<h3>Delegating after another statement</h3><p>In Java 17, this(...) must come first in its constructor. Move shared work into the delegated constructor or a clear helper. Circular constructor delegation is rejected rather than allowed to recur forever.</p>
+<h3>Assuming fields already hold final values</h3><p>A field initializer can be overwritten by the constructor body. In an output trace, list each assignment in order. The last applicable assignment determines the value observed after construction.</p>
+<h2 id="version-notes">Use the Java 17 delegation rule</h2>
+<p>The first-statement requirement for this(...) applies to the Java 17 baseline here. Later Java releases add constructor-body capabilities with different constraints. Read examples according to their stated release instead of mixing rules from different versions.</p>
+<h2 id="summary">Make initialization part of the interface</h2>
+<p>A constructor gives each new object a deliberate starting state. Overloads can delegate to one complete initialization path, with this separating fields from shadowing parameters. Next, control which callers may reach those members in <a href="topic:oop-access-modifiers">Access Modifiers</a>.</p>

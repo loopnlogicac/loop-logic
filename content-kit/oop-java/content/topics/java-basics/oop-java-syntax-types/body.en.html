@@ -1,0 +1,59 @@
+<h2 id="introduction">Choose the right kind of value</h2>
+<p class="lead">A mark, a CGPA and a pass decision carry different kinds of information. Think of a variable type as a label on a storage box. The label tells Java which values belong there and which operations make sense. Choosing the type carefully prevents many mistakes before execution.</p>
+<p>A <dfn>primitive type</dfn> holds a basic value such as an integer or a boolean. Java has eight primitive types. Object references form a separate family, which you meet with strings and arrays. You cannot assume that every Java value is an object.</p>
+<p>If you know C, braces and semicolons will look familiar. Java gives several types stronger fixed guarantees than C does. It also separates boolean truth values from numbers. These differences matter more than the small changes in spelling.</p>
+<h2 id="syntax">Declarations, constants and inferred locals</h2>
+<p>A local declaration gives a type, name and often an initial value. A local variable must be definitely assigned before reading. Object fields have default values, but an uninitialised local int is not automatically safe to read.</p>
+<pre><code class="language-java">int mark = 80;
+double cgpa = 3.75;
+boolean passed = mark &gt;= 40;
+final int CREDIT = 3;
+var count = 4;</code></pre>
+<p><dfn>Type inference</dfn> means the compiler works out a declared type from an initializer. Local var became available in Java 10. Here count is an int permanently; assigning text to it later is still a type error. var is not dynamic typing.</p>
+<table class="ref"><caption>Java primitive choices</caption><thead><tr><th scope="col">Type</th><th scope="col">Meaning</th><th scope="col">Useful caution</th></tr></thead><tbody>
+<tr><td>byte</td><td>Signed 8-bit integer</td><td>-128 through 127</td></tr>
+<tr><td>short</td><td>Signed 16-bit integer</td><td>Often promoted in arithmetic</td></tr>
+<tr><td>int</td><td>Signed 32-bit integer</td><td>Common count and index type</td></tr>
+<tr><td>long</td><td>Signed 64-bit integer</td><td>Use L on large integer literals</td></tr>
+<tr><td>float</td><td>32-bit floating-point value</td><td>Use f on float literals</td></tr>
+<tr><td>double</td><td>64-bit floating-point value</td><td>Default decimal literal type</td></tr>
+<tr><td>char</td><td>Unsigned 16-bit UTF-16 code unit</td><td>Not always a whole visible character</td></tr>
+<tr><td>boolean</td><td>true or false</td><td>Cannot cast to int</td></tr>
+</tbody></table>
+<h2 id="how-it-works">Follow the operation before the assignment</h2>
+<p>An arithmetic expression is evaluated using its operand types. With two int operands, division uses integer arithmetic. It discards the fractional part towards zero. Thus 7 / 2 is 3 and -7 / 2 is -3. A double operand changes the division to floating-point arithmetic.</p>
+<p>A <dfn>cast</dfn> explicitly requests a conversion, written with a type in parentheses. Widening an int to long preserves its value. Narrowing double to int can discard a fraction. Narrowing a larger integer to byte can discard high bits. The destination type alone does not change earlier arithmetic.</p>
+<p>Consider two counts equal to 50000. Multiplying them as int exceeds the int range. Java integer overflow wraps according to its defined arithmetic rules, unlike C signed-overflow assumptions. Storing that already overflowed result in long does not recover the intended product.</p>
+<p>Convert one operand to long before multiplication. The other operand is promoted for that operation, and the exact product fits. You should reason about the largest intermediate result, not only the final variable. This habit also helps with totals and fee calculations.</p>
+<p>Floating-point values approximate many decimal fractions. They are useful for averages and measurements, but they are not exact decimal money storage. The small formatting examples show presentation, not a complete financial arithmetic policy. Later designs can choose a representation suited to exact amounts.</p>
+<h2 id="examples">Compare arithmetic results</h2>
+<p>Read the operand types before predicting each line. The examples separate integer division, narrowing, inference and widening so you can identify which rule produces the result.</p>
+<h3>Integer and decimal division</h3>
+<p>155 / 2 uses integer division and prints 77. A double operand keeps the half mark as 77.5.</p>
+<div data-example="ex-1"></div>
+
+<h3>Explicit narrowing</h3>
+<p>Casting 3.89 to int produces 3. Narrowing 130 to byte keeps the low eight bits and produces -126.</p>
+<div data-example="ex-2"></div>
+
+<h3>A constant and an inferred local</h3>
+<p>var infers int from 4. The multiplication gives 12, and the comparison gives a boolean true.</p>
+<div data-example="ex-3"></div>
+
+<h3>Widen before multiplying</h3>
+<p>The cast changes the first operand to long before multiplication, so 2500000000 fits.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Operators that resemble C</h2>
+<p>Java uses familiar arithmetic, relational and logical operators. The remainder operator is %, assignment is =, and equality comparison is == for primitive values. The short-circuit operators &amp;&amp; and || can skip evaluating their right operand when the left already decides the answer.</p>
+<p>A Java if condition must have type boolean. You cannot write if (mark) as a numeric truth test. Write an explicit comparison such as mark != 0 instead. Java also does not allow C-style casts between boolean and integer types.</p>
+<p>The final modifier prevents assigning a new value to a variable after its allowed initialization. A final primitive is stable in value. A final reference later has a different caution: the referenced object's contents may still be mutable. Do not confuse assignment control with deep immutability.</p>
+<p>Local var needs an initializer that identifies a usable type. var value = null cannot infer which reference type you intended. It also cannot serve as a field type or method parameter type in the ordinary declarations covered here. Use explicit types when they make units or meaning easier to see.</p>
+<h2 id="common-mistakes">Catch type mistakes early</h2>
+<h3>Casting after integer division</h3><p>Writing (double) (total / count) converts the already truncated quotient. Convert total before the division, or use a double operand. Also decide how a zero count should be handled before dividing.</p>
+<h3>Making an integer literal too large</h3><p>A large decimal literal intended for long may need an L suffix. Use uppercase L because lowercase l resembles the digit one. Check the literal itself as well as the variable receiving it.</p>
+<h3>Assuming char means a byte</h3><p>Java char stores one UTF-16 code unit. Some Unicode characters require two such units. For general text, use String and choose text-processing operations according to what you need to count.</p>
+<h2 id="version-notes">Local inference has a version boundary</h2>
+<p>Local var requires Java 10 or newer. The declarations and conversions on this page are valid under Java 17. The release target prevents accidentally relying on later language additions while you practise these foundations.</p>
+<h2 id="summary">Types guide every calculation</h2>
+<p>Use int for bounded whole-number work, long when intermediate integer results need more range, and double when a fractional approximation is appropriate. Keep boolean separate from numbers. Next, direct these values through <a href="topic:oop-java-control-flow">Java control flow</a>.</p>

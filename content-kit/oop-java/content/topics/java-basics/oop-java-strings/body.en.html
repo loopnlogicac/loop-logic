@@ -1,0 +1,57 @@
+<h2 id="introduction">Text is an object with rules</h2>
+<p class="lead">A course code looks like a short row of characters, but Java text has behaviour as well as contents. A <dfn>String</dfn> represents an immutable sequence of UTF-16 code units. You can inspect it or request another text value, but you cannot edit its characters in place.</p>
+<p>Think of a printed course notice. You can make a revised copy, yet the original printed notice stays the same. A String variable can point to a revised String, but that reassignment does not alter the old object. Other references still see the original contents.</p>
+<p>If you know C, do not treat String as a writable char array ending at a null character. Java strings track their length and offer methods for common operations. You do not allocate a spare byte for a terminator or call free on the text.</p>
+<h2 id="syntax">Read text through methods</h2>
+<p>String literals use double quotes. A char literal uses single quotes and holds one UTF-16 code unit. String operations are method calls through a reference. Unlike an array, a String provides length() as a method.</p>
+<pre><code class="language-java">String course = "CSE 212";
+int units = course.length();
+char first = course.charAt(0);
+String number = course.substring(4);
+boolean matches = course.equals("CSE 212");</code></pre>
+<table class="ref"><caption>Useful String operations</caption><thead><tr><th scope="col">Method</th><th scope="col">Question or result</th></tr></thead><tbody>
+<tr><td>length()</td><td>Number of UTF-16 code units</td></tr>
+<tr><td>charAt(index)</td><td>One code unit at an index</td></tr>
+<tr><td>substring(begin, end)</td><td>Text from begin inclusive to end exclusive</td></tr>
+<tr><td>indexOf(text)</td><td>First matching position, or -1</td></tr>
+<tr><td>startsWith(prefix)</td><td>Whether a prefix matches</td></tr>
+<tr><td>equals(other)</td><td>Whether text content matches</td></tr>
+</tbody></table>
+<p>For charAt, a valid index is below length(). For substring, the end can equal length() because it is excluded. A reversed or out-of-range interval is invalid. Write the intended range on paper before selecting its endpoints.</p>
+<h2 id="how-it-works">Separate content from reference identity</h2>
+<p>Reference equality with == asks whether two references identify the same object. String.equals asks whether their character contents match. Two separately constructed strings can therefore produce false with == and true with equals. Choose the comparison that answers your actual question.</p>
+<p>String literals are interned, meaning Java can share one canonical literal object. This can make == appear to compare text correctly in a small experiment. That observation does not change the operator's meaning. Text read from input should also be compared by content rather than identity.</p>
+<p>Immutability makes sharing a String safe from character edits. If first and second both refer to CSE, requesting first.toUpperCase does not edit either reference's object. Saving the returned result changes first to a new result reference when needed. second continues to see its original text.</p>
+<p>Some methods may return the same object when no change is needed. Never use that possibility as a content-comparison rule. You should depend on the method's text result rather than whether a particular implementation allocated another object.</p>
+<h2 id="examples">Follow returned text and mutable builders</h2>
+<p>The first example makes an ignored result visible. The next compares identity and content directly. The later examples inspect a course code and construct a roll list with separators.</p>
+<h3>A method result must be saved</h3>
+<p>Ignoring the returned uppercase text leaves code equal to cse. Assigning the result changes the reference to CSE.</p>
+<div data-example="ex-1"></div>
+
+<h3>Identity and content</h3>
+<p>new creates a separate String object. The references differ, but the character content matches.</p>
+<div data-example="ex-2"></div>
+
+<h3>Extract a course number</h3>
+<p>The seven UTF-16 units include the space. substring starts at index 4 and charAt(0) returns C.</p>
+<div data-example="ex-3"></div>
+
+<h3>Build a roll list</h3>
+<p>The builder grows one piece at a time and places commas only between rolls.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="building-text">Use a builder for repeated appends</h2>
+<p>A <dfn>StringBuilder</dfn> is a mutable buffer for assembling text. append adds another piece to that buffer, and toString gives you a String result. You can append numbers as well as text, because the builder can produce their textual representations.</p>
+<p>Repeated String concatenation in a loop can require repeated intermediate results as the text grows. A builder makes the intended accumulation explicit. It is especially useful when you add many small pieces or decide separators dynamically. For a short fixed message, ordinary + concatenation is often clearer.</p>
+<p>To create a comma-separated list, append comma-space before each item after the first. That policy avoids a trailing comma and needs no removal afterwards. For an empty list, decide what the user should see. An empty String and a message such as Empty communicate different things.</p>
+<p>Text indexing also has a Unicode caution. A char is not guaranteed to hold a whole user-perceived character. Some Unicode code points use two UTF-16 units, and a visible character can include combining marks. A reverse-by-char exercise therefore states ASCII input rather than claiming to reverse every language correctly.</p>
+<p>Case conversion can depend on locale. Locale.ROOT provides a fixed language-neutral convention when you normalise a machine-readable code. This does not mean every user name should be converted with the same rule. Choose the text policy according to its purpose.</p>
+<h2 id="common-mistakes">Keep the text contract clear</h2>
+<h3>Ignoring a returned String</h3><p>Calling substring or a case-conversion method does not rewrite the receiver. Save the returned value when the variable should represent the changed text. Check which reference you print after the call.</p>
+<h3>Using == for a password or course code</h3><p>Two equal inputs may occupy different objects. Use equals for a case-sensitive content match. If a reference might be null, handle that possibility before calling an instance method through it.</p>
+<h3>Indexing a String like an array</h3><p>text[0] is not Java String syntax. Use charAt(0) when one UTF-16 code unit is appropriate. For a full substring, use the half-open interval methods rather than treating text as a C pointer.</p>
+<h2 id="version-notes">StringBuilder is an established tool</h2>
+<p>StringBuilder has been available since Java 5. The String operations on this page are supported by Java 17. Newer text features are unnecessary for these examples, which focus on content, identity and controlled text construction.</p>
+<h2 id="summary">Choose immutable text or a mutable construction buffer</h2>
+<p>String gives stable text values and content comparisons through equals. StringBuilder helps you assemble a result before turning it into String. Next, read such text from the keyboard in <a href="topic:oop-java-input-output">Input and Output</a>.</p>

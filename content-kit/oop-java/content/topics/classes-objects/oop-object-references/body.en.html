@@ -1,0 +1,79 @@
+<h2 id="introduction">Two arrows can reach one changing object</h2>
+<p class="lead">Imagine two students receiving the same room number. Changing the furniture in that room affects what both visitors see. Changing one student's written room number does not rewrite the other's. Java references behave similarly: copied reference values can reach one shared object.</p>
+<p><dfn>Aliasing</dfn> means two or more references identify the same object. It is useful when parts of a program intentionally share state. It becomes surprising when a caller expects an independent copy. The first step is to draw variables and objects as different things.</p>
+<p>This lesson combines that memory picture with null and equality. You will distinguish changing an object's field from redirecting a reference. You will also distinguish asking whether two references reach one object from asking whether two objects have equal values.</p>
+<h2 id="syntax">Declare a reference, then decide its target</h2>
+<p>A reference variable can hold a reference returned by new, a copy from another variable, or null. <dfn>null</dfn> is the special value meaning no object. A local reference still needs definite assignment before it is read.</p>
+<pre><code class="language-java">Cell first = new Cell(5);
+Cell alias = first;
+Cell missing = null;
+boolean identical = first == alias;</code></pre>
+<p>The first line creates a Cell. The second copies its reference without constructing another Cell. The third creates no Cell at all. Count allocations rather than declarations when you trace the number of objects.</p>
+<p>If you know C, a reference gives you a way to reach shared state, but not raw memory arithmetic. You cannot add one to a Cell reference to find a neighbour. Java also prevents direct manual freeing of an object through its reference.</p>
+<h2 id="how-it-works">Mutation moves a value; reassignment moves an arrow</h2>
+<pre class="diagram">After Cell alias = first:
+
+first -----+
+           +----&gt; Cell A { value = 5 }
+alias -----+
+
+After alias.value = 8:
+
+first -----+
+           +----&gt; Cell A { value = 8 }
+alias -----+
+
+After alias = new Cell(9):
+
+first ----------&gt; Cell A { value = 8 }
+alias ----------&gt; Cell B { value = 9 }</pre>
+<p>A field assignment changes storage inside the reached object. Every alias can observe that changed field. Reference assignment changes the variable on the left side, leaving other variables untouched. These are two different kinds of state change.</p>
+<p>The same distinction applies to method parameters. Java copies the reference value into the parameter. The callee can mutate the reached object if its interface permits it. Reassigning the parameter changes only that local reference, not the caller variable.</p>
+<p>Returning a new object is one way to ask the caller to adopt a replacement. The caller then assigns the returned reference explicitly. That interface makes the rebinding visible instead of pretending a parameter is the caller's variable.</p>
+<p>An object without any reachable path from the running program becomes eligible for garbage collection. Setting one alias to null does not make an object unreachable while another live path remains. Collection timing is not guaranteed, so do not use it as an ordinary control-flow event.</p>
+<h2 id="examples">Follow aliases, missing values and comparisons</h2>
+<p>The first two examples separate one shared Cell from two equal-looking Cells. The null guard checks for a target before access. The method trace changes the original object before redirecting a parameter. Objects.equals then shows a library helper for safe equality around missing references.</p>
+<h3>Mutation through an alias</h3>
+<p>Both references reach one Cell. Its value becomes 8 and the identity comparison is true.</p>
+<div data-example="ex-1"></div>
+
+<h3>Fresh objects with matching fields</h3>
+<p>Two new expressions create separate identities. Cell inherits Object.equals, which also uses identity here.</p>
+<div data-example="ex-2"></div>
+
+<h3>A null guard</h3>
+<p>The reference holds no object. Testing it before field access avoids a NullPointerException.</p>
+<div data-example="ex-3"></div>
+
+<h3>Mutate, then redirect a parameter</h3>
+<p>The first assignment changes the original Cell. The second moves only the parameter copy, so the caller still sees 7.</p>
+<div data-example="ex-4"></div>
+
+<h3>Null-safe content comparison</h3>
+<p>Objects.equals handles a null first reference without calling a method on it.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="null-safety">Give missing values an explicit meaning</h2>
+<p>Calling an instance method through null, or reading an instance field through it, throws NullPointerException. The runtime cannot find a receiver object. Comparing a reference with null is safe because the comparison does not access an object's fields.</p>
+<p>Check whether null is an allowed state in your design. An optional search result may legitimately be missing. A required Student dependency might be better rejected at construction. Adding checks everywhere without deciding the meaning can hide a deeper modeling error.</p>
+<p>Short-circuit conditions are useful guards. In cell != null &amp;&amp; cell.value &gt; 0, the right side runs only when the first comparison is true. Reversing the order attempts the field access before the guard can help. The order is part of the safety argument.</p>
+<p>A guard should lead to a defined alternative. Printing Missing, returning a documented result or rejecting the operation may all be appropriate. Silently substituting zero is not always correct, because a legitimate zero and a missing value can mean different things.</p>
+<p>For content comparisons, a known nonnull literal can be the receiver of equals. Objects.equals offers a more general null-safe comparison of two references. It returns true for two null values, false when exactly one is null, and otherwise delegates to the first object's equals.</p>
+<h2 id="equality">Identity and value are different questions</h2>
+<p>Reference == compares identity: it is true when both references identify the same object, or both are null. It does not inspect fields. Two fresh Cell objects with value 5 therefore have different identities even though their visible numbers match.</p>
+<p>Every ordinary class inherits equals from Object unless it overrides the method. The inherited Object.equals also compares identity. Java does not automatically invent field-by-field equality for an ordinary class. The Cell examples deliberately keep that inherited rule visible.</p>
+<p>String overrides equals to compare text content. Wrapper classes such as Integer define their own value rules too. Thus a.equals(b) means apply the equality contract of a's class, rather than always compare all fields. Read or define that contract before relying on it.</p>
+<p>When you later implement value equality, you must also respect the hashCode contract. Equal objects need equal hash codes for hash-based containers to work correctly. <a href="topic:oop-object-class">The Object Class</a> teaches a complete implementation. An incomplete custom equals here would distract from the reference model.</p>
+<p>The same identity distinction can guide application design. Two records can represent separate events with identical values. Two immutable coordinates may be considered equal by coordinates. Decide which question matters instead of assuming identity or value equality is universally preferable.</p>
+<h2 id="ownership">Sharing is an interface decision</h2>
+<p>A method returning a mutable internal object gives the caller an alias into its state. The caller may then mutate that state through public operations. That can be intentional collaboration, or an unwanted hole in encapsulation. Explain the ownership policy in the method contract.</p>
+<p>Copying an outer array does not automatically copy all its referenced objects. A shallow copy creates new container storage while preserving element reference values. Independent mutable object graphs may require deeper copying, which is a design-specific operation rather than ordinary assignment.</p>
+<p>Immutable objects reduce sharing risks because aliases cannot change their state. Mutable objects remain useful when multiple parts of a program need a common live view. Neither sharing nor copying is always best; the right choice follows the model and expected updates.</p>
+<h2 id="common-mistakes">Avoid misleading reference explanations</h2>
+<h3>Saying objects are passed by reference</h3><p>That wording suggests the callee can reassign the caller variable. Java copies reference values instead. Show both a field mutation and a parameter reassignment to distinguish the mechanisms.</p>
+<h3>Comparing content with ==</h3><p>Identity comparison can succeed for shared literals or cached values without becoming a content rule. Use the appropriate equals contract for values. Add null handling when the receiver may be missing.</p>
+<h3>Assuming an abandoned local destroys the object</h3><p>Another field, array element or local may still reach it. Object lifetime follows reachability, not only the scope of one variable. Java does not guarantee immediate destruction at a closing brace.</p>
+<h2 id="version-notes">Reference rules do not need new syntax</h2>
+<p>Java 17 uses the same pass-by-value and identity rules illustrated here. Objects.equals has been available since Java 7. Later pattern-matching syntax does not change the distinction between a copied reference and its target object.</p>
+<h2 id="summary">Keep variables, targets and contracts separate</h2>
+<p>Draw an arrow for each reference, then decide whether a statement moves an arrow or edits its target. Handle null deliberately and choose equality according to the class contract. Continue by organising type names in <a href="topic:oop-packages">Packages and Imports</a>.</p>

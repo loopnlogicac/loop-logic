@@ -1,0 +1,55 @@
+# OOP (Java) — Batch 1
+
+Package version: 0.1.0. Format: 1.1. Track: oop-java.
+
+This package delivers all 16 topics from java-basics and classes-objects, in curriculum order. The remaining 25 topics belong to later batches. No curriculum point from these two modules was omitted. Full English lessons are included; titles, summaries and key points also have Bangla translations. Full Bangla lesson bodies are not included.
+
+## Contents and coverage
+
+| Topic | Coverage and reviewer focus |
+| --- | --- |
+| oop-introduction | Procedural and object-oriented thinking; class, object, identity, state and behaviour; four-pillar comparison; Java's role. This is the curriculum's theory topic, with four worked written exercises. |
+| oop-java-setup | JDK/JRE/JVM, installing a suitable JDK, PATH and terminal compilation, bytecode portability, IntelliJ IDEA/VS Code/NetBeans configuration. |
+| oop-java-syntax-types | All primitive types, C comparisons, boolean conditions, casts, overflow, final, Java 10 local var inference. |
+| oop-java-control-flow | if, switch statements and expressions, for/while/do-while, enhanced for, yield, labelled break, empty ranges. |
+| oop-java-methods | Static declaration/calls, primitive and reference value passing, overload selection, recursive factorial and digit sum with bounds. |
+| oop-java-arrays | Array objects, length and defaults, rectangular and jagged allocation, Arrays.toString/sort, checked bounds and ArrayIndexOutOfBoundsException. |
+| oop-java-strings | Immutable strings, methods and half-open substrings, identity versus equals, interning, StringBuilder, UTF-16 and ASCII-only reversal limits. |
+| oop-java-input-output | Scanner tokens/lines and newline handling, printf/String.format with fixed locale, EOF loops, BufferedReader and parsing. |
+| oop-classes-objects | Fields and instance methods, new, independent instances and aliases, Student UML and memory diagrams. |
+| oop-constructors | Compiler-provided default versus explicit no-argument constructors, parameterised overloads, this and this(...), initialization traces and Java 17 ordering. |
+| oop-access-modifiers | All four access levels, visibility table, private top-level nest access, protected subclass receiver restriction, private field rationale. |
+| oop-encapsulation | Validated getters/setters, invariant preservation, meaningful domain operations, immutable classes, information hiding and defensive copies. |
+| oop-static-members | Static fields/methods/blocks, instance-versus-static table, creation counter versus live-object count, utility class construction, constant-inlining exception. |
+| oop-object-references | Aliasing diagrams, null and NullPointerException, identity versus class-defined equals, mutation versus parameter reassignment, shallow copies and reachability. |
+| oop-packages | Package declarations and source/output folder layout, normal/fully-qualified/static imports, classpath roots, compile/run commands and name conflicts. |
+| oop-wrapper-classes | Eight wrapper pairs, boxing/unboxing, null extraction, guaranteed small constant boxing identity, larger-value caching limits, parseInt/valueOf and parsing failures. |
+
+## Verification
+
+- Actual toolchain: Eclipse Temurin OpenJDK 21.0.13.1+2, javac 21.0.13.1, Node.js v24.22.1 (see manifest and report for recorded versions).
+- All 170 distinct complete programs were compiled separately using `javac --release 17 -encoding UTF-8 -Xlint:all -Werror`, without suppressing any lint category. Each source was copied into an isolated temporary directory as Main.java and launched as Main.
+- The programs comprise 64 examples, 61 code-practice reference solutions and 45 embedded output-quiz programs. The eight written practice problems have worked answers.
+- Every example and practice .out was written from its actual process output. The 61 solutions were run on all 134 practice inputs, including empty/zero cases, thresholds, rejected changes, full capacity, and maximum stated factorial and square values.
+- Output quiz answer text came from real runs. All options and the final checker replay were checked against those results.
+- Every source is a single file containing class Main and the traditional public static void main(String[] args). Supporting top-level classes are not public. There are no package declarations, wildcard imports, external dependencies, runtime-only skips, intentional compiler failures or nondeterministic output examples.
+- Run from content-kit with the JDK bin directory on PATH: `node tools/check.mjs oop-java/content --report oop-java/content/CHECK_REPORT.txt`.
+- CHECK_REPORT.txt records the final full compile/run check. Remaining warnings: none.
+- The final set has 185 quiz questions. A separate asset audit confirmed all 461 source/input/output assets are referenced and use LF line endings.
+- Temporary compiler fixtures verified the written named-package output layout and qualified launch command, and confirmed that cross-package protected access accepts a Child receiver but rejects an arbitrary Parent receiver. These fixtures are not part of the content package.
+- Two data lines intentionally contain trailing whitespace: the empty-course output preserves the space after `Course:`, and the buffered-input test includes a spaces-only line. These are real output and meaningful blank-input data; do not trim them as source formatting.
+- All 15 distinct reference URLs were reachable when reviewed. They point to approved Java learning, API or language-specification documentation.
+
+## Review boundaries and deliberate choices
+
+- The one-file Java rule and the packages curriculum are reconciled by teaching project package declarations as short non-runnable fragments, source/output diagrams, terminal commands and a worked written exercise. Runnable demonstrations stay in the unnamed package and use real library imports. Cross-package protected rules are taught through the visibility table and prose, since a single unnamed-package file cannot establish a cross-package access context.
+- All complete programs compile cleanly. Compiler and runtime mistakes are explained in prose instead of shipping intentionally failing programs. Bounds and null examples demonstrate safe guards. The text names the exceptions that an unguarded access would raise.
+- Introductory fields are deliberately visible to make object state and aliases concrete. The following access and encapsulation lessons replace that approach with private fields and controlled operations.
+- The input exercises use bounded, documented input. General recovery from malformed tokens and I/O failures is deferred to the exception topic; the BufferedReader introduction explains its throws IOException preview.
+- A few early exercises need Scanner or simple arrays before their dedicated lesson. Their body text defines the necessary operation briefly and links forward. Constructor traces explain the superclass concept and link to inheritance before using that vocabulary.
+- Wrapper output never assumes that Integer values outside the required cache range have distinct identity. UTF-16 lengths are not described as counts of user-perceived characters. Numeric formatting exercises use fixed locales, and integer calculations have explicit bounds.
+- Future features are signposted where relevant: var (10), switch expressions (14), records (16). Inheritance, polymorphism, full equals/hashCode implementation, pattern matching and sealed classes are later curriculum topics, rather than extra material added here.
+- No video links were selected. No additional topic IDs, labs, datasets, assets or full Bangla bodies were invented.
+- Human review should check teaching clarity and natural Bangla, the protected receiver explanation, the constructor order trace, the written package-layout commands, and the precise scope of wrapper caching guarantees. Review status remains draft for editorial review.
+
+Suggested extra topics: none for this delivery; later curriculum topics already cover the follow-on concepts.

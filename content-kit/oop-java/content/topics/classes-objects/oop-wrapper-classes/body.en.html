@@ -1,0 +1,74 @@
+<h2 id="introduction">Put a primitive value inside an object type</h2>
+<p class="lead">An array can store int values directly, but some APIs require objects. A <dfn>wrapper class</dfn> represents a primitive value through an object type. Integer is the wrapper for int, while Double wraps double. The distinction adds useful operations and also introduces reference-related pitfalls.</p>
+<p>Think of a number written on a card. The numeric value and the card carrying it are different ideas. Two cards may carry the same number while being separate objects. A missing card is not the same as a card carrying zero.</p>
+<p>Wrappers matter for future generic collections, which use reference types as type arguments. You can understand boxing and equality now without using those collections yet. Keep the primitive value, object identity and possible null reference separate in every trace.</p>
+<h2 id="syntax">Map each primitive to its wrapper</h2>
+<table class="ref"><caption>Primitive and wrapper pairs</caption><thead><tr><th scope="col">Primitive</th><th scope="col">Wrapper</th><th scope="col">Typical use</th></tr></thead><tbody>
+<tr><td>byte</td><td>Byte</td><td>Small signed integer</td></tr>
+<tr><td>short</td><td>Short</td><td>Short signed integer</td></tr>
+<tr><td>int</td><td>Integer</td><td>Counts and marks</td></tr>
+<tr><td>long</td><td>Long</td><td>Larger whole-number values</td></tr>
+<tr><td>float</td><td>Float</td><td>Single-precision value</td></tr>
+<tr><td>double</td><td>Double</td><td>Double-precision value</td></tr>
+<tr><td>char</td><td>Character</td><td>One UTF-16 unit</td></tr>
+<tr><td>boolean</td><td>Boolean</td><td>True or false</td></tr>
+</tbody></table>
+<p>The wrapper names are classes in java.lang, so they need no explicit imports. The spelling is not always the primitive name with a capital letter: int maps to Integer and char to Character. Number is a common superclass for numeric wrappers, not a ninth primitive wrapper.</p>
+<pre><code class="language-java">int mark = 80;
+Integer boxed = mark;
+int restored = boxed;
+Integer parsed = Integer.valueOf("80");</code></pre>
+<p><dfn>Autoboxing</dfn> is the automatic conversion from a primitive to its wrapper. <dfn>Unboxing</dfn> extracts the primitive value. The compiler inserts these conversions in permitted contexts, but the runtime consequences still matter.</p>
+<h2 id="how-it-works">Follow the conversion around arithmetic</h2>
+<p>Assigning int 80 to Integer requests a boxed representation. Assigning that nonnull Integer to int extracts its numeric value. Arithmetic such as boxed + 5 also unboxes before adding. The result is numeric addition rather than String concatenation.</p>
+<p>Wrapper objects are immutable values. Writing boxed++ does not edit an existing Integer's internal number. It unboxes, increments the primitive value, boxes the result and reassigns the variable. Another reference to the old Integer still observes its original value.</p>
+<p>Primitive int cannot be null, but Integer can. Attempting to unbox a null reference throws NullPointerException. The expression may look like ordinary arithmetic, so the failure location can surprise you. Inspect the reference's origin when a numeric expression unexpectedly fails.</p>
+<p>A new Integer array contains null references, not automatically boxed zeros. Fill each element before arithmetic, or define an explicit missing-value policy. A new int array, by contrast, contains primitive zeros. Choosing the element type changes both storage meaning and possible failure cases.</p>
+<p>A final Integer reference cannot be reassigned, and the wrapper object itself cannot change its numeric value. That combination differs from final int[], whose referenced elements remain mutable. Return to the general object rule rather than assuming all final references behave alike.</p>
+<h2 id="examples">Observe boxing, parsing and safe comparison</h2>
+<p>The first example boxes and restores a mark before arithmetic. The next two separate a guaranteed small identity case from a larger value comparison. Parsing then converts numeric text, while the final guard handles a genuinely missing wrapper.</p>
+<h3>Box and unbox a mark</h3>
+<p>The first assignment boxes 80. The second unboxes it before arithmetic, producing 85.</p>
+<div data-example="ex-1"></div>
+
+<h3>Guaranteed small-value identity</h3>
+<p>Constant int boxing within -128 through 127 shares identity as specified. Value equality also holds.</p>
+<div data-example="ex-2"></div>
+
+<h3>Compare larger boxed values safely</h3>
+<p>Content comparison is reliable for 1000. No assumption is made about whether references are cached.</p>
+<div data-example="ex-3"></div>
+
+<h3>Parse numeric text</h3>
+<p>Parsing converts text into numeric values. Adding 1 to the parsed roll gives 18.</p>
+<div data-example="ex-4"></div>
+
+<h3>Handle a missing wrapper</h3>
+<p>The conditional avoids unboxing the null reference and chooses a default zero.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="cache">The small-value identity trap</h2>
+<p>Java can reuse wrapper objects for selected values. For boxing constant int values from -128 through 127, shared identity is guaranteed by the language rules. That is why two Integer references initialized from the constant 127 compare true with == in the example.</p>
+<p>Do not extend that observation to every integer. Implementations may cache values beyond the required range. Identity for a larger value such as 1000 must therefore not be used as a portable numeric comparison rule. A program that seems to work on one runtime can mislead you elsewhere.</p>
+<p>Integer.valueOf also documents caching for at least its small range. The practical lesson remains to use value comparison when you mean numeric equality. Caching is an allocation detail that callers should not turn into a business rule.</p>
+<p>Integer.equals accepts another Integer with the same int value. It does not treat a Long as equal merely because the mathematical magnitude matches. The wrappers preserve their type-specific equality contracts. If you intend a numeric conversion, make that conversion explicit before comparing.</p>
+<p>The == operator also behaves differently when one operand is primitive. A comparison between Integer and int can unbox the wrapper and compare primitive values. If that wrapper is null, it can fail. Read operand types before predicting whether == performs identity comparison or numeric comparison.</p>
+<p>For ordering, Integer.compare returns a negative number, zero or a positive number. It avoids using subtraction as an ordering shortcut, which can overflow for extreme int values. Choose an operation that states the intended relation instead of relying on implementation accidents.</p>
+<h2 id="parsing">Text conversion is different from boxing</h2>
+<p>Integer.parseInt reads integer text and returns primitive int. Integer.valueOf(String) reads integer text and returns Integer. Boxing starts with an existing primitive value instead of text. These operations can appear near each other, but they solve different conversion problems.</p>
+<p>Parsing accepts a valid representation within the target range. Decimal text such as 3.5 is not a valid int token. Text containing a course label or an out-of-range number is also invalid. Integer.parseInt reports these cases with NumberFormatException rather than rounding or returning null.</p>
+<p>A leading sign can be part of integer text. Leading zeros in ordinary decimal parseInt do not request octal notation. The parsed number no longer remembers display width, so parsing 0017 gives seventeen. Use formatting later if you need a padded label.</p>
+<p>Double.parseDouble can read decimal floating-point text such as 3.75. Its result still follows double's approximate arithmetic. Parsing text does not make binary floating-point an exact decimal money type. Keep input interpretation separate from the numeric model you choose.</p>
+<p>These exercises state valid input bounds so the main focus stays on conversions. When reading uncontrolled user input, you must decide how to handle invalid parsing. <a href="topic:oop-exceptions">Exception Handling</a> explains the reporting and recovery mechanisms.</p>
+<h2 id="null-policy">Choose whether missing values belong in the model</h2>
+<p>A wrapper is useful when missing and zero must remain distinct. For example, a missing mark could mean not yet assessed, while zero is an assessed result. Replacing both with zero loses that meaning. A null reference is one representation, but the interface must describe it.</p>
+<p>Check for null before unboxing when it is allowed. A conditional can choose a documented default or skip a missing value. Ensure only the chosen branch attempts extraction. A method called intValue still needs a real wrapper object, just like implicit unboxing.</p>
+<p>For data that is always present and used in arithmetic, prefer a primitive unless an API requires a wrapper. It avoids nullable state and unnecessary object-level reasoning. Use wrappers for a concrete modeling or API need rather than because the class name looks more object-oriented.</p>
+<h2 id="common-mistakes">Avoid accidental object assumptions</h2>
+<h3>Using == because a small experiment succeeded</h3><p>Cached boxed values can share references. Use equals when comparing boxed values by their Integer contract. Handle null before calling an instance method through a possibly missing reference.</p>
+<h3>Constructing wrappers with deprecated constructors</h3><p>Prefer valueOf or autoboxing instead of new Integer. The old constructors are deprecated and add no useful value here. Their warnings also signal that a newer API choice is expected.</p>
+<h3>Assuming parsing truncates decimal text</h3><p>Integer.parseInt does not behave like casting an already numeric double. It validates integer text. Choose the parser for the promised input format and report invalid text deliberately.</p>
+<h2 id="version-notes">Boxing is old; constructor advice still matters</h2>
+<p>Autoboxing and unboxing were introduced in Java 5. The Java 17 baseline supports the conversions and factories used here. Deprecated wrapper constructors are avoided, and no result depends on a runtime-specific extension to caching.</p>
+<h2 id="summary">Compare values deliberately and guard missing references</h2>
+<p>Wrappers connect primitive arithmetic with object-based APIs. Boxing, unboxing and parsing remain distinct steps with different failure cases. Keep equality type-aware and null handling explicit. Continue to <a href="topic:oop-inheritance">Inheritance</a> when you are ready to relate and extend classes.</p>
