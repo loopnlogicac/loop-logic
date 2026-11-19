@@ -457,9 +457,20 @@ async function proPage() {
     a.click(); URL.revokeObjectURL(a.href);
   });
   const paid = courses.added.filter((c) => c.access === 'paid');
+  const packs = await api('GET', '/api/admin/packs').catch(() => []);
+  const review = (p, approve) => async () => {
+    const note = approve ? null : prompt('What should the instructor change?', '');
+    if (!approve && note === null) return;
+    await api('POST', `/api/admin/packs/${p.id}/review`, { approve, note }); toast(approve ? 'Approved.' : 'Returned to the instructor.'); route();
+  };
+  const packCard = card('Exam packs from instructors', table(['Pack', 'By', 'Contents', 'Status', ''], packs.map((p) => [
+    el('span', {}, el('strong', { text: p.title }), p.description ? el('br') : null, p.description ? el('small', { class: 'adm-hint', text: p.description.slice(0, 160) }) : null),
+    p.ownerEmail, `${num(p.lessons.length)} lessons · ${num(p.papers.length)} papers · ${num(p.mockTests)} mock tests · ${num(p.files.length)} files`,
+    chip({ draft: 'Draft', review: 'Waiting for review', approved: 'Approved' }[p.status] ?? p.status, p.status === 'approved' ? 'ok' : p.status === 'review' ? 'info' : ''),
+    p.status === 'review' ? el('span', {}, button('Approve', review(p, true), 'primary small'), ' ', button('Return', review(p, false), 'small line')) : p.files.length ? el('a', { href: p.files[0].url, target: '_blank', rel: 'noopener', text: 'First file ↗' }) : '']), 'No packs yet. Instructors write them in their dashboard.'));
   return [el('div', { class: 'adm-kpis' }, kpi('On the waitlist', num(w.count)), kpi('Paid courses', num(paid.length)), kpi('Payments', 'bKash / Nagad', 'checked by an admin')),
     row(card('Paid courses', table(['Course', 'Price', 'Samples', ''], paid.map((c) => [c.title.en, `৳ ${num(c.price)}`, num(c.counts.samples), el('a', { href: `#course/${c.id}`, text: 'Manage access' })]), 'No paid courses yet.')),
-      card('Latest waitlist sign-ups', el('p', { class: 'adm-hint', text: 'Emails are partly hidden here. The export is written to the audit log.' }), table(['Email', 'Wants', 'Joined'], w.waitlist.slice(0, 30).map((r) => [r.email, r.plan, ago(r.at)]), 'Nobody yet.'), exp))];
+      card('Latest waitlist sign-ups', el('p', { class: 'adm-hint', text: 'Emails are partly hidden here. The export is written to the audit log.' }), table(['Email', 'Wants', 'Joined'], w.waitlist.slice(0, 30).map((r) => [r.email, r.plan, ago(r.at)]), 'Nobody yet.'), exp)), packCard];
 }
 
 // ── coupons ──

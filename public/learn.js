@@ -173,6 +173,7 @@ async function renderTopic() {
           el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
         langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, quiz, practice, exam, videos, refs, pager)));
   fillAdSlots();
+  api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 }
 

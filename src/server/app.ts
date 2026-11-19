@@ -14,9 +14,11 @@ import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
 import type { AdminService } from '../app/admin.ts';
+import type { ClassService, Staff } from '../app/classes.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
+import { allCourses } from '../content/courses.ts';
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -42,6 +44,7 @@ export interface AppDeps {
   extras: VideoExtrasService;
   tutorials: TutorialService;
   admin?: AdminService;
+  classes?: ClassService;
   store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
@@ -62,7 +65,7 @@ export interface AppDeps {
   };
 }
 
-type Ctx = { req: IncomingMessage; params: Record<string, string>; query: URLSearchParams; body: any; learnerId: string; email: string | null; anonId?: string; signedIn?: boolean; headers: Record<string, string> };
+type Ctx = { req: IncomingMessage; params: Record<string, string>; query: URLSearchParams; body: any; learnerId: string; email: string | null; anonId?: string; signedIn?: boolean; headers: Record<string, string>; staff?: Staff };
 type Handler = (ctx: Ctx) => unknown;
 interface Route {
   method: string;
@@ -70,7 +73,7 @@ interface Route {
   keys: string[];
   handler: Handler;
   /** editor = instructor, but refused outright when editing is locked (public deploy without a key). admin = signed in and an admin. */
-  auth: 'learner' | 'instructor' | 'editor' | 'admin' | 'none';
+  auth: 'learner' | 'instructor' | 'editor' | 'admin' | 'staff' | 'none';
   maxBody?: number;
 }
 
@@ -111,6 +114,10 @@ function sameSecret(a: string, b: string): boolean {
 export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
+  const cls = () => {
+    if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
+    return d.classes;
+  };
   const adm = () => {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
     return d.admin;
@@ -275,7 +282,34 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/admin/ai', () => adm().ai(), 'admin'),
     route('GET', '/api/admin/audit', () => adm().auditLog(), 'admin'),
 
-    // instructor
+    // students and classes
+    route('POST', '/api/learn-activity', ({ body, learnerId }) => tutorials.recordActivity(learnerId, body)),
+    route('POST', '/api/classes/join', ({ body, learnerId, email, signedIn }) => cls().join(learnerId, email, Boolean(signedIn) || d.auth.mode === 'supabase', body.code)),
+    route('GET', '/api/my-classes', ({ learnerId }) => cls().studentClasses(learnerId)),
+    route('POST', '/api/classes/:id/leave', ({ params, learnerId }) => cls().leave(learnerId, params.id!)),
+
+    // instructor dashboard (signed in, instructor or admin)
+    route('GET', '/api/instructor/meta', () => ({ tracks: tutorials.adminTracks().filter((t) => t.delivered && !t.hidden).map((t) => ({ id: t.id, title: t.title })), courses: allCourses().map((c) => ({ id: c.id, title: c.title.en })) }), 'staff'),
+    route('GET', '/api/instructor/classes', ({ staff }) => cls().myClasses(staff!), 'staff'),
+    route('POST', '/api/instructor/classes', ({ body, staff }) => cls().saveClass(staff!, body), 'staff'),
+    route('GET', '/api/instructor/classes/:id', ({ params, staff, query }) => cls().dashboard(staff!, params.id!, lang(query.get('lang'))), 'staff'),
+    route('POST', '/api/instructor/classes/:id', ({ params, body, staff }) => cls().saveClass(staff!, body, params.id!), 'staff'),
+    route('DELETE', '/api/instructor/classes/:id', ({ params, staff }) => cls().archiveClass(staff!, params.id!), 'staff'),
+    route('POST', '/api/instructor/classes/:id/code', ({ params, staff }) => cls().newCode(staff!, params.id!), 'staff'),
+    route('GET', '/api/instructor/classes/:id/studio', ({ params, staff, query }) => cls().studio(staff!, params.id!, lang(query.get('lang'))), 'staff'),
+    route('POST', '/api/instructor/classes/:id/requests/:learner', ({ params, body, staff }) => cls().approve(staff!, params.id!, params.learner!, body.approve === true), 'staff'),
+    route('POST', '/api/instructor/classes/:id/assignments', ({ params, body, staff }) => cls().saveAssignment(staff!, params.id!, body), 'staff'),
+    route('POST', '/api/instructor/classes/:id/assignments/:aid', ({ params, body, staff }) => cls().saveAssignment(staff!, params.id!, body, params.aid!), 'staff'),
+    route('DELETE', '/api/instructor/classes/:id/assignments/:aid', ({ params, staff }) => cls().deleteAssignment(staff!, params.id!, params.aid!), 'staff'),
+    route('POST', '/api/instructor/classes/:id/posts', ({ params, body, staff }) => cls().post(staff!, params.id!, body), 'staff'),
+    route('DELETE', '/api/instructor/classes/:id/posts/:pid', ({ params, staff }) => cls().deletePost(staff!, params.id!, params.pid!), 'staff'),
+    route('GET', '/api/instructor/packs', ({ staff }) => cls().packs(staff!), 'staff'),
+    route('POST', '/api/instructor/packs', ({ body, staff }) => cls().savePack(staff!, body), 'staff', 128 * 1024),
+    route('POST', '/api/instructor/packs/:id', ({ params, body, staff }) => cls().savePack(staff!, body, params.id!), 'staff', 128 * 1024),
+    route('GET', '/api/admin/packs', ({ staff }) => cls().packs(staff!, true), 'admin'),
+    route('POST', '/api/admin/packs/:id/review', ({ params, body, staff }) => cls().reviewPack(staff!, params.id!, body.approve === true, body.note), 'admin'),
+
+    // instructor (old practice-loop overview)
     route('GET', '/api/instructor/overview', () => instructor.overview(), 'instructor'),
     route('POST', '/api/instructor/seed-demo', async () => {
       if (!d.config.allowSeed) throw new AppError('forbidden', 403, 'Demo seeding is turned off.');
@@ -332,17 +366,31 @@ export function createApp(d: AppDeps) {
       let email: string | null = null;
       let anonId: string | undefined;
       let signedIn: boolean | undefined;
-      if (match.r.auth === 'learner' || match.r.auth === 'admin') {
+      let staff: Staff | undefined;
+      // Signed-in instructors and admins may also use the older instructor and editor endpoints.
+      const staffFor = (id: { learnerId: string; email: string | null; signedIn?: boolean }) => {
+        const isIn = Boolean(id.signedIn) || d.auth.mode === 'supabase';
+        const role = isIn && id.email && d.admin ? d.admin.roleOf(id.email) : 'learner';
+        return role === 'admin' || role === 'instructor' ? { learnerId: id.learnerId, email: id.email!, role } as Staff : undefined;
+      };
+      if ((match.r.auth === 'instructor' || match.r.auth === 'editor') && String(req.headers.authorization ?? '').startsWith('Bearer ')) {
+        staff = staffFor(await d.auth.identify(req));
+      }
+      if (staff) {
+        /* signed-in staff: allowed */
+      } else if (match.r.auth === 'learner' || match.r.auth === 'admin' || match.r.auth === 'staff') {
         const id = await d.auth.identify(req);
         learnerId = id.learnerId;
         email = id.email;
         anonId = id.anonId;
         signedIn = id.signedIn;
         if (id.setCookie) headers['set-cookie'] = id.setCookie;
-        if (match.r.auth === 'admin') {
+        if (match.r.auth === 'admin' || match.r.auth === 'staff') {
           const isIn = Boolean(id.signedIn) || d.auth.mode === 'supabase';
-          if (!isIn || !id.email) throw new AuthError('Sign in with your admin account.');
-          if (!d.admin?.isAdmin(id.email)) throw new AppError('forbidden', 403, 'This account is not an admin. Ask an admin to give you the role.');
+          if (!isIn || !id.email) throw new AuthError(match.r.auth === 'admin' ? 'Sign in with your admin account.' : 'Sign in with your instructor account.');
+          staff = staffFor(id);
+          if (match.r.auth === 'admin' && staff?.role !== 'admin') throw new AppError('forbidden', 403, 'This account is not an admin. Ask an admin to give you the role.');
+          if (match.r.auth === 'staff' && !staff) throw new AppError('forbidden', 403, 'This account is not an instructor yet. Ask an admin to give you the instructor role.');
         }
       } else if (match.r.auth === 'editor' && !d.config.instructorKey && d.config.editLocked) {
         throw new AppError('edit_locked', 403, 'Editing is turned off until an instructor key (INSTRUCTOR_KEY) is set on the server.');
@@ -354,7 +402,7 @@ export function createApp(d: AppDeps) {
       const params: Record<string, string> = {};
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
       const body = await readJson(req, match.r.maxBody);
-      const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers });
+      const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers, staff });
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
       if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details } }, headers);

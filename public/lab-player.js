@@ -439,11 +439,13 @@ export async function mountLab(host, { track, topic, labId }) {
   playBtn.onclick = play;
   range.oninput = () => { stop(); show(Number(range.value)); };
 
+  let reported = false;
   async function doRun() {
     stop();
     note.textContent = L.loading;
     try {
       run = await api('POST', `/api/learn/${track}/${topic}/labs/${labId}/run`, { input: values, lang: getLang() });
+      if (!reported) { reported = true; api('POST', '/api/learn-activity', { kind: 'lab', track, topic, lab: labId }).catch(() => {}); }
       snaps = [startState(run.kind, run.init)];
       show(0);
     } catch (e) { note.textContent = e.message; note.className = 'lp-note err'; }

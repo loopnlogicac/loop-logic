@@ -1,5 +1,5 @@
 // Learner dashboard: continue reading, progress, practice, focus areas, receipts.
-import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn } from './common.js';
+import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn, currentUser, showSignIn, toast } from './common.js';
 
 const T = {
   en: {
@@ -48,7 +48,7 @@ function render(d) {
   const L = t();
   applyI18n(L);
   document.title = `${L.hello} · Loop & Logic`;
-  const nodes = [el('div', { class: 'page-head' }, el('h1', { text: L.hello }), el('p', { text: L.helloSub }))];
+  const nodes = [el('div', { class: 'page-head' }, el('h1', { text: L.hello }), el('p', { text: L.helloSub })), classesBox()];
 
   if (d.isNew) nodes.push(welcome(L));
 
@@ -141,6 +141,47 @@ function render(d) {
     el('div', { style: 'display:grid;gap:20px' }, lessons, practice),
     el('div', { style: 'display:grid;gap:20px' }, focus, receipts)));
   main.replaceChildren(...nodes);
+}
+
+// ── My classes: join with the code from your instructor; see posts and assignments ──
+const C = {
+  en: { h: 'My classes', join: 'Join a class', code: 'Class code from your instructor', go: 'Join', signIn: 'Sign in to join your class', note: 'When you join, your instructor sees your progress in their class: topics opened, quiz scores and labs run. Your questions to the AI stay private.', pending: 'Waiting for your instructor to accept you', due: 'due', noDue: 'no due date', done: 'Done', todo: 'To do', read: 'Read', quiz: 'Pass the quiz', lab: 'Run the lab', leave: 'Leave class', left: 'You left the class.', joined: 'You joined', waiting: 'Request sent to', none: 'No assignments yet.', by: 'Instructor' },
+  bn: { h: 'আমার ক্লাস', join: 'ক্লাসে যোগ দাও', code: 'শিক্ষকের দেওয়া ক্লাস কোড', go: 'যোগ দাও', signIn: 'ক্লাসে যোগ দিতে সাইন ইন করো', note: 'যোগ দিলে তোমার শিক্ষক তাঁর ক্লাসে তোমার অগ্রগতি দেখবেন: কোন টপিক খুলেছ, কুইজের নম্বর আর কোন ল্যাব চালিয়েছ। এআই-কে করা প্রশ্ন গোপন থাকবে।', pending: 'শিক্ষকের অনুমোদনের অপেক্ষায়', due: 'জমার শেষ দিন', noDue: 'শেষ দিন নেই', done: 'সম্পন্ন', todo: 'বাকি', read: 'পড়ো', quiz: 'কুইজে পাস করো', lab: 'ল্যাব চালাও', leave: 'ক্লাস ছাড়ো', left: 'তুমি ক্লাস ছেড়েছ।', joined: 'যোগ দিয়েছ', waiting: 'অনুরোধ পাঠানো হয়েছে', none: 'এখনো কোনো অ্যাসাইনমেন্ট নেই।', by: 'শিক্ষক' },
+};
+function classesBox() {
+  const L = C[getLang()];
+  const box = el('section', { class: 'card my-classes', 'aria-labelledby': 'mc-h' }, el('h2', { id: 'mc-h', text: L.h }), el('div', { class: 'skeleton' }));
+  const fill = async () => {
+    if (!currentUser()) {
+      box.replaceChildren(el('h2', { id: 'mc-h', text: L.h }), el('p', { class: 'muted small', text: L.note }), el('button', { type: 'button', class: 'btn secondary', text: L.signIn, onclick: () => showSignIn() }));
+      return;
+    }
+    const { classes } = await api('GET', '/api/my-classes').catch(() => ({ classes: [] }));
+    const input = el('input', { type: 'text', id: 'mc-code', placeholder: 'ABCD-EFGH', autocomplete: 'off', style: 'text-transform:uppercase' });
+    const joinBtn = el('button', { type: 'submit', class: 'btn primary', text: L.go });
+    const form = el('form', { class: 'mc-join' }, el('label', { for: 'mc-code', text: L.code }), el('div', { class: 'row' }, input, joinBtn));
+    form.onsubmit = async (e) => {
+      e.preventDefault(); joinBtn.disabled = true;
+      try { const r = await api('POST', '/api/classes/join', { code: input.value }); toast(`${r.status === 'pending' ? L.waiting : L.joined}: ${r.name}`); fill(); } catch (err) { toast(err.message); } finally { joinBtn.disabled = false; }
+    };
+    const kind = { read: L.read, quiz: L.quiz, lab: L.lab };
+    box.replaceChildren(el('h2', { id: 'mc-h', text: L.h }),
+      ...classes.map((c) => el('div', { class: 'mc-class' },
+        el('div', { class: 'mc-head' }, el('strong', { text: c.name }), el('span', { class: 'muted small', text: `${L.by}: ${c.instructor}` })),
+        c.status === 'pending' ? el('p', { class: 'tag', text: L.pending }) : null,
+        ...c.posts.slice(0, 2).map((p) => el('div', { class: 'mc-post' }, el('strong', { text: `${p.pinned ? '📌 ' : ''}${p.title}` }), el('p', { text: p.body }), el('span', { class: 'muted small', text: ago(p.at) }))),
+        c.status === 'active' ? (c.assignments.length ? el('div', { class: 'mc-assign' }, ...c.assignments.map((a) => {
+          const done = a.items.filter((i) => i.done).length;
+          return el('details', { open: done < a.items.length || null },
+            el('summary', {}, el('span', { text: a.title }), el('span', { class: `tag ${done === a.items.length ? 'live' : ''}`, text: `${num(done)}/${num(a.items.length)} · ${a.due ? `${L.due} ${new Date(a.due).toLocaleDateString(getLang() === 'bn' ? 'bn-BD' : 'en-GB')}` : L.noDue}` })),
+            el('ul', {}, ...a.items.map((i) => el('li', {}, el('span', { class: i.done ? 'ok' : 'todo', text: i.done ? '✓' : '○' }), ' ', `${kind[i.kind]}: `,
+              el('a', { href: `/learn.html?track=${encodeURIComponent(i.track)}&topic=${encodeURIComponent(i.topic)}${i.lab ? `#lab-${i.lab}` : ''}`, text: i.title })))));
+        })) : el('p', { class: 'muted small', text: L.none })) : null,
+        el('button', { type: 'button', class: 'linkish small', text: L.leave, onclick: async () => { if (!confirm(`${L.leave}: ${c.name}?`)) return; await api('POST', `/api/classes/${c.id}/leave`); toast(L.left); fill(); } }))),
+      el('details', { class: 'mc-joinbox', open: !classes.length || null }, el('summary', { text: L.join }), el('p', { class: 'muted small', text: L.note }), form));
+  };
+  fill().catch(() => {});
+  return box;
 }
 
 async function load() {

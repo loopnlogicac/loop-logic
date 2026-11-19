@@ -1,5 +1,5 @@
 // Video course player: plays a course's YouTube playlists in order, inside the site.
-import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast, ensureSignedIn, getConfig } from './common.js';
+import { currentUser, fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast, ensureSignedIn, getConfig } from './common.js';
 import { tryNowButton, learnerSections, editLink, openEditor } from './video-extras.js';
 
 const T = {
@@ -23,6 +23,7 @@ const T = {
 const t = () => T[getLang()];
 const params = new URLSearchParams(location.search);
 const courseId = params.get('course') ?? '';
+let wantEdit = location.hash === '#edit'; // from the instructor's content studio
 const main = document.getElementById('main');
 let view = null;
 let config = null;
@@ -101,6 +102,7 @@ function render() {
 
   main.replaceChildren(crumbs, el('div', { class: 'watch', style: 'margin-top:12px' }, left, right));
   fillAdSlots();
+  if (wantEdit && config?.staff && !editing) { wantEdit = false; left.querySelector('.vx-stack + p .linkish')?.click(); }
   main.querySelector('.vlist a[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 
@@ -141,6 +143,7 @@ async function mark(videoId, watched, then) {
 window.addEventListener('popstate', (e) => load(e.state?.v ?? new URLSearchParams(location.search).get('v')));
 await ensureSignedIn();
 config = await getConfig().catch(() => null);
+if (config && currentUser()) config.staff = await api('GET', '/api/me').then((m) => m.role === 'admin' || m.role === 'instructor').catch(() => false);
 mountNav('courses', () => load(view?.current?.id));
 applyI18n(t());
 load(params.get('v'));

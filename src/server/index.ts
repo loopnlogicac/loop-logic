@@ -20,6 +20,7 @@ import { LiveSearch } from '../library/live.ts';
 import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
 import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
+import { ClassService } from '../app/classes.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -55,6 +56,7 @@ const watch = new WatchService(store, extras);
 const tutorials = new TutorialService(store, join(here, '../../content-kit'));
 // Admins: everyone in ADMIN_EMAILS, plus people an admin gives the role in the admin site.
 const admin = new AdminService(store, tutorials, watch, { adminEmails: (env.ADMIN_EMAILS ?? '').split(','), youtubeKey: env.YOUTUBE_API_KEY || null });
+const classes = new ClassService(store, tutorials, extras, { minGroup: Number(env.MIN_GROUP_SIZE ?? 3) });
 await admin.init().catch((e) => console.warn(`admin: could not load admin content: ${(e as Error).message}`));
 
 const server = createApp({
@@ -67,6 +69,7 @@ const server = createApp({
   extras,
   tutorials,
   admin,
+  classes,
   store,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),

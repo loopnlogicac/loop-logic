@@ -117,14 +117,14 @@ function quizCard(courseId, video, L) {
 
 /** "Edit" link for instructors; opens the editor in place of the learner sections. */
 export function editLink(config, onOpen) {
-  if (!config || config.editing === 'locked') return null;
+  if (!config || (config.editing === 'locked' && !config.staff)) return null;
   return el('button', { class: 'linkish small', type: 'button', onclick: onOpen, text: t().edit });
 }
 
 /** Loads the full extras (asking for the instructor key if needed) and renders the editor. */
 export async function openEditor(target, video, course, config, onDone) {
   const L = t();
-  if (config.editing === 'key' && !store.get('ll_ikey', 'session')) {
+  if (config.editing === 'key' && !config.staff && !store.get('ll_ikey', 'session')) {
     const k = window.prompt(L.keyAsk);
     if (!k) return;
     store.set('ll_ikey', k.trim(), 'session');

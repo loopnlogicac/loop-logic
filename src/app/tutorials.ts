@@ -293,6 +293,7 @@ export class TutorialService {
     const given = (answers && typeof answers === 'object' ? answers : {}) as Record<string, unknown>;
     const results: Record<string, { chosen: number | null; correct: boolean; answer: number; explanation: string }> = {};
     let score = 0, answered = 0;
+    const correctById: Record<string, boolean> = {};
     for (const q of x.json.quiz ?? []) {
       const c = given[q.id];
       const chosen = Number.isInteger(c) ? Number(c) : null;
@@ -300,10 +301,25 @@ export class TutorialService {
       answered++;
       const correct = chosen === q.answer;
       if (correct) score++;
+      correctById[q.id] = correct;
       results[q.id] = { chosen, correct, answer: q.answer, explanation: String(q.explanation ?? '') };
     }
-    if (answered) await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: `tutorial:${trackId}:${topicId}`, blockId: null, type: 'quiz', payload: { score, answered, total: (x.json.quiz ?? []).length }, at: new Date().toISOString() }]);
+    if (answered) await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: `tutorial:${trackId}:${topicId}`, blockId: null, type: 'quiz', payload: { score, answered, total: (x.json.quiz ?? []).length, correct: correctById }, at: new Date().toISOString() }]);
     return { score, answered, total: (x.json.quiz ?? []).length, results };
+  }
+
+  /** A learner opened a topic, or ran one of its labs (for their instructor's class view). */
+  async recordActivity(learnerId: string, body: Json) {
+    const kind = body?.kind === 'lab' ? 'lab' : 'view';
+    const { x } = this.topicOr404(String(body?.track ?? ''), String(body?.topic ?? ''), 'en');
+    const lab = kind === 'lab' ? String(body?.lab ?? '') : null;
+    if (lab && !(x.json.labs ?? []).includes(lab)) throw new AppError('not_found', 404, 'No such lab.');
+    const lessonId = `tutorial:${x.track}:${x.id}`;
+    const recent = (await this.store.readingEvents(learnerId)).slice(-50);
+    const type = kind === 'lab' ? 'lab_check' : 'view';
+    if (recent.some((e) => e.type === type && e.lessonId === lessonId && (!lab || e.payload.lab === lab) && Date.now() - Date.parse(e.at) < 3_600_000)) return { ok: true, repeat: true };
+    await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId, blockId: lab, type, payload: lab ? { lab } : {}, at: new Date().toISOString() }]);
+    return { ok: true };
   }
 
   solution(trackId: string, topicId: string, practiceId: string, lang: Lang) {
