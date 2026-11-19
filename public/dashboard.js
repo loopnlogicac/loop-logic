@@ -3,7 +3,6 @@ import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSigned
 
 const T = {
   en: {
-    customQuiz: 'Custom quiz',
     tagline: 'Learn with purpose', foot: 'Loop & Logic · answers come only from reviewed notes and approved websites',
     hello: 'Your learning', helloSub: 'Pick up where you left off. Everything here comes from what you did on Loop & Logic.',
     welcome: 'Welcome to Loop & Logic', welcomeSub: 'Start with a five-minute lesson. Select any line you don’t understand — you’ll get a short answer with its source.',
@@ -13,12 +12,12 @@ const T = {
     lessons: 'Your lessons', notStarted: 'Not started', start: 'Start', open: 'Open',
     practice: 'Practice and sealed check', noPractice: 'You haven’t practised yet.', noPracticeSub: 'Judge an AI coworker’s pricing advice, then prove it on a fresh task with no help.', practiceCta: 'Start practice',
     phase: { practice: 'Practising', assessment: 'Sealed check open', complete: 'Completed' },
+    customQuiz: 'Custom quiz',
     attempts: (a, c, i) => `${a} attempts · ${c} correct · ${i} without help`, ready: 'Ready for the sealed check', keepGoing: 'Get two right without help to unlock the sealed check.', go: 'Go to practice',
     mistakes: 'Mistakes you make most', focus: 'Worth another look', focusNone: 'Nothing flagged. When a paragraph takes you a long time and you ask about it, it shows up here.', reread: 'Re-read',
     receipts: 'Evidence receipts', shown: 'Shown alone', notYet: 'Not yet shown', withHelp: 'With help', noReceipts: 'Finish a sealed check to get your first receipt.',
   },
   bn: {
-    customQuiz: 'নিজের তৈরি কুইজ',
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
     hello: 'তোমার শেখা', helloSub: 'যেখানে থেমেছিলে সেখান থেকে শুরু করো। এখানের সবকিছু লুপ অ্যান্ড লজিকে তোমার কাজ থেকে।',
     welcome: 'লুপ অ্যান্ড লজিকে স্বাগতম', welcomeSub: 'পাঁচ মিনিটের একটা পাঠ দিয়ে শুরু করো। যে লাইন বোঝোনি তা সিলেক্ট করো — উৎসসহ ছোট উত্তর পাবে।',
@@ -28,6 +27,7 @@ const T = {
     lessons: 'তোমার পাঠ', notStarted: 'শুরু হয়নি', start: 'শুরু করো', open: 'খোলো',
     practice: 'অনুশীলন ও বন্ধ যাচাই', noPractice: 'এখনো অনুশীলন করোনি।', noPracticeSub: 'এআই সহকর্মীর দামের পরামর্শ যাচাই করো, তারপর সাহায্য ছাড়া নতুন প্রশ্নে প্রমাণ দাও।', practiceCta: 'অনুশীলন শুরু করো',
     phase: { practice: 'অনুশীলন চলছে', assessment: 'বন্ধ যাচাই খোলা', complete: 'সম্পন্ন' },
+    customQuiz: 'নিজের তৈরি কুইজ',
     attempts: (a, c, i) => `${a}টি চেষ্টা · ${c}টি ঠিক · ${i}টি সাহায্য ছাড়া`, ready: 'বন্ধ যাচাইয়ের জন্য প্রস্তুত', keepGoing: 'সাহায্য ছাড়া দুটি ঠিক করলে বন্ধ যাচাই খুলবে।', go: 'অনুশীলনে যাও',
     mistakes: 'সবচেয়ে বেশি যে ভুল হয়', focus: 'আরেকবার দেখা ভালো', focusNone: 'কিছু চিহ্নিত হয়নি। কোনো অনুচ্ছেদে অনেক সময় লাগলে আর সেটা নিয়ে প্রশ্ন করলে এখানে দেখাবে।', reread: 'আবার পড়ো',
     receipts: 'প্রমাণপত্র', shown: 'একা দেখিয়েছ', notYet: 'এখনো দেখানো হয়নি', withHelp: 'সাহায্য নিয়ে', noReceipts: 'বন্ধ যাচাই শেষ করলে প্রথম প্রমাণপত্র পাবে।',
