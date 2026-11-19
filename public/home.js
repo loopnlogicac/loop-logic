@@ -24,7 +24,7 @@ const T = {
       ['Labs you can play', 'Watch sorting, linked lists, KNN and more step by step, on your own input, with each step explained.'],
       ['Quizzes that adapt', 'Short quizzes after each topic show what to revisit, and lessons adjust to how you read.']],
     ytH: 'All our playlists are free on YouTube', ytP: (n) => `Subscribe to Loop & Logic for new Bangla lessons every week. ${n} people already have.`, ytCta: 'Open the channel',
-    footP: 'Answers come only from reviewed notes and approved websites.', fTut: 'Tutorials', fVid: 'Video courses', fPrice: 'Pricing', fPractice: 'Practice', fDash: 'My dashboard', fInst: 'For instructors',
+    footP: 'Answers come only from reviewed notes and approved websites.', fTut: 'Tutorials', fVid: 'Video courses', fPrice: 'Pricing', fPractice: 'Practice', fDash: 'My dashboard', fInst: 'For instructors', fPriv: 'Privacy', fTerms: 'Terms',
   },
   bn: {
     tagline: 'উদ্দেশ্য নিয়ে শেখা',
@@ -48,7 +48,7 @@ const T = {
       ['খেলার মতো ল্যাব', 'সর্টিং, লিংকড লিস্ট, KNN আর আরও অনেক কিছু ধাপে ধাপে দেখো, নিজের ইনপুটে, প্রতিটি ধাপের ব্যাখ্যাসহ।'],
       ['মানিয়ে নেওয়া কুইজ', 'প্রতিটি টপিকের পর ছোট কুইজ দেখায় কী আবার পড়তে হবে, আর তুমি যেভাবে পড়ো পাঠ সেভাবে বদলায়।']],
     ytH: 'আমাদের সব প্লেলিস্ট ইউটিউবে ফ্রি', ytP: (n) => `প্রতি সপ্তাহে নতুন বাংলা পাঠের জন্য লুপ অ্যান্ড লজিক সাবস্ক্রাইব করো। ইতিমধ্যে ${n} জন করেছে।`, ytCta: 'চ্যানেল খোলো',
-    footP: 'উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে।', fTut: 'টিউটোরিয়াল', fVid: 'ভিডিও কোর্স', fPrice: 'মূল্য', fPractice: 'অনুশীলন', fDash: 'আমার ড্যাশবোর্ড', fInst: 'শিক্ষকদের জন্য',
+    footP: 'উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে।', fTut: 'টিউটোরিয়াল', fVid: 'ভিডিও কোর্স', fPrice: 'মূল্য', fPractice: 'অনুশীলন', fDash: 'আমার ড্যাশবোর্ড', fInst: 'শিক্ষকদের জন্য', fPriv: 'গোপনীয়তা', fTerms: 'শর্তাবলি',
   },
 };
 const t = () => T[getLang()];
@@ -147,7 +147,7 @@ function render() {
   document.getElementById('home').replaceChildren(...[hero, tracks, pro, courses, how, yt].filter(Boolean));
   document.getElementById('foot').replaceChildren(el('div', { class: 'wrap h-foot' },
     el('div', {}, el('strong', { text: 'loop & logic' }), el('p', { text: L.footP })),
-    el('nav', { 'aria-label': 'Footer' }, el('a', { href: '/learn.html', text: L.fTut }), el('a', { href: '/courses.html', text: L.fVid }), el('a', { href: '/practice.html', text: L.fPractice }), el('a', { href: '/pricing.html', text: L.fPrice }), el('a', { href: '/dashboard.html', text: L.fDash }), el('a', { href: '/instructor.html', text: L.fInst }))));
+    el('nav', { 'aria-label': 'Footer' }, el('a', { href: '/learn.html', text: L.fTut }), el('a', { href: '/courses.html', text: L.fVid }), el('a', { href: '/practice.html', text: L.fPractice }), el('a', { href: '/pricing.html', text: L.fPrice }), el('a', { href: '/dashboard.html', text: L.fDash }), el('a', { href: '/instructor.html', text: L.fInst }), el('a', { href: '/privacy.html', text: L.fPriv }), el('a', { href: '/terms.html', text: L.fTerms }))));
 }
 
 async function load() {
