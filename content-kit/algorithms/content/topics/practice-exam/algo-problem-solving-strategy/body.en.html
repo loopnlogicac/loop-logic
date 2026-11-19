@@ -1,0 +1,70 @@
+<h2 id="introduction">Turn a statement into a precise contract</h2>
+<p class="lead">A problem statement often gives a story before it gives the useful structure. Your first job is to identify the input, the exact requested output and the constraints. Only then choose an algorithm.</p>
+<p>Suppose a task asks whether two marks sum to a target. Are the marks stored at distinct indices? Can values repeat? Must you print the pair, its positions or only YES? Does the input contain one case or many? Each answer changes what a correct solution must retain.</p>
+<p>We will use pair sum as a running example. The contract is existence of two distinct entries whose sum equals a target. Equal values at different positions are allowed. A single entry equal to half the target is insufficient.</p>
+<p>A reliable workflow combines a small reference solution, a proof for a faster method and tests that challenge assumptions. Constraints help choose the budget, but they do not replace the proof. A program can run quickly and still answer the wrong question.</p>
+
+<h2 id="syntax">Write a small mathematical model</h2>
+<p>Let values[0..n) be the input array. We need indices i&lt;j with values[i]+values[j]==target. The inequality makes distinctness explicit and prevents counting the same unordered pair twice.</p>
+<p>The first implementation tries all such pairs. It is slow for large n but easy to inspect. The second sorts a copy in place and maintains left&lt;right. It only prints existence, so losing original positions is acceptable here. A task asking for original indices would need records containing both value and index.</p>
+<p>The third example changes the query to a range sum. Define prefix[i] as the sum before index i. Then the sum over half-open range [l,r) is prefix[r]-prefix[l]. This illustrates choosing a technique from the required query rather than from familiar keywords.</p>
+<pre><code class="language-text">sort values in ascending order
+left = 0; right = n - 1
+while left &lt; right:
+    sum = values[left] + values[right]
+    if sum == target: return YES
+    if sum &lt; target: left++
+    else: right--
+return NO</code></pre>
+
+<h2 id="how-it-works">Let the constraints guide a shortlist</h2>
+<p>For n around twenty, subset enumeration may be feasible. For n around two hundred thousand, a quadratic pair loop is usually unrealistic. Sorting, linear scans, logarithmic data structures or suitable hashing deserve attention. These are rough planning clues, not universal time-limit promises.</p>
+<p>For a pair sum after sorting, compare the smallest and largest remaining entries. If their sum is too small, the smallest entry cannot succeed with any other remaining partner. Discard it by increasing left. If the sum is too large, the largest entry cannot succeed with any other remaining partner. Decrease right.</p>
+<p>Negative values do not break that ordering argument. A sorted array still orders all possible partners. By contrast, sliding-window rules that rely on sums only increasing may fail with negative values. Name the monotonic property instead of assuming every two-index method has the same preconditions.</p>
+<p>If a task has overlapping subproblems and small state dimensions, try DP. If a locally attractive choice appears, seek an exchange argument or a counterexample before choosing greedy. If choices constrain future choices and n is small, backtracking may fit.</p>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Keep a quadratic reference</h3>
+<p>The all-pairs version checks i&lt;j directly. For [1,2,4,8] at target six it prints YES. It is a useful reference for short inputs because its logic closely follows the contract.</p>
+<div data-example="ex-1"></div>
+<h3>Use ordering to discard impossible partners</h3>
+<p>The sorted version prints the same result while moving its endpoints inward. It uses qsort for compact preparation; the C standard does not guarantee qsort has O(n log n) worst-case time.</p>
+<div data-example="ex-2"></div>
+<h3>Change the query, change the technique</h3>
+<p>For [1,2,4,8], the prefix example reports six on [1,3) and zero on the empty range [2,2). Pair search and repeated range sums need different summaries of the same data.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Discard one endpoint with a proof</h2>
+<p>Sorted values [1,2,4,8] have target six. The first sum is nine, so discard eight. The next sum is five, so discard one. The remaining two plus four reach the target.</p>
+<p>The table records the decision before moving a pointer. That order helps detect loops that update both pointers after only one inequality and accidentally skip an answer.</p>
+<table class="ref"><caption>Two pointers on four sorted values</caption><thead><tr><th scope="col">left value</th><th scope="col">right value</th><th scope="col">Sum</th><th scope="col">Action</th></tr></thead><tbody><tr><td>1</td><td>8</td><td>9</td><td>Too large: move right</td></tr><tr><td>1</td><td>4</td><td>5</td><td>Too small: move left</td></tr><tr><td>2</td><td>4</td><td>6</td><td>Found two distinct entries</td></tr></tbody></table>
+
+<h2 id="correctness">Maintain a search region</h2>
+<p>The invariant is that any still-possible pair lies between left and right, unless an answer was already found. Initially every index is present. When the endpoint sum is below the target, pairing the left value with a smaller partner cannot increase it enough. No solution uses that left endpoint, so removing it is safe.</p>
+<p>The symmetric argument applies to an excessive sum at the right endpoint. Equality returns a real pair because left&lt;right. When the pointers meet or cross, fewer than two candidates remain and no solution was discarded.</p>
+<p>The pair reference gives an independent route through all index pairs. Agreement on many small cases is useful debugging evidence. The ordering proof establishes why the faster method works for every valid bounded input, including cases you never generated.</p>
+
+<h2 id="complexity">Budget time and memory together</h2>
+<p>The reference inspects n(n-1)/2 pairs, so its time is O(n^2) and extra space O(1). The pointer scan moves each endpoint at most n times in total, giving O(n) time after sorting.</p>
+<p>With a guaranteed O(n log n) sort, the complete method has that time bound. The example uses library qsort, whose formal C interface does not promise a particular complexity. If a worst-case bound is required, use a sort with a stated guarantee such as merge sort or heap sort and account for its memory.</p>
+<p>Prefix sums need O(n) preparation and O(n) stored totals, then O(1) per range query. A huge value range can make a frequency array wasteful even when n is small. Estimate actual bytes as well as symbolic growth, and include recursion stack or retained output when relevant.</p>
+
+<h2 id="testing">Create cases that attack the reasoning</h2>
+<p>Start with n=0 and n=1 to test distinct-index handling. Then try [3,3] at target six, which must succeed, and [3] at target six, which must fail. Add all-negative values, a missing target, and a pair using the first and last sorted positions.</p>
+<p>Use an exhaustive or seeded small generator to compare the fast result with the reference. When they disagree, shrink the case by removing entries while preserving the failure. A short counterexample is easier to reason about than a long random list.</p>
+<p>Check numeric bounds before running large cases. Even if each value fits int, their sum might not. The examples restrict values and target to minus one thousand through one thousand, so pair sums remain safe. General inputs may need long long.</p>
+
+<h2 id="common-mistakes">A familiar technique still needs its assumptions</h2>
+<p>Using left&lt;=right permits one entry to partner with itself. Requiring left&lt;right encodes the actual contract. Rejecting all equal values is also wrong because duplicates at different indices are allowed.</p>
+<p>Do not sort away original indices when the output asks for them. Keep records or reconstruct carefully with multiplicities. Also avoid a subtraction-based qsort comparator that can overflow; comparing a&gt;b and a&lt;b gives a safe three-way result.</p>
+<p>Choosing greedy because the input is large does not prove it correct. A fast incorrect method still fails. Return to the structure of feasible solutions and explain what each discarded possibility can no longer achieve.</p>
+
+<h2 id="practice-platforms">Build a repeatable study habit</h2>
+<p>On Beecrowd, practise reading exact input termination rules and output formatting with small problems first. On Codeforces, use contest difficulty and technique tags to select a gradual challenge. Read an editorial after making a serious attempt, then explain the key invariant in your own words.</p>
+<p>After solving a problem, revisit one failed assumption and one useful edge case. Reimplement the central idea later without copying the previous code. A list of accepted submissions is less useful than being able to justify why a pointer move, recurrence or exchange is safe.</p>
+
+<h2 id="version-notes">C17 input and comparison checks</h2>
+<p>Every input conversion is checked before use. The demonstration capacity is one hundred entries, and its validated sums fit int. qsort may rearrange equal entries in any order; existence of a pair does not depend on that order. Output requiring stable records would need a stronger convention.</p>
+
+<h2 id="summary">Choose, justify, compare</h2>
+<p>A strong solution starts with an exact contract, uses constraints to shortlist methods, and proves the step that removes work. A small reference and targeted edge cases help find implementation mistakes. Keep those habits as you move from classroom examples to contest problems.</p>
