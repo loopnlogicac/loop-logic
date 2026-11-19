@@ -188,7 +188,7 @@ def check_drawn_arithmetic(id, input, result):
 
 
 def main():
-    assert json.loads((ROOT/'manifest.json').read_text())['packageVersion'] == '0.4.0'
+    assert json.loads((ROOT/'manifest.json').read_text())['packageVersion'] == '0.5.0'
     rng = np.random.default_rng(2026)
     traces = programs = 0
     for entry in json.loads((ROOT/'shared/math-labs.json').read_text())['labs']:

@@ -1,0 +1,74 @@
+<h2 id="introduction">Remainders connect several useful tools</h2>
+<p class="lead">Suppose you want the largest equal-sized groups that divide two class sizes without leftovers. That is a greatest-common-divisor question. If you want every prime roll number up to a limit, a sieve answers a different number question efficiently. Modular arithmetic connects both ideas to algorithms involving cycles and residues.</p>
+<p>The greatest common divisor, gcd(a,b), is the largest positive integer dividing both nonnegative inputs, when they are not both zero. Euclid computes it by repeatedly replacing a pair with a smaller remainder pair.</p>
+<p>Extended Euclid also finds coefficients x and y satisfying ax+by=gcd(a,b). These coefficients explain when division modulo an integer is possible. A modular inverse of a is a number x such that a*x is congruent to one modulo m.</p>
+<p>We will implement all three tools with small explicit arithmetic bounds. The central habit is to preserve an equation or divisibility fact while shrinking the work. Memorising the final formulas is less useful than knowing why each transformation is valid.</p>
+
+<h2 id="syntax">State each number domain</h2>
+<p>Euclid accepts a and b in zero through one million, excluding the pair zero,zero. While b is nonzero, compute remainder a%b, replace a by b and b by the remainder. Once b is zero, a is the gcd.</p>
+<p>Extended Euclid uses the same recursion. The base case b=0 returns a with coefficients one and zero. After solving b*x1+(a%b)*y1=g, substitute a%b=a-(a/b)*b. The new coefficients are x=y1 and y=x1-(a/b)*y1.</p>
+<p>The sieve accepts an upper limit n from zero through one hundred. A composite flag means definitely not prime. Mark zero and one separately, then cross off multiples of every still-unmarked p through the square root of n.</p>
+<p>The inverse example requires modulus at least two. After extended Euclid, gcd one means a*x+m*y=1. Reducing modulo m removes m*y and leaves the inverse relation. Normalise x to zero through m-1 for a conventional answer.</p>
+<pre><code class="language-text">mark 0 and 1 composite
+for p = 2 while p &lt;= n / p:
+    if p is not composite:
+        for multiple = p * p to n, step p:
+            mark multiple composite
+report all unmarked values from 2 through n</code></pre>
+
+<h2 id="how-it-works">Shrink pairs and cross off multiples</h2>
+<p>For a=48 and b=18, the remainder chain is (48,18), (18,12), (12,6), (6,0). The last nonzero remainder is six. Every pair has exactly the same common divisors as the original pair.</p>
+<p>For extended Euclid with 30 and 18, the last nonzero remainder is six. Unwinding gives 6=18-12=18-(30-18)=-30+2*18. The program therefore returns x=-1 and y=2 and prints the recomputed identity.</p>
+<p>For a sieve through twenty, p=2 crosses off 4,6,8,...,20. Next p=3 crosses off 9,12,15,18. Four is already marked, and p=5 would exceed the square-root boundary. Remaining unmarked values are prime.</p>
+<p>The lab displays one flag per integer, including zero and one. A zero flag means not yet ruled out; after all marking passes, exactly the flags for primes remain zero. It lists the surviving numbers at completion, matching the C example.</p>
+<div data-lab="sieve"></div>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Sieve every prime through a limit</h3>
+<p>Input twenty prints 2 3 5 7 11 13 17 19. Limits zero and one print an empty prime list. They do not turn zero or one into primes.</p>
+<div data-example="ex-1"></div>
+<h3>Recover Bézout coefficients</h3>
+<p>Input 30 18 returns gcd six and coefficients minus one and two. The printed identity recomputes a*x+b*y so you can check the meaning of those coefficients.</p>
+<div data-example="ex-2"></div>
+<h3>Find an inverse or explain its absence</h3>
+<p>Input 3 11 prints inverse four. Input 6 9 prints No inverse because their gcd is three. A negative Bézout coefficient is normalised before it is displayed as a residue.</p>
+<div data-example="ex-3"></div>
+<h3>Read Euclid as divisions</h3>
+<p>The final program prints each division for 48 and 18. The remainder decreases until zero, explaining both the result and why the loop terminates.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="trace">Start at p squared</h2>
+<p>When crossing off multiples of p, values 2p,3p,...,(p-1)p already have a factor smaller than p. Earlier passes have marked them. Starting at p*p avoids repeating that earlier work without missing any new composite.</p>
+<p>The loop condition p&lt;=n/p avoids overflowing p*p during the test in a larger implementation. Inside the loop, that condition also establishes that p*p&lt;=n, so the first marked multiple is valid.</p>
+<table class="ref"><caption>Repeated markings such as 12 are harmless</caption><thead><tr><th scope="col">Prime candidate</th><th scope="col">First marked value</th><th scope="col">Newly marked through 20</th></tr></thead><tbody><tr><td>2</td><td>4</td><td>4,6,8,10,12,14,16,18,20</td></tr><tr><td>3</td><td>9</td><td>9,15</td></tr><tr><td>4</td><td>skip</td><td>Already composite</td></tr></tbody></table>
+
+<h2 id="correctness">Preserve divisors and eliminate composites</h2>
+<p>For Euclid, a common divisor of a and b also divides a-q*b=a%b. Conversely, a divisor of b and a%b divides q*b+a%b=a. Thus replacing (a,b) by (b,a%b) preserves the full set of common divisors. At b=0, the largest common divisor is a.</p>
+<p>Extended Euclid preserves an explicit integer combination. The recursive result is a correct equation in b and the remainder. Substitution gives the coefficients returned to the parent. The base equation a*1+0*0=a begins the induction.</p>
+<p>For the sieve, every marked multiple p*k with k&gt;=p is composite. A composite number at most n has a prime factor at most its square root; otherwise both factors would exceed the square root and their product would exceed it. That prime's pass marks the number, so no composite survives.</p>
+<p>Finally, an inverse implies a*x+m*y=1 for some integer y, forcing gcd(a,m)=1. Bézout supplies that equation whenever the gcd is one. This proves both necessity and sufficiency, rather than treating inverse existence as a numerical coincidence.</p>
+
+<h2 id="complexity">Numeric size and bit size differ</h2>
+<p>Euclid uses O(log min(a,b)) remainder steps when both inputs are positive. Every few steps reduce the larger scale substantially; consecutive Fibonacci numbers produce the slowest classical sequence. If one input is zero, the result needs only the boundary case.</p>
+<p>That is a count of arithmetic operations. With arbitrary-precision integers, a division is not constant-time, so a bit-cost analysis needs the operand lengths and the arithmetic implementation. The bounded long long examples use machine arithmetic.</p>
+<p>The sieve performs about n/2+n/3+n/5+... markings over primes. The standard bound is O(n log log n) time and O(n) flags. Extended Euclid uses O(log min(a,b)) recursive depth and coefficient work per level. Inverse computation adds only coefficient normalisation after that call.</p>
+
+<h2 id="edge-cases">No inverse is a valid result</h2>
+<p>gcd(0,b)=b for positive b, and gcd(a,0)=a. The pair zero,zero is excluded because a positive greatest common divisor is not defined by this convention. Negative inputs are also excluded to keep remainder and sign rules focused.</p>
+<p>One and every modulus greater than one are coprime, so one is its own inverse. A=0 has no inverse for those moduli. Composite moduli can still have inverses: three has inverse three modulo eight because their gcd is one.</p>
+<p>Modulo one is a degenerate ring with no ordinary distinct zero and one; the inverse interface starts at two. For negative values, normalize residues with (r%m+m)%m after proving the intermediate addition cannot overflow.</p>
+
+<h2 id="common-mistakes">Division modulo m needs permission</h2>
+<p>Ordinary division cannot replace multiplication by a modular inverse. From 6*x congruent to 3 modulo 9, cancelling six as if it were invertible is invalid. First inspect the gcd.</p>
+<p>A sieve that begins crossing off at p marks the prime itself. Start at p*p, and separately reject zero and one. Do not confuse unmarked with prime before all necessary marking passes finish.</p>
+<p>In extended Euclid, exchanging x1 and y1 without the quotient term breaks the Bézout identity. Recompute a*x+b*y for small test pairs to expose that mistake.</p>
+
+<h2 id="best-practices">Verify equations as well as answers</h2>
+<p>Check that the returned gcd divides both inputs and that the coefficients reproduce it. For an inverse, reduce a*inverse modulo m and require one. For the sieve, compare small results with trial division.</p>
+<p>Arithmetic bounds belong beside the code. Products of coefficients and inputs may need a wider type than the gcd itself. The examples use long long and inputs at most one million, keeping their displayed identity products comfortably within range.</p>
+
+<h2 id="version-notes">Integer operations in C17</h2>
+<p>C17 supplies remainder and integer division but no built-in gcd or inverse function. The implementations here do not need floating-point square roots. Generalising the sieve to a large bound requires checking both allocation size and multiple+=p near the integer limit.</p>
+
+<h2 id="summary">Use the invariant behind the formula</h2>
+<p>Euclid preserves common divisors, extended Euclid preserves a linear identity, and the sieve removes precisely composite numbers. Bézout connects the gcd to modular inverse existence. These tools work reliably when input signs, bounds and residue conventions are explicit.</p>
