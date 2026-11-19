@@ -1,0 +1,49 @@
+<h2 id="introduction">Why databases matter</h2>
+<p class="lead">Imagine three university offices keeping separate lists of the same students. You change your address at registration, but the library still sends letters to your old home. A shared database helps those offices work from the same facts.</p>
+<p><dfn>Data</dfn> means recorded facts, such as a name, a course code or a mark. The number 85 alone tells you little. Knowing that it is Ayesha’s mark in CSE 212 gives it meaning. Good records preserve that context rather than leaving you to guess.</p>
+<p>A <dfn>database</dfn> is an organised collection of related data kept for a purpose. A university database connects students, teachers, courses and enrollments. A shop database connects customers, orders and payments. A library database connects members, books and loans. The relationships make combined questions possible.</p>
+<p>A <dfn>database management system</dfn>, or DBMS, is the software that manages a database. MySQL is one such system. The database is the collection of facts; MySQL is the software controlling that collection. A student portal is another layer: an application that asks the DBMS for data.</p>
+<h2 id="how-it-works">From a question to shared records</h2>
+<p>A DBMS sits between applications and stored information. You request a result, such as the courses in your current registration. The application checks who you are and sends a database request. The DBMS checks permissions, finds matching records and returns the requested values.</p>
+<pre class="diagram">Student portal     Accounts application     Library application
+       \                    |                    /
+                       DBMS server
+                            |
+                 Related stored records</pre>
+<p>Sharing storage does not mean sharing every permission. A teacher may enter marks for assigned sections. A fee clerk may record payments. A student may see their own results. An administrator manages the system and permissions. The database designer decides which facts belong together and what rules connect them.</p>
+<p>A database also has a description of its allowed structure, called a schema. For example, a student record has an identifier and a name. The current records are the data stored within that structure. You will compare schemas and changing contents in <a href="topic:db-data-models">Data Models</a>.</p>
+<p>A DBMS can enforce rules you declare. It can reject a mark of 185 when marks must be between zero and 100. It cannot know that a teacher intended 85 instead of 58. Human checking, clear procedures and recorded responsibility remain necessary.</p>
+<h2 id="worked-examples">Work through three everyday systems</h2>
+<h3>One student address across offices</h3>
+<p>Start with the problem: registration stores Ayesha’s address, while accounts stores another copy. After a move, only one copy changes. This is <dfn>inconsistency</dfn>: records that should agree no longer do. Repeated storage of the same fact is called redundancy.</p>
+<ol>
+<li>Give Ayesha one stable student identifier, such as 101.</li>
+<li>Keep her current contact details in one authoritative student record.</li>
+<li>Make fee and loan records refer to that identifier.</li>
+<li>Allow authorised staff to update the contact details.</li>
+<li>Let other offices read the shared address when they need it.</li>
+</ol>
+<p>The aim is controlled repetition, not a promise that every repeated byte disappears. Reports, backups and performance caches may contain copies. Those copies need defined refresh or recovery rules so people know which version is authoritative.</p>
+<h3>The final available seat</h3>
+<p>Suppose section A has one free seat. Tanvir and Nabila both request it at nearly the same moment. If two applications independently read the same count, both may believe the seat is available. Each then adds an enrollment, exceeding capacity.</p>
+<p>The seat check and enrollment need to form one coordinated operation. A <dfn>transaction</dfn> groups related work that should succeed or fail together. Concurrency control coordinates overlapping operations. The desired outcome is one successful reservation and one clear full-section response. Merely placing records in tables does not guarantee that outcome.</p>
+<h3>A shop’s order and payment records</h3>
+<p>Rumana buys exercise books and pens. Her order has several item rows, while a payment records the amount received. The shop asks two different questions: what was ordered, and what was paid? Keeping them separate allows partial payments without changing the original order.</p>
+<table class="ref"><caption>Different facts need different responsibilities</caption><thead><tr><th>Fact</th><th>Who may change it?</th><th>Useful question</th></tr></thead><tbody>
+<tr><td>Product price</td><td>Authorised sales staff</td><td>What is the current price?</td></tr>
+<tr><td>Order item price</td><td>Controlled order process</td><td>What price was agreed?</td></tr>
+<tr><td>Payment amount</td><td>Accounts staff</td><td>How much has been received?</td></tr>
+</tbody></table>
+<p>The DBMS combines related facts without requiring every employee to edit every table. Historical order prices should survive later catalogue price changes. This is a design decision that database rules can support once the meaning is clear.</p>
+<h3>Recovering after a failure</h3>
+<p>A server may stop during a payment entry, or a disk may fail later. Recovery facilities help return the database to a valid state. Backups protect against wider loss, while transaction records support recovery of completed and interrupted work. A backup plan needs actual restoration checks, not only a scheduled copy.</p>
+<p>A single private file can still be appropriate for a short-lived club list with one editor. A DBMS adds administration, hosting and learning costs. Choose it when shared editing, relationships, permissions, reliable updates or flexible reporting justify those costs. Record count alone is not the whole decision.</p>
+<h2 id="common-mistakes">Mistakes when thinking about databases</h2>
+<h3>Calling the portal the database</h3>
+<p>The portal displays information and handles user interaction. The DBMS manages database requests beneath it. If the portal crashes, stored records may still be safe. If the database service stops, several applications may lose access together. Distinguishing the layers helps you investigate the right failure.</p>
+<h3>Giving every account full access</h3>
+<p>A shared database should not make every user an administrator. Give each account only the access needed for its duties. Review ownership rules too: permission to read results should not automatically expose every student’s results. The application and DBMS both have roles in protecting access.</p>
+<h3>Expecting software to fix unclear facts</h3>
+<p>A DBMS cannot infer whether an order is cancelled or merely unpaid. Define those states with the people who use them. Incorrect assumptions can produce perfectly valid rows that describe the wrong situation. Understand the work before choosing tables and constraints.</p>
+<h2 id="summary">What to carry forward</h2>
+<p>Data records facts, a database organises related facts, and a DBMS manages their use. Shared records reduce conflicting copies when responsibilities and rules are clear. Transactions, permissions and recovery support dependable applications. Next, follow these responsibilities through <a href="topic:db-architecture">DBMS Architecture</a>.</p>

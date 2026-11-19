@@ -1,0 +1,365 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-relational-calculus",
+  "module": "relational-model",
+  "order": 3,
+  "kind": "theory",
+  "title": {
+    "en": "Relational Calculus (Introduction)",
+    "bn": "রিলেশনাল ক্যালকুলাস পরিচিতি"
+  },
+  "summary": {
+    "en": "Express database questions as safe logical conditions using tuple and domain variables.",
+    "bn": "টিউপল ও ডোমেইন ভেরিয়েবল দিয়ে নিরাপদ যৌক্তিক শর্তে ডাটাবেসের প্রশ্ন প্রকাশ করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 65,
+  "prerequisites": [
+    "db-relational-algebra"
+  ],
+  "related": [
+    "db-sql-introduction"
+  ],
+  "keywords": [
+    "relational calculus (introduction)",
+    "relational model",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "CHECK constraints are enforced from MySQL 8.0.16. The examples also run on MySQL 8.4."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Describe the answer with a condition"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Variables, predicates and quantifiers"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Check formulas against university stories"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Logical expressions need careful boundaries"
+    },
+    {
+      "id": "summary",
+      "title": "Say what qualifies and what must exist"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "An existential condition in SQL",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The witness is a result with at least 80 marks. Students 101, 102 and 104 have such a result, and each student appears once.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Every enrollment has a result",
+      "level": "advanced",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Only student 107 has an enrollment without a result. Student 108 qualifies because there is no enrollment that violates the rule: this is vacuous truth.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Write a tuple predicate",
+      "statementHtml": "<p>Express the IDs of CSE students using tuple relational calculus.</p>",
+      "hints": [
+        "State the variable’s range before its comparison."
+      ],
+      "answerHtml": "<p>{s.student_id | Students(s) ∧ s.department_id = 1}. Students(s) restricts s to existing student tuples. The department condition keeps only CSE rows. The result projects student_id, not the whole tuple.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Use a result witness",
+      "statementHtml": "<p>Express students who have at least one mark of 80 or more.</p>",
+      "hints": [
+        "A high result belonging to a different student is not a witness."
+      ],
+      "answerHtml": "<p>{s.student_id | Students(s) ∧ ∃r (Results(r) ∧ r.student_id = s.student_id ∧ r.marks ≥ 80)}. The witness r must belong to the same student. Ayesha, Tanvir and Rafi qualify in the university data.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Translate to domain variables",
+      "statementHtml": "<p>For S(id, name, dept), express names in department 1 using domain relational calculus.</p>",
+      "hints": [
+        "Bind all fields of the relation, even fields not returned."
+      ],
+      "answerHtml": "<p>{&lt;n&gt; | ∃i ∃d (S(i,n,d) ∧ d = 1)}. Each variable holds one attribute value. The relation predicate binds the three values to the same row. The existential variables do not appear in the returned one-column tuple.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Avoid vacuous acceptance",
+      "statementHtml": "<p>A scholarship rule requires at least one enrollment and a result for every enrollment. Explain both parts.</p>",
+      "hints": [
+        "Try the rule on a student with no enrollment rows."
+      ],
+      "answerHtml": "<p>First require an enrollment witness for the student. Then require that no enrollment lacks a matching result. Without the first part, Fahim, who has no enrollments, satisfies the universal condition vacuously. The scholarship rule deliberately excludes him.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Repair an unsafe complement",
+      "statementHtml": "<p>Explain why {x | NOT Students(x)} is unsafe and describe a finite alternative.</p>",
+      "hints": [
+        "An absence condition needs a defined set of candidates."
+      ],
+      "answerHtml": "<p>The complement can include unlimited tuples outside Students, so the answer depends on an unspecified universe. Start instead from a finite relation such as Applicants(x), then keep applicants absent from Students. Both the range and comparison keys must be explicit.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How does calculus differ from an algebra expression?",
+      "options": [
+        "It forces a disk-read sequence",
+        "It forbids logical variables",
+        "It defines only indexes",
+        "It states a condition answers must satisfy"
+      ],
+      "answer": 3,
+      "explanation": "Calculus expresses what qualifies, while algebra composes operations; neither prescribes a physical plan."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a tuple variable represent in tuple relational calculus?",
+      "options": [
+        "A complete tuple from a relation",
+        "Only one numeric digit",
+        "A disk page identifier",
+        "A SQL connection password"
+      ],
+      "answer": 0,
+      "explanation": "Tuple variables have named attributes and range over relation rows."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a domain variable represent?",
+      "options": [
+        "A whole table definition",
+        "One attribute value",
+        "Only an internet domain name",
+        "A storage engine"
+      ],
+      "answer": 1,
+      "explanation": "Domain calculus uses variables for individual column values."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does ∃r mean in a database predicate?",
+      "options": [
+        "Every r is suitable",
+        "No r can exist",
+        "There exists a suitable r",
+        "r is always a key"
+      ],
+      "answer": 2,
+      "explanation": "The existential quantifier asks for at least one witness satisfying the predicate."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does ∀e mean over a stated enrollment range?",
+      "options": [
+        "Exactly one enrollment must match",
+        "Some enrollment must match",
+        "The range is sorted",
+        "Every enrollment in that range must meet the condition"
+      ],
+      "answer": 3,
+      "explanation": "Universal quantification tests each member of the stated range."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why restrict a calculus variable to Students?",
+      "options": [
+        "To give it a finite database range",
+        "To choose a font",
+        "To force marks into text",
+        "To disable comparison"
+      ],
+      "answer": 0,
+      "explanation": "Range restriction prevents answers from wandering over unrelated values outside the database."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is wrong with asking for all x that are not stored students without a finite range?",
+      "options": [
+        "It always returns one row",
+        "It may describe infinitely many outside values",
+        "It is exactly a primary-key constraint",
+        "It automatically becomes a view"
+      ],
+      "answer": 1,
+      "explanation": "An unrestricted complement can include unlimited values absent from stored relations."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which SQL construct naturally expresses an existential witness?",
+      "options": [
+        "ORDER BY alone",
+        "DROP TABLE",
+        "EXISTS",
+        "AUTO_INCREMENT"
+      ],
+      "answer": 2,
+      "explanation": "EXISTS checks whether a subquery has at least one qualifying row."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A student has no enrollments. Does every enrollment have a result for that student hold?",
+      "options": [
+        "No, because the student must fail",
+        "Only if a zero mark is inserted",
+        "Only if the name is known",
+        "Yes, vacuously, unless a separate existence condition is required"
+      ],
+      "answer": 3,
+      "explanation": "There is no counterexample enrollment; requiring at least one enrollment is an additional predicate."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How does SQL differ from classical safe calculus?",
+      "options": [
+        "SQL has duplicates and NULL unless handled explicitly",
+        "SQL always uses set semantics",
+        "SQL cannot express EXISTS",
+        "SQL has no conditions"
+      ],
+      "answer": 0,
+      "explanation": "DISTINCT and explicit NULL rules may be needed to match classical set-based logic."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which formula states that every required section is enrolled?",
+      "options": [
+        "There exists one enrolled section",
+        "There is no required section without a matching enrollment",
+        "There exists one missing section",
+        "The student has a name"
+      ],
+      "answer": 1,
+      "explanation": "Universal conditions can be rewritten as absence of a counterexample."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does domain independence mean here?",
+      "options": [
+        "Every column must use the same SQL type",
+        "No relation may contain text",
+        "Answers do not change when unrelated outside values enlarge the universe",
+        "Every DBMS gives identical formatting"
+      ],
+      "answer": 2,
+      "explanation": "A safe expression derives its answers from relevant finite data rather than an arbitrary outside domain."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Calculus describes qualifying answers through predicates.",
+      "bn": "ক্যালকুলাসে শর্ত দিয়ে কাঙ্ক্ষিত উত্তর বর্ণনা করা হয়।"
+    },
+    {
+      "en": "Tuple variables range over complete relation rows.",
+      "bn": "টিউপল ভেরিয়েবল একটি রিলেশনের পুরো সারি বোঝায়।"
+    },
+    {
+      "en": "Domain variables represent individual attribute values.",
+      "bn": "ডোমেইন ভেরিয়েবল আলাদা অ্যাট্রিবিউটের মান বোঝায়।"
+    },
+    {
+      "en": "Existential quantification asks whether a witness exists.",
+      "bn": "অস্তিত্বসূচক কোয়ান্টিফায়ার খোঁজে অন্তত একটি প্রমাণ আছে কি না।"
+    },
+    {
+      "en": "Safe expressions restrict answers to database-derived values.",
+      "bn": "নিরাপদ এক্সপ্রেশনে উত্তর ডাটাবেস থেকে পাওয়া মানে সীমিত থাকে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Compare tuple and domain calculus with one department query.",
+      "marks": 5,
+      "answerHtml": "<p>Tuple calculus uses {s.student_id | Students(s) ∧ s.department_id = 1}. Domain calculus for S(i,n,d) uses {&lt;i&gt; | ∃n ∃d (S(i,n,d) ∧ d=1)}. The former variable denotes a row; the latter variables denote separate values. Both must be range restricted.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Explain safety, range restriction and domain independence.",
+      "marks": 5,
+      "answerHtml": "<p>Safety ensures a finite answer grounded in database values. Range restriction binds variables to finite relation occurrences or appropriate constants. Domain independence means enlarging an unrelated outside universe does not alter the answer. Unrestricted complements can violate these goals.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Translate “students enrolled in every required section” into a counterexample condition. Explain an empty required set.",
+      "marks": 7,
+      "answerHtml": "<p>Return a candidate student when no required section exists for which their enrollment is absent. This becomes nested NOT EXISTS in SQL, as in the division example. If the required set is empty, every candidate student satisfies the condition. Add other eligibility conditions when the business rule needs them.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL 8.4 Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

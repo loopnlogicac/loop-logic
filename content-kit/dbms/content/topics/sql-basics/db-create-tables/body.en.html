@@ -1,0 +1,57 @@
+<h2 id="introduction">Make invalid records harder to store</h2>
+<p class="lead">A mark of 101 should not quietly enter a system whose scale ends at 100. A result should not belong to a nonexistent enrollment. Table definitions let MySQL check these promises whenever rows change.</p>
+<p>CREATE TABLE defines columns, types and constraints. A <dfn>constraint</dfn> is a rule the database enforces on stored data. Good constraints support the real requirements. They cannot replace understanding those requirements, but they prevent many accidental invalid states.</p>
+<p>Start with a clear name for the fact being stored. An attendance row describes one student on one date. It needs an identity, a student reference and a presence value. It should not allow two attendance records for the same student and day under this particular policy.</p>
+<h2 id="syntax">Read a definition as a set of promises</h2>
+<pre><code class="language-sql">CREATE TABLE table_name (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    required_value INT NOT NULL,
+    status_code INT NOT NULL DEFAULT 1,
+    UNIQUE (required_value),
+    CHECK (status_code IN (0, 1))
+);</code></pre>
+<p>Each line expresses one part of the design. The identifier is generated when omitted. A required value cannot be NULL. A default supplies an omitted status. UNIQUE forbids repeated known values. CHECK tests a condition on a row. This is a definition pattern; choose actual names and references from the fact you are modelling.</p>
+<table class="ref"><caption>Constraints are related but not interchangeable</caption><thead><tr><th>Rule</th><th>What it guarantees</th><th>What it does not guarantee</th></tr></thead><tbody>
+<tr><td>NOT NULL</td><td>A value is required</td><td>Text is nonblank or factually correct</td></tr>
+<tr><td>UNIQUE</td><td>Known key values do not repeat</td><td>Nullable columns contain no NULL</td></tr>
+<tr><td>PRIMARY KEY</td><td>Unique, required row identity</td><td>Business numbering has no gaps</td></tr>
+<tr><td>DEFAULT</td><td>A value can be supplied when omitted</td><td>Other supplied values are valid</td></tr>
+<tr><td>CHECK</td><td>The condition is not FALSE</td><td>An UNKNOWN condition is rejected</td></tr>
+<tr><td>FOREIGN KEY</td><td>A reference has a valid parent</td><td>Every parent has a child</td></tr>
+</tbody></table>
+<h2 id="how-it-works">Combine rules for meaningful domains</h2>
+<h3>Required values and valid values</h3>
+<p>NOT NULL prevents an unknown mark. CHECK with a zero-to-100 range prevents invalid known marks. Use both when a recorded result must have a real mark. SQL CHECK accepts TRUE or UNKNOWN and rejects FALSE, so the range condition alone does not exclude NULL.</p>
+<p>A name declared NOT NULL may still be an empty string. If blank names are forbidden, add a suitable nonblank rule and validate input carefully. Constraints should follow the actual policy, including whether whitespace-only values are meaningful. A type declaration alone cannot describe every business requirement.</p>
+<h3>Keys, references and defaults</h3>
+<p>A primary key can have one column or several. A unique pair such as student_id with attended_on expresses one attendance event per day. Its components can repeat individually. Foreign keys ensure those student numbers refer to existing Students rows.</p>
+<p>A DEFAULT value applies when the statement omits the column or explicitly requests DEFAULT. It is not a substitute for checking a supplied value. A default present value of 1 is suitable only if attendance entry really assumes presence; another workflow may need explicit entry instead.</p>
+<p>AUTO_INCREMENT provides a convenient identifier when one is omitted. It does not promise gapless numbers. Failed work, deletions and rollbacks may leave gaps. Do not interpret the highest generated ID as the current number of rows or as a legally controlled receipt count.</p>
+<h3>Change structure deliberately</h3>
+<p>ALTER TABLE changes an existing definition, for example by adding a column or constraint. Before adding NOT NULL or UNIQUE, inspect existing rows. Old NULL values or repeated known values can violate the proposed rule. Correct them using verified information rather than invented placeholders.</p>
+<p>DROP TABLE removes the table definition and its rows. TRUNCATE TABLE empties a table while keeping its definition and normally resets AUTO_INCREMENT. DELETE removes rows through DML and can have a WHERE condition. These commands have different transaction and reference behaviour.</p>
+<p>Many MySQL structural commands cause an implicit commit. A later ROLLBACK does not restore a table emptied by TRUNCATE. InnoDB also restricts truncating a table referenced by another table’s foreign key. Use a private scratch table when exploring destructive structural changes.</p>
+<h2 id="examples">Create, alter and test definitions</h2>
+<h3>Build constrained attendance records</h3>
+<p>The attendance example combines a generated identity, student reference, unique day rule, default and range check. One inserted row demonstrates which values MySQL supplies.</p>
+<div data-example="ex-1"></div>
+<h3>Add a capacity with ALTER</h3>
+<p>A small study-group table receives a capacity column. The inserted group uses the new default of ten seats.</p>
+<div data-example="ex-2"></div>
+<h3>Empty a table, then remove its definition</h3>
+<p>A private label table demonstrates TRUNCATE and DROP separately. The metadata count confirms the table no longer exists after DROP.</p>
+<div data-example="ex-3"></div>
+<h3>Reject an out-of-range mark</h3>
+<p>The attempted update deliberately asks for 101 marks. MySQL rejects the CHECK violation, preserving the earlier valid result.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Constraints that look stronger than they are</h2>
+<h3>Assuming UNIQUE also requires a value</h3>
+<p>MySQL allows several NULL values in a nullable unique column. That can suit an optional email, but it does not provide a required candidate identifier. Add NOT NULL when every row must have a known unique value.</p>
+<h3>Using inconsistent names</h3>
+<p>Choose lowercase table names and descriptive column names, such as student_id and enrolled_on. Avoid switching between StudentID, sid and student_number for the same meaning without a reason. Table-name case behaviour can differ across operating systems, making consistent lowercase naming especially useful.</p>
+<h3>Disabling rules instead of understanding a rejection</h3>
+<p>A foreign-key error often identifies an incorrect parent or operation order. Check the referenced row and intended relationship first. Disabling foreign-key checks can leave orphaned records. Treat a rejection as evidence to investigate the data and design.</p>
+<h2 id="version-notes">CHECK enforcement has a version boundary</h2>
+<div class="callout version"><p>MySQL 8.0.16 began enforcing CHECK constraints. Earlier versions accepted some CHECK syntax without enforcing its condition. The definitions here target 8.0.16 or newer and use InnoDB for foreign keys and transactional row changes.</p></div>
+<h2 id="summary">Express the full rule</h2>
+<p>Types, required values, keys, defaults and checks solve different problems. Combine them deliberately and distinguish row changes from structural changes. Next, use these definitions while learning <a href="topic:db-insert-update-delete">INSERT, UPDATE and DELETE</a>.</p>

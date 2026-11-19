@@ -1,0 +1,67 @@
+<h2 id="introduction">Build a question from smaller operations</h2>
+<p class="lead">“Find CSE students from Dhaka” contains two tasks: keep matching students and choose the columns you want. Relational algebra gives those tasks names and symbols. Larger queries grow by combining small, well-defined operations.</p>
+<p><dfn>Relational algebra</dfn> is a language of operations on relations. Each operation receives relations and produces another relation. This closure lets you nest expressions. An intermediate answer can become the input to the next step without changing the basic kind of object.</p>
+<p>Classical algebra uses sets: duplicate tuples disappear and tuple order has no meaning. SQL usually keeps duplicate result rows unless you request DISTINCT. SQL also includes NULL, which classical algebra does not. Keep those differences visible when comparing a mathematical expression with a MySQL query.</p>
+<h2 id="syntax">Read the main symbols</h2>
+<table class="ref"><caption>Operations and their first SQL counterparts</caption><thead><tr><th>Symbol</th><th>Meaning</th><th>SQL counterpart</th></tr></thead><tbody>
+<tr><td>σ</td><td>Select tuples meeting a condition</td><td>WHERE</td></tr>
+<tr><td>π</td><td>Project attributes</td><td>SELECT DISTINCT selected columns</td></tr>
+<tr><td>ρ</td><td>Rename a relation or attributes</td><td>AS aliases</td></tr>
+<tr><td>∪</td><td>Set union</td><td>UNION</td></tr>
+<tr><td>∩</td><td>Set intersection</td><td>EXISTS or INTERSECT on newer versions</td></tr>
+<tr><td>−</td><td>Set difference</td><td>NOT EXISTS or EXCEPT on newer versions</td></tr>
+<tr><td>×</td><td>Cartesian product</td><td>CROSS JOIN</td></tr>
+<tr><td>⋈</td><td>Join related tuples</td><td>JOIN with its condition</td></tr>
+<tr><td>÷</td><td>Cover every value in a required set</td><td>Nested NOT EXISTS</td></tr>
+</tbody></table>
+<p>Subscripts name attributes or conditions. Read π<sub>student_id</sub>(σ<sub>department_id=1</sub>(Students)) from inside outward. First keep department 1 students, then return their identifiers. Neither operation asks the server to use a particular index or physical scan.</p>
+<h2 id="how-it-works">Selection, projection and rename</h2>
+<p><dfn>Selection</dfn> keeps entire tuples whose predicate is true. σ<sub>marks ≥ 80</sub>(Results) keeps three result tuples in the university data. <dfn>Projection</dfn> keeps named attributes. Projecting student_id from those tuples returns the identities of qualifying students rather than their marks and sections.</p>
+<p>Several qualifying results may belong to the same student. Set projection returns that student only once. SQL needs DISTINCT when duplicates are possible. Projection does not mean selecting the first few rows; that is a different operation involving order and a limit.</p>
+<p><dfn>Rename</dfn> gives a relation or its attributes new names within an expression. Use ρ to distinguish two roles of the same relation or to make headings clear. SQL aliases such as s for Students serve this purpose. Aliases do not change the stored schema.</p>
+<h3>Set operations need compatible shapes</h3>
+<p>Union, intersection and difference require union-compatible inputs. Corresponding attributes must have compatible domains and the inputs must have the same degree. A set of student identifiers can combine with another set of student identifiers. It should not be unioned meaningfully with unrelated payment amounts merely because both happen to use integers.</p>
+<p>Let A be students enrolled in section 31: {101,102}. Let B be students enrolled in section 33: {101,102,103}. Their union is {101,102,103}; their intersection is {101,102}. B − A is {103}, while A − B is empty. Difference is directional.</p>
+<h3>Products and joins combine tuple pairs</h3>
+<p>A Cartesian product pairs every tuple on the left with every tuple on the right. Eight students and five courses produce forty pairs. These are possible combinations, not proof of actual registration. To represent actual enrollment, follow the recorded relationship rather than assuming every pair exists.</p>
+<p>A <dfn>theta join</dfn> keeps product pairs satisfying a condition θ. An equality join uses equality as its condition. Natural join matches every same-named attribute automatically and merges matching columns. That convenience can become a trap if a later schema change adds another shared name.</p>
+<p>A left outer join preserves unmatched left tuples and adds missing right-side values. In the enrollment-result example, Sadia’s enrollment survives with NULL marks. Outer joins extend the classical set-based operators with missing-value behaviour. State this difference when discussing a mathematical answer.</p>
+<h3>Division means every required value</h3>
+<p>Suppose the required sections are 31 and 33. A student qualifies only when neither requirement is missing from their enrollments. Ayesha and Tanvir have both sections. Nabila has section 33 but not section 31, so having one qualifying witness is insufficient.</p>
+<p>Using E(student_id, section_id) and R(section_id), division E ÷ R returns the student IDs from E that cover every R section. The SQL example instead uses Students as the candidate range, then checks that no required section lacks an enrollment. For a nonempty required set, the intended qualifying IDs agree here.</p>
+<p>An empty required set exposes the candidate-range choice. Every student satisfies “no requirement is missing,” including Fahim with no enrollments. Classical division’s projected E candidate range would omit an ID absent from E. Define the business question’s candidates before choosing an expression.</p>
+<h3>Check a relational expression’s intermediate schema</h3>
+<p>Write down the attributes after every operation when solving an exam problem. Selection preserves the input attributes. Projection changes them to the requested list. A product combines both schemas, requiring renaming when names conflict. A join combines matching values according to its condition. This habit exposes comparisons against attributes that were already removed and prevents ambiguous names from hiding a wrong connection.</p>
+<h2 id="examples">Match algebra to actual SQL answers</h2>
+<h3>Filter first, then choose towns</h3>
+<p>The first query corresponds to selection followed by projection. Known CSE hometowns become Cumilla and Dhaka after duplicates disappear.</p>
+<div data-example="ex-1"></div>
+<h3>Compare three set operations</h3>
+<p>Use enrollment-derived ID sets with compatible meanings. The SQL returns a union, an intersection and a directional difference in separate results.</p>
+<div data-example="ex-2"></div>
+<h3>Construct and rename product pairs</h3>
+<p>Restrict the demonstration to two students and two courses. Aliases make the two displayed identifiers unambiguous.</p>
+<div data-example="ex-3"></div>
+<h3>Apply a theta condition</h3>
+<p>Match students to their results and require marks of at least 80. The output represents qualifying student-result pairs, so a student can appear more than once.</p>
+<div data-example="ex-4"></div>
+<h3>Inspect a natural join’s shared columns</h3>
+<p>Enrollments and Results share exactly the intended pair of identifiers. The query joins on both, rather than on just student_id.</p>
+<div data-example="ex-5"></div>
+<h3>Preserve a missing result</h3>
+<p>The outer join keeps both section 35 enrollments. The absence of Sadia’s result appears as NULL rather than removing her enrollment.</p>
+<div data-example="ex-6"></div>
+<h3>Test every required section</h3>
+<p>The division-style query uses two nested absence tests. Read them as “there is no required section that this student has not enrolled in.”</p>
+<div data-example="ex-7"></div>
+<h2 id="common-mistakes">Check the meaning after every operation</h2>
+<h3>Projecting a needed condition away too early</h3>
+<p>If you discard department_id before testing department membership, the remaining relation may no longer contain the attribute needed for selection. Build the expression from the inside and note each intermediate schema. Keep join attributes until their connections have been applied.</p>
+<h3>Treating a join as one row per student</h3>
+<p>A join produces matching pairs. Ayesha has several results, so joining her student row to Results repeats her identity across those pairs. Use set projection or DISTINCT when the question asks only which students, rather than which results.</p>
+<h3>Replacing every with any</h3>
+<p>One EXISTS proves one witness. It does not prove that all requirements are covered. Division needs absence of a missing requirement, or another correctly counted equivalent. Try a student with only one of two required sections to expose an incomplete condition.</p>
+<h2 id="version-notes">Keep SQL version differences explicit</h2>
+<div class="callout version"><p>MySQL added INTERSECT and EXCEPT in 8.0.31. The set examples use EXISTS and NOT EXISTS so they also work on the stated 8.0.16 baseline. UNION already removes duplicates; UNION ALL preserves them. ORDER BY defines display order separately from set membership.</p></div>
+<h2 id="summary">Compose the logical answer</h2>
+<p>Algebra builds queries through tuple filters, attribute choices, sets and combinations. Match SQL’s duplicate and NULL behaviour deliberately. Division handles every-value questions after defining the candidate range. Next, express answers through logical conditions in <a href="topic:db-relational-calculus">Relational Calculus</a>.</p>

@@ -1,0 +1,60 @@
+<h2 id="introduction">Different ways to organise the same world</h2>
+<p class="lead">A student can take several courses, and a course can have many students. You need a way to describe those connections before choosing file layouts or writing queries. A data model gives you that vocabulary.</p>
+<p>A <dfn>data model</dfn> supplies concepts for representing facts, relationships and rules. A model might use trees, linked records, tables, objects or documents. These are ways to organise meaning. They are not merely different colours for the same screen.</p>
+<p>Choosing a model affects how you describe relationships and retrieve information. Start with the questions people need answered. For university registration, those questions cross students, sections, teachers and results. For a product catalogue, one item may have a nested set of specifications that differs from another item’s set.</p>
+<h2 id="how-it-works">Compare five model families</h2>
+<h3>Hierarchical records</h3>
+<p>The <dfn>hierarchical model</dfn> organises records as a tree. A parent can have several children, but each non-root child has one parent. Think of Department above Course above Section. Finding a section often means following that parent-child path.</p>
+<pre class="diagram">University
+  +-- CSE Department
+  |     +-- Database Course
+  |             +-- Section A
+  |             +-- Section B
+  +-- Mathematics Department
+        +-- Calculus Course</pre>
+<p>A tree works naturally when the real relationships follow a stable hierarchy. Sharing causes difficulty. If a course belongs to several departments, the tree may need duplicate nodes or an additional linking mechanism. Duplicating the whole course description creates several places to update its title.</p>
+<h3>Network records</h3>
+<p>The older <dfn>network model</dfn> allows more flexible record links, including several owner paths for one record. A course can therefore participate in several departmental connections. Applications navigate these links to reach the required records.</p>
+<p>Network here does not mean an internet connection. It describes a graph-like record organisation. Flexible links solve some tree restrictions, but applications can become tied to navigation routes. A new question may require understanding how to traverse a different sequence of links.</p>
+<h3>Relational tables</h3>
+<p>The <dfn>relational model</dfn> describes data through relations, which you can first picture as tables. A row represents one combination of facts. Named columns describe attributes. Values, such as department identifiers, connect related rows without exposing physical memory addresses.</p>
+<p>A university design keeps Students and Sections separately, then records their connections in Enrollments. A query combines them through matching identifiers. This supports new reports without adding a physical pointer for every question. You will study keys and precise relation rules in <a href="topic:db-relational-model">Relations, Keys and Constraints</a>.</p>
+<h3>Objects</h3>
+<p>An <dfn>object model</dfn> represents persistent objects with identity, state and often behaviour. A Person object may have structured contact details and belong to a particular type. Object-oriented database ideas can align storage with object-oriented application designs.</p>
+<p>Do not confuse an object database with a program that reads SQL tables into objects. Many applications use objects in memory while storing data relationally. Mapping between those representations introduces its own design choices about identity, relationships and updates.</p>
+<h3>Documents</h3>
+<p>A <dfn>document model</dfn> groups information into documents with fields and possibly nested values. One product document might include size and material. Another might include voltage and warranty details. Documents make varying nested structures convenient to package together.</p>
+<p>Flexible fields still need meaningful rules. If one document stores price as text and another stores a number, reporting becomes harder. Validation, field naming and migration policies remain important. Flexibility shifts schema management; it does not remove the need to understand structure.</p>
+<table class="ref"><caption>Useful first comparisons</caption><thead><tr><th>Model</th><th>Main picture</th><th>Question to consider</th></tr></thead><tbody>
+<tr><td>Hierarchical</td><td>Parent-child tree</td><td>Can every child have one natural parent?</td></tr>
+<tr><td>Network</td><td>Linked records</td><td>Which paths must applications follow?</td></tr>
+<tr><td>Relational</td><td>Related sets of tuples</td><td>Which values identify and connect facts?</td></tr>
+<tr><td>Object</td><td>Persistent typed objects</td><td>How will identity and behaviour be managed?</td></tr>
+<tr><td>Document</td><td>Nested field collections</td><td>Which facts are normally read together?</td></tr>
+</tbody></table>
+<h2 id="worked-examples">Choose structures and recognise changes</h2>
+<h3>A shared course</h3>
+<p>Suppose CSE and EEE both use an introductory mathematics course. In a strict tree, placing the course under one department hides the other connection. Copying it under both departments creates duplicate descriptions. A relational approach can keep one course and store two department-course links.</p>
+<p>The better choice depends on the real rule. If departments offer separate versions with different syllabuses, those may be different courses. If the course is truly shared, a common identity matters. A model should express that distinction rather than deciding it accidentally through folder placement.</p>
+<h3>A schema and its instance</h3>
+<p>A <dfn>schema</dfn> describes allowed structure and constraints. For Students, it might declare student_id, student_name and department_id, with a unique required identifier. An <dfn>instance</dfn> is the current collection of rows satisfying that description.</p>
+<ol>
+<li>Start with eight valid student rows.</li>
+<li>Insert a ninth student with a new identifier.</li>
+<li>The instance changes because the current contents change.</li>
+<li>The schema stays the same because no column or rule changes.</li>
+<li>Add a required birth-date column: this changes the schema itself.</li>
+</ol>
+<p>Two different instances can satisfy one schema. Existing rows must be considered when the schema changes. Adding a required value without correcting old missing values may fail or misrepresent the data. Structural changes therefore need planning as well as new definitions.</p>
+<h3>Why relational systems became common</h3>
+<p>Relational systems separated logical questions from fixed record-navigation paths. Declarative SQL lets you state the answer you want while the DBMS chooses access methods. Keys and constraints give a clear way to describe identity and references. Transactions support related changes under concurrent use.</p>
+<p>Tools, standards, mature implementations and reporting ecosystems also encouraged adoption. This does not prove that tables are best for every workload. A document store may suit some nested access patterns; a relational design may suit shared transactional facts. Compare actual relationships, consistency needs and common queries.</p>
+<h2 id="common-mistakes">Model choices that obscure meaning</h2>
+<h3>Assuming tables have a permanent first row</h3>
+<p>A relation has no inherent tuple order. A result that needs highest marks first must request an order. Physical storage can change after maintenance or a different access plan. Do not treat a screenshot’s current order as part of the data model.</p>
+<h3>Equating flexible documents with no schema</h3>
+<p>Applications still expect fields and types even when storage allows variation. Write down those expectations and validate important facts. Otherwise, one optional field can become several incompatible spellings that reports must repair later.</p>
+<h3>Picking a model from popularity alone</h3>
+<p>List operations such as recording enrollment, correcting marks and reporting unpaid orders. Then compare how each candidate model handles them. A familiar tool can help, but familiarity does not settle whether the underlying relationships have been represented correctly.</p>
+<h2 id="summary">Connect the model to the requirements</h2>
+<p>Models offer different structures for describing facts. Schemas define permitted structures, while instances contain the current facts. Relational systems offer flexible value-based queries, but model choice should follow the work. Next, describe the university’s entities and rules using <a href="topic:db-er-model">The ER Model</a>.</p>

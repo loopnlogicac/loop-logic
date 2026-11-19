@@ -1,0 +1,486 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-aggregate-group-by",
+  "module": "sql-basics",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Aggregate Functions and GROUP BY",
+    "bn": "অ্যাগ্রিগেট ফাংশন ও গ্রুপ বাই"
+  },
+  "summary": {
+    "en": "Summarise rows with aggregates, filter groups and avoid misleading averages.",
+    "bn": "অ্যাগ্রিগেট দিয়ে সারির সারাংশ করো, গ্রুপ বাছো এবং ভুল গড় এড়াও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-operators-functions"
+  ],
+  "related": [],
+  "keywords": [
+    "aggregate functions and group by",
+    "sql basics",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "CHECK constraints are enforced from MySQL 8.0.16. The examples also run on MySQL 8.4."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Turn several rows into a useful summary"
+    },
+    {
+      "id": "syntax",
+      "title": "Separate rows, groups and result order"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Count the right things"
+    },
+    {
+      "id": "examples",
+      "title": "Inspect totals and their denominators"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "A plausible number can answer the wrong question"
+    },
+    {
+      "id": "version-notes",
+      "title": "Keep grouping mode enabled"
+    },
+    {
+      "id": "summary",
+      "title": "State the population behind the summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Count rows and known hometowns",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>All eight students count as rows. Only six have a non-NULL hometown; the two Dhaka values count separately.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Summarise result marks",
+      "level": "basic",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The eleven result records total 739 marks. AVG divides by eleven, giving 67.18 after rounding; the minimum and maximum are 39 and 90.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Group the students by department",
+      "level": "basic",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Department 1 has four students. Departments 2 and 3 have two each, and the grouped counts add back to eight.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Separate row filtering from group filtering",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>WHERE removes the 39-mark result before grouping. HAVING keeps sections 31, 32, 33 and 34, each with at least two passing results.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Compute a credit-weighted grade average",
+      "level": "advanced",
+      "file": "examples/ex-5.sql",
+      "output": "examples/ex-5.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>For student 101, the numerator is 26.25 over seven credits, so CGPA is 3.75. Pending results are excluded; this teaching report assumes no repeated-course replacement.</p>"
+    },
+    {
+      "id": "ex-6",
+      "title": "Distinguish an empty sum from zero",
+      "level": "basic",
+      "file": "examples/ex-6.sql",
+      "output": "examples/ex-6.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>An unpaid order contributes no payment rows. COUNT returns 0, SUM returns NULL, and COALESCE supplies the chosen display value 0.00.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Compare row and value counts",
+      "statementHtml": "<p>For each department, return department_id, COUNT(*) as students and COUNT(hometown) as known_towns ordered by department_id. Then return COUNT(*) as n and AVG(marks) as mean_mark for section 36.</p>",
+      "hints": [
+        "A group with missing hometowns and an empty result set reveal different NULL behaviour."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Find departments with several known towns",
+      "statementHtml": "<p>Filter out NULL hometowns, group by department_id and return department_id plus COUNT(DISTINCT hometown) as towns for groups with at least two distinct towns. Order by department_id. Then count students in department 99 as n.</p>",
+      "hints": [
+        "WHERE chooses eligible rows; HAVING tests the distinct count."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Summarise partial and absent payments",
+      "statementHtml": "<p>For each order represented in payments, return order_id, SUM(amount_bdt) as received_bdt ordered by order_id. Separately return COUNT(*) as n and COALESCE(SUM(amount_bdt),0.00) as received_bdt for unpaid order 203.</p>",
+      "hints": [
+        "Several payment rows may belong to one order, while an unpaid order has none."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-3.sql",
+      "tests": [
+        {
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-4",
+      "type": "code",
+      "difficulty": "hard",
+      "title": "Compare weighted and unweighted grades",
+      "statementHtml": "<p>Return student 102’s simple mean grade point as simple_mean and credit-weighted mean as weighted_mean, both rounded to two places. Then count completed results for student 108 as n.</p>",
+      "hints": [
+        "The three-credit failing course must weigh more than the one-credit laboratory."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-4.sql",
+      "tests": [
+        {
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Repair an ambiguous group",
+      "statementHtml": "<p>A report groups students by department_id and selects student_name with COUNT(*). Explain the error and two meaningful repairs.</p>",
+      "hints": [
+        "Decide what one output row represents."
+      ],
+      "answerHtml": "<p>A department has several student names, so there is no single name for its group. Return department_id and the count only, or group by student_id when the report should describe each student. Do not disable ONLY_FULL_GROUP_BY to hide an unclear question.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the difference between COUNT(*) and COUNT(hometown)?",
+      "options": [
+        "Both remove duplicate towns",
+        "The first ignores all NULL rows",
+        "The first counts rows and the second counts known hometown values",
+        "The second counts only Dhaka"
+      ],
+      "answer": 2,
+      "explanation": "COUNT(expr) excludes NULL in that expression; COUNT(*) does not inspect individual fields."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does SUM return on an empty matching payment set?",
+      "options": [
+        "Always zero",
+        "Always one",
+        "A random amount",
+        "NULL"
+      ],
+      "answer": 3,
+      "explanation": "No numeric values exist to sum, so SQL SUM returns NULL; choose a display fallback explicitly."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which clause filters individual marks before grouping?",
+      "options": [
+        "WHERE",
+        "HAVING only",
+        "ORDER BY only",
+        "LIMIT only"
+      ],
+      "answer": 0,
+      "explanation": "WHERE changes which rows enter aggregate calculations."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which clause can test COUNT(*) >= 2 for each group?",
+      "options": [
+        "A same-level WHERE aggregate test",
+        "HAVING",
+        "FROM only",
+        "USE"
+      ],
+      "answer": 1,
+      "explanation": "HAVING is evaluated against group results rather than individual source rows."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is an ungrouped student_name usually invalid beside COUNT grouped by department_id?",
+      "options": [
+        "Names cannot be text",
+        "COUNT forbids all other columns",
+        "A department can contain several different student names",
+        "GROUP BY always requires every table column"
+      ],
+      "answer": 2,
+      "explanation": "ONLY_FULL_GROUP_BY rejects ambiguous nonaggregate values without a valid functional dependency."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does GROUP BY guarantee the displayed group order?",
+      "options": [
+        "Yes, always ascending",
+        "Yes, always descending",
+        "Only with NULL values",
+        "No, add ORDER BY"
+      ],
+      "answer": 3,
+      "explanation": "Grouping defines membership; sorting is a separate request."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is a simple average of grade points wrong for unequal course credits?",
+      "options": [
+        "It gives one-credit and three-credit courses equal weight",
+        "AVG always returns text",
+        "Credits must all be zero",
+        "A CGPA cannot be computed in SQL"
+      ],
+      "answer": 0,
+      "explanation": "A weighted average multiplies each grade point by its course credits before dividing by total credits."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does AVG(marks) treat a missing result row as a zero?",
+      "options": [
+        "Yes, every missing result is zero",
+        "No, the absent row contributes nothing",
+        "Only when ordered",
+        "Only for three-credit courses"
+      ],
+      "answer": 1,
+      "explanation": "Missing rows never enter the aggregate; report the denominator and pending-result policy."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does COUNT(DISTINCT hometown) do with two Dhaka rows and NULL?",
+      "options": [
+        "Counts all three as towns",
+        "Counts only NULL",
+        "Counts Dhaka once and ignores NULL",
+        "Rejects the query"
+      ],
+      "answer": 2,
+      "explanation": "DISTINCT removes repeated known arguments before the count."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many hometown values does COUNT(hometown) include?",
+      "language": "sql",
+      "code": "SELECT COUNT(hometown) AS n FROM students;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 5 |\n+---+",
+        "+---+\n| n |\n+---+\n| 8 |\n+---+",
+        "+---+\n| n |\n+---+\n| 6 |\n+---+"
+      ],
+      "answer": 3,
+      "explanation": "Six students have known hometowns, including both students from Dhaka."
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What sum is reported for all existing result marks?",
+      "language": "sql",
+      "code": "SELECT SUM(marks) AS n FROM results;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+------+\n| n    |\n+------+\n|  739 |\n+------+",
+        "+----+\n| n  |\n+----+\n| 11 |\n+----+",
+        "+-----+\n| n   |\n+-----+\n| 769 |\n+-----+",
+        "+-----+\n| n   |\n+-----+\n| 800 |\n+-----+"
+      ],
+      "answer": 0,
+      "explanation": "Adding the eleven stored marks gives 739; missing results add neither zero nor another row."
+    },
+    {
+      "id": "q-12",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many result groups have at least three completed results?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM (SELECT section_id FROM results\nGROUP BY section_id HAVING COUNT(*) >= 3) AS groups_found;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 3 |\n+---+",
+        "+---+\n| n |\n+---+\n| 4 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Sections 33 and 34 each have three completed results."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "COUNT(*) counts rows even when some fields are unknown.",
+      "bn": "কিছু ঘর নাল হলেও কাউন্ট স্টার সারি গোনে।"
+    },
+    {
+      "en": "Most aggregates ignore NULL argument values.",
+      "bn": "বেশির ভাগ অ্যাগ্রিগেট নাল মান বাদ দিয়ে হিসাব করে।"
+    },
+    {
+      "en": "GROUP BY forms groups before aggregate results are returned.",
+      "bn": "অ্যাগ্রিগেটের ফল দেখানোর আগে গ্রুপ বাই দল তৈরি করে।"
+    },
+    {
+      "en": "WHERE filters rows and HAVING filters completed groups.",
+      "bn": "হোয়্যার সারি বাছাই করে, হ্যাভিং তৈরি গ্রুপ বাছাই করে।"
+    },
+    {
+      "en": "A weighted CGPA needs credits in both numerator and denominator.",
+      "bn": "ওজনযুক্ত সিজিপিএর লব ও হর দুটোতেই ক্রেডিট ধরতে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Explain COUNT(*), COUNT(column), SUM and AVG for NULL and empty input.",
+      "marks": 5,
+      "answerHtml": "<p>COUNT(*) counts every input row. COUNT(column) counts only known values. SUM and AVG ignore NULL arguments. On an empty ungrouped input, COUNT returns zero while SUM and AVG return NULL. Grouping an empty input returns no groups unless the query deliberately supplies parent groups.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Compute student 101’s CGPA from grade points 4.00, 3.75 and 3.50 with credits 3, 1 and 3.",
+      "marks": 6,
+      "answerHtml": "<p>The weighted numerator is 4.00×3 + 3.75×1 + 3.50×3 = 26.25. Total completed credits are 7. CGPA = 26.25/7 = 3.75. A plain mean would give equal weight to the one-credit and three-credit subjects, which does not follow this grading rule.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain WHERE versus HAVING and how a pass-only filter changes an average.",
+      "marks": 5,
+      "answerHtml": "<p>WHERE marks >= 40 removes failures before groups form, so AVG describes only passing results. HAVING AVG(marks) >= 40 instead computes averages from all input results and selects whole groups. The two questions have different denominators and can produce different answers. Use names that tell the reader what was averaged.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL 8.4 Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

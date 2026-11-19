@@ -1,0 +1,59 @@
+<h2 id="introduction">Change the intended rows</h2>
+<p class="lead">A shop clerk receives three desk lamps and needs to increase one stock value. Updating every product would be a serious mistake. SQL row changes need a clear target and a way to verify the result.</p>
+<p>INSERT adds rows, UPDATE changes existing rows and DELETE removes matching rows. These commands operate inside the structure defined by your tables. Constraints remain active during changes, so an insertion or update can be rejected when it violates a rule.</p>
+<p>Use the shop records to separate customer identity, catalogue products, orders, item lines and payments. The fact you want to change determines the table. A later catalogue price change should not rewrite the historical price agreed on an old order.</p>
+<h2 id="syntax">Name columns and targets explicitly</h2>
+<pre><code class="language-sql">INSERT INTO table_name (column_a, column_b)
+VALUES (value_a, value_b);
+
+UPDATE table_name
+SET column_b = replacement
+WHERE key_column = wanted_key;
+
+DELETE FROM table_name
+WHERE key_column = wanted_key;</code></pre>
+<p>The column list aligns inserted values with their meaning. UPDATE uses SET for assignments. DELETE has no column list because it removes complete matching rows. A WHERE condition is not a cosmetic addition: it decides which existing rows are candidates for change.</p>
+<p>For several inserted rows, write several parenthesised value groups after VALUES. Each group must match the column list. In ordinary InnoDB INSERT without IGNORE, a constraint failure makes that statement fail rather than committing only its valid new rows. Earlier statements in the transaction may still need an explicit rollback.</p>
+<h2 id="how-it-works">Preview, change and verify</h2>
+<h3>Use a stable identity</h3>
+<p>Product 4 is the desk lamp. Its identifier is a stronger target than a description such as “study products,” which can match several rows. First read the identifier and current stock with the intended condition. Then apply arithmetic to the stored value, such as adding the received quantity.</p>
+<p>Setting stock to a remembered total can overwrite another legitimate adjustment. Arithmetic updates avoid that particular stale-value pattern, although full inventory workflows still need concurrency rules. A preview is helpful, but it is not a lock or proof that no other session can change the data.</p>
+<h3>Know where rollback applies</h3>
+<p>START TRANSACTION begins a group of changes. COMMIT makes the transaction’s work permanent. ROLLBACK cancels its uncommitted InnoDB row changes. A common correction workflow previews the target, changes it inside a transaction, inspects the result and commits only after checking.</p>
+<p>Autocommit is normally enabled, so a successful standalone change may commit immediately unless you open a transaction. A rollback after that completed commit cannot undo it. Avoid mixing structural commands into the correction, because many DDL statements commit implicitly.</p>
+<h3>Understand absent and dependent targets</h3>
+<p>Deleting a nonexistent customer is valid and removes no rows. Updating a nonexistent product likewise changes none. A successful statement does not prove it found the intended object. Read back the target and inspect affected-row information where your client provides it.</p>
+<p>A foreign key can block a deletion or cause dependent changes. The shop’s order_items cascade when an order is deleted. Payments restrict order deletion to protect their history. Cancelling an order is therefore often a status change with a defined refund process, rather than physical deletion.</p>
+<h3>Use safe-update mode as one guard</h3>
+<p>MySQL’s SQL_SAFE_UPDATES setting can reject broad UPDATE or DELETE statements that lack suitable key-based restrictions or a limit. It is useful while learning, but it cannot judge your intention. A perfectly keyed update to the wrong product can still pass the guard.</p>
+<p>Do not switch safe mode off reflexively when a statement fails. Check the key condition and the plan first. Limits also need caution: limiting the number of changed rows does not identify which business objects should change. Good targeting begins with the object’s identity.</p>
+<table class="ref"><caption>Decide what the operation means</caption><thead><tr><th>Event</th><th>Likely change</th><th>Check before committing</th></tr></thead><tbody>
+<tr><td>New customer arrives</td><td>INSERT Customer</td><td>Identity is new and fields align</td></tr>
+<tr><td>Lamp stock arrives</td><td>UPDATE Product stock</td><td>Product key and quantity are correct</td></tr>
+<tr><td>One cancelled item is removed</td><td>DELETE OrderItem</td><td>Both composite key components match</td></tr>
+<tr><td>An order is cancelled after payment</td><td>Controlled status and refund workflow</td><td>Financial history remains explainable</td></tr>
+</tbody></table>
+<h2 id="examples">Make small, visible changes</h2>
+<h3>Add one customer and then a pair</h3>
+<p>The insertion example uses explicit columns for both forms. Omitted optional phone values become NULL.</p>
+<div data-example="ex-1"></div>
+<h3>Preview and change an exercise-book price</h3>
+<p>Only product 1 changes from 60.00 to 65.00 BDT. The transaction ends with rollback so the experiment does not become a permanent price decision.</p>
+<div data-example="ex-2"></div>
+<h3>Remove a composite-key item line</h3>
+<p>The cancelled order’s line is identified by order_id and product_id together. Counts before restoration show which dependent fact disappeared.</p>
+<div data-example="ex-3"></div>
+<h3>Update using a primary-key condition in safe mode</h3>
+<p>The final example enables the session guard and increases lamp stock by one. The key condition identifies the product directly.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Changes that are easy to misunderstand</h2>
+<h3>Omitting WHERE from UPDATE</h3>
+<p>Without a condition, every row is a candidate. If you intended one product, stop and add its key before running the statement. A preview using the same condition helps expose overbroad categories or spelling comparisons.</p>
+<h3>Using TRUNCATE as a shorter DELETE</h3>
+<p>TRUNCATE empties a table as DDL, resets generated numbering and causes an implicit commit. It has no WHERE clause and is not restored by a later ordinary rollback. Use DELETE for selected transactional row removal. Reference constraints can impose further restrictions.</p>
+<h3>Ignoring omitted-column defaults</h3>
+<p>An omitted nullable phone can reasonably become NULL. An omitted amount with a zero default may hide missing business information. Understand the table’s defaults before relying on them. A syntactically valid insertion can still describe the wrong event.</p>
+<h2 id="version-notes">Transactional behaviour depends on the engine</h2>
+<div class="callout version"><p>The shared tables use InnoDB on MySQL 8.0.16 or later. The rollback demonstrations rely on InnoDB transaction support. Do not transfer their behaviour to nontransactional storage engines or to structural commands that commit implicitly.</p></div>
+<h2 id="summary">Keep intent visible during changes</h2>
+<p>Explicit column lists clarify additions, key conditions target changes and transactions provide a checking boundary. Respect dependent history and distinguish DELETE from TRUNCATE. Next, learn more precise reading in <a href="topic:db-select-basics">SELECT Basics</a>.</p>

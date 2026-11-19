@@ -1,0 +1,399 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-insert-update-delete",
+  "module": "sql-basics",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "INSERT, UPDATE and DELETE",
+    "bn": "ডেটা যোগ, পরিবর্তন ও মুছে ফেলা"
+  },
+  "summary": {
+    "en": "Change rows deliberately with explicit columns, checked conditions and transactions.",
+    "bn": "কলামের নাম, যাচাই করা শর্ত ও ট্রানজেকশন দিয়ে বুঝে ডেটা বদলাও।"
+  },
+  "level": "beginner",
+  "estMinutes": 35,
+  "prerequisites": [
+    "db-create-tables"
+  ],
+  "related": [
+    "db-select-basics"
+  ],
+  "keywords": [
+    "insert, update and delete",
+    "sql basics",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "CHECK constraints are enforced from MySQL 8.0.16. The examples also run on MySQL 8.4."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Change the intended rows"
+    },
+    {
+      "id": "syntax",
+      "title": "Name columns and targets explicitly"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Preview, change and verify"
+    },
+    {
+      "id": "examples",
+      "title": "Make small, visible changes"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Changes that are easy to misunderstand"
+    },
+    {
+      "id": "version-notes",
+      "title": "Transactional behaviour depends on the engine"
+    },
+    {
+      "id": "summary",
+      "title": "Keep intent visible during changes"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Insert one customer, then two more",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>Three explicit identifiers create three rows. phone is omitted and becomes NULL, which records an unknown phone value.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Preview and update a single price",
+      "level": "basic",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The preview identifies the exercise book at 60.00 BDT. Only that key is updated to 65.00 BDT before the change is cancelled.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Delete a row and restore it",
+      "level": "basic",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The cancelled order has one item, so the first count is zero. Its composite key targets one line and rollback restores it.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Use the safe-update guard",
+      "level": "basic",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>A primary-key condition allows the lamp update in safe mode. Safe mode cannot tell whether you intended to add one lamp.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Adjust a stock item without losing its original value",
+      "statementHtml": "<p>On shop data, increase product 4 stock by 3 inside a transaction and return product_id and stock. Rollback and return the same columns again. Finally count product_id 999 as n.</p>",
+      "hints": [
+        "Use arithmetic on the stored value, and keep the key condition."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Handle an absent delete target",
+      "statementHtml": "<p>Insert customer 6 named Reza Alam from Dhaka with no phone. Return that row. Delete customer 999, report the count of customer 6 as n, then delete customer 6 and count it again.</p>",
+      "hints": [
+        "Deleting a nonexistent key is valid and removes no rows."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Catch an overbroad condition",
+      "statementHtml": "<p>A clerk intends to change one product price but writes a condition on category alone. Explain a safer workflow.</p>",
+      "hints": [
+        "A category usually identifies a group rather than a product."
+      ],
+      "answerHtml": "<p>Preview product_id and price_bdt with the planned condition. If several products appear, narrow the condition to the intended product key. Change the price inside a transaction, inspect the result and commit only after checking. Safe-update mode is useful but cannot verify the chosen key is correct.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Preserve payment history",
+      "statementHtml": "<p>An order has two payment records and is cancelled. Why might deleting the order be blocked?</p>",
+      "hints": [
+        "Check which child tables keep historical evidence."
+      ],
+      "answerHtml": "<p>The payment foreign key uses RESTRICT, so the order remains while payments reference it. Cancellation should record status and any refund process rather than silently erase financial history. The right operation follows the business event, not the shortest SQL command.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why include a column list in INSERT?",
+      "options": [
+        "It states which value belongs to each field",
+        "It automatically sorts all rows",
+        "It prevents every invalid amount",
+        "It replaces constraints"
+      ],
+      "answer": 0,
+      "explanation": "Explicit columns avoid depending on an implicit table column order."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens to an omitted nullable phone with no explicit default?",
+      "options": [
+        "It always receives zero",
+        "It receives NULL",
+        "It copies another customer’s phone",
+        "The server must crash"
+      ],
+      "answer": 1,
+      "explanation": "NULL expresses the unknown phone allowed by the column definition."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does UPDATE without WHERE normally target?",
+      "options": [
+        "Only the first row",
+        "Only rows with NULL",
+        "Every row in the table",
+        "No rows"
+      ],
+      "answer": 2,
+      "explanation": "Without a condition, all rows are candidates; safe-update settings may reject the statement."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why preview the same WHERE condition before DELETE?",
+      "options": [
+        "To make DELETE automatically reversible",
+        "To disable foreign keys",
+        "To lock all servers forever",
+        "To inspect the rows you intend to remove"
+      ],
+      "answer": 3,
+      "explanation": "A preview helps detect a wrong target, but concurrency and transaction design still matter."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which change can ROLLBACK undo in an open InnoDB transaction?",
+      "options": [
+        "A DELETE of selected rows",
+        "A TRUNCATE already implicitly committed",
+        "A DROP already implicitly committed",
+        "A completed COMMIT"
+      ],
+      "answer": 0,
+      "explanation": "Row DML remains reversible until commit; many DDL statements commit implicitly."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What can SQL_SAFE_UPDATES fail to detect?",
+      "options": [
+        "Every UPDATE statement",
+        "A key-based update to the wrong product",
+        "A missing semicolon only",
+        "All uses of arithmetic"
+      ],
+      "answer": 1,
+      "explanation": "A key condition can satisfy the guard while still expressing the wrong intention."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why store unit_price_bdt on order_items when products has a current price?",
+      "options": [
+        "All prices must be identical forever",
+        "A foreign key cannot join products",
+        "An order needs the agreed historical price",
+        "It is only a formatting rule"
+      ],
+      "answer": 2,
+      "explanation": "Current catalogue changes should not rewrite the agreed amount of an old order."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After adding two units to the empty lamp stock, what stock is read?",
+      "language": "sql",
+      "code": "UPDATE products SET stock = stock + 2 WHERE product_id = 4;\nSELECT stock AS n FROM products WHERE product_id = 4 ORDER BY product_id;\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 4 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+"
+      ],
+      "answer": 3,
+      "explanation": "The original lamp stock is zero, so adding two yields two."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Deleting missing customer 999 changes the total customer count to what?",
+      "language": "sql",
+      "code": "DELETE FROM customers WHERE customer_id = 999;\nSELECT COUNT(*) AS n FROM customers;\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 5 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 4 |\n+---+",
+        "+---+\n| n |\n+---+\n| 6 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "No customer matches key 999, so all five original customers remain."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many order-item rows survive deleting cancelled order 204?",
+      "language": "sql",
+      "code": "DELETE FROM orders WHERE order_id = 204;\nSELECT COUNT(*) AS n FROM order_items WHERE order_id = 204;\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 8 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "The order_items foreign key cascades; this order has no payment blocking its deletion."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Column lists keep INSERT values aligned with their meaning.",
+      "bn": "কলামের নাম লিখলে ইনসার্টের মান কোথায় যাবে বোঝা যায়।"
+    },
+    {
+      "en": "An UPDATE condition decides which rows can change.",
+      "bn": "আপডেটের শর্ত ঠিক করে কোন সারি বদলাবে।"
+    },
+    {
+      "en": "DELETE removes matching rows and preserves table structure.",
+      "bn": "ডিলিট মিলে যাওয়া সারি সরায়, টেবিলের গঠন রাখে।"
+    },
+    {
+      "en": "TRUNCATE is DDL and causes an implicit commit.",
+      "bn": "ট্রাংকেট ডিডিএল কমান্ড এবং নিজে থেকেই কমিট ঘটায়।"
+    },
+    {
+      "en": "Safe-update mode is a guardrail rather than a proof.",
+      "bn": "সেফ আপডেট সতর্কতার ব্যবস্থা, ভুল হবে না এমন নিশ্চয়তা নয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "design",
+      "question": "Describe a safe workflow for correcting one stored mark.",
+      "marks": 6,
+      "answerHtml": "<p>Confirm the student-section pair, preview the original mark, begin a transaction and update using both key components. Read back the changed result and its generated grade. Commit only when the correction is authorised and correct; otherwise rollback. An audit procedure should record who approved the correction.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Explain why DELETE and TRUNCATE are not interchangeable.",
+      "marks": 4,
+      "answerHtml": "<p>DELETE can select rows with WHERE and participates in InnoDB transactions. TRUNCATE empties a table as DDL and commits implicitly, so a later rollback does not restore it. Foreign-key restrictions and identifier reset behaviour also differ.</p>"
+    },
+    {
+      "type": "long",
+      "question": "A multi-row INSERT contains one foreign-key violation. What should you expect for an ordinary InnoDB INSERT without IGNORE?",
+      "marks": 5,
+      "answerHtml": "<p>The statement fails and its inserted rows are rolled back, rather than leaving the valid rows from that same statement committed. Earlier statements in the transaction need separate consideration. Correct the invalid parent reference and retry with a deliberate transaction plan.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL 8.4 Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

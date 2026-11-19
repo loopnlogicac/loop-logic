@@ -1,0 +1,57 @@
+<h2 id="introduction">Read the facts that answer your question</h2>
+<p class="lead">A student office needs CSE roll numbers and names, not every field in the university database. SELECT lets you choose the columns, keep matching rows and present the answer in a useful order.</p>
+<p>A <dfn>query</dfn> asks the database for information. A result set contains the rows and columns returned by that request. Reading rows does not change their stored values. An alias can change a displayed heading without altering the table definition.</p>
+<p>Start with a precise question. “Show students” leaves many choices unstated. “Return identifiers and names for department 1, ordered by identifier” tells you the source, output columns, condition and order. Clear questions lead to clearer SQL.</p>
+<h2 id="syntax">Read a SELECT statement in parts</h2>
+<pre><code class="language-sql">SELECT selected_columns
+FROM source_table
+WHERE row_condition
+ORDER BY first_sort_key, tie_breaker
+LIMIT row_count;</code></pre>
+<table class="ref"><caption>The parts answer different questions</caption><thead><tr><th>Clause</th><th>Question</th></tr></thead><tbody>
+<tr><td>SELECT</td><td>Which values should appear?</td></tr>
+<tr><td>FROM</td><td>Which table supplies the rows?</td></tr>
+<tr><td>WHERE</td><td>Which source rows qualify?</td></tr>
+<tr><td>ORDER BY</td><td>How should the answer be arranged?</td></tr>
+<tr><td>LIMIT</td><td>How much of the ordered answer is needed?</td></tr>
+</tbody></table>
+<p>SELECT appears first in writing, but a useful logical reading starts with FROM and WHERE. Identify candidate rows, keep the qualifying ones, compute displayed values and arrange the result. The server may use a different physical plan while preserving the requested meaning.</p>
+<h2 id="how-it-works">Choose columns, rows and presentation</h2>
+<h3>Columns and aliases</h3>
+<p>Name the columns you need rather than relying on SELECT *. Explicit columns keep reports understandable when a table gains new fields. They can also avoid retrieving unnecessary data. Use an alias such as roll for student_id when that heading helps the reader.</p>
+<p>An alias belongs to the query result. It does not rename a stored column. A SELECT alias is generally not available in the same query’s WHERE because row filtering logically happens earlier. ORDER BY can use a result alias to arrange the displayed expression.</p>
+<h3>Conditions and three-valued logic</h3>
+<p>WHERE keeps rows only when the condition is TRUE. Ordinary comparisons can yield FALSE or UNKNOWN as well. NULL represents missing or unknown information, so comparing a hometown to NULL with equals does not produce TRUE. Use IS NULL to ask whether the marker is present.</p>
+<p>IS NOT NULL finds known values. The text 'NULL' is a known four-letter string, not the missing-value marker. An empty string is another known value. Avoid using zero or invented town names to stand for unknown information; those replacements blur the meaning of the data.</p>
+<p>When combining AND and OR, parentheses make the intended grouping visible. AND has higher precedence than OR. If your question means “CSE students from either Dhaka or Cumilla,” group the town alternatives before combining them with the department rule.</p>
+<h3>Ordering and limiting</h3>
+<p>ORDER BY is ascending unless you specify DESC. Text sorting follows the chosen collation. For highest marks, sort marks descending. When several results tie, add student_id and section_id to settle their order. A complete ordering makes repeated top-N queries reproducible.</p>
+<p>LIMIT keeps a requested portion of the result. Without ORDER BY, the phrase “first three” has no stable meaning. Even with ORDER BY marks alone, a tie at the boundary can select different students. A key-based tie breaker defines which rows occupy those places.</p>
+<p>MySQL sorts NULL before known values in ascending order and after known values in descending order. If missing values need a special placement, express it deliberately. Presentation order is separate from membership: sorting a result does not decide which rows satisfy WHERE.</p>
+<h3>Distinct combinations</h3>
+<p>DISTINCT removes duplicate combinations of all selected expressions. Selecting distinct hometowns collapses the two Dhaka values to one. Selecting student_id with hometown keeps both students because the pairs differ. Think about the entire output row rather than one column in isolation.</p>
+<p>For DISTINCT, repeated NULL values form one displayed duplicate group if they remain in the input. Filtering with IS NOT NULL removes them before distinct towns are displayed. Later, COUNT(DISTINCT hometown) ignores NULL arguments, which is a related but different aggregate rule.</p>
+<h2 id="examples">Predict the result shape</h2>
+<h3>CSE students with a clearer heading</h3>
+<p>Department 1 has four students. The query returns only their identifiers and names, using roll as the identifier heading.</p>
+<div data-example="ex-1"></div>
+<h3>The three highest recorded marks</h3>
+<p>Descending marks define the ranking. Student and section identifiers settle ties before LIMIT chooses the first three rows.</p>
+<div data-example="ex-2"></div>
+<h3>Known towns without repetitions</h3>
+<p>The town list removes unknown values and duplicate Dhaka entries. It answers which towns are represented, rather than how many students live in each town.</p>
+<div data-example="ex-3"></div>
+<h3>Students whose hometown is unknown</h3>
+<p>The last query uses IS NULL directly. It finds Imran and Fahim without pretending either has a blank or zero hometown.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Small syntax changes can change the question</h2>
+<h3>Comparing a value with NULL using equals</h3>
+<p>The result of hometown = NULL is UNKNOWN, even when hometown itself is NULL. WHERE therefore keeps no rows for that comparison. Replace it with IS NULL when the question concerns missing hometowns.</p>
+<h3>Using DISTINCT to hide an unexplained duplicate</h3>
+<p>Before removing repeated rows, ask why they exist. A later join may correctly produce one row per result, so a student appears several times. DISTINCT can answer a student-membership question, but it cannot repair a join that connects unrelated records.</p>
+<h3>Assuming storage order is report order</h3>
+<p>A table may appear in identifier order during one experiment. Another plan or maintenance operation can change that appearance. State ORDER BY for every report that needs predictable rows. Order by the question’s meaning and then settle remaining ties.</p>
+<h2 id="version-notes">A stable MySQL query foundation</h2>
+<div class="callout version"><p>The SELECT, DISTINCT, alias, ORDER BY and LIMIT forms here work on the MySQL 8.0.16 baseline and MySQL 8.4. LIMIT syntax differs in some other database products. Text comparison and sorting also depend on collation settings.</p></div>
+<h2 id="summary">Define membership before presentation</h2>
+<p>SELECT chooses values, WHERE chooses qualifying rows and ORDER BY defines their arrangement. DISTINCT removes equal output combinations, while LIMIT takes a defined portion. Treat NULL explicitly. Next, extend these queries with <a href="topic:db-operators-functions">Operators and Built-in Functions</a>.</p>

@@ -1,0 +1,52 @@
+<h2 id="introduction">Rows need identities and rules</h2>
+<p class="lead">Two students can share a name, but they should not share a student identifier. A result should refer to a real enrollment. The relational model gives you precise language for these everyday requirements.</p>
+<p>A <dfn>relation</dfn> is a set of tuples described by named attributes. You can picture it as a table, with some cautions about SQL’s duplicates and NULL values. A <dfn>tuple</dfn> is one row. An <dfn>attribute</dfn> is a named column with an allowed domain of values.</p>
+<p>A <dfn>domain</dfn> describes permissible values for an attribute. Marks might be whole numbers from zero through 100. A name uses text, while admitted_on uses a date. A SQL type captures part of a domain; further constraints may be needed to express the complete rule.</p>
+<h2 id="syntax">Write distinct constraints for distinct jobs</h2>
+<pre><code class="language-sql">student_id INT PRIMARY KEY,
+email VARCHAR(120) NOT NULL UNIQUE,
+department_id INT NOT NULL,
+FOREIGN KEY (department_id) REFERENCES departments(department_id)</code></pre>
+<p>The pattern above names three different responsibilities. The primary key identifies the student row. Email provides another guaranteed identifier in this design. The department reference connects the student to an existing parent. None of these rules says that a name must be unique.</p>
+<h2 id="how-it-works">Choose minimal identifiers</h2>
+<p>A <dfn>superkey</dfn> is any attribute set that uniquely identifies tuples under the schema’s rules. If student_id is unique, then student_id together with student_name is also unique. Adding extra attributes does not destroy uniqueness, but those attributes may be unnecessary.</p>
+<p>A <dfn>candidate key</dfn> is a minimal superkey: remove any attribute and the remaining set no longer guarantees uniqueness. Minimal means no unnecessary attributes. It does not mean shortest spelling, smallest number or fastest index.</p>
+<p>The <dfn>primary key</dfn> is the candidate selected as the main row identifier. Other candidate keys are <dfn>alternate keys</dfn>. In Students, student_id is primary and email is alternate because both are declared unique and required. A nullable UNIQUE column alone is not a classical candidate key.</p>
+<p>A <dfn>foreign key</dfn> is a set of child attributes that references an eligible parent key. It may repeat across child rows. Many students can reference department 1. Its purpose is a valid connection, not unique identification of the child.</p>
+<table class="ref"><caption>Keys in the university design</caption><thead><tr><th>Relation</th><th>Chosen primary key</th><th>Important reference</th></tr></thead><tbody>
+<tr><td>Students</td><td>student_id</td><td>department_id → Departments</td></tr>
+<tr><td>Sections</td><td>section_id</td><td>course_id → Courses</td></tr>
+<tr><td>Enrollments</td><td>student_id, section_id</td><td>Both parent identities</td></tr>
+<tr><td>Results</td><td>student_id, section_id</td><td>The complete enrollment pair</td></tr>
+</tbody></table>
+<p><dfn>Entity integrity</dfn> requires the primary-key attributes to be known and unique. A composite primary key excludes NULL in every component. <dfn>Referential integrity</dfn> requires each non-NULL foreign-key reference to match a valid parent. NOT NULL adds a requirement that an optional reference alone would not provide.</p>
+<p>Result references the whole enrollment pair. Two separate references to Student and Section would only prove that both parents exist independently. They would not prove that this student actually enrolled in this section. The composite reference preserves that stronger relationship.</p>
+<h3>Choose parent-change actions deliberately</h3>
+<p>ON DELETE RESTRICT prevents deletion while a child still refers to the parent. ON DELETE CASCADE removes dependent child rows. ON DELETE SET NULL keeps child rows but clears their nullable references. Choose the action from the meaning of the relationship, not from a preference for shorter cleanup code.</p>
+<p>ON UPDATE actions govern changes to referenced key values. CASCADE copies the new parent key into child references. RESTRICT blocks an incompatible change. SET NULL requires nullable child columns. In InnoDB, NO ACTION behaves like immediate RESTRICT rather than a deferred end-of-transaction check.</p>
+<h3>Test a key against permitted future rows</h3>
+<p>Imagine admitting another student named Ayesha Rahman. The name may repeat without breaking any stated rule. Now imagine admitting another student with identifier 101. That must fail because the schema guarantees unique identifiers. Candidate-key reasoning uses these permitted and forbidden future situations, rather than a coincidence in today’s short list.</p>
+<h2 id="examples">Watch integrity rules operate</h2>
+<h3>Two guaranteed ways to identify a student</h3>
+<p>Read the primary and alternate identifiers for three students. Their current values illustrate the rules, while the constraints provide the guarantees.</p>
+<div data-example="ex-1"></div>
+<h3>Delete an owner inside a transaction</h3>
+<p>Student 106 owns an enrollment and a result. Follow the cascading deletion, then use rollback to restore the related rows.</p>
+<div data-example="ex-2"></div>
+<h3>Change a referenced department number</h3>
+<p>The department key changes from 3 to 9 during the transaction. Its student references follow because the foreign key specifies ON UPDATE CASCADE.</p>
+<div data-example="ex-3"></div>
+<h3>Try to reference a missing department</h3>
+<p>This insertion contains a deliberate mistake. Department 99 has no parent row, so MySQL rejects the reference instead of accepting an orphan student record.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Do not infer keys from small samples</h2>
+<h3>Declaring a name unique because it happens to be unique today</h3>
+<p>The current eight names differ, but the university may admit another student with the same name. A key claim must follow the permitted future data. Ask which rule guarantees identity before declaring a candidate key.</p>
+<h3>Using cascades for all historical records</h3>
+<p>An enrollment’s result may reasonably depend on that enrollment. A payment often has a different lifecycle and may need to survive profile closure. The shop design restricts deletion through financial references. Changing all references to CASCADE would change that policy, not merely save typing.</p>
+<h3>Expecting rollback to undo every command</h3>
+<p>The cascade examples use InnoDB row changes inside an open transaction. Many structural commands commit implicitly. Creating or dropping a table inside the same workflow changes the rollback boundary. Keep structural operations out of a row-change experiment unless their effects are understood.</p>
+<h2 id="version-notes">Relational ideas and MySQL details</h2>
+<div class="callout version"><p>Classical relations are sets without NULL. SQL tables can contain duplicate rows unless constrained, and nullable fields use three-valued logic. These examples use MySQL 8.0.16 or later with InnoDB, primary keys and explicitly declared reference actions.</p></div>
+<h2 id="summary">Let constraints express promises</h2>
+<p>Candidate keys provide minimal guaranteed identity. Primary keys enforce entity integrity, while foreign keys preserve valid references. Parent-change actions decide what dependent facts should do. Next, combine relations as queries in <a href="topic:db-relational-algebra">Relational Algebra</a>.</p>
