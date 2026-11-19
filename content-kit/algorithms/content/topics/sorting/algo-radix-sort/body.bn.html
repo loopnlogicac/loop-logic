@@ -1,0 +1,67 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">তিন-digit student code আগে শেষ,পরে মাঝের,শেষে প্রথম digit-এ সাজাতে পারো। কিন্তু নতুন digit tie হলে আগের order রাখতে হবে। <dfn>LSD radix sort</dfn> এভাবেই digit pass মেলায়।</p>
+<p>LSD মানে least significant digit first:units,tens,hundreds। Later stable pass আগের lower-digit order না ভেঙে আরও ভালো order বানায়।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">for place in 1, 10, 100
+    count[0..9] = 0
+    count digit ((a[i] + 99) / place) mod 10 for all i
+    accumulate count into prefix ends
+    scan i from n - 1 down to 0; place whole a[i] stably
+    copy output back into a</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>একবারে একটি digit নাও</h3>
+<p>Nonnegative key-তে digit=(key/place)%10। 472-এ place1→2,10→7,100→4। Integer division lower digit বাদ দেয়,remainder10 পরেরটি নেয়। Missing leading digit zero।</p>
+<p>Bounded C-তে original -99..99। প্রত্যেক key-তে99 যোগে order-preserving0..198। Encoded key থেকে digit,কিন্তু original value move। একই constant যোগ integer order রাখে।</p>
+<p>198 পর্যন্ত তিন decimal pass যথেষ্ট। Fixed bound-এ place multiply করে overflow ঝুঁকি নেই। General maximum নিলে place*base range ছাড়ানোর আগেই stop চাই। Exact integer digit-এ floating power নয়।</p>
+<h3>প্রতি digit-এ stable counting</h3>
+<p>Digit0..9,তাই দশ counter। প্রতি record-এর current digit count,prefix end,তারপর right-to-left buffer placement। পরের digit-এর আগে whole record copy back।</p>
+<p>Counting sort-এর একই stable rule,পুরো key নয় এক digit-এ। Output n,count base b-তে b cell। Units থেকে tens-এ frequency বদলাতে পারে,তাই প্রতি pass reset।</p>
+<p>শুধু digit নয়,পুরো key/record move। Digit array বানালে পরের pass-এর তথ্য হারায়। Student-এর associated field-ও সঙ্গে যাবে,identity সব pass-এ থাকবে।</p>
+<h3>Stability lower digit বাঁচায় কেন</h3>
+<p>Units pass-এর পরে last digit ordered। Tens pass ছোট tens আগে নেয়;এক tens group-এ stable হওয়ায় units order থাকে। তাই last-two-digit number-এর মতো order।</p>
+<p>Unshifted [21,13,12]-এ stable units [21,12,13],tens [12,13,21]। Tens tie reverse হলে12,13 ভুল হতে পারে। আগের tie order না রাখলে আলাদা digit sort যথেষ্ট নয়।</p>
+<p>Induction-এ d place-এর পরে d low digit-এ sorted। সব digit শেষে tuple পুরো key নির্ধারণ করে। এটিই LSD correctness-এর মূল।</p>
+<h3>Encoded পাঁচ-value trace</h3>
+<p>[7,3,5,3,1]-এর encoding [106,102,104,102,100]। Units6,2,4,2,0-তে original [1,3,3,5,7]। Stable placement-এ দুই original3-এর order থাকে।</p>
+<p>এখানে tens সবzero,hundreds সবone। দুই pass আগের order অপরিবর্তিত রাখবে। কিছু না-করা pass-ও stability test। Digit boundary পেরোনো দ্বিতীয় example-এ আরও পরিবর্তন দেখো।</p>
+<p>[-99,-98,0,99]→[0,1,99,198]। Leading zero comparison model-এর অংশ। একই তিন pass-এ negative branch লাগে না। স্পষ্ট bounded range-offset-এর জন্যই encoding উপযুক্ত।</p>
+<h3>Parameter-সহ cost বের করো</h3>
+<p>d digit pass,b base,n record। প্রতি stable counting pass-এ count initialize b,scan n,prefix b,place n,copy n:Θ(n+b)। d বার Θ(d(n+b))।</p>
+<p>Output প্রতি pass reuse,workspace Θ(n+b),Θ(dn) নয়। C-তে pass scope-এর আগের buffer পরে বাঁচে না। Peak simultaneous storage জরুরি। Count-ও reset করে reuse।</p>
+<p>Fixed digit count ও base-এ n-এ linear হতে পারে। Unbounded integer-এ magnitude-এ d বাড়ে;সবসময় O(n) বললে parameter লুকায়। খুব বড় base-এ কম pass হলেও count initialize-memory dominate করতে পারে।</p>
+<p>Comparison sort arbitrary comparable key নেয়। Radix-এ positional encoding-এর digit order intended full order মানতে হবে। Variable string,signed machine integer,locale text-এ আলাদা rule চাই। ছোট signed range-এর offset সব type-এর universal recipe নয়।</p>
+<h3>ভেবে LSD বাছো</h3>
+<p>Most-significant-digit strategy উল্টো প্রান্ত থেকে group করে পরে recurse। Control আলাদা,কিছু variable-length key-তে স্বাভাবিক। Iterative LSD proof-এর সঙ্গে তার grouping মেশাবে না।</p>
+<p>ছোট bounded key-তে LSD trace সহজ। Tiny n-এ setup insertion বা library sort-এর লাভ ছাড়াতে পারে। Domain ও memory limit দেখে নাও। সুবিধা d,b-এর উপকারী সীমার শর্তে।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>106,102,104,102,100 তিন pass-এ ordered;original1 3 3 5 7।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা sort করো</h3>
+<p>99 যোগে -2-ও nonnegative encoding। Stable pass সব original signed মান রাখে।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>শেষে equal score পাশাপাশি,distinct scan তিন বলে।</p>
+<div data-example="ex-3"></div>
+<h3>Decimal boundary পার হওয়া দেখো</h3>
+<p>Encoding0,1,99,198,100 পেরোয়। শুধু units final নয়;tens-hundreds স্থির করে।</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>Encoding</td><td>[106,102,104,102,100]</td><td>শুধু digit নিতে99 যোগ।</td></tr><tr><td>Units pass</td><td>[1,3,3,5,7]</td><td>Digit0,2,2,4,6 record order দেয়।</td></tr><tr><td>Tens pass</td><td>[1,3,3,5,7]</td><td>সমান tens-এ units order থাকে।</td></tr><tr><td>Hundreds pass</td><td>[1,3,3,5,7]</td><td>সমান leading digit final order রাখে।</td></tr></tbody></table>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>r low digit-এ sorted ধরো। Digit r+1-এর stable pass নতুন digit-এ order দেয়;equal group-এ আগের r-digit order থাকে। তাই combined r+1 low digit sorted। Zero pass-এর base vacuous;সবশেষে full encoded order।</p>
+<p>Allowed range-এ +99 strictly increasing,তাই encoded ও original order একই। Buffer-এ প্রতিটি pass whole record রাখে। Fixed তিন pass unbounded power হিসাব ছাড়াই থামে।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Demo b10,d3,তাই Θ(3(n+10)),peak Θ(n+10)। Width-base variable হলে general Θ(d(n+b)) রাখো। Counting pass থেকে stability,linear buffer বলে strict in-place নয়।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>Unstable digit sort নেওয়া</h3>
+<p>Later equal-digit group আগের low-digit order হারাতে পারে। প্রতিটি pass stable চাই।</p>
+<h3>Negative key-তে সরাসরি remainder</h3>
+<p>Negative remainder count index নয়। Digit নেওয়ার আগে order-preserving encoding বলো।</p>
+<h3>Range guard ছাড়া place multiply</h3>
+<p>General loop-এ integer place overflow হতে পারে। Pass bound বা multiplication guard দাও।</p>
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>এখানে C17 division nonnegative encoding-এ। Fixed place-এ repeated multiplication overflow নেই।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Explicit encoding ও digit bound-এ পুরো record stable low-to-high pass-এ সাজাও।</p>
+<p>বিভিন্ন guarantee মিলিয়ে বাছতে <a href="topic:algo-sorting-comparison">sorting comparison</a> পড়ো।</p>
