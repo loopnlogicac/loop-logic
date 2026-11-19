@@ -6,9 +6,9 @@ function trace(input) {
     let count = 0;
     const pointers = () => {
         steps.push({op: 'pointer', name: 'front', target: front, line: 8,
-            note: {en: 'Front identifies the next removal cell; count decides whether it is live.'}});
+            note: {en: 'Front identifies the next removal cell; count decides whether it is live.', bn: 'front পরের সরানোর ঘর চেনায়; ঘরটি ব্যবহৃত কি না count বলে।'}});
         steps.push({op: 'pointer', name: 'rear', target: rear, line: 8,
-            note: {en: 'Rear identifies the next insertion cell; count decides whether insertion is allowed.'}});
+            note: {en: 'Rear identifies the next insertion cell; count decides whether insertion is allowed.', bn: 'rear পরের ঢোকানোর ঘর চেনায়; ঢোকানো যাবে কি না count বলে।'}});
         const logical = [];
         for (let k = 0; k < count; k++) logical.push(items[(front + k) % 4]);
         steps.push({op: 'list', name: 'items', items: logical, line: 8,

@@ -1,124 +1,134 @@
-# C 0.4.0 — reviewer notes
+# C 0.5.0 — reviewer notes
 
-This cumulative package contains 77 draft topics: the 60 previously delivered
-C topics plus all 17 Batch 4 topics in strings and pointers. The manifest keeps
-schemaVersion 1.1, advances packageVersion to 0.4.0, and lists all nine delivered
-modules in curriculum order. No requested topic or coverage point is deferred.
-No additional curriculum IDs are proposed.
+This cumulative package contains 97 draft topics: the unchanged 77 topics from
+Batches 1–4 and all 20 Batch 5 topics. The manifest advances packageVersion from
+0.4.0 to 0.5.0 and adds dynamic-memory, structures, and preprocessor in curriculum
+order. Only this package folder changes. No requested coverage point is deferred,
+and no extra curriculum IDs are proposed.
 
-## Batch 4 coverage
+## Batch 5 coverage
 
 | Module | Topic | Coverage and review focus |
 | --- | --- | --- |
-| strings | c-strings-intro | Character arrays, null termination, literal versus writable copy, DIU storage diagram, empty strings, length versus capacity and byte versus visible-character counts. |
-| strings | c-string-input-output | Bounded scanf %s, whole-line fgets, return checks, newline removal, oversized-line rejection and draining, puts/printf, fixed format strings and C11 removal of gets. |
-| strings | c-string-functions | strlen, strcpy, strncpy, strcat, strcmp, strchr and strstr; reference table, capacity calculations, strncpy padding/termination, non-overlap rules and borrowed search results. |
-| strings | c-string-manipulation | Hand-written length, copy, append, comparison and reverse; palindrome pairs, word-state and vowel counts, upper/lowercase conversion, empty-string safety and loop reasoning. |
-| strings | c-array-of-strings | Fixed-width char rows versus literal-pointer tables, bounded row input, text comparison, character-copy swaps versus address swaps, sorting names, logical used rows and representation diagrams. |
-| strings | c-character-functions | isalpha, isdigit, isspace, isupper, toupper and tolower; unsigned-char argument domain, normalized predicates, EOF handling, initial C locale, category counts and whitespace normalization. |
-| pointers | c-pointers-intro | Addresses, &, pointer declarations, dereference, aliases, pointer redirection, NULL initialization and real %p output with void * conversions; illustrative-address memory diagram. |
-| pointers | c-pointer-arithmetic | Type-scaled steps, ptrdiff_t and %td, same-array differences and ordering, one-past markers, half-open ranges and backward traversal without before-begin pointers. |
-| pointers | c-pointers-and-arrays | Array conversion, a[i] versus *(a+i), pointer traversal, sizeof distinctions, actual-array counts, parameter adjustment, interior views and pointer-to-array types. |
-| pointers | c-pointers-and-strings | char[] versus literal views, literal-write UB, suffix aliases, string functions through pointers, capacity/lifetime contracts and read-only parsing. |
-| pointers | c-pointers-and-functions | C passes pointer values by value; swap, min/max outputs, output aliasing, live caller-array search returns, invalid automatic-local returns and shared static results. |
-| pointers | c-pointer-to-pointer | Two indirection levels, changing caller pointers, real row-pointer tables versus fixed matrices, independently allocated rows, partial-failure cleanup and allocation ownership. |
-| pointers | c-function-pointers | Declaration/call forms, compatible dispatch tables, calculator operations, unary callbacks, qsort and overflow-safe comparison; incompatible-call UB and object/function pointer distinctions. |
-| pointers | c-void-null-pointers | Generic object addresses, C implicit conversion rules, actual target type/alignment/lifetime, NULL states and checks, empty-string distinction and C23 nullptr/nullptr_t note. |
-| pointers | c-dangling-wild-pointers | Uninitialized pointer reads, block and allocated lifetimes, dangling aliases after free, owner versus borrower, safe scalar copies, caller-owned outputs and sanitizer tools. |
-| pointers | c-const-pointers | Pointer to const, const pointer and both; outward/right-to-left declaration reading, const-correct inputs, mutable aliases, top-level parameter qualification and unsafe nested qualification conversion. |
-| pointers | c-array-of-pointers | Address-entry arrays versus pointer-to-array, row strides, literal and numeric jagged rows, separate row lengths, initialization, aliases and table/target lifetimes. |
+| dynamic-memory | c-dynamic-memory-intro | Automatic versus allocated duration, common stack/heap implementation picture, run-time sizes, stdlib.h interfaces, owners and borrowers, returned allocations, empty collections. |
+| dynamic-memory | c-malloc-calloc | sizeof target expressions, NULL checks, allocation-product overflow guards, malloc/calloc comparison, integer zero initialization versus pointer/floating representations. |
+| dynamic-memory | c-realloc-free | Temporary-pointer pattern, preserved prefix, new-tail initialization, length versus capacity, aliases invalidated on success, positive-size failure, explicit free for zero capacity, double-free prevention. |
+| dynamic-memory | c-memory-leaks | Lost ownership versus dangling access, two-resource cleanup, early returns, borrowed searches, ASan/LeakSanitizer and Valgrind workflows and limits. |
+| dynamic-memory | c-dynamic-arrays | Dynamic vectors, contiguous rectangular indexing, separately allocated rows, jagged lengths, dimension/product validation, partial-row cleanup and reverse ownership order. |
+| structures | c-structures | Definition versus object, dot access, positional/designated initialization, student records, omitted members, embedded-array value copying and field equality. |
+| structures | c-nested-structures | Embedded Date and Result groups, nested member chains, nested initializers, subrecord replacement, chronology and application validity. |
+| structures | c-array-of-structures | Filling records, logical count, search and missing results, whole-record sorting, stable ties, in-place filtering, complexity and empty input. |
+| structures | c-structures-and-pointers | Arrow versus dereference/dot, allocated records and record arrays, interior borrowers, shallow pointer-member copies, deep-copy responsibilities. |
+| structures | c-structures-and-functions | Value versus pointer parameters, const views, safe record-value returns, in-place updates, borrowed selection results and invalid local-address returns. |
+| structures | c-typedef | Scalar/structure/callback aliases, unchanged compatibility and formatting, complete pointer aliases, top-level const and ownership cautions. |
+| structures | c-unions | Shared storage, size guarantees, structure/union comparison, explicit tags, matching payload reads, numeric conversion versus representation reinterpretation. |
+| structures | c-enums | Explicit and automatic enumerators, switch cases, sparse codes, validation, enum versus macro constants and C17 representation limits. |
+| structures | c-bit-fields | Widths and unsigned ranges, flag packing, promotion-aware printing, non-addressable fields, input temporaries, zero-width separators and layout/hardware/concurrency limits. |
+| structures | c-structure-padding | Alignment rationale, sizeof/offsetof/_Alignof, measured reorderings, array stride, padding-insensitive equality and explicit serialization. |
+| preprocessor | c-preprocessor-intro | Translation timing, directive reference, token replacement, inclusion versus linking, gcc -E/-P inspection and runtime/build-time distinction. |
+| preprocessor | c-macros | Object/function-like macros, inner/outer parentheses, defined bad-grouping comparison, repeated-evaluation UB explained without execution, #/##, two-level expansion and inline functions. |
+| preprocessor | c-conditional-compilation | Full #if family, existence versus value, defaults and -D overrides, debug/release builds, platform conventions and configuration consistency. |
+| preprocessor | c-header-files-guards | Angle/quoted includes, a real reusable header, repeated inclusion, self-contained dependencies, portable guards versus pragma once and translation-unit/linkage boundaries. |
+| preprocessor | c-predefined-macros | __FILE__, __LINE__, __DATE__, __TIME__, __STDC_VERSION__, call-site diagnostics, #line, build stamps versus execution time and optional-feature checks. |
 
-Every new topic includes bilingual title, summary and key points, an English
-lesson, a syntax fragment/table, worked programs, practice solutions, quizzes
-and worked exam answers. Every pointer topic has a `<pre class="diagram">`
-memory diagram and at least one intentional common-mistake example with its
-`demonstrates` field set. All review statuses remain draft.
+Every new lesson includes English text, bilingual title/summary/key points,
+worked programs, reference solutions, quizzes, and worked exam answers. All
+required and recommended lesson sections are present. Every lesson meets its
+level's body-word target without repeated cross-topic teaching paragraphs.
+Full Bangla bodies are optional and are not included in this batch. Bangla
+metadata follows BANGLA_STYLE.md. Video lists remain empty rather than attaching
+an unverified teaching match. All review statuses remain draft.
 
 New content totals:
 
-- 78 examples: 62 normal programs and 16 intentional mistakes;
-- 68 programming practice solutions with 138 input/output cases;
-- 175 quiz questions, including 51 compiled and executed output questions;
-- 92 bilingual key points and 54 worked exam questions.
-
-Example counts vary from 3 to 6, quizzes from 10 to 12, key points from 5 to 6,
-and exam questions from 3 to 4 according to the topic. All 17 lessons meet their
-level's body-word target. Full Bangla lesson bodies are optional and are not
-included. Bangla metadata follows BANGLA_STYLE.md, including পয়েন্টার,
-অ্যাড্রেস, স্ট্রিং, ভেরিয়েবল and ফাংশন. Video lists remain empty because a
-precise teaching match was not established; no speculative video is attached.
+- 67 complete examples, with 3–5 examples per topic;
+- 80 programming practice solutions and 166 input/output cases;
+- 200 quiz questions, including 60 compiled and executed output questions;
+- 104 bilingual key points and 60 worked exam questions;
+- 147 C source files and 233 .out files generated from real executions;
+- one reusable project header, examples/lab-record.h in c-header-files-guards.
 
 ## Execution and validation
 
 Toolchain: gcc (Debian 14.2.0-19) 14.2.0; Node.js v24.22.1; 64-bit Linux.
-Normal new programs compile as C17 with -Wall -Wextra -Wpedantic -Werror -O2.
-Their C99 loop declarations are reflected in standards.minimum.
+All new source files and output-quiz programs compile and run as C17 with
+-Wall -Wextra -Wpedantic -Werror -O2. The standards.minimum metadata identifies
+C99 syntax where used and C11 for the alignment lesson. Earlier explicitly
+selected language-version examples are preserved unchanged.
 
-All 200 new .out files were generated by compiling and running the actual
-programs: 62 example runs and 138 practice cases. All 51 new output-quiz
-answers were also derived from and checked against real executions. Intentional
-compile failures and undefined-behavior examples have no invented output.
-The checker verifies their declared demonstration mode; undefined-behavior
-programs are compiled leniently and deliberately not executed.
+All 233 new .out files were captured from actual program stdout: 67 example
+runs and 166 practice runs. The 60 output-quiz answers and worked output exam
+answers were likewise derived from compiled executions. No new program executes
+undefined behavior; unsafe fragments are explained as mistakes in the lesson.
+Platform-varying examples retain actual output and explicit outputNote fields.
 
-The unchanged 60-topic baseline passed with 0 errors and 0 warnings before this
-work. The complete 77-topic package was then checked from inside content-kit/:
+The unchanged 77-topic baseline passed with 0 errors and 0 warnings. The entire
+97-topic cumulative package then passed the required command from content-kit/:
 
 ```sh
 node tools/check.mjs c-tutorial/c-tutorial --sanitize --report c-tutorial/c-tutorial/CHECK_REPORT.txt
 ```
 
-The final report records **0 errors and 0 warnings**. The checker compiles and
-executes normal examples, practice cases and output quizzes, and additionally
-runs normal example/practice paths with AddressSanitizer and UBSan. Earlier
-topic files are unchanged; their existing examples and tests remain part of
-the cumulative validation.
+CHECK_REPORT.txt records **0 errors and 0 warnings**. The check compiles and runs
+examples, reference solutions and output quizzes, and additionally runs example
+and practice paths with AddressSanitizer, UBSan and leak detection.
 
-An independent Python oracle also passed 873 cases across 13 new reference
-solutions, including:
+Additional verification completed outside the repository:
 
-- ASCII reversal, exact palindromes and word counts for empty, maximum-length,
-  mixed-whitespace and seeded random lines;
-- whitespace normalization and digit masking;
-- overlapping substring matches and missing/empty separator suffixes;
-- every valid half-open slice of the five-element pointer-arithmetic array,
-  including empty and reverse traversals;
-- every 1–4 by 1–4 allocated matrix dimension;
-- randomized min/max, qsort results and both callback transformations.
+- 671 independent expected-result comparisons across 17 reference solutions:
+  randomized vector reversal, maxima, append and prefix retention; every stream
+  length 0–30; integer histograms; every 1–5 by 1–5 rectangle; every square
+  diagonal size 1–5; random jagged rows; stable record sorting/filtering including
+  duplicate keys; chronological dates; tagged sums; all 32 valid packed flag
+  combinations; bounded inline side effects; every stage/action combination;
+  and randomized record-winner selection.
+- Four source/build checks: gcc -E token replacement, both debug flag values,
+  and the real-header mode of c-header-files-guards/examples/ex-3.c. The latter
+  uses -DUSE_LAB_HEADER and includes lab-record.h twice, with identical output
+  to the self-contained example. The debug variants retain the same core result.
+- 59 injected allocation-failure paths across 38 allocation-using programs.
+  A temporary linker wrapper rejected each allocation in turn, including realloc
+  and partial-row construction. Every forced failure returned the intended error
+  status with no AddressSanitizer, UBSan or leak report. The original contents
+  were not changed to add test hooks.
 
-The oracle compared outputs against independent Python calculations. Its
-scripts, compiler products and authoring utilities remain outside the repository.
-Only content-kit/c-tutorial/c-tutorial/ files are changed.
+The authoring utilities, oracle, allocation wrapper, executables and intermediate
+preprocessor output are outside the repository. Valgrind commands are taught but
+no Valgrind execution is claimed; the actual memory checks used GCC sanitizers.
 
 ## Human review and limits
 
-- Review the natural Bangla and PPS/SPL question wording before publication.
-- The address example is explicitly nondeterministic: its .out records a real
-  run, while locations and %p representation vary. Diagram addresses are
-  illustrative. The sizeof example is also marked implementation-dependent;
-  it makes no universal claim about pointer or int widths.
-- String manipulation and text practice deliberately use ASCII byte domains.
-  UTF-8/Bangla visible-character counts, reversal and dictionary collation need
-  a different text-aware design. ctype examples use the initial C locale and
-  unsigned-char conversions; no Unicode classification is claimed.
-- Numeric scanf exercises assume representable input inside their stated
-  domains. Conversion counts do not constitute a parser for oversized numbers.
-  Token widths protect storage; line examples separately explain truncation,
-  remaining input, EOF and newline policies.
-- Dynamic allocation in the double-pointer and lifetime lessons is a bounded
-  preview. Allocation results and partial-row cleanup are handled, but the
-  successful executions do not force allocator failure. General-size overflow
-  checks and fuller allocation interfaces belong to the next module.
-- NULL checks represent an agreed absence state; they do not validate a stale
-  address. Clearing an owner does not clear aliases. Const views do not extend
-  lifetime or freeze mutable targets reached through other valid access paths.
-- qsort has no promised algorithm or stability guarantee. Comparators preserve
-  negative/zero/positive ordering without signed subtraction overflow. Function
-  pointers retain compatible signatures and are not treated as void pointers.
-- C23 nullptr and its type are explanatory notes; no new C23 execution is claimed.
-  The package retains the inherited explicitly selected C23 example unchanged.
-- Whitespace-sensitive .in fixtures deliberately include tabs and trailing
-  spaces for classification, trimming and normalization. Several .out fixtures
-  end with an empty result line after their prompt. Preserve those bytes; git
-  whitespace diagnostics on these fixtures describe intentional test data.
-- No warnings remain, and every requested curriculum coverage point is covered.
+- Review natural Bangla and PPS/SPL exam wording before publication.
+- Structure size/alignment examples show real GCC/Linux measurements. Spread is
+  12 bytes, Grouped is 8, offsets are 0/4/8, and int/record alignments are 4 here.
+  These are labeled target observations, not universal C17 sizes. Portable quiz
+  questions test guaranteed relationships instead of hard-coded offsets.
+- The byte-count practice uses sizeof(int), so its numeric output is platform
+  dependent. Its largest fixture is SIZE_MAX for the verified 64-bit target.
+  All numeric input fixtures assume representable values within stated domains;
+  scanf conversion counts do not safely parse arbitrarily large numeric strings.
+- Platform detection uses implementation conventions. __DATE__/__TIME__ describe
+  actual translation context, not current time or a guaranteed UTC stamp. Their
+  recorded output can change on rebuild. #line supplies deliberate stable source
+  locations in diagnostic examples.
+- calloc zero bits guarantee integer zero here, not a universal null-pointer or
+  floating-zero representation. malloc/realloc storage is initialized before
+  value reads; general byte products and bounded exercise counts are distinguished.
+- Positive-size realloc failure preserves the old block. Success invalidates old
+  aliases even if an address appears unchanged. Zero-size realloc is avoided;
+  its C17/C23 differences are explained. Clearing an owner does not clear borrowers.
+- Flat matrices and int ** row tables have different representations. Row-table
+  cleanup releases completed rows before the table. The examples avoid requiring
+  variable-length-array support, which can be optional in C17 implementations.
+- Union programs read the intended stored member under explicit tags. They do not
+  use representation punning as numeric conversion. Pointer-containing copies
+  remain shallow and require a separate ownership contract.
+- Bit-field ordering, units and padding are implementation choices. The examples
+  use explicit unsigned ranges and promotion-aware printing. External formats use
+  explained shifts/masks and need separate byte serialization; no hardware layout
+  or atomic-access guarantee is implied.
+- Include guards operate per translation unit and do not solve duplicate external
+  definitions. The real header uses a deliberately static inline helper. Its
+  search path is verified with GCC; pragma once is described as a common extension.
+- There are no remaining warnings, missing requested topics, or deferred coverage
+  points. No earlier topic file was modified.

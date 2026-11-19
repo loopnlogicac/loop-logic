@@ -1,3 +1,65 @@
+# Algorithms – Batch 4
+
+Package version: **0.4.0**, schema **1.1**, track **algorithms**.
+
+This final batch adds all **13 remaining topics and 4 labs** in `backtracking`, `strings-math`, `complexity` and `practice-exam`. The curriculum is complete: **56/56 topics and 32/32 labs**. New material includes **32 complete C17 examples, 20 code-practice solutions with 68 captured test outputs, 24 worked written exercises, 140 quiz questions (40 compiled output questions), and 95 worked exam/interview questions**. The interview bank contains the required **50 questions with answers**, grouped by technique, in both its body and structured question list.
+
+## Coverage
+
+| Topic | Material and reviewer focus |
+| --- | --- |
+| `algo-backtracking-intro` | State-space trees, choose/explore/undo, exact-one-count pruning proofs, copied versus shared state, first-answer versus all-answer stopping, empty strings and output-sensitive costs. |
+| `algo-n-queens` | Column and both-diagonal safety, row recursion, all-solution counts, saved first witness, independent vector validation, symmetry convention and implementation-specific factorial bounds. Lab: `n-queens`, grid. |
+| `algo-subset-sum` | Indexed subsets, include/exclude recursion, nonnegative pruning and signed counterexample, zeros and empty subsets, unsigned masks, downward 0/1 reachability DP and pseudo-polynomial costs. |
+| `algo-permutations` | Reversible swaps, depth-local duplicate suppression, sorted used-array lexicographic generation, repeated-copy rule and output-sensitive factorial costs. |
+| `algo-graph-coloring` | Fixed-palette exact search, greedy first-fit comparison and path-ordering counterexample, timetable graph, witness/exhaustion proof, degree bound and actual matrix implementation costs. |
+| `algo-naive-string-matching` | Every legal alignment, overlapping counts, first occurrence versus nonoverlapping policy, measured comparisons and repeated-prefix worst case. Lab: `naive-matching`, array. |
+| `algo-kmp` | Proper borders, prefix construction, multiple fallbacks, overlap-preserving matching, border-chain listing, correctness and amortised linear analysis. Lab: `kmp-prefix`, array. |
+| `algo-rabin-karp` | Rolling polynomial update, negative-remainder normalisation, verified hits, actual aa/dx collision, candidate-sensitive and worst-case costs, hash assumptions and arithmetic bounds. |
+| `algo-number-theory` | Euclid, extended Euclid/Bézout reconstruction, sieve from p squared, modular arithmetic, inverse existence and normalisation, numeric versus bit-cost qualifications. Lab: `sieve`, array. |
+| `algo-p-np` | Decision questions, P/NP, certificates, NP-hard/complete, source-to-target reductions, independent-set/vertex-cover complement example, famous complete problems, pseudo-polynomial DP and the open P-versus-NP question. |
+| `algo-exam-questions` | Twelve fully solved questions: bubble passes, complete small knapsack/LCS tables, Dijkstra snapshots, Kruskal decisions, recurrences, colouring bounds and complexity proofs. |
+| `algo-problem-solving-strategy` | Output contract, constraint-based method selection, brute reference, sorted two-pointer proof, prefix queries, edge/differential tests, overflow/qsort qualifications and Beecrowd/Codeforces study workflow. |
+| `algo-interview-questions` | Fifty short answers grouped into foundations, searching, sorting, divide/conquer, greedy, DP, graphs, backtracking, strings, number theory, complexity and strategy. |
+
+No curriculum point is intentionally omitted, and no extra topic ids are proposed. Titles, summaries, key points and important lab decisions follow `BANGLA_STYLE.md`. Full Bangla bodies remain optional and are not added. Video lists are empty because no catalogue match was verified. Content remains `review.status: draft` for ordinary subject and language review.
+
+## Earlier-title edits
+
+To satisfy the request that **every lab title be a short descriptive phrase**, ten existing labs receive English-title-only changes: `kadane`, `activity-selection`, `binary-search`, `linear-search`, `bubble-sort`, `counting-sort`, `heap-sort`, `insertion-sort`, `merge-sort` and `selection-sort`. Earlier lesson bodies, programs, outputs, lab algorithms and metadata other than those English titles are unchanged. All edits are confined to `content-kit/algorithms/content/`; no curriculum, checker or player code changes.
+
+## Verification
+
+From inside `content-kit/`:
+
+```bash
+node tools/check.mjs algorithms/content --sanitize --report algorithms/content/CHECK_REPORT.txt
+```
+
+The cumulative check reports **0 errors and 0 warnings**. Real GCC runs produced all **100 new `.out` files** (32 examples plus 68 practice test outputs). All 40 output-quiz programs were compiled and run to select their answers. The required check repeats compilation/output comparisons, runs examples and practice under AddressSanitizer and UndefinedBehaviorSanitizer, and validates all cumulative lab presets, explicit checks and generated inputs.
+
+Additional independent verification:
+
+- **5,892 C executions / 9,468 assertions**, seed 5104: exact binary-string sets; queen counts and first witnesses against whole-column permutations for n=1..8; exhaustive small nonnegative/signed subset counts; distinct/ordered permutation sets; naive/KMP/Rabin–Karp matches against independent substring positions; explicit collision and long repetition cases; prefix lengths against direct border enumeration; sieve flags against trial division; gcd against Python's gcd and Bézout identities; inverse existence/equations; colouring witnesses and triangle counts; two-pointer/brute pair existence against independent distinct-index enumeration.
+- **2,084 lab cases / 7,284 assertions**: repeat-call determinism, input immutability, valid shared-player steps, exhaustive short string matches and direct prefix-border references, all supported sieve limits against divisor counts, and all queen sizes against whole-board permutation enumeration. Maximum trace length: **967 steps**, below the 3,000-step limit. The lab checks were repeated after adding the explicit KMP base-case explanation.
+
+Actual tools: GCC 14.2.0 (Debian 14.2.0-19), Node.js v24.22.1 and Python 3.12.14 for temporary authoring/reference scripts. Learner programs are C17, and labs use the required pure deterministic JavaScript. Temporary scripts and binaries remain outside the repository.
+
+## Conventions and review attention
+
+- C strings are nonempty lowercase Latin tokens, at most 24 letters for matching and eight for permutations. Positions are bytes, not Unicode grapheme clusters. The lab form permits empty strings: naive matching explicitly accepts an empty pattern at all n+1 boundaries, while KMP returns an empty prefix table. These documented extensions do not change the C examples' nonempty domain.
+- Queen programs accept n=1..8; the lab limits n to five to show every decision within the step budget. Reflections/rotations count separately. Ascending column trials define the first witness. After counting, the lab restores that saved board; unsatisfiable sizes remain empty.
+- Subsets distinguish input indices, including duplicate and zero values. The recursive overshoot prune requires nonnegative values; the signed mask version has no such prune. The Boolean DP returns reachability, not every witness.
+- Swap-generated permutations are distinct but not generally lexicographic. Sorted used-array output is lexicographic. The factorial quotient program is deliberately fixed to aabb, avoiding unsupported general factorial arithmetic.
+- Colouring uses a fixed simple undirected five-exam conflict graph. The exact solver returns one witness, and the triangle program counts labelled assignments. A greedy failure never proves general impossibility.
+- Rabin–Karp uses base 26, modulus 101 and a=0. Its small fixed hash deliberately exhibits a collision; character verification preserves correctness. Many true or spurious hits can require quadratic verification work.
+- Fixed capacities and integer bounds are explicit. qsort has no C-standard O(n log n) guarantee, which the strategy lesson states. Inverses require modulus at least two. Zero and one are explicit nonprimes.
+- Review the border-chain and reduction proofs, pseudo-polynomial explanation, symmetry convention and natural Bangla wording before publication. There are no unresolved checker warnings.
+
+Earlier notes follow as historical records; their scope and counts apply to those deliveries.
+
+---
+
 # Algorithms – Batch 3
 
 Package version: **0.3.0**, schema **1.1**, track **algorithms**.

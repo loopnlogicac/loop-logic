@@ -1,0 +1,58 @@
+<h2 id="introduction">An empty notebook or a page of zeros</h2>
+<p class="lead">malloc gives you storage without useful initial values. calloc gives you storage with every bit set to zero. Think of malloc as a notebook whose previous marks must not be read. calloc is closer to a page prepared with zero counters. Which one fits depends on how the program first uses the data.</p>
+<p>For a list of exam scores, you may overwrite every element immediately after reading input. malloc is suitable because there is no need to clear the elements first. For attendance counters, you want to increment counts before making any other assignment. calloc prepares integer zeros, so those increments start from a meaningful value.</p>
+<p>A <dfn>byte count</dfn> measures storage, while an element count measures objects. Confusing these counts is a common source of heap overflows. Ten ints require ten times sizeof an int, not necessarily ten bytes. C permits different int sizes, so use the type expression rather than a remembered machine value.</p>
+<p>Neither function promises success. Treat NULL as a failed request whenever the requested size is positive. The success branch owns exactly the requested storage and must eventually release it. Allocation functions do not know which indices you plan to use or which values count as valid marks.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>In C, write <code>malloc(count * sizeof *values)</code> for count objects of the pointed-to type. Write <code>calloc(count, sizeof *values)</code> when integer elements should begin at zero. The separate calloc arguments describe the same total amount of storage. There is no need to cast either return value.</p>
+<p>Use sizeof on the target, not on the pointer variable. sizeof values measures an address-sized object here. It does not measure the planned array. Parentheses around a type name, as in sizeof(int), are valid too, but repeating the type makes later edits easier to get wrong.</p><pre><code class="language-c">int *values = NULL;
+if (count &gt; SIZE_MAX / sizeof *values) {
+    return 1;
+}
+values = malloc(count * sizeof *values);
+</code></pre><table class="ref"><thead><tr><th scope="col">Property</th><th scope="col">malloc</th><th scope="col">calloc</th></tr></thead><tbody><tr><td>Arguments</td><td>Total byte count</td><td>Count and element size</td></tr><tr><td>Initial bits</td><td>Indeterminate contents</td><td>All bits zero</td></tr><tr><td>Integer elements</td><td>Write before reading</td><td>Begin with value zero</td></tr><tr><td>Release</td><td>free(base)</td><td>free(base)</td></tr><tr><td>Failure for positive size</td><td>NULL</td><td>NULL</td></tr></tbody></table>
+
+<h2 id="how-it-works">Check the size before asking for storage</h2>
+<p>The allocation size has its own failure risk before malloc ever runs. size_t is an unsigned integer type. If count times the element size wraps around, malloc sees the wrapped byte count. It may successfully allocate a small block while your loop still writes count elements. The successful pointer check cannot repair that arithmetic mistake.</p>
+<p>The safe general test uses division first. SIZE_MAX is the largest size_t value. If count exceeds SIZE_MAX divided by the element size, the requested product cannot fit. Reject that count before multiplication. The element size is positive, so the division itself is well defined. Include stdint.h for SIZE_MAX.</p>
+<p>A small input bound can establish this safety without a large general-purpose interface. In these exercises, counts of at most thirty make the requested arrays tiny. Still understand the division test, because later container code may receive a size_t from another function. A sensible application limit also avoids unrealistic memory requests even when arithmetic fits.</p>
+<p>After allocation, malloc and calloc give suitable alignment for these ordinary integer objects. Store through an int pointer and use indices within count. A calloc integer array can be read immediately as zeros. A malloc integer array must first receive explicit values, perhaps by input, calculation, or a copy from another live array.</p>
+<p>The promise of zero bits is narrower than every type's default value. All-zero bits represent zero for integer types. Portable C does not require an all-zero pointer representation to be a null pointer. It also does not promise the floating representation you might assume. Initialize pointer members with NULL and floating values with their intended values when their meaning matters.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The first programs separate initialization from size calculation. The final counter program uses calloc because each increment reads the previous value. Check that the histogram contains one entry for group zero, three for group one, and one for group two. Uninitialized counters would make that calculation invalid.</p>
+
+<h3>A zeroed score array</h3>
+<p>Four integer slots are created with zero bits, which represent integer zero. Assigning scores[2] changes only the third slot. The first and last slots remain zero, so the program prints 0 9 0. The count is passed separately from the element size. Once the values have been printed, one free releases all four slots.</p>
+<div data-example="ex-1"></div>
+
+<h3>Check an allocation product</h3>
+<p>The SIZE_MAX division guard runs before multiplication. The chosen count of five passes that guard, then malloc supplies storage. The loop writes values one through five before the final read. The result Last: 5 follows from the loop assignments, not from malloc's initial contents. On a larger request, the same guard would reject an unrepresentable product.</p>
+<div data-example="ex-2"></div>
+
+<h3>Count three lab groups</h3>
+<p>A frequency counter needs its previous value during every increment. calloc makes that previous value zero initially. The fixed group labels stay between zero and two, matching the table bounds. Three labels select group one, and one label selects each other group. The resulting frequencies add to five, matching the number of input labels.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Zero requests and allocation limits</h2>
+<p>A zero-byte request has special rules. malloc(0) and calloc with a zero total size may return NULL or a non-null pointer that you can pass to free. You may not use either outcome as an element of a zero-length array. Handle an empty collection before allocation if you want a single easy-to-explain representation.</p>
+<p>calloc must not succeed with an undersized block when its requested total is too large. An explicit count check remains useful for a shared size policy and for later calculations. Do not imitate calloc by writing malloc(count * size) followed by a clearing loop before validating that product. The wrap could already have caused a dangerously small allocation.</p>
+<p>If allocation fails during input processing, do not continue with a fixed local fallback of unknown capacity. Report failure or return it to your caller. If some other allocation already succeeded, release that earlier ownership as part of leaving the operation. A failed allocation does not clean unrelated blocks for you.</p>
+<p>The byte-count exercise prints sizeof-dependent results. It is intentionally a calculation on the current platform, not a claim that all ints occupy four bytes. Its overflow decision remains portable. The accepted input is a nonnegative decimal value representable in size_t; scanf conversion checks do not safely parse arbitrarily large numeric strings.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Allocating pointer-sized elements</h3>
+<p>Writing malloc(count * sizeof values) uses the pointer size. It may request too much or too little for the target type. Write sizeof *values and keep the count expressed in elements. Extra storage can conceal the mistake during testing, so a successful run alone does not prove the size expression is right.</p>
+<h3>Incrementing uninitialized counters</h3>
+<p>The expression counts[group]++ first reads counts[group]. If malloc supplied that storage and no earlier assignment initialized the integer, this read is invalid. Either fill every counter with zero in a loop or choose calloc. Checking for NULL only proves that storage was obtained; it says nothing about its contents.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Choose allocation from the first meaningful operation. An overwrite-only array fits malloc. An integer frequency table often fits calloc. State the count limit and preserve it beside the pointer. Check a signed input's range before converting it to an unsigned size.</p>
+<p>Keep size arithmetic separate from value arithmetic. A safe allocation product does not prove that a later sum of marks fits int. Use the exercise's stated ranges to justify both. For code with large counts or large numeric values, reconsider the accumulator type as well as the allocation expression.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>malloc and calloc exist in all commonly used C standards, including C17. This lesson uses C99 loop declarations and SIZE_MAX from stdint.h. The absence of an allocation cast is deliberate C syntax; C++ has different conversion rules. All-bits-zero initialization does not become a universal pointer or floating-value guarantee in C17.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Use the requested element count and sizeof the pointed-to object to calculate storage. Check arithmetic before allocation and NULL afterward. Decide whether immediate integer zeros are useful or whether you will overwrite every element. Continue to <a href="topic:c-realloc-free">realloc and free</a> to change an existing block safely.</p>
