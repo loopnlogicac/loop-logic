@@ -1,0 +1,53 @@
+<h2 id="introduction">Make room before probes become expensive</h2>
+<p class="lead">A classroom register can begin with a small sheet, then move to a larger sheet when more students arrive. A hash table also needs room to grow. Its <dfn>load factor</dfn> is the number of live keys divided by capacity. A growing load usually increases the work needed to find a free slot.</p>
+<p>Our set starts with five cells and grows before a new distinct key would make the load exceed 0.6. The replacement capacity is twice the old capacity plus one: five, eleven, twenty-three, forty-seven. The choice keeps growth geometric while preserving enough empty slots for linear probing. Linear probing works with these capacities without requiring that each be prime.</p>
+<p>Changing capacity changes the home bucket. <dfn>Rehashing</dfn> means allocating a replacement array and placing every live key again using the new formula. It is not a byte-for-byte enlargement of the existing layout. You must restore the rule that lookup begins at a key's new home and finds it before encountering an empty cell.</p>
+<h2 id="syntax">Separate live count from array capacity</h2>
+<p>The Table record stores cells, capacity and count. Each Cell has a key and a used flag. This version supports insertion but no deletion, so it needs no tombstones. Count measures distinct occupied cells; capacity includes every empty cell too. A duplicate never increases count.</p>
+<p>Before adding a key, position follows linear probes until it finds that key or an unused cell. Since the maximum load is 0.6, an empty cell always exists. This invariant makes the search loop terminate. A production helper that accepts arbitrary damaged or full tables should also enforce an explicit attempt bound.</p>
+<p>The threshold comparison uses (count+1)*10 &gt; capacity*6. Integer arithmetic avoids disagreement caused by rounded decimal displays. Our accepted input has at most twelve keys, so capacity reaches at most twenty-three and the products cannot overflow size_t. A general unbounded container must check capacity growth, byte multiplication and count arithmetic against their limits before allocating.</p>
+<p>A hash helper reduces an int key through long long arithmetic, whose range includes int. The small capacities safely fit long long. Negative remainders are adjusted before conversion to size_t. This keeps INT_MIN usable without trying to negate it or convert a negative remainder directly into an unsigned array index.</p>
+<h2 id="how-it-works">Build the replacement before publishing it</h2>
+<p>With keys 0,5,10, the capacity-five table has load three-fifths. Adding 15 would make four-fifths, so growth happens first. The program allocates eleven initialized cells, scans all five old cells, reinserts each used key, then inserts 15 under the new modulus.</p>
+<pre class="diagram">Old capacity 5, before fourth distinct insertion:
+[0] [5] [10] [empty] [empty]
+          allocate replacement capacity 11
+Rehash old keys: 0 -&gt; slot 0; 5 -&gt; slot 5; 10 -&gt; slot 10
+Insert 15: home 4 -&gt; slot 4
+New: [0] [ ] [ ] [ ] [15] [5] [ ] [ ] [ ] [ ] [10]
+Publish new pointer and capacity; release old allocation.</pre>
+<p>The old cells remain owned by the table until the replacement is ready. If allocation fails, add returns minus one without changing that ownership. The caller can then release the original array or choose another response. This sequence avoids losing all keys merely because a larger allocation was unavailable.</p>
+<p>Our cells contain integers, so copying a live key into a new cell cannot fail. A dictionary with separately allocated strings or records must define whether rehashing moves record pointers or duplicates owned data. Moving pointers can preserve records without reallocating each one, but external pointers into the old cell array still become invalid.</p>
+<p>After rebuilding, the previous empty-cell position is meaningless. The code recomputes position for the incoming key under the new capacity. It then writes the new record and increments count once. Existing keys contribute to the replacement layout but do not represent new insertions and must not increase the logical count again.</p>
+<h2 id="examples">Trigger growth and inspect new positions</h2>
+<h3>Grow a linear-probing set transactionally</h3>
+<p>The fourth distinct key triggers capacity eleven. The seventh triggers twenty-three. Existing keys are inserted again under the new modulus.</p>
+<div data-example="ex-1"></div>
+<h3>A duplicate does not trigger growth</h3>
+<p>Three distinct keys fit at load 0.6. Repeated keys do not cross the threshold because membership is checked first.</p>
+<div data-example="ex-2"></div>
+<h3>Rebuild changes positions of negative keys too</h3>
+<p>Normalized remainders change with capacity. Copying the old cells directly would break lookup after the first empty position.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Amortized rebuilding and expected probing</h2>
+<p>One insertion that grows storage costs O(m+n) for scanning old cells and reinserting n live keys, assuming expected bounded probe cost. Near a fixed load threshold, m and n are proportional, so this is O(n). Other insertions can be expected O(1) with a suitable hash distribution and available capacity.</p>
+<p>To analyze a sequence, add the rebuild sizes. Doubling capacities produces a geometric sum: eight plus sixteen plus thirty-two is less than sixty-four. Across enough insertions to reach the final size, the total rebuild work is O(n). Spreading that cost across the sequence gives O(1) amortized rebuilding overhead per distinct insertion.</p>
+<p>Amortized and expected describe different things. Amortized analysis spreads occasional growth across many operations; it does not assume random queries. Expected probe analysis depends on the key distribution and hashing model. A bad fixed hash can make collision work much worse even when geometric resizing is correct.</p>
+<p>In a classroom exercise, report both parts: expected O(1) amortized insertion under suitable hashing, O(n) work for a particular rebuild, and O(m+n) temporary storage while both arrays coexist. The final table occupies O(m) cells. No extra recursive stack is needed because the implementation rebuilds with loops.</p>
+<p>Growing by one cell each time would cause 1+2+...+n copying work, which is O(n squared). Geometric growth avoids that pattern. Reserving a suitable capacity in advance can also avoid rebuilds when the expected number of keys is known. The target must account for spare cells, not only the final key count.</p>
+<h2 id="edge-cases">Decide when rebuilding is unnecessary</h2>
+<p>An empty set owns five initialized cells but no keys. Its first insertion needs no growth. Three distinct keys exactly meet the 0.6 threshold and remain at capacity five. Repeated insertion of the third key does not trigger growth because membership is checked before the threshold calculation.</p>
+<p>Negative keys are rehashed like positive ones. For -1, the home changes from four in capacity five to ten in capacity eleven. Copying its old index would leave it behind an empty new home, making a normal lookup report absence. This small case makes the need for reinsertion visible.</p>
+<p>A deletion-capable open-address table may rebuild without growing to remove tombstones. Chaining may instead grow bucket headers and relink existing nodes. Both operations recompute placement under the chosen capacity. The current program deliberately keeps the simpler insertion-only set so that rebuilding ownership is easy to follow.</p>
+<p>Shrinking needs a separate lower threshold. Growing and shrinking around the same boundary can make alternating insertions and deletions rebuild repeatedly. Leaving a wide gap between thresholds prevents this oscillation. If predictable response time matters, a table may distribute migration over later operations rather than stop for one complete rebuild.</p>
+<h2 id="common-mistakes">Do not preserve obsolete positions</h2>
+<h3>Reallocating without rehashing</h3>
+<p>A larger block alone does not repair home positions. Create an empty replacement and insert each live key with the new modulus.</p>
+<h3>Freeing the original before allocation succeeds</h3>
+<p>A failed malloc would then destroy the only copy of the set. Keep the old table until replacement construction has completed.</p>
+<h3>Calling every insertion worst-case constant time</h3>
+<p>A growing insertion touches many keys. State the amortized claim for a sequence and the hashing assumption behind expected probing.</p>
+<h2 id="version-notes">C17 allocation size arithmetic</h2>
+<div class="callout version"><p>The growth example uses size_t for capacities and allocation counts. Its twelve-key bound keeps every multiplication representable. An unrestricted C17 container must check size growth and byte-count overflow before malloc.</p></div>
+<h2 id="summary">Capacity changes require a new layout</h2>
+<p>A reliable rebuild keeps ownership clear and recomputes every key's position. Geometric capacity growth controls total migration work, while load policy controls spare space. Continue to <a href="topic:ds-graph-terminology">graphs</a>, where records represent connections rather than dictionary buckets.</p>

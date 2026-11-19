@@ -1,0 +1,55 @@
+<h2 id="introduction">Let a collision search for another cell</h2>
+<p class="lead">Imagine assigned seats in a small reading room. If your assigned seat is occupied, you follow a fixed rule to try another seat. <dfn>Open addressing</dfn> stores each key directly in the table array and uses a <dfn>probe sequence</dfn> to find its possible positions.</p>
+<p>The rule must be reproducible. A search starts from the same home bucket and follows the same sequence as insertion. It compares keys until it finds a match, a never-used empty cell, or the attempt limit. Our eleven-slot table supports three methods, chosen by an input number: zero for linear, one for quadratic and two for double hashing.</p>
+<p>Each slot has a key field and a state field. State zero means never used, one means occupied, and two means deleted. A deleted slot is a tombstone: available for later insertion, but unable to prove that a searched key is absent. Integer zero remains valid data because state, rather than key value, describes occupancy.</p>
+<h2 id="syntax">Write the complete probe formula</h2>
+<p>All methods use normalized h1(k)=k mod 11, with attempt i beginning at zero. Linear probing uses (h1+i)%11. Quadratic probing uses (h1+i*i)%11. Double hashing uses (h1+i*h2)%11, where h2=1+(k mod 10), again with normalized remainders. Every attempt uses the original home bucket, rather than the previous probe as a new home.</p>
+<p>Linear probing visits every slot because its step is one. Its weakness is primary clustering: long adjacent occupied runs attract more arrivals. A key whose home is anywhere inside a run must continue toward its end. Even unrelated home buckets then share the same congested region.</p>
+<p>Quadratic steps spread early attempts apart but need a coverage argument. Modulo eleven, i squared reaches only six distinct residues. Our code bounds attempts at eleven and reports exhaustion if no reachable free slot appears. A table can therefore reject an insertion while some slots remain empty. The standard prime-capacity guarantee for this simple quadratic rule requires the table to stay below half full.</p>
+<p>Double hashing chooses a separate step for each key. A complete cycle needs gcd(step,capacity)=1. With prime eleven and step one through ten, that condition always holds. Keys with the same home can follow different routes, reducing shared clustering. They can still collide, so the normal comparison and stopping rules remain necessary.</p>
+<h2 id="how-it-works">Search past deletions without creating duplicates</h2>
+<p>Insert 1,12,23,34 using linear probing. All four begin at slot one, so they occupy slots one through four. Removing 12 must not turn slot two into a never-used empty cell. Otherwise a search for 34 would stop too early and incorrectly report absence.</p>
+<pre class="diagram">Before deletion:
+slot       0     1     2     3     4     5
+state    empty  [1]  [12]  [23]  [34]  empty
+After deleting 12:
+state    empty  [1]   [†]  [23]  [34]  empty
+Search 34: home 1 -&gt; tombstone 2 -&gt; 23 at 3 -&gt; match at 4</pre>
+<p>Insertion remembers the first tombstone but continues searching for an equal key. When it reaches a never-used empty cell, equality is ruled out along that sequence. It can then place the new key into the remembered tombstone, or into that empty cell if no tombstone occurred. If every allowed probe is used, a remembered tombstone is still reusable.</p>
+<p>The first example inserts all input keys, deletes one key and searches for another. The fourth example goes further: it deletes 12, tries duplicate 23, then inserts new key 34. The duplicate attempt leaves the tombstone available. The new key occupies it, while the older 23 stays reachable.</p>
+<div data-lab="hash-open-addressing"></div>
+<p>In the lab, choose the same four initial keys and switch methods. The final membership should agree unless the quadratic sequence exhausts its reachable positions. Slot layouts may differ because each method resolves collisions differently. The insertion status list distinguishes a duplicate from an exhausted attempt.</p>
+<h2 id="examples">Compare placement and tombstone behavior</h2>
+<h3>Choose a probing method and preserve a search</h3>
+<p>Linear probing places colliding keys in consecutive cells. Deleting 12 leaves a tombstone, so a later search still reaches 34.</p>
+<div data-example="ex-1"></div>
+<h3>Quadratic probing can exhaust its reachable cells</h3>
+<p>Seven colliding keys request only six distinct quadratic offsets modulo eleven. The last insertion returns -1 even though other slots are empty.</p>
+<div data-example="ex-2"></div>
+<h3>Inspect a double-hash cycle</h3>
+<p>The second hash gives step three. Since eleven is prime, the sequence visits every slot before returning to its start.</p>
+<div data-example="ex-3"></div>
+<h3>Reuse a tombstone after checking for a duplicate</h3>
+<p>The first attempt finds 23 beyond the tombstone and adds nothing. The new key 34 later reuses that same tombstone without hiding 23.</p>
+<div data-example="ex-4"></div>
+<h2 id="comparison">Load and probe coverage both matter</h2>
+<p>An expected constant-time claim needs a low load and a suitable distribution model. As live occupancy approaches capacity, finding a free slot becomes harder. Tombstones can also lengthen searches even though they no longer count as live keys. A useful implementation monitors both live count and used-or-deleted count, then rebuilds when necessary.</p>
+<p>For a capacity-m table, one bounded operation can inspect O(m) slots in the worst case and uses O(1) working space. The array occupies O(m) total storage. An insertion adds no separately allocated node. This often improves locality compared with chasing a linked chain, but requires free capacity and careful deletion rules.</p>
+<p>A never-used empty slot proves absence because insertion would have stopped there earlier in the same sequence. That argument assumes the capacity and hash rule have not changed without rebuilding. Tombstones preserve the argument by distinguishing deletion from a slot that was never crossed by stored keys.</p>
+<p>Double hashing has a full-cycle guarantee under our capacity and step choices. Quadratic probing has a different limitation, explicitly shown by example two. Do not call both failures table full: one can mean all slots occupied, while the other means only the chosen sequence is exhausted.</p>
+<h2 id="edge-cases">Bound every attempt loop</h2>
+<p>An empty table gives an immediate empty probe. A single occupied home either matches or forces another probe. A full linear or double-hash table scans at most eleven attempts before failure. Searching an absent key in a table containing only occupied cells and tombstones also terminates at that bound.</p>
+<p>Duplicate keys keep set semantics and return status zero. Negative keys use the same normalization for both h1 and h2. With -1, h1 is ten and h2 is ten, so the double-hash step remains nonzero. The key arithmetic after reduction stays small enough for the int expressions used here.</p>
+<p>Capacity must never be zero; all remainder formulas depend on a positive divisor. Increasing capacity requires reinsertion because both home positions and steps can change. Merely adding unused cells at the end would leave searches following routes unrelated to the old placement.</p>
+<p>The eleven-slot arrays are initialized with empty state and harmless key zero. State tests always happen before interpreting a stored key. Reusing a tombstone changes state back to occupied. An absent deletion leaves every state untouched, while a successful deletion records exactly one tombstone.</p>
+<h2 id="common-mistakes">Do not erase the search history</h2>
+<h3>Stopping at a tombstone</h3>
+<p>A collision may have pushed the target beyond that slot. Continue until a match, a never-used empty slot or the bounded attempt limit.</p>
+<h3>Inserting at the first tombstone immediately</h3>
+<p>The same key may already appear later. Save the reusable position and complete the duplicate check before committing an insertion.</p>
+<h3>Assuming every step covers the table</h3>
+<p>Step four in capacity twelve visits only three distinct cells. Check coprimality for double hashing and the load guarantee for the chosen quadratic formula.</p>
+<h2 id="version-notes">C17 slot states</h2>
+<div class="callout version"><p>The probing programs use explicit int state fields rather than reserving an integer key as an empty marker. Their bounded offsets fit int, and their negative-remainder adjustment follows C17 arithmetic rules.</p></div>
+<h2 id="summary">Placement rules are part of lookup</h2>
+<p>Open addressing replaces external lists with a repeatable sequence of array positions. Slot state preserves the meaning of a search after deletion. The next lesson explains <a href="topic:ds-rehashing">when and how to rebuild</a> as occupancy grows.</p>

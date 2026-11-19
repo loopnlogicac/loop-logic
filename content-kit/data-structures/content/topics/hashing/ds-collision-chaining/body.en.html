@@ -1,0 +1,55 @@
+<h2 id="introduction">Give each bucket its own list</h2>
+<p class="lead">Think of a numbered desk with several ID cards stacked in its tray. Choosing the tray gets you close, but you still read the IDs inside it. <dfn>Separate chaining</dfn> works the same way: each hash bucket points to a linked list of records sharing that bucket.</p>
+<p>You already know how a singly linked list connects records. Hashing adds a small array of starting pointers, so a search usually inspects only one short list. Our table has seven bucket headers, initialized to NULL. Each node owns an integer key and a next pointer. Every key is stored once; inserting an equal key leaves the set unchanged.</p>
+<p>Chaining tolerates more keys than buckets because records live outside the header array. A bucket can still become long, so table capacity matters for speed even when insertion has memory available. The load factor tells you the average number of keys per bucket, while the actual distribution tells you how uneven those lengths are.</p>
+<h2 id="syntax">State ownership and duplicate policy</h2>
+<p>The insert helper receives the array of bucket heads and a key. It calculates bucket(key,7), then follows the list while comparing complete keys. If an equal key exists, it returns zero. Otherwise it allocates one node and appends it at the final NULL link. A result of one means added; minus one reports allocation failure.</p>
+<p>Using a pointer to a link keeps append and deletion compact. At first, link points to the bucket header itself. After each advance, it points to the next field inside an existing node. Assigning through link therefore changes exactly the incoming pointer that must change. The local variable is a pointer; the node remains owned by the table.</p>
+<table class="ref"><thead><tr><th scope="col">Operation</th><th scope="col">Expected time</th><th scope="col">Worst time</th><th scope="col">Extra working space</th></tr></thead><tbody><tr><td>Unique insert with append</td><td>O(1+alpha)</td><td>O(n)</td><td>O(1), plus one new node</td></tr><tr><td>Search or delete by key</td><td>O(1+alpha)</td><td>O(n)</td><td>O(1)</td></tr><tr><td>Release entire table</td><td>O(m+n)</td><td>O(m+n)</td><td>O(1)</td></tr></tbody></table>
+<p>These expected costs assume a well-distributed hash. Here alpha=n/m, with n distinct stored keys and m buckets. Checking equality makes unique insertion linear in its chosen chain, even though attaching a node at a known link is constant time. The table itself occupies O(m+n) space for headers and records.</p>
+<h2 id="how-it-works">Repair one incoming link at a time</h2>
+<p>Insert 1,8,15 into an empty seven-bucket table. Each remainder is one. The first insertion changes the bucket header, the second changes node 1 next, and the third changes node 8 next. Our append policy preserves insertion order inside the list; front insertion would reverse it without changing membership.</p>
+<pre class="diagram">Before insert 15:
+bucket[1] -&gt; [1|next] -&gt; [8|NULL]
+After insert 15:
+bucket[1] -&gt; [1|next] -&gt; [8|next] -&gt; [15|NULL]
+Before delete 8:
+link -&gt; node 1 next -&gt; [8|next] -&gt; [15|NULL]
+After delete 8:
+bucket[1] -&gt; [1|next] ----------------&gt; [15|NULL]
+node 8 is released only after its incoming link changes.</pre>
+<p>Search for 15 first chooses bucket one, then compares 1 and 15. It returns success at the second node. Search for 22 visits the same list but reaches NULL, proving absence. An equal bucket index alone cannot stop either search because several unequal keys can share it.</p>
+<p>Deletion walks until link refers to the matching node, or until the pointed-to link is NULL. On a match, save the node pointer, replace the incoming link with old next, then free old. Saving next before freeing avoids reading dead memory. Since the code never uses old afterward, the released record cannot become an accidental traversal step.</p>
+<p>The animation follows the same append order and duplicate rule as example one. Try removing 8 from [1,8,15], then search for 15. Next remove 1 to see the header case. The table player draws bucket values as lists; the box diagram shows the owning links that the C program actually repairs.</p>
+<div data-lab="hash-chaining"></div>
+<h2 id="examples">Test ordinary and concentrated buckets</h2>
+<h3>Insert, remove and find in seven buckets</h3>
+<p>Insertion appends to the bucket list. Removing 8 repairs the middle link while the duplicate 1 creates no record.</p>
+<div data-example="ex-1"></div>
+<h3>Delete the bucket head and the last record</h3>
+<p>The same link-based deletion changes a bucket header. The following search sees an empty bucket.</p>
+<div data-example="ex-2"></div>
+<h3>Measure concentration as well as load</h3>
+<p>A moderate average load hides a five-node chain. The longest bucket reveals this concentration.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Interpret the load factor carefully</h2>
+<p>With ninety keys and thirty buckets, alpha is three. Under a uniform-distribution model, a failed search examines about three records after choosing its bucket. A successful search can stop partway through its chain; its exact expected comparisons depend on placement and query assumptions. Both are described by O(1+alpha), rather than a universal constant.</p>
+<p>Alpha can exceed one because the bucket count does not limit the number of allocated records. This differs from open addressing, where each slot holds at most one live key. More nodes still mean more allocation, pointer chasing and key comparisons. Growing a chained table redistributes nodes under a new modulus; it does not change the principle of a per-bucket list.</p>
+<p>A small average can hide one bad bucket. Example three deliberately sends five keys into one chain. Its longest value is five even though alpha is below one. Reporting the maximum length alongside alpha helps you notice regular key patterns that a poor hash function failed to spread.</p>
+<p>A front-insert dictionary without uniqueness checking can attach a record in O(1) time. Our dictionary has a different contract: equal keys do not create duplicates. It must inspect the chosen chain first, regardless of which end receives the new node. Explain that contract before quoting insertion cost in an exam.</p>
+<h2 id="edge-cases">Handle missing nodes and failed allocation</h2>
+<p>In an empty table, a search immediately finds NULL and deletion returns zero. A one-node bucket may be emptied by assigning its header to NULL. Deleting a tail sets its predecessor next to NULL. An absent key changes no links and releases no memory, so repeated deletion is safe and reports zero the second time.</p>
+<p>Allocation failure must not destroy existing nodes. The insert function allocates before writing its incoming link. If malloc returns NULL, the old list remains intact. The caller in example one releases all existing records before returning failure. Invalid input after partial construction uses the same cleanup path.</p>
+<p>Chaining has no fixed full state except memory or an application limit. These programs accept at most twelve initial keys to keep traces readable, but that is an input bound rather than the data structure's capacity rule. The cleanup routine scans all seven buckets, saves each successor and frees each node once.</p>
+<p>The key range includes negative integers. Our normalized remainder maps -1 to bucket six. Zero is an ordinary stored key, since an empty list is represented by NULL rather than by a special integer value. A duplicate causes no allocation and does not increase the stored-key count or alpha.</p>
+<h2 id="common-mistakes">Keep equality and lifetime separate</h2>
+<h3>Freeing the node before repairing next</h3>
+<p>After free, reading the node's next pointer is invalid. Save the successor and repair the owning link first, then release the old node.</p>
+<h3>Replacing the bucket header for every deletion</h3>
+<p>That only works for a matching head. A middle deletion must update its predecessor's next field. The pointer-to-pointer walk identifies the correct location in either case.</p>
+<h3>Counting attempts as distinct stored keys</h3>
+<p>The repeated key 1 in example one already exists. Only a successful allocation and attachment increases the set size used in the load factor.</p>
+<h2 id="version-notes">C17 allocation and node lifetime</h2>
+<div class="callout version"><p>The bucket lists use malloc and free from the standard library. C17 does not permit reading a record after free. Initialize bucket pointers with NULL and construct each node before publishing its incoming link.</p></div>
+<h2 id="summary">A bucket narrows a linked-list search</h2>
+<p>Separate chaining keeps every colliding key in a reachable record. Hash selection chooses the list; key comparisons find the record; link repair preserves ownership during deletion. Continue with <a href="topic:ds-open-addressing">open addressing</a> to keep records inside the array itself.</p>

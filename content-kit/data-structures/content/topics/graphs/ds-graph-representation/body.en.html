@@ -1,0 +1,56 @@
+<h2 id="introduction">Store the same network in different shapes</h2>
+<p class="lead">A map does not tell a C program where its connections live in memory. You must choose records and indexing rules. Three common choices are an adjacency matrix, adjacency lists and an edge list. They can describe the same graph while making different operations cheap.</p>
+<p>Imagine you often ask whether building two connects directly to building seven. A table cell gives a quick answer. Now imagine you need every neighbor of a building in a sparse campus map. A short list avoids scanning hundreds of empty cells. Representation is therefore part of the algorithm's cost, not merely a formatting preference.</p>
+<p>We use vertex IDs zero through n-1 and simple undirected input. Each pair appears once in the input and twice in neighbor storage. The examples reject loops, repeated pairs and IDs outside the vertex range. These input rules keep the different printed layouts comparable.</p>
+<h2 id="syntax">Matrices reserve pairs; lists reserve connections</h2>
+<p>An <dfn>adjacency matrix</dfn> has one cell for each ordered vertex pair. For an unweighted graph, a[u][v]=1 means the edge exists and zero means it does not. An undirected graph writes both a[u][v] and a[v][u]. A directed graph writes only the ordered arc unless the reverse arc also exists.</p>
+<p>An <dfn>adjacency list</dfn> gives every vertex its own neighbor sequence. A linked implementation stores a destination ID and a next pointer in each record. An array-backed implementation stores active neighbor IDs consecutively, with a count or a pair of offsets identifying each vertex's range. Both avoid scanning absent edges during traversal.</p>
+<p>An <dfn>edge list</dfn> stores records such as {from,to,weight}. An undirected edge usually needs one record; a directed record already carries its orientation. This is convenient when an algorithm processes all edges, as in sorting edges for a spanning-tree algorithm. Finding one vertex's neighbors requires a scan unless another index is maintained.</p>
+<p>For weights, keep presence separate from the number zero. A free connection can have weight zero. A matrix can use an additional boolean presence matrix or another unambiguous optional-value representation. Using a large infinity marker also needs overflow care when later algorithms add path costs.</p>
+<h2 id="how-it-works">Allocate an undirected pair consistently</h2>
+<p>For edges 0-1,0-2,2-3, matrix rows describe which destinations connect from each source. The linked version front-inserts neighbor records, so its printed order reverses input arrival at each vertex. The array version scans the matrix in ascending order and therefore prints sorted neighbor IDs. Different list order does not change the graph.</p>
+<pre class="diagram">Before edge 0-2:
+head[0] -&gt; [to:1|NULL]     head[2] -&gt; NULL
+After edge 0-2, front insertion:
+head[0] -&gt; [to:2|next] -&gt; [to:1|NULL]
+head[2] -&gt; [to:0|NULL]
+Matrix changes: a[0][2] = 1 and a[2][0] = 1
+Edge list gains one record: [from:0 | to:2]</pre>
+<p>A linked undirected insertion requires two allocations. Our connect helper obtains both records before changing either header. If either allocation fails, it frees whichever record was obtained and returns failure. Publishing the first record before allocating the second would temporarily describe a one-way connection in an undirected graph.</p>
+<p>The caller owns every list header and reachable neighbor record. Release traverses each list, saves next and frees the current record. Although an undirected connection has two records, each allocation is freed once because each belongs to exactly one endpoint list. Do not try to share one singly linked record between two independent next chains.</p>
+<p>Example three reserves a bounded rectangular neighbor array to simplify construction. It stores only count[u] active entries per row during traversal. The reserved C array still takes O(V squared) capacity. A compact implementation with a total of 2E active neighbor entries and V+1 offsets achieves the usual O(V+E) storage bound.</p>
+<h2 id="examples">Build all three views</h2>
+<h3>Build a symmetric adjacency matrix</h3>
+<p>Every undirected pair writes two cells. The diagonal stays zero because this input format rejects loops.</p>
+<div data-example="ex-1"></div>
+<h3>Allocate both neighbor records before publishing an edge</h3>
+<p>Front insertion prints neighbors in reverse input order. Two allocations succeed before either list header changes.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted array-backed neighbor lists</h3>
+<p>Scanning the matrix in increasing vertex order gives sorted lists. This bounded rectangular array reserves more space than compact lists would.</p>
+<div data-example="ex-3"></div>
+<h3>Keep a zero-weight edge in an edge list</h3>
+<p>An explicit edge record distinguishes zero weight from no edge. A weighted matrix needs the same distinction through a presence flag.</p>
+<div data-example="ex-4"></div>
+<h2 id="comparison">Choose the cost table that matches storage</h2>
+<table class="ref"><thead><tr><th scope="col">Operation</th><th scope="col">Matrix</th><th scope="col">Unsorted adjacency lists</th><th scope="col">Edge list</th></tr></thead><tbody><tr><td>Stored space</td><td>O(V squared)</td><td>O(V+E)</td><td>O(V+E), including vertices</td></tr><tr><td>Test edge u-v</td><td>O(1)</td><td>O(degree(u))</td><td>O(E)</td></tr><tr><td>List neighbors of u</td><td>O(V)</td><td>O(degree(u))</td><td>O(E)</td></tr><tr><td>Scan all connections</td><td>O(V squared)</td><td>O(V+E)</td><td>O(E)</td></tr></tbody></table>
+<p>A linked edge append or front attachment can be constant time once its endpoint records are known and allocation succeeds. Enforcing unique edges first may require a neighbor search. Removing an undirected pair from unsorted linked lists requires locating both incoming links, then releasing both records. The matrix instead clears two known cells in O(1) time.</p>
+<p>A sorted neighbor array supports binary-search adjacency tests, but inserting into the middle shifts later entries. Dynamic per-vertex arrays have amortized append costs; a compact offset layout can need a large rebuild when a new edge changes segment sizes. Those variants improve particular workloads rather than replacing every cost in the basic table automatically.</p>
+<p>For a dense graph, E is proportional to V squared and matrix storage can be reasonable. For a sparse graph, E is much smaller, making compact lists attractive. An edge list is especially useful for input/output and whole-edge processing, but repeated neighbor queries benefit from building an adjacency index first.</p>
+<h2 id="edge-cases">Represent empty rows and isolated vertices</h2>
+<p>With no edges, a matrix contains zeroes, each linked header is NULL and an edge list has no connection records. The vertex count still matters. A graph with eight isolated vertices differs from a graph with no vertices, even though both have an empty edge list.</p>
+<p>A one-vertex simple graph has an empty neighbor list and a zero diagonal. A complete n-vertex graph has n-1 neighbors at each vertex. The bounded examples accept at most eight vertices, and n*(n-1)/2 distinct undirected pairs can exist. Input limits and duplicate checks protect the fixed arrays.</p>
+<p>The linked example also uses a small seen matrix to reject duplicate input pairs. That validation aid reserves O(V squared) cells even though the linked representation alone uses O(V+E). If you remove that matrix in a larger sparse program, use a neighbor search or a suitable set to enforce uniqueness.</p>
+<p>Our array-conversion example builds through a matrix, taking O(V squared) time. A direct compact construction can count endpoint degrees, prefix-sum their offsets, then fill neighbor segments in O(V+E) time. If traversal order matters, sort each segment separately afterward and account for that added cost.</p>
+<h2 id="common-mistakes">Do not infer adjacency from arbitrary cell values</h2>
+<h3>Treating weight zero as absence</h3>
+<p>A zero-cost edge is still an edge. Store a presence flag or an explicit edge record so the graph model remains unambiguous.</p>
+<h3>Claiming compact-list space for a rectangular array</h3>
+<p>An active count limits work, but it does not release reserved cells. Count actual allocated capacity when describing memory use.</p>
+<h3>Forgetting the reverse undirected record</h3>
+<p>A traversal starting from the other endpoint would then miss the connection. Update both endpoint lists and clean up both records on deletion.</p>
+<p>Vertex labels can be mapped to compact integer IDs before building any representation. Keep the reverse label array for display, and validate that every edge endpoint belongs to that mapping. This prevents a label lookup failure from becoming an out-of-range index.</p>
+<h2 id="version-notes">C17 records and pointers</h2>
+<div class="callout version"><p>The linked neighbor records use ordinary C17 structures, compound literals and explicit release. Actual pointer widths and structure padding vary by implementation, so record counts should not be quoted as universal byte counts.</p></div>
+<h2 id="summary">Representation controls what gets scanned</h2>
+<p>A matrix indexes a pair immediately, while adjacency lists enumerate existing neighbors directly. An edge list keeps each connection as a record. With storage chosen, use <a href="topic:ds-graph-bfs">breadth-first search</a> to visit reachable vertices by distance layer.</p>

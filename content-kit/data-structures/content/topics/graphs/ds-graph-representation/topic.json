@@ -1,0 +1,381 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ds-graph-representation",
+  "module": "graphs",
+  "order": 2,
+  "kind": "lesson",
+  "level": "intermediate",
+  "title": {
+    "en": "Graph Representation",
+    "bn": "গ্রাফ মেমরিতে রাখার উপায়"
+  },
+  "summary": {
+    "en": "Build matrices, neighbor lists and edge lists, then compare their storage and query costs.",
+    "bn": "ম্যাট্রিক্স, নেইবার লিস্ট আর এজ লিস্ট বানিয়ে মেমরি আর কাজের খরচ মিলিয়ে দেখো।"
+  },
+  "estMinutes": 50,
+  "prerequisites": [
+    "ds-graph-terminology"
+  ],
+  "related": [
+    "ds-graph-bfs"
+  ],
+  "keywords": [
+    "graphs",
+    "C17",
+    "Graph Representation"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The linked neighbor records use ordinary C17 structures, compound literals and explicit release. Actual pointer widths and structure padding vary by implementation, so record counts should not be quoted as universal byte counts."
+    ]
+  },
+  "videos": [],
+  "labs": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Store the same network in different shapes"
+    },
+    {
+      "id": "syntax",
+      "title": "Matrices reserve pairs; lists reserve connections"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Allocate an undirected pair consistently"
+    },
+    {
+      "id": "examples",
+      "title": "Build all three views"
+    },
+    {
+      "id": "comparison",
+      "title": "Choose the cost table that matches storage"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Represent empty rows and isolated vertices"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not infer adjacency from arbitrary cell values"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 records and pointers"
+    },
+    {
+      "id": "summary",
+      "title": "Representation controls what gets scanned"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Build a symmetric adjacency matrix",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Every undirected pair writes two cells. The diagonal stays zero because this input format rejects loops.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "Allocate both neighbor records before publishing an edge",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Front insertion prints neighbors in reverse input order. Two allocations succeed before either list header changes.</p>",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Use sorted array-backed neighbor lists",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Scanning the matrix in increasing vertex order gives sorted lists. This bounded rectangular array reserves more space than compact lists would.</p>",
+      "stdin": "examples/ex-3.in"
+    },
+    {
+      "id": "ex-4",
+      "title": "Keep a zero-weight edge in an edge list",
+      "level": "advanced",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>An explicit edge record distinguishes zero weight from no edge. A weighted matrix needs the same distinction through a presence flag.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Convert pairs to matrix rows",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read the bounded simple graph format in example one. Print Matrix: vertices, edges and pairs: then n rows of n zero-or-one entries separated by spaces.</p>",
+      "hints": [
+        "Write both a[u][v] and a[v][u]."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Convert pairs to sorted neighbor arrays",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (0..8), m (0..28), then m unique loop-free undirected pairs. Print Array lists: vertices, edges and pairs:, followed by u: and ascending neighbors on each line.</p>",
+      "hints": [
+        "A row length records how many entries are active."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Compare sparse storage",
+      "statementHtml": "<p>For 1000 vertices and 1500 undirected edges, count matrix entries, adjacency neighbor records and edge-list records.</p>",
+      "hints": [
+        "Undirected adjacency stores both orientations."
+      ],
+      "answerHtml": "<p>The matrix has 1000000 entries. An adjacency list has 3000 neighbor records plus 1000 headers. An edge list has 1500 edge records. These are record counts, not equal byte counts: pointers, weights and padding change actual storage.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Choose a query representation",
+      "statementHtml": "<p>A program repeatedly asks whether u and v are adjacent, rarely lists neighbors, and has a dense graph. Which representation fits?</p>",
+      "hints": [
+        "Match the most frequent operation."
+      ],
+      "answerHtml": "<p>An adjacency matrix answers an edge-existence query in O(1) time by indexing a cell. Its O(V squared) storage is reasonable for a dense graph. Ordinary unsorted adjacency lists require O(degree(u)) time for the same query.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must an undirected matrix insertion update?",
+      "options": [
+        "Both a[u][v] and a[v][u]",
+        "Only the diagonal",
+        "Only one arbitrary row",
+        "Every zero in the matrix"
+      ],
+      "answer": 0,
+      "explanation": "One undirected connection is represented in both ordered directions."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many neighbor records represent E undirected edges?",
+      "options": [
+        "E",
+        "2E",
+        "V",
+        "V squared in every list"
+      ],
+      "answer": 1,
+      "explanation": "Each endpoint has a record for the other endpoint."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which representation gives O(1) edge-existence testing by vertex IDs?",
+      "options": [
+        "Unindexed edge list",
+        "Unsorted linked adjacency list",
+        "Adjacency matrix",
+        "A queue of visited vertices"
+      ],
+      "answer": 2,
+      "explanation": "A matrix indexes one known pair directly."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is zero an unsafe absent-edge marker in a weighted matrix?",
+      "options": [
+        "All weights must be negative",
+        "Zero cannot be stored in C",
+        "The diagonal must hold one",
+        "An existing edge may have weight zero"
+      ],
+      "answer": 3,
+      "explanation": "Presence and weight need distinct meanings."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a rectangular V by V neighbor array use O(V+E) reserved space?",
+      "options": [
+        "No, it reserves O(V squared) cells",
+        "Yes, if active counts are small",
+        "Yes, if all entries are int",
+        "Only when the graph is directed"
+      ],
+      "answer": 0,
+      "explanation": "Active lengths reduce traversal work but do not change allocation size."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why allocate both linked neighbor records before attaching either?",
+      "options": [
+        "To sort the vertices automatically",
+        "To preserve undirected consistency on allocation failure",
+        "To avoid all collisions",
+        "To make edge tests constant time"
+      ],
+      "answer": 1,
+      "explanation": "If either allocation fails, both new records can be discarded without modifying headers."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is an edge list especially convenient?",
+      "options": [
+        "When repeatedly asking for one vertex neighbors without an index",
+        "When O(1) adjacency tests are mandatory",
+        "When processing or sorting all edges",
+        "When isolated vertices must be forgotten"
+      ],
+      "answer": 2,
+      "explanation": "Each connection is already stored as one explicit endpoint record."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many cells change from zero when edge 0-2 is added to an empty undirected matrix?",
+      "options": [
+        "0",
+        "1",
+        "3",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "Symmetric cells represent the two directions of one undirected edge.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int a[3][3]={{0}},sum=0;\n    a[0][2]=a[2][0]=1;\n    for(int i=0;i<3;i++){for(int j=0;j<3;j++){sum+=a[i][j];}}\n    printf(\"%d\\n\",sum);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which neighbors does a sorted matrix-row conversion print for vertex zero?",
+      "options": [
+        "1\n3",
+        "1",
+        "3",
+        "3\n1"
+      ],
+      "answer": 0,
+      "explanation": "Scanning IDs upward prints one then three.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int row[]={0,1,0,1};\n    for(int v=0;v<4;v++){if(row[v]){printf(\"%d\\n\",v);}}\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What does the presence flag say about the zero-weight record?",
+      "options": [
+        "0 0",
+        "1 0",
+        "1 1",
+        "0 1"
+      ],
+      "answer": 1,
+      "explanation": "The edge is present despite having zero cost.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int present=1,weight=0;\n    printf(\"%d %d\\n\",present,weight);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A matrix reserves a cell for each ordered vertex pair.",
+      "bn": "ম্যাট্রিক্সে প্রতিটা ভার্টেক্স জোড়ার জন্য একটা সেল থাকে।"
+    },
+    {
+      "en": "Undirected adjacency lists store each edge at both endpoints.",
+      "bn": "আনডিরেক্টেড অ্যাডজেসেন্সি লিস্টে এজ দুই পাশেই রাখা হয়।"
+    },
+    {
+      "en": "An edge list stores endpoint records without fast neighbor lookup.",
+      "bn": "এজ লিস্টে দুই প্রান্ত রাখা হয়, তবে নেইবার খুঁজতে পুরো লিস্ট দেখতে হয়।"
+    },
+    {
+      "en": "A zero-weight edge needs a separate presence flag.",
+      "bn": "শূন্য ওয়েটের এজ রাখতে আলাদা আছে-নেই ফ্ল্যাগ লাগে।"
+    },
+    {
+      "en": "Choose storage from the operations your program performs.",
+      "bn": "প্রোগ্রামে কোন কাজ বেশি হবে, তা দেখে গ্রাফের স্টোরেজ বেছে নাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "For 1000 vertices and 1500 undirected edges, count matrix entries, adjacency neighbor records and edge-list records.",
+      "answerHtml": "<p>The matrix has 1000000 entries. An adjacency list has 3000 neighbor records plus 1000 headers. An edge list has 1500 edge records. These are record counts, not equal byte counts: pointers, weights and padding change actual storage.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "A program repeatedly asks whether u and v are adjacent, rarely lists neighbors, and has a dense graph. Which representation fits?",
+      "answerHtml": "<p>An adjacency matrix answers an edge-existence query in O(1) time by indexing a cell. Its O(V squared) storage is reasonable for a dense graph. Ordinary unsorted adjacency lists require O(degree(u)) time for the same query.</p>"
+    },
+    {
+      "type": "output",
+      "marks": 6,
+      "question": "Trace build a symmetric adjacency matrix for input: 4 3\n0 1\n0 2\n2 3. Show the intermediate memory or worklist changes.",
+      "answerHtml": "<p>Every undirected pair writes two cells. The diagonal stays zero because this input format rejects loops.</p><pre class=\"output\">Matrix: vertices, edges and pairs:\n0 1 1 0\n1 0 0 0\n1 0 0 1\n0 0 1 0\n</pre>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT algorithms course materials",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/"
+    },
+    {
+      "title": "C standard library",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

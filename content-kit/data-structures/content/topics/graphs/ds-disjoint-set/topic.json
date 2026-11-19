@@ -1,0 +1,403 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ds-disjoint-set",
+  "module": "graphs",
+  "order": 5,
+  "kind": "lesson",
+  "level": "advanced",
+  "title": {
+    "en": "Disjoint Set (Union-Find)",
+    "bn": "ডিসজয়েন্ট সেট: ইউনিয়ন আর ফাইন্ড"
+  },
+  "summary": {
+    "en": "Maintain connected groups with root links, union by size and path compression.",
+    "bn": "রুটের লিংক দিয়ে গ্রুপ রাখো, সাইজ দেখে জোড়ো, আর ফাইন্ডের পথ ছোট করো।"
+  },
+  "estMinutes": 60,
+  "prerequisites": [
+    "ds-graph-terminology"
+  ],
+  "related": [
+    "ds-exam-questions"
+  ],
+  "keywords": [
+    "graphs",
+    "C17",
+    "Disjoint Set (Union-Find)"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The find function performs compression with loops and local int variables, avoiding recursive stack use. The parent and size arrays have fixed bounds in these examples; a larger implementation must validate endpoints and capacity before every access."
+    ]
+  },
+  "videos": [],
+  "labs": [
+    "union-find"
+  ],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Track groups without storing every route"
+    },
+    {
+      "id": "syntax",
+      "title": "Use self-parent roots and root sizes"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Build a shallow forest, then compress a path"
+    },
+    {
+      "id": "examples",
+      "title": "Compare merging with compression alone"
+    },
+    {
+      "id": "comparison",
+      "title": "Understand selectors and edge order"
+    },
+    {
+      "id": "edge-cases",
+      "title": "State the cost model precisely"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Merge representatives, not arbitrary records"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 iterative compression"
+    },
+    {
+      "id": "summary",
+      "title": "Shallow links make repeated membership cheap"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Merge graph edges with union by size",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The six connected vertices share root zero. The isolated vertex remains a singleton, so there are two components.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "Union pairs that create a deeper forest",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Equal-size groups keep the first root. Finding three follows two links before compression; the later union adds vertex four to the same group.</p>",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Flatten a prepared parent chain",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The prepared chain illustrates compression alone. Every vertex on the path from four now points straight to zero.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Compress a path after balanced merges",
+      "level": "advanced",
+      "file": "examples/ex-4.c",
+      "stdin": "examples/ex-4.in",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Vertex six follows four to zero and becomes a direct child of zero. Vertices three and five keep unqueried two-link paths, so compression has not flattened the entire set.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Count distinct connected groups",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read n (0..12), m (0..20), then m valid union pairs. Loops and repeated pairs are allowed. Print Vertices, pair count and union pairs:, components=C, then i root=R for IDs in order. Break equal-size ties in favor of the first root.</p>",
+      "hints": [
+        "Decrease components only when roots differ."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Inspect representative parents",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read graph 0..4 and query 0..6. Print Union graph (0..4) and query (0..6):, root=R size=S components=C, then parents: and seven values. Use the pair order listed in the lesson (ascending for graphs 0..3) and compress only finds that occur.</p>",
+      "hints": [
+        "Parent arrays need not be completely flat after every union."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace a size-based merge",
+      "statementHtml": "<p>Start singleton sets 0..3. Perform union(0,1), union(2,3), union(0,2), then find(3). Give parent and valid root size.</p>",
+      "hints": [
+        "Only roots own meaningful sizes."
+      ],
+      "answerHtml": "<p>After the first two unions, parent=[0,0,2,2] and root sizes are size[0]=2, size[2]=2. The third keeps root 0, sets parent[2]=0 and size[0]=4. Find(3) rewrites parent[3]=0, leaving [0,0,0,0]. Nonroot size entries are stale and must not be read as component sizes.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Near-constant does not mean worst-case constant",
+      "statementHtml": "<p>State the cost of union by size with path compression and explain why one find need not be O(1).</p>",
+      "hints": [
+        "Distinguish a sequence average from one operation."
+      ],
+      "answerHtml": "<p>Across a sequence of operations, the amortized cost is O(alpha(n)), where alpha is the inverse Ackermann function. A single find can still follow several parent links. Union by size alone bounds tree height by O(log n); compression makes later finds cheaper. Initial make-set work and storage are both O(n).</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which parent entry identifies a representative root?",
+      "options": [
+        "parent[root] equals root",
+        "parent[root] equals minus one in this implementation",
+        "parent[root] equals its size",
+        "parent[root] is always the largest ID"
+      ],
+      "answer": 0,
+      "explanation": "Self-parent entries terminate find in this forest representation."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must union compare before changing a parent link?",
+      "options": [
+        "Only the endpoint numbers",
+        "The two representative roots",
+        "Only stale nonroot sizes",
+        "All graph edge weights"
+      ],
+      "answer": 1,
+      "explanation": "Arbitrary nonroot attachment can corrupt the partition or create parent cycles."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What changes when union finds equal representatives?",
+      "options": [
+        "The root size doubles",
+        "The component count decreases",
+        "No component is merged",
+        "Every parent resets to itself"
+      ],
+      "answer": 2,
+      "explanation": "The endpoints already belong to one set."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where is the valid component size for a queried vertex v?",
+      "options": [
+        "Always at size[v]",
+        "At parent[v]+1",
+        "In the graph weight matrix",
+        "At size[find(v)]"
+      ],
+      "answer": 3,
+      "explanation": "Nonroot size entries can retain obsolete values."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does path compression add a graph connection?",
+      "options": [
+        "No, it only changes the representative forest",
+        "Yes, every parent rewrite is a road",
+        "Yes, it changes the component membership",
+        "Only for directed graphs"
+      ],
+      "answer": 0,
+      "explanation": "Parent links are data-structure shortcuts rather than original graph edges."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What bound applies to union by size plus compression across a sequence?",
+      "options": [
+        "Exactly O(1) worst case",
+        "O(alpha(n)) amortized per operation",
+        "O(n squared) for every find",
+        "O(log n) allocated nodes per union"
+      ],
+      "answer": 1,
+      "explanation": "Inverse Ackermann describes amortized sequence behavior."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can ordinary union-find handle an arbitrary removed edge directly?",
+      "options": [
+        "Yes, set one endpoint parent to itself",
+        "Yes, decrement any root size",
+        "No, deletion may require rebuilding or a different structure",
+        "Only if the edge endpoints differ"
+      ],
+      "answer": 2,
+      "explanation": "The partition does not retain enough edge history to determine which paths survive deletion."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which root does the prepared parent path 3 to 2 to 0 reach?",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "0"
+      ],
+      "answer": 3,
+      "explanation": "Only zero is a self-parent on that path.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int parent[]={0,0,0,2},root=3;\n    while(parent[root]!=root){root=parent[root];}\n    printf(\"%d\\n\",root);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many components remain after two successful merges and one redundant merge?",
+      "options": [
+        "2",
+        "0",
+        "1",
+        "3"
+      ],
+      "answer": 0,
+      "explanation": "Only successful unions reduce the count.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int components=4,merged[]={1,1,0};\n    for(int i=0;i<3;i++){components-=merged[i];}\n    printf(\"%d\\n\",components);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What root size results when sets of sizes two and three merge?",
+      "options": [
+        "0 5",
+        "1 5",
+        "1 3",
+        "0 2"
+      ],
+      "answer": 1,
+      "explanation": "The larger root survives with total size five.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int size[]={2,3},parent[]={0,1};\n    parent[0]=1;size[1]+=size[0];\n    printf(\"%d %d\\n\",parent[0],size[1]);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does rank after path compression equal the current physical tree height?",
+      "options": [
+        "Yes, always",
+        "Only when n is even",
+        "No, rank remains a balancing bound",
+        "It becomes the number of graph edges"
+      ],
+      "answer": 2,
+      "explanation": "Compression can reduce real height without reducing the rank used for future attachments."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Each root is its own parent in a disjoint-set forest.",
+      "bn": "ডিসজয়েন্ট সেটের রুট নিজের প্যারেন্ট নিজেই।"
+    },
+    {
+      "en": "Union joins roots rather than arbitrary vertices.",
+      "bn": "ইউনিয়নে যেকোনো ভার্টেক্স না জুড়ে দুই রুট জোড়া হয়।"
+    },
+    {
+      "en": "Union by size attaches the smaller group below the larger.",
+      "bn": "সাইজ দেখে ইউনিয়ন করলে ছোট গ্রুপ বড় গ্রুপের নিচে বসে।"
+    },
+    {
+      "en": "Path compression changes links without changing membership.",
+      "bn": "পাথ কমপ্রেশনে লিংক বদলায়, কিন্তু গ্রুপের সদস্য বদলায় না।"
+    },
+    {
+      "en": "Union-find cannot reconstruct a route through graph edges.",
+      "bn": "ইউনিয়ন-ফাইন্ড দিয়ে গ্রাফের এজ ধরে যাওয়ার পথ বের করা যায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Start singleton sets 0..3. Perform union(0,1), union(2,3), union(0,2), then find(3). Give parent and valid root size.",
+      "answerHtml": "<p>After the first two unions, parent=[0,0,2,2] and root sizes are size[0]=2, size[2]=2. The third keeps root 0, sets parent[2]=0 and size[0]=4. Find(3) rewrites parent[3]=0, leaving [0,0,0,0]. Nonroot size entries are stale and must not be read as component sizes.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "State the cost of union by size with path compression and explain why one find need not be O(1).",
+      "answerHtml": "<p>Across a sequence of operations, the amortized cost is O(alpha(n)), where alpha is the inverse Ackermann function. A single find can still follow several parent links. Union by size alone bounds tree height by O(log n); compression makes later finds cheaper. Initial make-set work and storage are both O(n).</p>"
+    },
+    {
+      "type": "output",
+      "marks": 6,
+      "question": "Trace merge graph edges with union by size for input: 0 5. Show the intermediate memory or worklist changes.",
+      "answerHtml": "<p>The six connected vertices share root zero. The isolated vertex remains a singleton, so there are two components.</p><pre class=\"output\">Union graph (0..4) and query (0..6):\nroot=0 size=6 components=2\nparents: 0 0 0 0 0 0 6\n</pre>"
+    },
+    {
+      "type": "program",
+      "marks": 6,
+      "question": "Write iterative full path compression for a valid parent forest with self-parent roots.",
+      "answerHtml": "<pre><code class=\"language-c\">static int compressed_find(int parent[], int u)\n{\n    int root = u;\n    while (parent[root] != root) { root = parent[root]; }\n    while (parent[u] != u) {\n        int next = parent[u];\n        parent[u] = root;\n        u = next;\n    }\n    return root;\n}</code></pre><p>The first pass finds the existing representative. The second saves each old successor before rewriting its link. No component membership changes, and the iterative version uses constant local space.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT algorithms course materials",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/"
+    },
+    {
+      "title": "C standard library",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

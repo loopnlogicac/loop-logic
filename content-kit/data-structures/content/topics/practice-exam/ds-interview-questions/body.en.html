@@ -1,0 +1,116 @@
+<h2 id="introduction">Practice explaining before reading answers</h2>
+<p class="lead">An interview answer should connect an operation to its memory layout and assumptions. Saying a list deletion is constant time is incomplete when the program must first search for the key. Explain what information the operation receives, what changes, and where the cost comes from.</p>
+<p>These fifty short questions are grouped by structure. Work through arrays, lists, stacks, queues, trees, hashing and graphs. Say each answer aloud, then draw a small counterexample to an overly broad claim. A skewed BST, a tombstone before a matching key and an isolated graph vertex are useful examples.</p>
+<p>When comparing designs, discuss locality, ownership, failure behavior and the operations you need most often. A suitable structure for one workload may be a poor fit for another. The answers use C-style arrays and pointers, but the reasoning about invariants and operation contracts also applies to other languages.</p>
+<h2 id="arrays">Arrays</h2>
+<h3>1. Arrays: What does contiguous array storage buy you?</h3>
+<p>Indexing uses base plus index times element width, so access is O(1). Nearby elements also tend to share cache lines. Inserting near the front still requires shifts.</p>
+<h3>2. Arrays: Can a C array grow in place by changing its length variable?</h3>
+<p>No. A length variable describes active elements, not allocated capacity. Allocate more space or use a checked realloc, and preserve the old pointer until success.</p>
+<h3>3. Arrays: Why is unsorted array search linear?</h3>
+<p>Any position may contain the target, so a failed search inspects all n active elements. An early match can finish sooner; the worst case remains O(n).</p>
+<h3>4. Arrays: What extra condition makes binary search possible?</h3>
+<p>The elements must be sorted under the same comparison rule. Binary search halves an index interval, taking O(log n) comparisons on an array.</p>
+<h3>5. Arrays: When is dynamic-array append expensive?</h3>
+<p>An append that grows storage may copy all n elements and invalidate old element pointers. Geometric capacity growth gives O(1) amortized append, while that single append costs O(n).</p>
+<h3>6. Arrays: Does deleting an array element always preserve order?</h3>
+<p>No. Shifting later elements preserves order in O(n) time. Replacing the deleted element with the last active value uses O(1) time when order is irrelevant.</p>
+<h3>7. Arrays: How do row-major and column-major layouts differ?</h3>
+<p>Row-major storage places one complete row before the next. Column-major storage places one complete column before the next; the address multiplier therefore changes.</p>
+<h2 id="lists">Lists</h2>
+<h3>8. Lists: Why does a linked list not support constant-time indexing?</h3>
+<p>A node stores links rather than the address of every later element. Finding index i follows i links from the head, so random indexing is O(n).</p>
+<h3>9. Lists: What must happen before freeing a list node?</h3>
+<p>Repair every owning incoming link, including head or tail if necessary. Then release the node exactly once, without reading its fields afterward.</p>
+<h3>10. Lists: Is deletion from a singly linked list always constant time?</h3>
+<p>Only unlinking with a known incoming link is O(1). Finding a key or predecessor takes O(n). A tail cannot generally be removed using only its own pointer.</p>
+<h3>11. Lists: Why can a doubly linked list delete a known node quickly?</h3>
+<p>The node stores its predecessor and successor. Repair both neighboring links and boundary headers, then free it. This uses O(1) time but needs an extra pointer per node.</p>
+<h3>12. Lists: How does iterative list reversal avoid losing the suffix?</h3>
+<p>Save current next before changing it to previous. Move previous to current and current to the saved successor. At completion previous becomes the new head.</p>
+<h3>13. Lists: How do slow and fast pointers detect a cycle?</h3>
+<p>Move slow one link and fast two links while both steps exist. In a cycle the relative gap eventually becomes zero. An acyclic list makes fast reach NULL.</p>
+<h3>14. Lists: What distinguishes a circular list from a corrupt list?</h3>
+<p>A circular list intentionally links its final node back to the head or a sentinel. Traversal uses that boundary as its stop rule rather than expecting NULL.</p>
+<h3>15. Lists: Why allocate before linking a new node?</h3>
+<p>Allocation can fail. Constructing the node before publishing its incoming link keeps the old list intact on failure and gives the caller a clear ownership rule.</p>
+<h2 id="stacks">Stacks</h2>
+<h3>16. Stacks: What makes a stack last-in first-out?</h3>
+<p>Insertion and removal use the same top end. The most recently pushed item is therefore the next item popped, unless another operation changes the stack first.</p>
+<h3>17. Stacks: What does an empty pop mean?</h3>
+<p>It is underflow. Report failure before accessing storage, rather than returning an arbitrary value that might also be valid data.</p>
+<h3>18. Stacks: How can one array hold two stacks?</h3>
+<p>Start one top at the left boundary and the other at the right. Grow them toward each other and report full when no gap remains.</p>
+<h3>19. Stacks: Why is a stack useful for bracket matching?</h3>
+<p>A closing bracket must match the most recent unmatched opening bracket. Push openings, compare closings with top, and require an empty stack at the end.</p>
+<h3>20. Stacks: Which postfix operand is popped first?</h3>
+<p>The right operand is popped first, then the left. For subtraction or division, reversing that order changes the answer.</p>
+<h3>21. Stacks: What does recursion store besides an argument?</h3>
+<p>A call frame keeps parameters, local state and a return location. An explicit stack must retain enough of that state to resume suspended work.</p>
+<h2 id="queues">Queues</h2>
+<h3>22. Queues: What makes a queue first-in first-out?</h3>
+<p>Enqueue adds at the rear and dequeue removes at the front. Waiting items preserve arrival order unless a different scheduling policy is introduced.</p>
+<h3>23. Queues: Why does a circular queue reclaim earlier cells?</h3>
+<p>Indices wrap modulo capacity. After a dequeue advances front, a later enqueue can reuse the released physical cell instead of shifting remaining values.</p>
+<h3>24. Queues: How can a circular queue distinguish full and empty?</h3>
+<p>Store a count, or reserve one unused cell, or maintain a separate flag. State the chosen convention before interpreting equal front and rear indices.</p>
+<h3>25. Queues: What is a deque?</h3>
+<p>A deque permits insertion and removal at both ends. A bounded circular array supports all four end operations in O(1) time.</p>
+<h3>26. Queues: Is a priority queue ordered by arrival time?</h3>
+<p>Its primary rule is priority. Equal-priority arrival order is guaranteed only if the implementation explicitly keeps a stable tie rule.</p>
+<h3>27. Queues: Why keep a tail pointer in a linked queue?</h3>
+<p>A tail pointer permits O(1) rear insertion. Removing the final node must reset both head and tail to avoid leaving a dangling tail.</p>
+<h2 id="trees">Trees</h2>
+<h3>28. Trees: How many edges does a nonempty tree contain?</h3>
+<p>A tree with n vertices has n-1 edges. This follows by removing leaves one at a time; the one-vertex tree has zero edges.</p>
+<h3>29. Trees: How do height and depth differ?</h3>
+<p>Depth measures the path from the root to a node. Height measures the longest downward path from that node to a leaf. State whether you count edges or nodes.</p>
+<h3>30. Trees: Does a binary tree have to be a BST?</h3>
+<p>No. Binary describes at most two child positions. A binary search tree adds an ordering rule across entire left and right subtrees.</p>
+<h3>31. Trees: Why is BST inorder sorted?</h3>
+<p>Inorder visits every smaller left-subtree key, then the root, then every larger right-subtree key. The recursive ordering rule makes the whole sequence sorted.</p>
+<h3>32. Trees: Can a BST search take linear time?</h3>
+<p>Yes. Increasing insertions into an ordinary BST create a chain. A search can then visit all n nodes, despite the name binary search tree.</p>
+<h3>33. Trees: What replaces a BST node with two children during deletion?</h3>
+<p>A common choice is its inorder successor, the minimum in its right subtree. Copy the key and remove the successor from its original position.</p>
+<h3>34. Trees: What does an AVL rotation preserve?</h3>
+<p>It preserves the inorder key sequence and all subtree key bounds while changing local height. Repair the middle subtree link and update cached heights.</p>
+<h3>35. Trees: How is a complete tree different from a full binary tree?</h3>
+<p>A complete tree fills levels from left to right. A full binary tree gives every internal node exactly two children; it may have leaves at different depths.</p>
+<h3>36. Trees: Is a heap globally sorted?</h3>
+<p>No. A max-heap constrains each parent to be at least its children. Siblings and separate branches need not appear in sorted order.</p>
+<h3>37. Trees: Why can bottom-up heap building be linear?</h3>
+<p>Most nodes are near leaves and sift only a short distance. Summing their work by subtree height gives a convergent geometric sum times n.</p>
+<h3>38. Trees: What distinguishes a trie prefix from a stored word?</h3>
+<p>A path can exist because longer words share that prefix. A terminal marker identifies an exact stored word, even when that node also has children.</p>
+<h3>39. Trees: Why are B+ leaves linked?</h3>
+<p>After locating the first qualifying leaf, a range query follows adjacent leaves in key order. Internal separators guide search while records remain in leaves.</p>
+<h2 id="hashing">Hashing</h2>
+<h3>40. Hashing: Can distinct keys have equal hashes?</h3>
+<p>Yes. A finite bucket array usually represents a larger key space. Compare actual keys when resolving collisions rather than treating a hash as an identity.</p>
+<h3>41. Hashing: What does load factor measure?</h3>
+<p>It is the number of stored keys divided by bucket or slot capacity. Chaining can exceed one; open addressing needs unused slots for efficient probing.</p>
+<h3>42. Hashing: Why does open-address deletion leave a tombstone?</h3>
+<p>A later key may have crossed that slot during insertion. A tombstone lets its search continue while still offering reusable space for a future insertion.</p>
+<h3>43. Hashing: What is primary clustering?</h3>
+<p>Linear probing forms contiguous occupied runs. New collisions tend to join and extend those runs, increasing the number of probes even for different home buckets.</p>
+<h3>44. Hashing: Why must keys be rehashed after growth?</h3>
+<p>The bucket formula depends on capacity. Reinserting each live key under the new formula restores the lookup rule; copying old positions does not.</p>
+<h2 id="graphs">Graphs</h2>
+<h3>45. Graphs: What does an adjacency list store for an undirected edge?</h3>
+<p>It stores one neighbor record at each endpoint. Thus E undirected edges produce 2E neighbor records, plus the vertex headers.</p>
+<h3>46. Graphs: Why mark on enqueue in BFS?</h3>
+<p>Two frontier vertices may both reach the same neighbor. Marking before enqueue prevents duplicate queue entries and fixes its first, shortest-hop distance.</p>
+<h3>47. Graphs: Does BFS solve arbitrary weighted shortest paths?</h3>
+<p>No. BFS minimizes edge count when all edges have equal cost. Unequal weights need an algorithm that accounts for those weights.</p>
+<h3>48. Graphs: What does DFS finish time record?</h3>
+<p>It records when a vertex has no remaining unexplored neighbor in its active call. Descendants finish before their ancestor returns.</p>
+<h3>49. Graphs: How do you traverse every disconnected component?</h3>
+<p>Scan all vertex IDs and start a new search at each unseen one. The searches form a forest and include isolated vertices as one-node trees.</p>
+<h3>50. Graphs: What does path compression change in union-find?</h3>
+<p>It redirects visited parent links toward their existing root. It changes the forest shape while preserving the set partition and representative root.</p>
+<h2 id="common-mistakes">Check assumptions before quoting a result</h2>
+<p>A complexity label needs a representation and an operation. Matrix traversal scans absent connections too; adjacency-list traversal does not. A BST can be a chain, and a hash function can place many keys into one bucket. State the conditions that allow a faster average or amortized claim.</p>
+<p>For pointer traces, distinguish an allocated record from the link that owns it. Repair incoming links before release, and never use a freed node as the next traversal step. For graph traces, specify source and neighbor order; use a separate unreachable marker instead of inventing a route.</p>
+<h2 id="summary">Turn a memorized fact into a reason</h2>
+<p>After each answer, change one assumption and predict the effect. Try a full queue, a duplicate key, a missing contact or a disconnected vertex. Revisit <a href="topic:ds-complexity-basics">complexity basics</a> whenever two answers appear to use the same cost word for different guarantees.</p>

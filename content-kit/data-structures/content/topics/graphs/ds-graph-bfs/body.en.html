@@ -1,0 +1,63 @@
+<h2 id="introduction">Explore nearby vertices before distant ones</h2>
+<p class="lead">Imagine asking which rooms you can reach through one corridor, then two corridors, then three. You should finish the nearer layer before expanding the next one. <dfn>Breadth-first search</dfn>, or BFS, achieves this using a first-in first-out queue.</p>
+<p>BFS starts at one source vertex. It discovers all vertices reachable from that source and records their minimum number of edges from it. A distance of zero belongs to the source itself. An unreachable vertex keeps the special value minus one, which cannot be confused with a valid nonnegative hop count.</p>
+<p>The examples use seven vertices numbered zero through six. Neighbors are examined in ascending ID order, so the printed order and chosen parents are repeatable. Another neighbor ordering could choose a different shortest route when several routes have the same length. The minimum distances would remain the same.</p>
+<h2 id="syntax">Let distance also mark discovery</h2>
+<p>The distance array begins at -1 and the parent array also begins at -1. A nonnegative distance means discovered. Set dist[start]=0 before enqueueing the source. For a newly discovered neighbor v of u, set dist[v]=dist[u]+1 and parent[v]=u, then append v to the queue.</p>
+<p>The seven-cell queue uses head as the next removal position and tail as the next insertion position. Each vertex enters at most once, so tail never exceeds seven. This one-shot traversal does not need circular reuse. A long-running queue service would instead need a circular representation or reset rule.</p>
+<pre><code class="language-text">dist = -1; parent = -1; dist[start] = 0
+mark start; enqueue start
+while queue not empty: u = dequeue
+for each ascending neighbor v: check dist[v]
+if undiscovered: dist[v] = dist[u]+1; parent[v] = u; mark v
+enqueue v
+finish u and append it to order
+report distances and parents</code></pre>
+<p>The last five lines describe work within the appropriate loop or condition: neighbor checking belongs inside the queue loop, and enqueue belongs inside the undiscovered branch. The C braces make these scopes explicit. The lab uses the same dist, parent, queue and order names, and marks discovery before queue insertion.</p>
+<h2 id="how-it-works">Trace the queue on the shared diamond</h2>
+<p>Graph zero contains edges 0-1,0-2,1-3,1-4,2-4,3-5,4-5, plus isolated vertex six. Graph one is the path 0-1-2-3-4-5-6. Graph two has seven vertices and no edges. Graph three is K7, containing every distinct undirected pair. All four graphs use the same vertex IDs.</p>
+<pre class="diagram">Before expanding 0:
+queue [0]     dist [0,-1,-1,-1,-1,-1,-1]
+After expanding 0:
+queue [1,2]   dist [0, 1, 1,-1,-1,-1,-1]
+After expanding 1:
+queue [2,3,4] parent[3]=1, parent[4]=1
+After expanding 2:
+queue [3,4]   vertex 4 is already discovered; no duplicate enqueue</pre>
+<table class="ref"><thead><tr><th scope="col">Expanded</th><th scope="col">Queue afterward</th><th scope="col">New vertices</th></tr></thead><tbody><tr><td>0</td><td>1,2</td><td>1 and 2 at distance 1</td></tr><tr><td>1</td><td>2,3,4</td><td>3 and 4 at distance 2</td></tr><tr><td>2</td><td>3,4</td><td>none</td></tr><tr><td>3</td><td>4,5</td><td>5 at distance 3</td></tr><tr><td>4</td><td>5</td><td>none</td></tr><tr><td>5</td><td>empty</td><td>none</td></tr></tbody></table>
+<p>The queue holds vertices waiting for expansion, not the entire visited set. Removing zero does not erase its distance. Vertex four remains marked when two examines it, so it is not enqueued again. Cycles therefore cannot make the queue grow forever.</p>
+<div data-lab="graph-bfs"></div>
+<p>Switch the source to six on graph zero. The lab labels only six with zero and processes a one-element queue. Next choose graph three: every other vertex is discovered directly from the source. Both cases obey the same algorithm even though their reachable sets and distance layers look very different.</p>
+<h2 id="examples">Read distances and reconstruct a route</h2>
+<h3>Queue traversal with distances and parents</h3>
+<p>The queue visits 0,1,2,3,4,5. Vertex six stays unreachable. Vertex five gets parent three because three is processed before four.</p>
+<div data-example="ex-1"></div>
+<h3>Reverse parent links to recover a route</h3>
+<p>Walking parents gives 5,3,1,0. Printing this temporary path backward gives a three-edge route from zero to five.</p>
+<div data-example="ex-2"></div>
+<h3>An isolated start still discovers itself</h3>
+<p>The start has distance zero and no parent even when its adjacency list is empty. No other vertex enters the queue.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Why first discovery gives a shortest route</h2>
+<p>The useful invariant is that queue distances never decrease from front to rear. Expanding a distance-d vertex can add only distance-(d+1) vertices. All queued vertices from earlier layers remain ahead of those new arrivals. The source starts this invariant with the single distance-zero entry.</p>
+<p>Suppose v first receives distance d+1 from u, but a shorter route exists. The predecessor of v on that route has distance below d. BFS would have expanded that predecessor earlier and already discovered v. This contradicts first discovery now, so d+1 is the minimum hop count.</p>
+<p>Each successful discovery stores one parent. These links form a BFS tree over the reachable vertices: every vertex except the source has one earlier parent with distance one smaller. To recover a path, walk from target through parent links until -1, recording vertices. Reverse that temporary sequence to print source-to-target order.</p>
+<p>If dist[target] is -1, there is no route from this source. Do not follow its -1 parent as an array index. If target equals source, the recovered path contains exactly that vertex and uses zero edges. Multiple shortest routes are possible; ascending neighbors choose one consistent parent, rather than enumerating all routes.</p>
+<p>BFS minimizes hops when every edge has equal cost. Unequal weights need another algorithm. It is unsafe to stop at the first weighted route merely because BFS found it quickly. Direction also matters: on directed adjacency lists, only outgoing neighbors may be traversed.</p>
+<h2 id="edge-cases">Separate traversal work from construction work</h2>
+<p>With adjacency lists, each reachable vertex enters and leaves the queue once. Every adjacency entry of a reached vertex is inspected once. In an undirected graph that means two inspections per reached edge. Including array initialization, traversal time is O(V+E), and distances, parents and queue require O(V) extra storage.</p>
+<p>The demonstration builder uses a small matrix to construct sorted array-backed neighbor lists. Building it costs O(V squared), and its rectangular arrays reserve O(V squared) cells. The bfs helper itself loops only over active neighbor counts. Distinguish that helper's traversal cost from the complete bounded demonstration program's setup and reserved storage.</p>
+<p>An empty graph needs a separate no-source policy; these examples always have seven vertices and require a valid source. A graph with no edges is still valid and reaches only its source. A complete graph can fill the queue with V-1 neighbors at once, yet marking on discovery ensures no capacity overflow.</p>
+<p>For all connected components of an undirected graph, place an outer loop over IDs and start BFS at every vertex whose discovery flag is still unset. Use a shared visited array across runs. Those searches form a forest. A single source search deliberately leaves other components untouched, including isolated vertex six in graph zero.</p>
+<h2 id="common-mistakes">Preserve the meaning of first arrival</h2>
+<h3>Marking only when dequeuing</h3>
+<p>Two earlier vertices can enqueue the same neighbor before either copy is removed. Mark when assigning its first distance, before enqueueing.</p>
+<h3>Changing parents on every encounter</h3>
+<p>A later edge is not a new discovery. Keep the first parent if you want the selected shortest-hop tree to stay stable.</p>
+<h3>Printing the parent walk forward</h3>
+<p>Parents lead toward the source. Reverse the collected sequence to show the route in the requested source-to-target direction.</p>
+<p>For a graph with many equal shortest routes, one parent stores only one answer. If you need every shortest predecessor, keep a list of incoming discoveries whose distance is one less. If you need only the number of shortest routes, a separate count can accumulate equal-layer contributions. Those tasks extend the state and require their own numeric overflow limits.</p><p>A practical BFS stopping rule depends on the question. For one target distance, first discovery already fixes that distance. For a full distance table or component traversal, continue until the queue empties. The examples finish the complete source search so unreachable vertices and all parent choices remain visible.</p>
+<h2 id="version-notes">C17 queue and parent arrays</h2>
+<div class="callout version"><p>The BFS examples use fixed arrays because the graph always has seven vertices. C17 does not supply a built-in queue type. The head and tail variables implement this traversal queue without dynamic allocation.</p></div>
+<h2 id="summary">FIFO order becomes distance order</h2>
+<p>BFS turns a queue into a layer-by-layer search, giving minimum hop counts and parent paths. The visited rule keeps each vertex's queue entry unique. Compare this with <a href="topic:ds-graph-dfs">depth-first search</a>, which follows one branch before returning.</p>
