@@ -10,14 +10,14 @@ export class QuestionBankService {
   private readonly store: Store;
   private readonly tutorials: TutorialService;
   constructor(store: Store, tutorials: TutorialService) { this.store = store; this.tutorials = tutorials; }
-  private async owned(staff: Staff, id: string) {
+  private async owned(staff: Staff, id: string, lang: Lang = 'en') {
     const d = await this.store.getDoc('bank_question', id);
-    if (!d || staff.role !== 'admin' && d.data.ownerId !== staff.learnerId) throw new AppError('not_found', 404, 'No such question.');
+    if (!d || staff.role !== 'admin' && d.data.ownerId !== staff.learnerId) throw new AppError('not_found', 404, lang === 'bn' ? 'এমন কোনো প্রশ্ন নেই।' : 'No such question.');
     return d;
   }
   async list(staff: Staff) { return { questions: (await this.store.listDocs('bank_question')).filter((d) => staff.role === 'admin' || d.data.ownerId === staff.learnerId).map((d) => ({ id: d.id, ...d.data })) }; }
   async save(staff: Staff, body: any, id?: string) {
-    const prev = id ? await this.owned(staff, id) : undefined;
+    const prev = id ? await this.owned(staff, id, body?.lang === 'bn' ? 'bn' : 'en') : undefined;
     this.tutorials.topic(String(body?.track ?? ''), String(body?.topic ?? ''), 'en');
     for (const lang of ['en', 'bn']) {
       if (!text(body.prompt?.[lang], 2000) || !text(body.explanation?.[lang], 3000) || !Array.isArray(body.options?.[lang]) || body.options[lang].length !== 4 || body.options[lang].some((o: unknown) => !text(o, 500)) || new Set(body.options[lang].map((o: string) => o.trim())).size !== 4) throw bad(body.lang === 'bn' ? 'bn' : 'en');
@@ -28,35 +28,36 @@ export class QuestionBankService {
     await this.store.putDoc({ kind: 'bank_question', id: qid, data, updatedAt: at });
     return { id: qid, ...data };
   }
-  async delete(staff: Staff, id: string) { await this.owned(staff, id); await this.store.deleteDoc('bank_question', id); return { ok: true }; }
+  async delete(staff: Staff, id: string, lang: Lang = 'en') { await this.owned(staff, id, lang); await this.store.deleteDoc('bank_question', id); return { ok: true }; }
 
   /** Assignment snapshots keep later bank edits from changing an assigned answer key. */
-  async prepare(staff: Staff, classId: string, assignmentId: string, item: any) {
+  async prepare(staff: Staff, classId: string, assignmentId: string, item: any, lang: Lang = 'en') {
     const ids = item.questionIds;
-    if (!Array.isArray(ids) || !ids.length || ids.length > 20 || new Set(ids).size !== ids.length) throw bad();
+    if (!Array.isArray(ids) || !ids.length || ids.length > 20 || new Set(ids).size !== ids.length) throw new AppError('bad_question', 400, lang === 'bn' ? 'কুইজের জন্য ১ থেকে ২০টি আলাদা প্রশ্ন বেছে নাও।' : 'Choose 1 to 20 different questions for the quiz.');
     const questions = [];
     for (const id of ids) {
-      const q = await this.owned(staff, String(id));
-      if (q.data.status !== 'approved' || q.data.track !== item.track || q.data.topic !== item.topic) throw new AppError('unapproved_question', 400, 'Select approved questions tagged to this topic.');
+      const q = await this.owned(staff, String(id), lang);
+      if (q.data.status !== 'approved' || q.data.track !== item.track || q.data.topic !== item.topic) throw new AppError('unapproved_question', 400, lang === 'bn' ? 'এই টপিকের অনুমোদিত প্রশ্নগুলোই বেছে নাও।' : 'Select approved questions tagged to this topic.');
       questions.push({ id: q.id, ...q.data });
     }
     const quizId = randomUUID();
     await this.store.putDoc({ kind: 'custom_quiz', id: quizId, data: { classId, assignmentId, track: item.track, topic: item.topic, questions }, updatedAt: new Date().toISOString() });
     return { kind: 'custom_quiz', track: item.track, topic: item.topic, quizId };
   }
-  private async available(learnerId: string, id: string) {
+  private async available(learnerId: string, id: string, lang: Lang = 'en') {
+    const missing = () => new AppError('not_found', 404, lang === 'bn' ? 'এমন কোনো কুইজ নেই।' : 'No such quiz.');
     const d = await this.store.getDoc('custom_quiz', id);
-    if (!d) throw new AppError('not_found', 404, 'No such quiz.');
+    if (!d) throw missing();
     const [c, e, a] = await Promise.all([this.store.getDoc('class', d.data.classId), this.store.getDoc('enrol', `${d.data.classId}:${learnerId}`), this.store.getDoc('assignment', d.data.assignmentId)]);
-    if (!c || c.data.archived || e?.data.status !== 'active' || e.data.learnerId !== learnerId || a?.data.classId !== c.id || !a.data.items.some((it: any) => it.kind === 'custom_quiz' && it.quizId === id)) throw new AppError('not_found', 404, 'No such quiz.');
+    if (!c || c.data.archived || e?.data.status !== 'active' || e.data.learnerId !== learnerId || a?.data.classId !== c.id || !a.data.items.some((it: any) => it.kind === 'custom_quiz' && it.quizId === id)) throw missing();
     return { d, title: a.data.title };
   }
   async quiz(learnerId: string, id: string, lang: Lang) {
-    const { d, title } = await this.available(learnerId, id);
+    const { d, title } = await this.available(learnerId, id, lang);
     return { id, title, track: d.data.track, topic: d.data.topic, questions: d.data.questions.map((q: any) => ({ id: q.id, prompt: q.prompt[lang], options: q.options[lang] })) };
   }
   async grade(learnerId: string, id: string, answers: any, lang: Lang) {
-    const { d } = await this.available(learnerId, id);
+    const { d } = await this.available(learnerId, id, lang);
     const results: Record<string, unknown> = {}, correct: Record<string, boolean> = {}; let score = 0;
     for (const q of d.data.questions) {
       const choice = answers?.[q.id];

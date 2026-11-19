@@ -170,7 +170,7 @@ function gradebookPage() {
 
 async function assignmentsPage() {
   const L = T[getLang()];
-  const bank = await api('GET', '/api/instructor/question-bank');
+  const bank = await api('GET', '/api/instructor/question-bank').catch(() => ({ questions: [] }));
   const tr = dash.track;
   const labIdx = tr ? await api('GET', `/api/learn-labs/${tr.id}`).catch(() => null) : null;
   const labsOf = (topic) => labIdx?.topics.find((x) => x.id === topic)?.labs ?? [];

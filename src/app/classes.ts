@@ -151,7 +151,7 @@ export class ClassService {
     if (due && !Number.isFinite(Date.parse(due))) throw bad('Choose a valid due date.');
     const aid = id ?? randomUUID();
     const prepared = [];
-    for (const item of items) prepared.push(item.kind === 'custom_quiz' ? await new QuestionBankService(this.store, this.tutorials).prepare(staff, classId, aid, item) : { kind: item.kind, track: item.track, topic: item.topic, lab: item.lab });
+    for (const item of items) prepared.push(item.kind === 'custom_quiz' ? await new QuestionBankService(this.store, this.tutorials).prepare(staff, classId, aid, item, body.lang === 'bn' ? 'bn' : 'en') : { kind: item.kind, track: item.track, topic: item.topic, lab: item.lab });
     const data = { classId, title, items: prepared, due: due ? new Date(Date.parse(due)).toISOString() : null, marks: Math.max(0, Math.min(1000, Number(body.marks) || 0)), passMark: Math.max(0, Math.min(100, Number(body.passMark ?? 60))), hintsOnly: body.hintsOnly !== false, createdAt: this.iso(), by: staff.email };
     await this.put('assignment', aid, data);
     if (!id) await this.notices.forClass(classId, 'assignment', aid, title);
