@@ -1,0 +1,73 @@
+<h2 id="introduction">Child link কোথায় থাকবে বেছে নাও</h2>
+<p class="lead">ছোট একটা tournament chart-এর ঘরগুলো ভাবো। প্রতিটি ঘরের নিচে বাম আর ডান অবস্থান আছে। সম্ভাব্য সব ঘরে নম্বর দিতে পারো, অথবা ভরা প্রতিটি ঘরে দুটি তির রাখতে পারো। এগুলো থেকেই বাইনারি ট্রির array আর linked representation পাওয়া যায়।</p>
+<p><dfn>Representation</dfn> হলো মেমরিতে কোনো যৌক্তিক গঠন সাজানোর পদ্ধতি। শুধু রাখা key-গুলো দিয়ে সেই বিন্যাস নির্ধারিত হয় না। কোন key কোন parent-এর child, সেই নিয়মও লাগবে। Input-এর নিয়ম আলাদা হলে দুটি প্রোগ্রাম একই key পেয়েও আলাদা গঠন বানাতে পারে।</p>
+<p>এই পাঠে level order-এ দেওয়া key থেকে complete tree বানানো হবে। Sparse array-র অবস্থানও আলাদা করে দেখানো হবে। কোনো builder-ই key তুলনা করে search ordering বসায় না। Root, leaf আর height-এর নামগুলো ঝালিয়ে নিতে <a href="topic:ds-tree-terminology">ট্রির পরিভাষা</a> দেখো।</p>
+
+<h2 id="syntax">অবস্থান দিয়ে সম্পর্ক আর সরাসরি পয়েন্টার</h2>
+<p>শূন্য থেকে index শুরু করা array representation-এ root থাকে শূন্য অবস্থানে। ভরা index i-এর সম্ভাব্য left child হলো 2*i+1, আর right child হলো 2*i+2। Root বাদে অন্য নোডের parent (i-1)/2; এখানে integer division হবে। Root-এর parent নেই, সেটি আলাদা case।</p>
+<pre class="diagram">Complete tree:            পাশাপাশি রাখা array:
+        [8]              index  0  1   2  3  4  5
+       /   \             key   8  3  10  1  6  9
+     [3]   [10]
+     / \    /
+   [1] [6] [9]
+যোগের আগে: index 6 ফাঁকা; 10-এর right child নেই
+যোগের পরে: index 6-এ 14; 10.right হলো অবস্থান 6</pre>
+<p>n key-র complete tree-তে শূন্য থেকে n-1 পর্যন্ত প্রতিটি index ভরা থাকে। হিসাব করা index n-এর ছোট হলেই child আছে। Append পরের index ব্যবহার করে; বাড়তি capacity থাকলে কাজ O(1)। <a href="topic:ds-dynamic-array">ডাইনামিক অ্যারের</a> মতো array বড় করতে O(n) copy লাগতে পারে।</p>
+<pre><code class="language-c">typedef struct Node {
+    int key;
+    struct Node *left, *right;
+} Node;</code></pre>
+<p>Linked node key আর দুটি পয়েন্টার রাখে। NULL child pointer মানে সেই অবস্থান ফাঁকা। root নামের পয়েন্টার প্রথম record চেনায়; ফাঁকা ট্রিতে এটি NULL। Allocated memory-র যেকোনো জায়গায় record থাকতে পারে; তাদের address key-র ক্রমে থাকার দরকার নেই।</p>
+<p>এক থেকে নম্বর শুরু করলে array-র সূত্র বদলায়: child হয় 2*i আর 2*i+1, parent হয় i/2। দুই নিয়মই চলে, কিন্তু মেশালে নোড হারাবে। সম্পর্ক থেকে হিসাব লেখার আগে ছবির পাশে root-এর index লিখে নাও।</p>
+
+<h2 id="how-it-works">Level-order input থেকে গঠন বানাও</h2>
+<p>Complete-tree builder প্রথমে শূন্য থেকে বারোর মধ্যে n পড়ে, তারপর -99 থেকে 99-এর মধ্যে nটি key পড়ে। শুরুতে মানগুলো temporary array-তে রাখে। Node allocate করার আগে সব পড়ে নিলে কোনো key বাদ পড়লে আধা তৈরি ট্রি পড়ে থাকে না। পড়া সফল হলেই build শুরু হয়।</p>
+<p>Build ফাংশন বর্তমান array index i পায়। i সক্রিয় সীমার বাইরে হলে NULL ফেরায়। না হলে একটা Node allocate করে, key লেখে, তারপর দুই child অবস্থান recursively বানায়। Record ফেরানোর মাধ্যমে caller সম্পূর্ণ হওয়া সেই ছোট subtree পায়।</p>
+<table class="ref"><caption>ছয়টি অবস্থান তৈরি</caption><thead><tr><th scope="col">Index</th><th scope="col">Key</th><th scope="col">Child অবস্থান</th><th scope="col">ফল</th></tr></thead><tbody><tr><td>0</td><td>8</td><td>1, 2</td><td>Root record</td></tr><tr><td>1</td><td>3</td><td>3, 4</td><td>দুটি linked leaf</td></tr><tr><td>2</td><td>10</td><td>5, 6</td><td>বামে leaf, ডানে NULL</td></tr><tr><td>5</td><td>9</td><td>11, 12</td><td>দুটিই n-এর বাইরে</td></tr></tbody></table>
+<p>Allocation ব্যর্থ হতে পারে। আগের call থেকে ফেরত আসা record না হারিয়ে ok flag ব্যর্থতা মনে রাখে। বাকি call নতুন নোড বানানো বন্ধ করে। main তবু আংশিক root পায় এবং destroy-তে দেয়; এটি failure ফেরানোর আগে পৌঁছানো যায় এমন সব record ছেড়ে দেয়।</p>
+<p>nটি linked record বানাতে O(n) সময় আর নোড রাখার জন্য O(n) জায়গা লাগে। এই complete গঠনে recursive call-এর বাড়তি জায়গা O(log n)। যেকোনো গঠনের সাধারণ builder-এ O(h+1) call space লাগতে পারে। এখানে বলা pointer assignment-এর খরচের বাইরে allocation-এর library খরচও আছে।</p>
+<pre class="diagram">Linked leaf তৈরি:
+আগে: parent.right ---&gt; NULL
+স্থানীয়: new ---&gt; [key=14 | left=NULL | right=NULL]
+পরে: parent.right ---&gt; [14 | NULL | NULL]
+ছেড়ে দেওয়া:
+আগে: root ---&gt; [8 | left ---&gt; subtree | right ---&gt; subtree]
+পরে: দুই child subtree ছাড়া হলো, তারপর record 8 ছাড়া হলো, root বাদ গেল</pre>
+<p>Sparse গঠন array-তে রাখলে প্রতিটি সম্ভাব্য অবস্থানের জন্য আলাদা present flag রাখো। শূন্য বৈধ data হলে শূন্য দিয়ে ফাঁকা ঘর চেনানো যায় না। তাই তৃতীয় উদাহরণে key থেকে আলাদা করে কোন ঘর ভরা রাখা হয়েছে। Parent অবস্থান না থাকলে child-ও গ্রহণ করে না।</p>
+<p>Sparse input-এ parent-এর আগে child অবস্থান আসতে পারে। সব জোড়া পড়ার পরে সম্পর্ক যাচাই করো। ভরা নোডের parent না থাকলে সেটি orphan, তাই ওই জোড়াগুলো rooted tree বোঝায় না। নির্দিষ্ট পনেরো অবস্থানে সব পরীক্ষা করতে O(15), সাধারণভাবে O(capacity) সময় লাগে।</p>
+<p>সরাসরি child index রাখার টেবিল আরেকটা array-ভিত্তিক উপায়। প্রতিটি record left আর right child-এর index রাখে, না থাকলে বিশেষ missing index রাখে। এতে বিশাল ফাঁক ছাড়াই sparse গঠন রাখা যায়। Link পয়েন্টারের মতো কাজ করে, তবে index একই array-র record বোঝায়।</p>
+
+<h2 id="examples">মেমরির দুই বিন্যাস দেখো</h2>
+<p>Linked উদাহরণের output-কে তৈরি ট্রির মধ্যে দিয়ে হাঁটা হিসেবে পড়ো। Inorder output সাজানো নাও হতে পারে, কারণ input-এর নিয়ম অবস্থান ধরে রাখে। Array উদাহরণে সম্ভাব্য আত্মীয় অবস্থান থাকলেই তা প্রিন্ট করে।</p>
+
+<h3>Level order থেকে linked node বানাও</h3>
+<p>Index 5 হয় index 2-এর left child। না থাকা index 6-এর জন্য right link হয় NULL।</p>
+<div data-example="ex-1"></div>
+
+<h3>অ্যারে থেকে parent আর child খোঁজো</h3>
+<p>Root-এর parent নেই। শেষ তিনটি ভরা অবস্থান leaf; না থাকা অবস্থানের জন্য -1 প্রিন্ট হয়।</p>
+<div data-example="ex-2"></div>
+
+<h3>রাখা মান থেকে ফাঁকা ঘর আলাদা রাখো</h3>
+<p>শূন্য আর ঋণাত্মক key-ও সাধারণ ডেটা। present array আলাদাভাবে কোন অবস্থান ভরা তা রাখে।</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">কেমন গঠন হবে ভেবে storage বেছে নাও</h2>
+<p>Complete array key-গুলো পাশাপাশি রাখে, প্রতি key-তে দুই পয়েন্টারও লাগে না। পাশের অবস্থান একই cache line-এও থাকতে পারে। Array সরালেও হিসাব করে পাওয়া child index বদলায় না। তবে পুরোনো storage-এর ভেতরে raw pointer ধরে রাখা কোড resize-এর পরে সেই pointer ব্যবহার করতে পারবে না।</p>
+<p>শুধু right child-এর চেইন implicit index 0, 2, 6, 14 আর 30 নেয়। পাঁচটি record-ই ত্রিশ নম্বর অবস্থান পর্যন্ত জায়গা দাবি করে। আরও নোড যোগ করলে সবচেয়ে বড় অবস্থান চেইনের দৈর্ঘ্যের সঙ্গে exponential হারে বাড়ে। Linked node শুধু ভরা অবস্থানপ্রতি একটা record নেয়, তাই এই sparse গঠনে তা ভালো মানায়।</p>
+<p>কোনো representation-ই সব কাজ constant time-এ করে না। জানা child link ধরা O(1), কিন্তু যেকোনো unsorted key খুঁজতে সব n নোড দেখতে হতে পারে। Linked tree mirror করতে প্রতিটি record-এ দুই পয়েন্টার অদলবদল হয়, সময় O(n)। Recursion বাড়তি O(h+1) জায়গা নেয়, আর আগের record-গুলো allocated থাকে।</p>
+<p>সাধারণ বাইনারি ট্রির নোড মুছতে তার child-গুলোর কী হবে সেই নিয়ম বলতে হবে। যেকোনো ভরা array অবস্থান সরালে গঠন ঠিক না করা পর্যন্ত গর্ত থাকে। Subtree না বাঁচিয়ে linked record সরালে সেগুলোতে আর পৌঁছানো যায় না। পরের BST পাঠে key-র ক্রম মেনে মুছে ফেলার নির্দিষ্ট নিয়ম আসবে।</p>
+
+<p>পরীক্ষায় byte address আর key-র width দিলে array অবস্থানের address হলো base-এর সঙ্গে index গুণ width যোগ করে। Width-গুলো ওই প্রশ্নের জন্য ধরা মান। Linked node-এর member address হিসাব করতে আলাদা record layout দিতে হবে; key array-র সূত্র pointer-ভিত্তিক record বোঝায় না।</p>
+
+<h2 id="common-mistakes">ডেটা থেকে গঠন আলাদা রাখো</h2>
+<h3>Input order-কে search-tree insertion ধরে নেওয়া</h3><p>Complete level-order build-এ 8, 10, 3 দিলে 10 বামে বসে। বাইনারি ট্রিতে তা বৈধ। BST insertion routine আলাদা link বেছে নেবে, তাই input-এর অর্থ সবসময় বলো।</p>
+<h3>হিসাব করা child index দিয়ে সক্রিয় array ছাড়িয়ে যাওয়া</h3><p>সূত্র শুধু অবস্থান দেয়, child থাকার প্রমাণ দেয় না। Complete storage-এ সেটি n-এর সঙ্গে যাচাই করো। Sparse storage-এ key পড়ার আগে capacity আর অবস্থান ভরা কি না দেখো।</p>
+<h3>Parent আগে ছেড়ে দেওয়া</h3><p>Linked record free করার পরে তার child pointer পড়তে পারবে না। Record free করার আগে left আর right subtree ছেড়ে দাও। পুরো ট্রি destroy করতে O(n) সময় লাগে, শেষে কোনো live record থাকে না।</p>
+
+<h2 id="version-notes">Portable C17-এ নোড রাখা</h2>
+<div class="callout version"><p>Node type আর builder-গুলো standard C17 allocation ব্যবহার করে। <code>sizeof *p</code> দিয়ে allocate করো, যাতে চাওয়া size পয়েন্টার যে type দেখায় তা মেনে হয়। Structure padding আর pointer width মেশিনভেদে বদলায়; কোনো output নির্দিষ্ট record size ধরে না বা আসল address প্রিন্ট করে না।</p></div>
+
+<h2 id="summary">Representation ঠিক করে কীভাবে চলবে</h2>
+<p>Complete গঠনের জন্য array-র সূত্র ছোট; child link দিয়ে sparse গঠন সরাসরি রাখা যায়। দুটোতেই কোন অবস্থান ভরা আর মেমরির দায় কার, তা পরিষ্কার থাকা চাই। এবার <a href="topic:ds-tree-traversals">ট্রি traversal</a> দিয়ে প্রতিটি রাখা নোডকে দরকারি ক্রমে দেখো।</p>
