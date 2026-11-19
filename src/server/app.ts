@@ -14,7 +14,7 @@ import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
-import { AuthError, type Authenticator } from './auth.ts';
+import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -60,7 +60,7 @@ export interface AppDeps {
   };
 }
 
-type Ctx = { req: IncomingMessage; params: Record<string, string>; query: URLSearchParams; body: any; learnerId: string; email: string | null };
+type Ctx = { req: IncomingMessage; params: Record<string, string>; query: URLSearchParams; body: any; learnerId: string; email: string | null; anonId?: string; signedIn?: boolean; headers: Record<string, string> };
 type Handler = (ctx: Ctx) => unknown;
 interface Route {
   method: string;
@@ -113,8 +113,8 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
       authMode: d.auth.mode,
-      supabaseUrl: d.auth.mode === 'supabase' ? d.config.supabaseUrl : null,
-      supabaseAnonKey: d.auth.mode === 'supabase' ? d.config.supabaseAnonKey : null, // public by design
+      supabaseUrl: d.auth.mode !== 'anonymous' ? d.config.supabaseUrl : null,
+      supabaseAnonKey: d.auth.mode !== 'anonymous' ? d.config.supabaseAnonKey : null, // public by design
       ai: d.config.aiDescription,
       liveSearch: d.config.liveSearch,
       store: d.config.storeKind,
@@ -123,7 +123,13 @@ export function buildRoutes(d: AppDeps): Route[] {
       freeDailyAi: d.config.freeDailyAi ?? 10,
       lessons: LESSONS.map((l) => ({ id: l.id, subject: l.subject, title: l.title, summary: l.summary })),
     }), 'none'),
-    route('GET', '/api/me', ({ learnerId, email }) => ({ learnerId, email })),
+    route('GET', '/api/me', ({ learnerId, email, signedIn }) => ({ learnerId, email, signedIn: Boolean(signedIn) || d.auth.mode === 'supabase' })),
+    route('POST', '/api/auth/claim', async ({ req, learnerId, anonId, signedIn, headers }) => {
+      if (!signedIn || !anonId || anonId === learnerId || !d.store) return { moved: 0 };
+      const moved = await d.store.claimLearner(anonId, learnerId);
+      headers['set-cookie'] = clearAnonCookie(req);
+      return { moved };
+    }),
 
     // catalog, dashboard, profile
     route('GET', '/api/courses', ({ query }) => learner.catalog(lang(query.get('lang'))), 'none'),
@@ -216,7 +222,7 @@ export function buildRoutes(d: AppDeps): Route[] {
 export function createApp(d: AppDeps) {
   const routes = buildRoutes(d);
   const publicDir = resolve(d.publicDir);
-  const connect = ["'self'", d.config.supabaseUrl && d.auth.mode === 'supabase' ? new URL(d.config.supabaseUrl).origin : ''].filter(Boolean).join(' ');
+  const connect = ["'self'", d.config.supabaseUrl && d.auth.mode !== 'anonymous' ? new URL(d.config.supabaseUrl).origin : ''].filter(Boolean).join(' ');
   const csp = `default-src 'self'; img-src 'self' data: https://i.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src ${connect}; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
   async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
@@ -259,10 +265,14 @@ export function createApp(d: AppDeps) {
 
       let learnerId = '';
       let email: string | null = null;
+      let anonId: string | undefined;
+      let signedIn: boolean | undefined;
       if (match.r.auth === 'learner') {
         const id = await d.auth.identify(req);
         learnerId = id.learnerId;
         email = id.email;
+        anonId = id.anonId;
+        signedIn = id.signedIn;
         if (id.setCookie) headers['set-cookie'] = id.setCookie;
       } else if (match.r.auth === 'editor' && !d.config.instructorKey && d.config.editLocked) {
         throw new AppError('edit_locked', 403, 'Editing is turned off until an instructor key (INSTRUCTOR_KEY) is set on the server.');
@@ -274,7 +284,7 @@ export function createApp(d: AppDeps) {
       const params: Record<string, string> = {};
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
       const body = await readJson(req, match.r.maxBody);
-      const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email });
+      const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers });
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
       if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details } }, headers);

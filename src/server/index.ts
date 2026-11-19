@@ -17,7 +17,7 @@ import { SupabaseStore } from '../store/supabase.ts';
 import { gatewayFromEnv } from '../ai/gateway.ts';
 import { AiPracticeTutor } from '../ai/tutor.ts';
 import { LiveSearch } from '../library/live.ts';
-import { anonymousAuth, supabaseAuth } from './auth.ts';
+import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
 import { createApp } from './app.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -35,7 +35,11 @@ const env = process.env;
 // SUPABASE_SECRET_KEY (sb_secret_…) is the current name; SUPABASE_SERVICE_ROLE_KEY (legacy JWT) still works.
 const serverKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
 const store: Store = env.SUPABASE_URL && serverKey ? new SupabaseStore(env.SUPABASE_URL, serverKey) : new MemoryStore();
-const auth = env.AUTH_MODE === 'supabase' && env.SUPABASE_URL && env.SUPABASE_ANON_KEY ? supabaseAuth(env.SUPABASE_URL, env.SUPABASE_ANON_KEY) : anonymousAuth();
+// Sign-in: with SUPABASE_URL and SUPABASE_ANON_KEY (the public "publishable" key) sign-in is optional
+// (hybrid); AUTH_MODE=supabase makes it required; AUTH_MODE=anonymous turns it off.
+const publicKey = env.SUPABASE_ANON_KEY || env.SUPABASE_PUBLISHABLE_KEY;
+const auth = !env.SUPABASE_URL || !publicKey || env.AUTH_MODE === 'anonymous' ? anonymousAuth()
+  : env.AUTH_MODE === 'supabase' ? supabaseAuth(env.SUPABASE_URL, publicKey) : hybridAuth(env.SUPABASE_URL, publicKey);
 const gateway = gatewayFromEnv(env, store);
 const live = new LiveSearch({ apiKey: env.TAVILY_API_KEY || null, store });
 
@@ -63,7 +67,7 @@ const server = createApp({
   publicDir: join(here, '../../public'),
   config: {
     supabaseUrl: env.SUPABASE_URL ?? null,
-    supabaseAnonKey: env.SUPABASE_ANON_KEY ?? null,
+    supabaseAnonKey: publicKey ?? null,
     aiDescription: gateway.describe(),
     liveSearch: live.enabled,
     storeKind: store.kind,

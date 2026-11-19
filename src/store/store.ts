@@ -58,6 +58,8 @@ export interface Store {
   getVideoExtras(videoId: string): Promise<VideoExtrasRow | undefined>;
   listVideoExtras(): Promise<VideoExtrasRow[]>;
   saveVideoExtras(row: VideoExtrasRow): Promise<void>;
+  /** Move an anonymous learner's reading history and profile to a signed-in account. Returns rows moved. */
+  claimLearner(fromId: string, toId: string): Promise<number>;
   /** Pro waitlist. Returns false when the email was already on the list. */
   addWaitlist(row: WaitlistRow): Promise<boolean>;
   waitlistCount(): Promise<number>;
@@ -153,7 +155,15 @@ export class MemoryStore implements Store {
   }
   async saveVideoExtras(row: VideoExtrasRow) {
     this.extras.set(row.videoId, structuredClone(row));
-  }  private waitlist = new Map<string, WaitlistRow>();
+  }  async claimLearner(fromId: string, toId: string) {
+    let n = 0;
+    for (const e of this.reading) if (e.learnerId === fromId) { e.learnerId = toId; n++; }
+    const p = this.profiles.get(fromId);
+    if (p && !this.profiles.has(toId)) this.profiles.set(toId, p);
+    this.profiles.delete(fromId);
+    return n;
+  }
+  private waitlist = new Map<string, WaitlistRow>();
   async addWaitlist(row: WaitlistRow) {
     if (this.waitlist.has(row.email)) return false;
     this.waitlist.set(row.email, { ...row });

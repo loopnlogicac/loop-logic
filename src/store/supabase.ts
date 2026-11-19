@@ -160,6 +160,13 @@ export class SupabaseStore implements Store {
   async saveVideoExtras(row: { videoId: string; data: Record<string, unknown>; updatedAt: string }) {
     await this.rest('POST', 'll_video_extras', { video_id: row.videoId, data: row.data, updated_at: row.updatedAt }, 'resolution=merge-duplicates,return=minimal');
   }
+  async claimLearner(fromId: string, toId: string) {
+    const moved = await this.rest<unknown[]>('PATCH', `ll_reading_events?learner_id=eq.${this.q(fromId)}`, { learner_id: toId }, 'return=representation');
+    const target = await this.rest<unknown[]>('GET', `ll_profiles?learner_id=eq.${this.q(toId)}&select=learner_id`);
+    if (target.length === 0) await this.rest('PATCH', `ll_profiles?learner_id=eq.${this.q(fromId)}`, { learner_id: toId }, 'return=minimal');
+    else await this.rest('DELETE', `ll_profiles?learner_id=eq.${this.q(fromId)}`, undefined, 'return=minimal');
+    return Array.isArray(moved) ? moved.length : 0;
+  }
   async addWaitlist(row: { email: string; plan: string; lang: string; learnerId: string | null; createdAt: string }) {
     const rows = await this.rest<unknown[]>('POST', 'll_waitlist', { email: row.email, plan: row.plan, lang: row.lang, learner_id: row.learnerId, created_at: row.createdAt }, 'resolution=ignore-duplicates,return=representation');
     return Array.isArray(rows) && rows.length > 0;

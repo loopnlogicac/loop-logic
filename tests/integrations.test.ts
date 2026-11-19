@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
 import { SupabaseStore, type HttpFetch } from '../src/store/supabase.ts';
 import { StaleStateError } from '../src/store/store.ts';
-import { supabaseAuth, anonymousAuth, AuthError } from '../src/server/auth.ts';
+import { supabaseAuth, anonymousAuth, hybridAuth, AuthError } from '../src/server/auth.ts';
+import { MemoryStore } from '../src/store/store.ts';
 import { LiveSearch, isAllowed } from '../src/library/live.ts';
 import { LearningService } from '../src/app/service.ts';
 
@@ -119,6 +120,31 @@ test('anonymous mode issues an HttpOnly cookie and reuses a valid one', async ()
   const again = await auth.identify(req({ cookie: `ll_learner=${first.learnerId}` }));
   assert.equal(again.learnerId, first.learnerId);
   assert.equal(again.setCookie, undefined);
+});
+
+test('optional sign-in: guests get a cookie, signed-in requests use the account and keep the guest id to claim', async () => {
+  const auth = hybridAuth('https://proj.supabase.co', 'anon-key', async (_url, init) => {
+    const good = init.headers.authorization === 'Bearer good-token';
+    return { ok: good, status: good ? 200 : 401, json: async () => (good ? { id: 'user-123', email: 'a@b.c' } : {}) };
+  });
+  const guest = await auth.identify(req({}));
+  assert.match(guest.setCookie!, /HttpOnly/);
+  assert.equal(guest.signedIn, undefined);
+  const me = await auth.identify(req({ authorization: 'Bearer good-token', cookie: `ll_learner=${guest.learnerId}` }));
+  assert.equal(me.learnerId, 'user-123');
+  assert.equal(me.signedIn, true);
+  assert.equal(me.anonId, guest.learnerId);
+  await assert.rejects(auth.identify(req({ authorization: 'Bearer bad' })), AuthError);
+});
+
+test('claiming moves a guest\'s reading history and profile to the account', async () => {
+  const s = new MemoryStore();
+  await s.addReadingEvents([{ id: 'e1', learnerId: 'guest', lessonId: 'course:c-programming', blockId: null, type: 'video', payload: {}, at: new Date().toISOString() }]);
+  await s.saveProfile('guest', { lang: 'bn' });
+  assert.equal(await s.claimLearner('guest', 'user-1'), 1);
+  assert.equal((await s.readingEvents('user-1')).length, 1);
+  assert.equal((await s.readingEvents('guest')).length, 0);
+  assert.deepEqual(await s.getProfile('user-1'), { lang: 'bn' });
 });
 
 test('allowlist: only https on an approved domain or its subdomain', () => {
