@@ -17,7 +17,7 @@ function trace(input) {
         steps.push({op: 'list', name: 'output', items: output.slice(), line: 4, vars: {i, key, position}, note: {en: `Place ${a[i]} at ${position}; right-to-left traversal preserves ties.`, bn: 'ডান থেকে বসালে সমান মানের আগের ক্রম বজায় থাকে।'}});
     }
     for (let i = 0; i < a.length; i++) {
-        steps.push({op: 'set', i, value: output[i], line: 5, note: {en: 'Copy this completed output position back into a.'}});
+        steps.push({op: 'set', i, value: output[i], line: 5, note: {en: 'Copy this completed output position back into a.', bn: "পূর্ণ output পজিশনের মান a-তে copy করো।"}});
     }
     steps.push({op: 'done', note: {en: 'Frequency counts and prefix positions have ordered all keys.', bn: 'গণনা আর prefix অবস্থান দিয়ে সব মান সাজানো হয়েছে।'}});
     return {init: {array: a}, steps};

@@ -13,7 +13,7 @@ function trace(input) {
             break;
         }
         steps.push({op: 'mark', targets: [i], tone: 'discarded', line: 2,
-            note: {en: `${a[i]} is different from ${input.target}; continue.`}});
+            note: {en: `${a[i]} is different from ${input.target}; continue.`, bn: `${a[i]} ও ${input.target} আলাদা; সামনে যাও।`}});
     }
     steps.push({op: 'done', line: result < 0 ? 3 : 2, vars: {result},
         note: {en: result < 0 ? 'Every value was tested; the target is absent.' : `Return the first matching index ${result}.`,

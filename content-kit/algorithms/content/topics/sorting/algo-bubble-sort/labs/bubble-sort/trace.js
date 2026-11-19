@@ -10,7 +10,7 @@ function trace(input) {
   if (n < 2) {
     steps.push({ op: 'mark', targets: n ? [0] : [], tone: 'sorted', line: 7, note: say('One value is already sorted.', 'একটি মান থাকলে সেটা আগেই সাজানো।') });
     if (!n) steps.pop();
-    steps.push({ op: 'done', note: say('Nothing to sort.'), vars: { swaps, comparisons } });
+    steps.push({ op: 'done', note: say('Nothing to sort.', 'সাজানোর মতো কিছু নেই।'), vars: { swaps, comparisons } });
     return { init: { array: a }, steps };
   }
 
@@ -33,11 +33,11 @@ function trace(input) {
       const rest = [];
       for (let k = 0; k < n - 1 - pass; k++) rest.push(k);
       steps.push({ op: 'mark', targets: rest, tone: 'sorted', line: 8, note: say('No swaps in this pass, so the array is sorted. Stop early.', 'এই পাসে কোনো অদলবদল হয়নি, তাই অ্যারে সাজানো। আগেই থামো।') });
-      steps.push({ op: 'done', note: say(`Sorted with ${swaps} swaps and ${comparisons} comparisons.`), vars: { swaps, comparisons } });
+      steps.push({ op: 'done', note: say(`Sorted with ${swaps} swaps and ${comparisons} comparisons.`, `${swaps} সোয়াপ ও ${comparisons} তুলনায় সাজানো হলো।`), vars: { swaps, comparisons } });
       return { init: { array: input.values.slice() }, steps };
     }
   }
-  steps.push({ op: 'mark', targets: [0], tone: 'sorted', line: 7, note: say(`${a[0]} is the smallest and is already first.`) });
-  steps.push({ op: 'done', note: say(`Sorted with ${swaps} swaps and ${comparisons} comparisons.`), vars: { swaps, comparisons } });
+  steps.push({ op: 'mark', targets: [0], tone: 'sorted', line: 7, note: say(`${a[0]} is the smallest and is already first.`, `${a[0]} সবচেয়ে ছোট, আগেই প্রথমে আছে।`) });
+  steps.push({ op: 'done', note: say(`Sorted with ${swaps} swaps and ${comparisons} comparisons.`, `${swaps} সোয়াপ ও ${comparisons} তুলনায় সাজানো হলো।`), vars: { swaps, comparisons } });
   return { init: { array: input.values.slice() }, steps };
 }

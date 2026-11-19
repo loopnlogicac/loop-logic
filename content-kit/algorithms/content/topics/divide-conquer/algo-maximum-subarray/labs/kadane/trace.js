@@ -9,7 +9,7 @@ function trace(input) {
         steps.push({op:'mark',targets:[i],tone:'current',line:3,
             vars:{i,ending},note:{en:values[i]>extended?'The old ending sum is negative, so start here.':'Extending the previous interval is at least as good.',bn:'এখান থেকে শুরু করা আর আগের অংশ বাড়ানো তুলনা করো।'}});
         best=Math.max(best,ending);
-        steps.push({op:'note',line:4,vars:{best},note:{en:`The best sum seen anywhere is now ${best}.`}});
+        steps.push({op:'note',line:4,vars:{best},note:{en:`The best sum seen anywhere is now ${best}.`, bn: `এখন পর্যন্ত যেকোনো interval-এর best sum ${best}।`}});
     }
     steps.push({op:'done',line:5,vars:{best},note:{en:`The maximum nonempty sum is ${best}.`,bn:`সর্বোচ্চ যোগফল ${best}।`}});
     return {init:{array:values},steps};
