@@ -16,7 +16,6 @@ import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
-import type { NoticeService } from '../app/notices.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
@@ -24,6 +23,7 @@ import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
 import { allCourses } from '../content/courses.ts';
+import type { NoticeService } from '../app/notices.ts';
 
 const MAX_BODY_BYTES = 16 * 1024;
 
