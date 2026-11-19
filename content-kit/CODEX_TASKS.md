@@ -149,3 +149,20 @@ Round 3 is merged. OOP (Java) and Compiler Design are complete. Follow `BANGLA_S
 | R4-F | Machine Learning | 4 | data-preparation (5 labs) |
 | R4-G | OOP (Java) | Bangla edition, part 1 | body.bn.html for java-basics, classes-objects |
 | R4-H | Compiler Design | Bangla edition, part 1 | body.bn.html for introduction, lexical-analysis |
+
+---
+
+## Round 5 (19 Nov 2026): last C and Algorithms work, ML regression, Bangla editions
+
+Round 4 is merged: Data Structures, Python, DBMS, OOP (Java) and Compiler Design now have every English topic. Follow `BANGLA_STYLE.md` in every task. A Bangla edition adds `body.bn.html` next to each `body.en.html` in the listed modules, and fills any missing `bn` text in those topics' `topic.json`; it does not change the English text, the examples or the `.out` files.
+
+| Task | Subject | Batch | Modules |
+|---|---|---|---|
+| R5-A | C | 5 | dynamic-memory, structures, preprocessor |
+| R5-B | Algorithms | 4 (last) | backtracking, strings-math, complexity, practice-exam (4 labs) |
+| R5-C | Machine Learning | 5 | regression (5 labs); also note pandas 3 output differences |
+| R5-D | OOP (Java) | Bangla edition, part 2 | inheritance-polymorphism, advanced-java |
+| R5-E | Compiler Design | Bangla edition, part 2 | syntax-analysis, semantic-analysis |
+| R5-F | Python | Bangla edition, part 1 | basics, control-flow, data-structures |
+| R5-G | Data Structures | Bangla edition, part 1 | foundations, arrays, linked-lists |
+| R5-H | DBMS | Bangla edition, part 1 | foundations, er-modelling, relational-model |
