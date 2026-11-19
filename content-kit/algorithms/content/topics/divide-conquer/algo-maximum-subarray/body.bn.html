@@ -1,0 +1,83 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">Club-এর দৈনিক balance change-এ positive টাকা আসে,negative খরচ। সবচেয়ে লাভজনক পরপর দিন চাই;মাঝের খারাপ দিন বাদ নয়। Subarray contiguous interval,তাই শুধু প্রথম,তৃতীয়,পঞ্চম দিন নেওয়া চলে না।</p>
+
+<p>এখানে অন্তত একটি element চাই। [-8,-3,-6]-এ best -3;zero দিলে কোনো দিন না-নেওয়া অন্য সমস্যা। তুলনার আগে convention ঠিক করো। একাধিক equal-best interval থাকলে boundary ফেরাতে tie rule চাই।</p>
+
+<p>[-2,3,-1,4,-5]-এ [1,4),অর্থাৎ3,-1,4,sum6। তিনভাবে করব:small reference brute force,crossing বোঝাতে divide-conquer,Kadane-তে prefix extend-এর দরকারি দুই total।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">ending = values[0]; best = ending
+for i = 1 to n - 1
+    ending = max(values[i], ending + values[i])
+    best = max(best, ending)
+return best</code></pre>
+<p>Ending মানে current index-এ শেষ হওয়া nonempty interval-এর greatest sum। Best মানে processed prefix-এর যেকোনো জায়গার greatest sum। আলাদা অর্থ:আজ ending negative হলেও আগের profitable interval best থাকতে পারে।</p>
+
+<p>দুই variable a[0] থেকে,loop indexone থেকে। Negative infinity ছাড়া nonempty শর্ত প্রতিষ্ঠিত। Caller অন্তত একটি value দেবে। Empty dataset হলে আলাদা response ঠিক করো,a[0] পড়বে না।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>পরের x-এ interval হয় এখানেই শুরু,নয় আগের index-এ শেষ হওয়া interval extend। সবার সঙ্গে একই x যোগ,তাই best extension আগের ending+x। নতুন ending=max(x,ending+x);এর সঙ্গে best তুলনায় পুরো prefix-এর answer থাকে।</p>
+
+<p>প্রথম ending-2। 3-এ restart3,extend1,তাই restart। -1-এ extend2,restart-1,তাই keep। 4-এ6। শেষ -5 ending1 করে,best6 ঠিক থাকে।</p>
+
+<div data-lab="kadane"></div>
+<p>Brute force start lo fixed করে hi বাড়ায়,running sum রাখে। n(n+1)/2 addition-এ সব nonempty interval। প্রতিবার sum নতুন করলে অপ্রয়োজনীয় তৃতীয় loop। ছোট input-এ fast routine যাচাইয়ে quadratic version সহজ।</p>
+
+<p>Mid split-এ optimum পুরো left,পুরো right বা crossing। প্রথম দুই recursive। Crossing-এ mid-1 থেকে left-এর greatest suffix,mid থেকে right-এর greatest prefix scan করে যোগ।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">দৈনিক balance-এ Kadane</h3>
+<p>Index3-এ best ending6।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">দুই half ও crossing interval</h3>
+<p>[1,4) root split পার হয়,sum6।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">All-negative-এ brute force</h3>
+<p>Nonempty হলে -3 নিতেই হবে;zero-তে ভুল করে empty চলত।</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">Zero-sum tie-র interval</h3>
+<p>Zero sum extend করলেও zero;অনেক interval optimal।</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">i</th><th scope="col">মান</th><th scope="col">এইখানে শেষের best</th><th scope="col">এখন পর্যন্ত best</th></tr></thead><tbody><tr><td>0</td><td>-2</td><td>-2</td><td>-2</td></tr><tr><td>1</td><td>3</td><td>3</td><td>3</td></tr><tr><td>2</td><td>-1</td><td>2</td><td>3</td></tr><tr><td>3</td><td>4</td><td>6</td><td>6</td></tr><tr><td>4</td><td>-5</td><td>1</td><td>6</td></tr></tbody></table>
+
+<p>উত্তরের মাঝের negative মানেই থামা নয়। 3 ও4 দিনের মাঝে -1 রাখা লাভজনক। আগের prefix-এর total সব ভবিষ্যৎ extension খারাপ করলেই Kadane ফেলে,প্রতিটি negative element নয়।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>i-এর আগে ending হলো i-1-এ best-ending,best হলো [0,i)-এর optimum। i-তে শেষ interval শুধু a[i] বা আগের-ending-এর extension। Exhaustive দুই possibility-র ভালোটি recurrence নেয়। তারপর best পুরোনো winner ও নতুন ending মেলায়।</p>
+
+<p>শুরুর prefix-এ একটিমাত্র nonempty interval প্রথম value,তাই invariant সত্য। প্রতিটি iteration দুই অর্থ রাখে। শেষে সব interval কোনো processed index-এ শেষ হয়েছে,best সব দেখে। i n-এর দিকে বাড়ায়,তাই stop।</p>
+
+<p>Divide-conquer-এর তিন location exhaustive। Crossing left suffix+right prefix হবেই। Choice স্বাধীন,প্রতিটির maximum যোগেই best। Nonempty base এক value;length induction-এ recursive result সঠিক।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Brute-force extension n+(n-1)+…+1,তাই Θ(n²),extra Θ(1)। Recursive দুই half+linear crossing-এ2T(n/2)+Θ(n),তাই Θ(n log n),active stack Θ(log n)।</p>
+
+<p>Kadane প্রতি value একবার,fixed arithmetic-comparison,তাই Θ(n),দুই total Θ(1) extra। Boundary-তে অল্প index। প্রতি candidate copy করলে constant space নষ্ট;boundary রাখো,দরকারে শুধু final copy।</p>
+
+<p>Positive,negative,mixed-এ bound linear;sort বা early exit নেই। Arithmetic width আলাদা:বড় অনেক change int overflow করতে পারে। এখানে16 value,-99..99-এ brute force ও crossing-সহ intermediate sum নিরাপদ।</p>
+
+<h2 id="edge-cases">Boundary ও সমান sum সামলাও</h2>
+<p>Boundary পেতে ending-এর tentative start ও best-এর final boundary রাখো। Restart strictly ভালো হলে start=i;ending strictly best ছাড়ালে start,i+1 save। Earliest start tie চাইলে equal-এ extend করো,পুরোনো start ফেলে দিও না।</p>
+
+<p>Single negative নিজেকে,all-positive পুরো sum ফেরায়। All-zero-তে অনেক optimum;exercise earliest start তারপর earliest end নেয়। আলাদা contract অংশ test করে,recurrence বদল বা empty answer লাগে না।</p>
+
+<p>Maximum subsequence গুলিও না;তাতে position skip করে বিচ্ছিন্ন positive যোগ করা যায়। Sum ও length-ও আলাদা। One-length interval জিততে পারে;longer tie শুধু বলা থাকলেই ভালো।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>Best,ending zero করলে negative-only-তে empty sum। Real first value নাও। Ending-এর আগে best update করলে current improvement বাদ যেতে পারে। আগে ending,পরে global।</p>
+
+<p>Crossing-এ দুই দিক অন্তত একটি element দেবে। Suffix-prefix maximumzero করলে empty side চলে। Code a[mid-1],a[mid] থেকে শুরু;half-open child-এ আলাদা position,split ঠিক ঢাকে।</p>
+
+<p>আগে sort করলে দিনের order বদলায়;বাস্তবে ছিল না এমন profitable interval হতে পারে। Original order রেখে ছোট case brute-force-এ মেলাও। [-2,3,-1,4,-5]-এ adjacency winner বদলায়।</p>
+
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<p>Signed int ও index-এ ছোট bound overflow এড়িয়ে negative নেয়। Max-এর special C17 library লাগে না,conditional operator দুই candidate মেলায়। বড় bound-এ running ও partial sum দুটোই widen করো।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>Kadane পরের extension-এর ঠিক তথ্য best-ending রাখে;আরেক total পুরোনো winner মনে রাখে। Divide-conquer left,right,crossing-এ একই answer পায়। পরের exponentiation-এ একই half দুইবার না করে reuse দেখবে।</p>
+<p>এবার <a href="topic:algo-fast-exponentiation">fast exponentiation</a> পড়ো।</p>

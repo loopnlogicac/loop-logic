@@ -1,0 +1,78 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">কয়েকটি classroom row-এর ফি যোগ করবে। দুই group-কে আলাদা row-এর total করতে বলে পরে দুই উত্তর যোগ করো। প্রত্যেক group আবার ভাগ করতে পারে। Divide and conquer-এ সমস্যা ছোট করো,সমাধান করো,উত্তর মেলাও। ছোট অংশ একসময় সরাসরি সমাধানযোগ্য হবে।</p>
+
+<p>Recursion দিয়ে প্রকাশ করা যায়,কিন্তু recursion নিজে ভালো কৌশল নিশ্চিত করে না। একই input-এ অনন্ত call-এ progress নেই;overlapping অংশ বারবার করলে waste। কোন size কমে ও প্রতি call কী ফেরায় চেনো।</p>
+
+<p>Binary search এক half,merge sort দুই half সাজিয়ে merge,quick sort আগে partition করে বাকি region সাজায়। Divide-combine কাজ আলাদা বলে recursion shape আলাদা। নতুন design-এর আগে এগুলো দেখলে cost আন্দাজে বলতে হয় না।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">sum_range(a, lo, hi):
+    if hi = lo: return 0
+    if hi - lo = 1: return a[lo]
+    mid = lo + (hi - lo) / 2
+    left = sum_range(a, lo, mid)
+    right = sum_range(a, mid, hi)
+    return left + right</code></pre>
+<p>Sum routine [lo,hi) নেয়;lo included,hi excluded,length hi-lo। Equal boundary empty,lengthone singleton। mid=lo+(hi-lo)/2-এ disjoint child,একসঙ্গে ঠিক মূল element।</p>
+
+<p>Call-এর আগে promise:sum_range a[lo]..a[hi-1] যোগ ফেরায়,input বদলায় না। Empty-তে zero চলে। Recursive maximum-এ nonempty চাই;সব integer input-এর জন্য সাধারণ maximum identity নেই।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>[7,3,5,3,1]-এ [0,5) mid2-তে ভাগ। [0,2) থেকে10,[2,5) থেকে9,root19। Odd extra element right-এ। Balanced analysis-এ কাছাকাছি size যথেষ্ট,হুবহু সমান নয়।</p>
+
+<p>Leaf একটি stored value দেয়। Internal call দুই child total ধরে,parent আবার সব element দেখে না। Combine একটি addition। তাই linear total,প্রতি level-এ linear কাজ নয়। আসল combine step থেকে analysis করো।</p>
+
+<p>Returned তথ্য যথেষ্ট হলে addition বদলাতে পারো। Maximum বড় child maximum,count দুই child match যোগ। কিন্তু শুধু দুই median থেকে parent median সাধারণত হয় না। Parent-এর দরকার দেখে child return type নাও।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">ফি total দুই half-এ ভাগ</h3>
+<p>Left10,right9,root19।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Sum-এর বদলে recursive maximum</h3>
+<p>Combine বড় child answer নেয়;negative input-এও -2 ফেরে।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Empty ও singleton interval</h3>
+<p>Empty interval zero,singleton8 split ছাড়াই8।</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">Interval</th><th scope="col">Child-এর উত্তর</th><th scope="col">ফেরত যোগফল</th></tr></thead><tbody><tr><td>[0,2)</td><td>7 ও 3</td><td>10</td></tr><tr><td>[2,5)</td><td>5 ও 4</td><td>9</td></tr><tr><td>[3,5)</td><td>3 ও 1</td><td>4</td></tr><tr><td>[0,5)</td><td>10 ও 9</td><td>19</td></tr></tbody></table>
+
+<p>Return যাচাইয়ে leaf থেকে root,call boundary-তে root থেকে leaf পড়ো। একই হিসাবের আলাদা view। শুধু split tree দেখিয়ে উত্তর ফেরার ধাপ না-লেখা পরীক্ষার ভুল। গুরুত্বপূর্ণ node-এ interval ও answer দুটো দেখাও।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Empty zero ও singleton a[lo] contract মেলে। সব ছোট interval সঠিক ধরে বড়টিকে দুই ছোট disjoint covering অংশ করো। Hypothesis-এ child exact sum,যোগে parent exact।</p>
+
+<p>Length≥2-এ mid দুই boundary-র মাঝে,দুই child ছোট nonnegative length। বারবার ভাগে zero/one আসবেই। Base সত্য,combine রাখে,decreasing length অনন্ত call আটকায়—পূর্ণ proof।</p>
+
+<p>Maximum-এর nonempty শর্ত রেখো। Baseone;বড় interval-এর দুই child-ই nonempty। দুই correct maximum-এর বড়টি union-এর maximum। Sum-এর মতো proof হলেও negative-only case-এ base contract জরুরি।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Sum-এর base constant;T(n)=T(floor(n/2))+T(ceil(n/2))+Θ(1)। Nonempty tree-তে n leaf,n-1 internal;প্রতি node constant,তাই Θ(n)। Depth Θ(log n)।</p>
+
+<p>Children পরপর,সব frame একসঙ্গে নয়। Longest path-এ peak Θ(log n) stack। Total node-কে simultaneous memory ধরবে না। Iterative sum Θ(n) time,Θ(1) space;এখানে ভাগ শেখায়,speedup নয়।</p>
+
+<p>Merge local Θ(n),তাই2T(n/2)+Θ(n)। Binary search এক child:T(n/2)+Θ(1)। Quick:T(k)+T(n-k-1)+Θ(n),k balance-নির্ভর। Recursive বললেই একটি complexity class নয়।</p>
+
+<h2 id="comparison">কাজে লাগে এমন ভাগ বাছো</h2>
+<p>নতুন সমস্যায় চার প্রশ্ন:call-এর region কোনটি,children-এর কোনটি,কোন ছোট case সরাসরি,কী তথ্য parent চায়? উত্তর দিলে চালানোর আগেই missing boundary ধরা পড়ে।</p>
+
+<p>Extra organization সাশ্রয়ী হলেই balanced child লাভ। প্রতি call দুই half copy-তে allocation-copy বাড়ে। Shared array boundary পাঠালে তা নেই। Merge-তে buffer লাগে,sum-এ নয়। নিজের implementation-এর storage বলো।</p>
+
+<p>Independent child আলাদা চলতে পারে বলে parallel কাজের ধারণা আসে। কিন্তু combine ও communication cost যায় না। এখানে C sequential,bound-ও sequential। দুই call নিজে দুই processor-এ চলে না।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>Mid দুই child-তে included হলে double-count। Half-open-এ [lo,mid),[mid,hi)। এক call-এ closed নিয়ম মেশাবে না। পাঁচ index এঁকে প্রতিটি ঠিক এক child-তে রাখো।</p>
+
+<p>শুধু zero base-এ singleton আবার নিজেকে বানাতে পারে। Split-এর আগে singleton ধরো। Binary search-এ input দুই half হলেও একটি call,তাই2T নয়।</p>
+
+<p>Maximum defaultzero negative-only answer বদলায়। Nonempty-তে real element নাও। Sum-এর type permitted size-value ধরবে। Asymptotic proof C signed addition overflow আটকায় না।</p>
+
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<p>এখানে max16 value,-99..99,তাই int partial sum নিরাপদ। একই array integer boundary-তে যায়। Declaration C17-এ চলে,কৌশল নতুন feature-নির্ভর নয়। Heap allocation লাগে না।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>Shrinking contract,সঠিক ছোট case ও combine-এর যথেষ্ট তথ্য চাই। Recurrence call ও local work আলাদা লেখে। Maximum subarray-তে দেখবে শুধু দুই child maximum crossing interval বোঝায় না।</p>
+<p>চলো <a href="topic:algo-maximum-subarray">maximum subarray</a> সমাধান করি।</p>
