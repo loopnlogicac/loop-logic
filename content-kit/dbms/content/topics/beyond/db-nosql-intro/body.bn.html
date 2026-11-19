@@ -1,14 +1,14 @@
 <h2 id="introduction">Access pattern দিয়ে শুরু</h2>
-<p class="lead">Cart,social কানেকশন,transcript আলাদা প্রশ্ন। Relational-এ সব হয়,তবে বিশেষ access অন্য model-এscale/express সহজ হতে পারে। <dfn>NoSQL</dfn> broad family,এক engine বা consistency promise নয়।</p>
-<p>“Not only SQL” বলা হয়। Nonrelational SQL-like দিতে পারে,relational JSON রাখে। নাম নয়,shape,operation,invariant,failure দিয়ে বাছো। Flexible-তেও required ফিল্ড-valid value rule চাই।</p>
-<p>এক request কী read-write,কোন fact atomic,কোন রিপোর্ট cross-গ্রুপ জয়েন জানতে হবে। Distribution replica,partition,networkfailure আনে;relational-এও আছে,NoSQL-only নয়।</p>
+<p class="lead">Shopping cart,social কানেকশন ও university transcript ভিন্ন প্রশ্ন করে। Relational model সব বোঝাতে পারে; অন্য model কোনো access সহজে প্রকাশ বা scale করতে পারে। <dfn>NoSQL</dfn> অনেক system-এর পরিবার, এক engine বা consistency promise নয়।</p>
+<p>নামটি প্রায়ই “not only SQL” বলা হয়। Nonrelational system-এ SQL-like ভাষা, relational-এ JSON-ও আছে। পণ্য নাম নয়, ডেটা shape,operation,invariant,failure দেখে বাছো। Flexible representation-এও required ফিল্ড ও valid value-এর নিয়ম লাগে।</p>
+<p>এক request কী পড়ে-লেখে, কোন fact একসঙ্গে atomic বদলাবে ও কোন রিপোর্ট গ্রুপ পেরিয়ে জয়েন করবে ভাবো। Distribution-এ replication,partition placement,network failure আসে। Relational deployment-এও এগুলো আছে; শুধু NoSQL-এর নয়।</p>
 
 <h2 id="how-it-works">চার family তুলনা</h2>
 <table class="ref"><thead><tr><th scope="col">Family</th><th scope="col">Shape</th><th scope="col">শুরুর workload</th><th scope="col">ভাবার বিষয়</th></tr></thead><tbody><tr><td>Document</td><td>Keyed nested document</td><td>এক cart/profile-item পড়া</td><td>Boundary,duplication,cross-document rule</td></tr><tr><td>কী-value</td><td>কী→value</td><td>Known session/cache কী</td><td>কী না জেনে খোঁজা</td></tr><tr><td>Wide-কলাম</td><td>Partitioned রো,sparse/grouped কলাম</td><td>Event,time-series partition কোয়েরি</td><td>Size,কোয়েরি-specific টেবিল,hot কী</td></tr><tr><td>Graph</td><td>Node,edge,property</td><td>Multi-hop path</td><td>Traversal selectivity,distribution</td></tr></tbody></table>
-<p><dfn>Document store</dfn> ফিল্ড,array,nested object এক unit। Cart-এcustomer-item embed এক-cart read সহজ। Separate পণ্য reference copy কমায়,agreed price copy history ঠিক রাখতে পারে।</p>
-<p><dfn>কী-value store</dfn> get(session_id),put(session_id,value)। কী main route। Cache expiry দিতে পারে,কিন্তু model-নাম persistence,eviction,ট্রানজ্যাকশন নিশ্চিত নয়। পণ্য ফিচার যাচাই।</p>
-<p><dfn>Wide-কলাম/কলাম-family</dfn> partition-clustering ঘিরে। Compressed কলাম scan-এর analytical columnar আলাদা। Attendance সেকশন-month partition,তারিখ-শিক্ষার্থী অর্ডার হতে পারে। খারাপ কী অধিকাংশ traffic এক node-এ দেয়।</p>
-<p><dfn>Graph store</dfn> first-class edge। Course prerequisite path traversal। Relational recursion-ও পারে,সম্পর্ক আছে বলেই graph বাধ্যতামূলক নয়। Depth,frequency,selectivity দেখো।</p>
+<p><dfn>Document store</dfn> related ফিল্ড,array,nested object একটি retrievable unit-এ রাখে। Cart document-এ customer পরিচয় ও item থাকতে পারে। Embed-এ এক-cart read সহজ। পণ্য reference-এ সব attribute copy লাগে না; agreed price copy purchase history ঠিক রাখে।</p>
+<p><dfn>কী-value store</dfn> get(session_id),put(session_id,value)-এর মতো কাজ করে। কী মূল পথ। Cache expiry দিতে পারে; নামটি নিজে persistence,eviction বা ট্রানজ্যাকশন guarantee নয়। নির্দিষ্ট system-এর ফিচার দেখো।</p>
+<p><dfn>Wide-কলাম store</dfn> বা কলাম-family store partition ও clustering choice ঘিরে ডেটা গুছায়। বড় scan-এর compressed analytical columnar engine আলাদা। Attendance সেকশন-month partition ও তারিখ-শিক্ষার্থী অর্ডার-এ হতে পারে। ভুল partition কী অধিকাংশ traffic এক node-এ ফেলতে পারে।</p>
+<p><dfn>Graph store</dfn> relationship-কে সরাসরি edge হিসেবে রাখে। Course prerequisite path traversal-এ বলা যায়। Relational recursion-ও path পারে; সম্পর্ক আছে বলেই graph store বাধ্যতামূলক নয়। Traversal-এর depth,frequency,selectivity দেখো।</p>
 
 <h2 id="worked-examples">Boundary বেছে failure test</h2>
 <h3>অর্ডার aggregate</h3>
@@ -18,29 +18,29 @@ ordered_on: 2026-03-02
 items:
   product_id: 1, quantity: 2, agreed_price_bdt: 60.00
   product_id: 3, quantity: 1, agreed_price_bdt: 120.00</pre>
-<p>অর্ডার-item একসঙ্গে পড়ায় embed মানায়। Agreed price রাখো,পরে catalogue history rewrite নয়। Customer detail অন্যত্র হলে পরিচয় reference। Address live নাকি historical delivery snapshot বাছো,আলাদা fact।</p>
-<p>Global stock এখনও অর্ডার-inventory দুইপাশ। Boundary overselling নিজে সারায় না। কিছু document DB multi-document ট্রানজ্যাকশন দেয়,scope-cost বুঝো। Reservation-compensation business process বদলায়,explicit failure চাই।</p>
+<p>অর্ডার ও item একসঙ্গে পড়া হয় বলে এক aggregate-এ embed মানাতে পারে। Agreed price রাখো, যেন পরে catalogue price history না বদলায়। Customer detail আলাদা maintained হলে reference নাও। Address live reference নাকি historical delivery snapshot ঠিক করো; fact আলাদা।</p>
+<p>Global stock আপডেট এখনও অর্ডার ও inventory পেরোয়। Document boundary overselling নিজে সারায় না। কিছু system multi-document ট্রানজ্যাকশন দেয়; scope-cost বোঝো। Reservation বা compensation workflow business process বদলায়, explicit failure handling চাই।</p>
 <h3>Event partition বাছো</h3>
-<p>সাধারণ প্রশ্ন যদি “সেকশন 31-এর March 2026-এর attendance” হয়, সেকশন আর month দিয়ে partition করলে নির্দিষ্ট রেঞ্জ একসঙ্গে থাকে। তারিখ আর শিক্ষার্থী-এর clustering অর্ডার ভেতরের পড়া সাজায়। এক শিক্ষার্থী কোন কোন সেকশন-এ ছিল জানতে অন্য টেবিল বা access path লাগতে পারে। কোয়েরি অনুযায়ী duplication সচেতন হতে পারে, তবে আপডেট যথেষ্ট consistent রাখতে হবে।</p>
-<p>সব university event এক permanent partition-এ রেখো না। সেটি সীমাহীন বড় হয়ে hotspot হতে পারে। শুধু বর্তমান দিনকেও কী করলে সব write এক জায়গায় যায়। শুধু মোট স্টোরেজ নয়, peak partition size আর throughput হিসাব করো। পরে repartition করতে ডেটা movement আর app-এর সমন্বয় লাগতে পারে।</p>
+<p>Common request যদি “সেকশন 31-এর March 2026 attendance”, সেকশন-month partition bounded রেঞ্জ এক রাখে। তারিখ-শিক্ষার্থী clustering অর্ডার পড়া সাহায্য করে। এক শিক্ষার্থী কোন কোন সেকশন-এ গেছে জানতে অন্য টেবিল/path লাগতে পারে। কোয়েরি-specific duplication ইচ্ছাকৃত হতে পারে, তবে আপডেট process app-এর দরকারি consistency রাখবে।</p>
+<p>সব university event-এর এক permanent partition করবে না; সীমাহীন বাড়ে ও hotspot হয়। শুধু current-day partition-ও সব write এক জায়গায় নিতে পারে। মোট স্টোরেজ নয়, peak partition size ও throughput মাপো। পরে repartition-এ ডেটা movement ও app coordination লাগতে পারে।</p>
 <h3>Network partition-এর সময় CAP</h3>
-<p><dfn>CAP theorem</dfn> এমন asynchronous distributed model নিয়ে কথা বলে যেখানে node-এর যোগাযোগ বিচ্ছিন্ন হতে পারে। এখানে consistency সাধারণত linearizability: completed operation যেন এক বর্তমান copy-তে real-time মেনে সাজানো হয়েছে। Availability মানে nonfailed node-এ প্রতিটি request সফল response পাবে, partition-এর জন্য reject বা অনির্দিষ্ট অপেক্ষা নয়।</p>
-<p>Network partition-এর সময় সব প্রাসঙ্গিক operation-এ দুটোই নিশ্চিত করা যায় না। এটি “চিরকাল যেকোনো দুই ফিচার বেছে নাও” ধরনের menu নয়। Partition tolerance model-এর failure শর্ত। যোগাযোগ ঠিক থাকলেও latency, replication আর consistency-এর পছন্দ আছে, কিন্তু সেগুলো theorem-এর নির্দিষ্ট impossibility proof-এর সমান নয়।</p>
+<p><dfn>CAP theorem</dfn> asynchronous distributed model-এ node-গুলোর যোগাযোগ বিচ্ছিন্ন হওয়া দেখে। Consistency সাধারণত linearizability: completed operation real-time অর্ডার মেনে এক current copy-এর মতো। Availability-তে nonfailed node-এর প্রতিটি request সফল response পাবে; partition-এর জন্য reject বা অনন্ত wait নয়।</p>
+<p>Network partition-এ সব relevant operation-এ দুটি guarantee একসঙ্গে হয় না। এটি “চিরকাল যেকোনো দুই ফিচার বাছো” নয়। Partition tolerance model-এর failure শর্ত। Partition না থাকলেও latency,replication,consistency গুরুত্বপূর্ণ, কিন্তু theorem-এর impossibility সাধারণ পারফরম্যান্স benchmark নয়।</p>
 <table class="ref"><thead><tr><th scope="col">ঘটনা</th><th scope="col">Node A</th><th scope="col">Node B</th><th scope="col">সিদ্ধান্ত</th></tr></thead><tbody><tr><td>Partition-এর আগে</td><td>Balance v1</td><td>Balance v1</td><td>Replica মেলে</td></tr><tr><td>Link নষ্ট</td><td>v2 change গ্রহণ</td><td>v2 পায় না</td><td>যোগাযোগ নেই</td></tr><tr><td>B-তে read</td><td>এখনও আলাদা</td><td>শুধু v1 আছে</td><td>পুরোনো মান দেবে, নাকি অপেক্ষা বা প্রত্যাখ্যান</td></tr></tbody></table>
-<p>A-তে write সম্পূর্ণ হওয়ার পরে B যদি linearizability ভেঙে v1 দেয়, ওই operation-এ সে availability বেছে নেয়। সর্বশেষ অবস্থা নিশ্চিত করতে না পেরে B অপেক্ষা বা প্রত্যাখ্যান করলে CAP-এর সংজ্ঞায় availability ছাড়ে। Public catalogue আর balance বদলানোর কাজের উপযুক্ত পছন্দ আলাদা হতে পারে।</p>
-<p>Eventual consistency বলে, আপডেট থামলে আর যোগাযোগ ফিরলে নির্দিষ্ট conflict-resolution assumption-এ replica এক হবে। প্রতিটি read বর্তমান, বা conflicting পেমেন্ট business-এর জন্য ঠিক মিটবে—এমন প্রতিশ্রুতি নয়। Read-your-writes, causal ordering আর শক্ত ট্রানজ্যাকশন mode আলাদা নিশ্চয়তা, যা পণ্য নির্দিষ্ট scope-এ দিতে পারে।</p>
+<p>A-তে write শেষের পরে B যদি linearizability ভেঙে v1 দেয়, ওই operation-এ availability নেওয়া হলো। Latest state নিশ্চিত করতে না পেরে B refuse/wait করলে CAP availability ছাড়া হলো। Public catalogue ও balance change-এ পছন্দ আলাদা হতে পারে।</p>
+<p>Eventual consistency বলে আপডেট থামলে ও যোগাযোগ ফিরলে conflict-resolution assumption অনুযায়ী replica converge করবে। প্রতিটি read current বা conflicting পেমেন্ট ব্যবসায় ঠিক হবে বলে না। Read-your-writes,causal অর্ডার,strong ট্রানজ্যাকশন আলাদা guarantee, পণ্য নির্দিষ্ট scope-এ দিতে পারে।</p>
 <h3>University-র জন্য বাছাই</h3>
-<p>Transcript-এ শক্ত কী, reference, mark কনস্ট্রেইন্ট আর শিক্ষার্থী-offering-ফল জয়েন দরকার। Existing relational schema তাই ভালো শুরু। Session cache কী-based access যোগ করতে পারে, prerequisite explorer graph operation নিতে পারে। একাধিক model পাশাপাশি চলে, তবে প্রতিটি system-এ backup, monitoring আর synchronization-এর কাজ বাড়ে।</p>
-<p>আপডেট ব্যর্থ হলে duplicate fact কীভাবে ঠিক হবে জিজ্ঞেস করো। বহু document-এ নাম থাকলে multi-document change বা asynchronous propagation লাগতে পারে। Display লেবেল-এ চললেও authoritative grade-এ তা নাও মানাতে পারে। Denormalization সহজ read-এর বিনিময়ে write আর stale value সামলানোর দায় বাড়ায়।</p>
-<p>শেষে ট্রানজ্যাকশন boundary, supported ইনডেক্স, কোয়েরি limit, replica placement, recovery আর দলের অভিজ্ঞতার evidence দেখো। “Schema-less” মানে app যেকোনো type নিরাপদে নেয় না। Document shape-এর ভার্সন রাখো, required ফিল্ড যাচাই আর migration প্ল্যান করো। Model বদলালে কনস্ট্রেইন্ট কোথায় থাকে বদলায়, সংজ্ঞা দেওয়ার প্রয়োজন যায় না।</p>
+<p>Transcript-এ strong কী,reference,mark কনস্ট্রেইন্ট ও শিক্ষার্থী-offering-ফল জয়েন চাই। আগের relational schema ভালো শুরু। কী-based session cache পাশে, prerequisite explorer-এ graph operation থাকতে পারে। অনেক model একসঙ্গে চললেও প্রতিটিতে backup,monitoring,synchronization কাজ বাড়ে।</p>
+<p>Failed আপডেট-এর পরে duplicate fact কীভাবে সারবে জিজ্ঞেস করো। অনেক document-এ নাম থাকলে multi-document আপডেট বা asynchronous propagation লাগে। Display লেবেল-এ মানলেও authoritative grade-এ নাও মানতে পারে। Denormalization read সহজ করে write ও staleness-এর দায় বাড়ায়।</p>
+<p>শেষে operational evidence দেখো: ট্রানজ্যাকশন boundary,ইনডেক্স,কোয়েরি limit,replica placement,recovery ও team experience। “Schema-less” মানে arbitrary type নিরাপদ নয়। Document shape ভার্সন করো, required ফিল্ড validate, migration পরিকল্পনা করো। Model কনস্ট্রেইন্ট কোথায় থাকে বদলায়; সংজ্ঞার প্রয়োজন সরায় না।</p>
 
 <h2 id="common-mistakes">Model-এর নাম দেখে shortcut নয়</h2>
 <h3>সব NoSQL-কে eventually consistent বলা</h3>
-<p>System আর operation mode অনুযায়ী strong read বা ট্রানজ্যাকশন-ও থাকে। দাবির আগে exact operation আর configuration বলো।</p>
+<p>System ও operation mode অনুযায়ী strong read বা ট্রানজ্যাকশন-সহ guarantee আলাদা। Consistency দাবি করার আগে exact operation ও configuration বলো।</p>
 <h3>Wide-কলাম আর analytical কলাম মেশানো</h3>
-<p>কলাম-family distributed রো partition আর কোয়েরি pattern ঘিরে সাজায়। Analytical columnar স্টোরেজ compressed কলাম scan-এ জোর দেয়। একই “কলাম” শব্দে workload এক হয় না।</p>
+<p>কলাম-family distributed রো partition ও কোয়েরি pattern ঘিরে সাজানো। Analytical columnar compressed কলাম scan করে। একই “কলাম” শব্দ workload এক করে না।</p>
 <h3>Foreign কী আছে বলেই graph বাছা</h3>
-<p>বেশিরভাগ দরকারি ডেটা-তেই সম্পর্ক আছে। Graph-এর বিশেষ লাভ আসে traversal workload আর access থেকে, শুধু connected রেকর্ড থাকা থেকে নয়।</p>
+<p>বেশিরভাগ কাজের ডেটা-তেই সম্পর্ক আছে। Graph-এর লাভ traversal workload ও access need থেকে, শুধু connected রেকর্ড থেকে নয়।</p>
 
 <h2 id="summary">Model আর নিশ্চয়তা একসঙ্গে বাছো</h2>
-<p>Document aggregate, known-কী access, partition-oriented event আর relationship traversal তুলনা করো। Partition-এর সময় প্রতিটি operation কী consistency আর response চায় বলো। <a href="topic:db-mini-project-university">University project</a>-এ নির্দিষ্ট requirement থেকে বাছাইয়ের কারণ দাও।</p>
+<p>Document aggregate,known-কী access,partition event ও relationship traversal তুলনা করো। Partition-এ কোন operation-এর কী response-consistency চাই বলো। Concrete requirement থেকে model বোঝাতে <a href="topic:db-mini-project-university">বিশ্ববিদ্যালয় প্রজেক্ট</a> নাও।</p>

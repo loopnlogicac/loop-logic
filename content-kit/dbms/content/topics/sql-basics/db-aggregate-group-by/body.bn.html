@@ -1,7 +1,7 @@
 <h2 id="introduction">অনেক রো থেকে দরকারি সারাংশ</h2>
-<p class="lead">Office জানতে চায় বিভাগ-পিছু কত শিক্ষার্থী। সব শিক্ষার্থী list করলে অন্য প্রশ্নের উত্তর। Aggregate রো মিলে সংখ্যা,মোট আর অন্য সারাংশ করে।</p>
-<p><dfn>Aggregate ফাংশন</dfn> কয়েক ইনপুট রো থেকে মান হিসাব করে। COUNT গোনে, SUM যোগ, AVG গড়, MIN-MAX সবচেয়ে ছোট-বড় known মান। GROUP BY ভাগ করে, প্রতিটি গ্রুপ নিজের সারাংশ পায়।</p>
-<p>আগে বলো এক আউটপুট রো কী বোঝায়: পুরো university,বিভাগ নাকি সেকশন? কোন রেকর্ড হিসাবেও আসে বলো। Passing ফল-এর গড় আর সব completed ফল-এর গড় আলাদা।</p>
+<p class="lead">প্রতি বিভাগে কত শিক্ষার্থী তা office জানতে চায়। সবাইকে list করলে অন্য প্রশ্নের উত্তর হয়। Aggregate ফাংশন রো মিলিয়ে সংখ্যা, মোট ও সারাংশ বানায়।</p>
+<p><dfn>Aggregate ফাংশন</dfn> একাধিক ইনপুট রো থেকে মান বের করে। COUNT গোনে, SUM যোগ, AVG গড়, MIN-MAX সর্বনিম্ন-সর্বোচ্চ জানা মান দেয়। GROUP BY রো ভাগ করে গ্রুপ-প্রতি সারাংশ দেয়।</p>
+<p>কোয়েরি লেখার আগে একটি আউটপুট রো কী বোঝায় বলো: পুরো university, একটি বিভাগ নাকি সেকশন। কোন রেকর্ড গণনায় ঢোকে তাও বলো। Passing ফল-এর গড় ও সব completed ফল-এর গড় আলাদা।</p>
 <h2 id="syntax">রো,গ্রুপ আর ফল অর্ডার আলাদা</h2>
 <pre><code class="language-sql">SELECT grouping_column, COUNT(*) AS row_count
 FROM source_table
@@ -9,7 +9,7 @@ WHERE row_condition
 GROUP BY grouping_column
 HAVING COUNT(*) &gt;= required_count
 ORDER BY grouping_column;</code></pre>
-<p>WHERE গ্রুপিং-এর আগে পৃথক রো দেখে। GROUP BY expression-এ গ্রুপ, aggregate সারাংশ। HAVING সম্পূর্ণ গ্রুপ দেখে, ORDER BY বাকি গ্রুপ সাজায়। সার্ভার physical পদ্ধতি আলাদা নিলেও logical ফল রাখে।</p>
+<p>WHERE গ্রুপিং-এর আগে রো দেখে। GROUP BY বলা expression-এ গ্রুপ বানায়। Aggregate সারাংশ করে, HAVING তৈরি গ্রুপ দেখে, ORDER BY বাকি গ্রুপ সাজায়। সার্ভার অন্য physical পদ্ধতি নিয়েও এই logical ফল রাখে।</p>
 <table class="ref"><caption>মূল aggregate-এর অর্থ</caption><thead><tr><th>Expression</th><th>অর্থ</th><th>Empty ungrouped ইনপুট</th></tr></thead><tbody>
 <tr><td>COUNT(*)</td><td>রো সংখ্যা</td><td>0</td></tr>
 <tr><td>COUNT(কলাম)</td><td>Non-NULL argument সংখ্যা</td><td>0</td></tr>
@@ -19,22 +19,22 @@ ORDER BY grouping_column;</code></pre>
 </tbody></table>
 <h2 id="how-it-works">সঠিক জিনিস গুনো</h2>
 <h3>রো আর known মান এক নয়</h3>
-<p>Students-এ আট রো, COUNT(*) আট। দুই hometown unknown, COUNT(hometown) ছয়। এতে repeated Dhaka আলাদা গোনা, COUNT(DISTINCT hometown) পাঁচ ভিন্ন known town।</p>
-<p>বেশিরভাগ aggregate NULL argument বাদ দেয়। Unknown mark নিজে zero করবে না। Zero real মান, numerator-denominator বদলায়। গড় দেখাতে missing-ফল policy স্পষ্ট।</p>
-<p>Empty ইনপুট-এ ungrouped aggregate তবুও এক সারাংশ রো: COUNT zero, SUM-AVG NULL। Grouped empty ইনপুট-এ গ্রুপ নেই, সাধারণত রো-ও নেই। তাই পেমেন্ট-only grouped রিপোর্ট-এ unpaid অর্ডার হারাতে পারে।</p>
+<p>Students-এ আট রো, তাই COUNT(*) আট। দুজনের hometown অজানা বলে COUNT(hometown) ছয়। এতে repeated Dhaka আলাদা গণনা হয়। COUNT(DISTINCT hometown)-এ পাঁচ আলাদা জানা town।</p>
+<p>অধিকাংশ aggregate NULL argument বাদ দেয়। তার মানে unknown mark নিজে থেকে zero নয়। Zero আসল মান, numerator ও denominator বদলায়। গড় দেখানোর সময় missing-ফল নীতি স্পষ্ট করো।</p>
+<p>খালি ইনপুটে ungrouped aggregate একটি সারাংশ রো দেয়: COUNT zero, SUM-AVG NULL। Grouped কোয়েরি-তে ইনপুটই না থাকলে গ্রুপ নেই, সাধারণত রো-ও নেই। তাই শুধু পেমেন্টের grouped রিপোর্ট-এ unpaid অর্ডার হারাতে পারে।</p>
 <h3>সংজ্ঞায়িত অর্থে গ্রুপ</h3>
-<p>Students department_id-তে গ্রুপ করলে তিন গ্রুপ, size চার,দুই,দুই। প্রতি রো Students-এ represented বিভাগ। নতুন বিভাগ-এ শিক্ষার্থী না থাকলে গ্রুপ বানানোর রো নেই, আসে না।</p>
-<p>Empty বিভাগ-ও চাইলে Departments থেকে Students-এ outer জয়েন। তখন non-NULL শিক্ষার্থী ID গুনবে, COUNT(*) preserved parent রো-ও গুনত। <a href="topic:db-joins">জয়েন</a> পাঠে দেখবে। পার্থক্য joined রো-এর অর্থ থেকে।</p>
-<p>কয়েক কলাম-এ পুরো combination গ্রুপ। Department-hometown একসঙ্গে, শুধু বিভাগ থেকে আলাদা। SQL গ্রুপিং-এ দুই NULL hometown এক গ্রুপ, যদিও সাধারণ NULL equality TRUE নয়।</p>
+<p>Students department_id-তে গ্রুপ করলে size চার, দুই, দুই—তিন গ্রুপ। প্রতি রো Students-এ প্রতিনিধিত্ব থাকা বিভাগ বোঝায়। নতুন খালি বিভাগ আসবে না, কারণ গ্রুপ বানানোর শিক্ষার্থী রো নেই।</p>
+<p>খালি বিভাগ রাখতে Departments থেকে Students outer জয়েন করো। COUNT(*) preserved parent-ও গুনবে, তাই non-NULL শিক্ষার্থী identifier নাও। <a href="topic:db-joins">জয়েন</a>-এ এই pattern দেখবে। পার্থক্য আসে একটি joined রো কী বোঝায় সেখান থেকে।</p>
+<p>একাধিক কলাম-এ গ্রুপিং পুরো combination ধরে। Department-hometown একসঙ্গে গ্রুপ করা শুধু বিভাগ থেকে আলাদা। SQL-এ দুই NULL hometown একই গ্রুপে থাকে, যদিও সাধারণ NULL equality TRUE নয়।</p>
 <h3>WHERE আর HAVING আলাদা ধাপ</h3>
-<p>অন্তত দুই passing ফল-এর সেকশন চাই। আগে WHERE marks অন্তত 40, তারপর section_id গ্রুপ, শেষে HAVING সংখ্যা অন্তত দুই। গড় শুধু pass-এর।</p>
-<p>সব ফল গ্রুপ করে গড় অন্তত 40 চাইলে failure-ও গড়ে আসে। শর্ত এদিক-ওদিক নিলে প্রশ্ন বদলায়। Failure বাদ দিলে mean_pass নাম দাও, unrestricted গড় নয়।</p>
+<p>অন্তত দুই passing ফল-এর সেকশন চাই ধরো। WHERE-এ অন্তত 40 রাখো, section_id-তে গ্রুপ করো, HAVING-এ সংখ্যা অন্তত দুই নাও। গড় তখন শুধু pass-এর।</p>
+<p>সব ফল গ্রুপ করে গড় অন্তত 40 চাইলে fail-ও গড়ে ঢোকে। তাই WHERE ও HAVING-এ শর্ত সরালে প্রশ্ন বদলাতে পারে। Fail বাদ দিলে unrestricted গড় না বলে mean_pass নাম দাও।</p>
 <h3>ONLY_FULL_GROUP_BY মানো</h3>
-<p>সাধারণত mode চালু। Grouped SELECT-এ arbitrary nonaggregate নেবে না। Department গ্রুপে বহু student_name, পুরো গ্রুপ বোঝায় এমন একটিমাত্র নাম নেই।</p>
-<p>গ্রুপিং কী আর aggregate দাও, বা selected fact অর্থপূর্ণ হয় এমন গ্রুপিং। MySQL grouped primary কী থেকে determined কলামের মতো কিছু functional dependency-ও বোঝে। বহু শিক্ষার্থী-এর বিভাগ থেকে যেকোনো নাম নেওয়ার যুক্তি নয়।</p>
-<p>Mode বন্ধে misleading কোয়েরি চললেও কোন নাম উত্তর জানা যায় না। এক রো-এর অর্থ পরিষ্কার করাই সমাধান। প্রশ্ন নির্দিষ্ট representative না চাইলে সুবিধার জন্য MIN(নাম) নেবে না।</p>
+<p>MySQL-এ সাধারণত ONLY_FULL_GROUP_BY চালু। Grouped SELECT গ্রুপ থেকে ইচ্ছেমতো nonaggregate মান নিতে পারে না। Department-এ অনেক শিক্ষার্থী নাম, কোনো একটি পুরো গ্রুপ বর্ণনা করে না।</p>
+<p>গ্রুপিং কী ও aggregate দাও, অথবা নির্বাচিত তথ্য অর্থপূর্ণ হয় এমন গ্রুপ করো। MySQL কিছু functional dependency-ও চেনে, যেমন grouped primary কী থেকে অন্য কলাম। তাতে বহু-শিক্ষার্থী বিভাগ থেকে arbitrary নাম নেওয়া বৈধ হয় না।</p>
+<p>Mode বন্ধ করে বিভ্রান্তিকর কোয়েরি চলতে পারে, কোন নাম চাই তা নির্দিষ্ট হয় না। একটি রো-এর অর্থ পরিষ্কার করো। প্রশ্নে ওই representative না চাইলে সুবিধার জন্য MIN(নাম) নেবে না।</p>
 <h3>Credit আলাদা হলে weight</h3>
-<p>Grade point documented 4.00 scale-এ এক কোর্স ফল। CGPA completed ফল-কে credit weight-এ মেলায়। Point গুণ credit যোগ করে একই completed credit-এর মোট দিয়ে ভাগ।</p>
+<p>Grade point একটি কোর্স ফল-এর 4.00-scale সারাংশ। CGPA completed কোর্স-কে credit weight দেয়। Grade point × credit যোগ করে একই completed credit-এর যোগফল দিয়ে ভাগ করো।</p>
 <pre class="diagram">Student 101
 Section 31: grade point 4.00 × 3 credits = 12.00
 Section 33: grade point 3.75 × 1 credit  =  3.75
@@ -43,35 +43,35 @@ Section 34: grade point 3.50 × 3 credits = 10.50
 Weighted total                         = 26.25
 Completed credits                      =  7
 CGPA                                   =  3.75</pre>
-<p>SQL ফল থেকে Section হয়ে Course-এ জয়েন করে credit পায়। জয়েন related টেবিলের matching রো মেলায়; পরের module বিস্তারিত। Section offering চেনায়, Course credit দেয়। গ্রুপিং recorded-ফল থাকা শিক্ষার্থী-পিছু weighted মান করে।</p>
-<p>Pending বাদ, repeated-কোর্স replacement ধরা হয়নি। University retake বা grade replacement rule আলাদা দিতে পারে। Official CGPA বলার আগে policy বলো। অদরকারি intermediate rounding নয়, final display round।</p>
+<p>SQL-এ ফল থেকে Section হয়ে Course-এ জয়েন করা হয়েছে। জয়েন সম্পর্কিত matching রো মেলায়; পরের module-এ বিস্তারিত আছে। Section offering চেনে, Course credit দেয়। গ্রুপিং-এ ফল থাকা শিক্ষার্থী-প্রতি weighted মান হয়।</p>
+<p>রিপোর্ট pending ফল বাদ দেয় এবং repeated-কোর্স replacement নেই ধরে। বাস্তবে retake-এ grade replacement বা বিশেষ নীতি থাকতে পারে। Official CGPA বলার আগে নীতি বলো। প্রতিটি contribution অকারণে round না করে শেষে display round করো।</p>
 <h2 id="examples">মোট আর denominator দেখো</h2>
 <h3>Student আর known hometown গুনো</h3>
-<p>রো আর value সংখ্যা-এর ফারাক দুই missing town থেকে, duplicate Dhaka নয়।</p>
+<p>প্রথম উদাহরণে রো সংখ্যা ও value সংখ্যা তুলনা। ফারাক দুই missing hometown-এর জন্য, repeated Dhaka-র জন্য নয়।</p>
 <div data-example="ex-1"></div>
 <h3>Completed mark সারাংশ</h3>
-<p>এগারো ফল-এর মোট 739, rounded গড় 67.18, ছোট-বড় 39 আর 90।</p>
+<p>এগারো ফল-এর মোট 739। Rounded গড় 67.18; সর্বনিম্ন 39, সর্বোচ্চ 90।</p>
 <div data-example="ex-2"></div>
 <h3>Department membership সংখ্যা</h3>
-<p>তিন রো শিক্ষার্থী রেকর্ড-এ represented বিভাগ বলে। ORDER BY ক্রম ঠিক করে।</p>
+<p>তিন grouped রো শিক্ষার্থী রেকর্ড-এ থাকা বিভাগ বর্ণনা করে। ORDER BY display স্থির করে।</p>
 <div data-example="ex-3"></div>
 <h3>অন্তত দুই pass-এর গ্রুপ</h3>
-<p>WHERE আগে 39 বাদ, তারপর HAVING সেকশন-এর pass সংখ্যা দেখে।</p>
+<p>WHERE গ্রুপিং-এর আগে 39 বাদ দেয়। HAVING পরে বাকি সেকশন-এর pass সংখ্যা দেখে।</p>
 <div data-example="ex-4"></div>
 <h3>Weighted grade গড়</h3>
-<p>ফল-কোর্স জয়েন credit আনে। Tanvir-এর তিন-credit failure equal-weight গড়-এর চেয়ে weighted মান বেশি নামায়।</p>
+<p>ফল-কোর্স জয়েন credit আনে। Tanvir-এর তিন-credit fail কীভাবে equal-weight গড়ের চেয়ে বেশি প্রভাব ফেলে দেখো।</p>
 <div data-example="ex-5"></div>
 <h3>পেমেন্ট মোট না থাকলে zero দেখাও</h3>
-<p>অর্ডার 203-এ পেমেন্ট নেই। Raw NULL sum আর সচেতন 0.00 fallback দুটোই দেখায়।</p>
+<p>অর্ডার 203-এর পেমেন্ট নেই। রিপোর্ট raw NULL sum ও ভেবে দেওয়া 0.00 display fallback দুটোই দেখায়।</p>
 <div data-example="ex-6"></div>
 <h2 id="common-mistakes">দেখতে ঠিক সংখ্যাও ভুল প্রশ্ন</h2>
 <h3>আগের গড় আবার গড়</h3>
-<p>দুই সেকশন-এ ফল সংখ্যা আলাদা। গড়-এর গড় সেকশন-এ equal weight, প্রতিটি ফল-এ নয়। Overall শিক্ষার্থী-ফল গড় চাইলে underlying রো থেকে বা contributing সংখ্যা-সহ মেলাও।</p>
+<p>দুই সেকশন-এ ফল সংখ্যা আলাদা হতে পারে। গড়-এর গড় করলে সেকশন সমান weight পায়, ফল নয়। Overall ফল গড় চাইলে raw রো থেকে করো বা প্রতিটি গড়-এর সঙ্গে contributing সংখ্যা মেলাও।</p>
 <h3>জয়েন multiplicity না দেখে SUM</h3>
-<p>অর্ডার-এ বহু item আর পেমেন্ট। দুটো সরাসরি জয়েন করলে প্রতি item-এ পেমেন্ট repeat, SUM receipts বাড়ায়। এক রো কী মানে দেখো, আগে প্রত্যেক সম্পর্ক intended level-এ সারাংশ করে মেলাও।</p>
+<p>এক অর্ডার-এ অনেক item ও পেমেন্ট হতে পারে। দুটো সরাসরি জয়েন করলে item-প্রতি পেমেন্ট repeat, পরে SUM receipt বাড়িয়ে বলে। প্রতি joined রো-এর অর্থ দেখো; মোট মেলানোর আগে সম্পর্কগুলো intended level-এ সারাংশ করো।</p>
 <h3>GROUP BY সর্ট-ও করে ভাবা</h3>
-<p>গ্রুপিং বলে কারা সারাংশ ভাগ করে, ক্রম নয়। Department-সেকশন display-তে ORDER BY। Accidental implementation-এ রিপোর্ট নয়।</p>
+<p>গ্রুপিং সারাংশ-র ভাগ ঠিক করে, ক্রমের প্রতিশ্রুতি নয়। Department বা সেকশন দেখাতে ORDER BY দাও। রিপোর্ট accidental গ্রুপিং implementation-এর ওপর নির্ভর করবে না।</p>
 <h2 id="version-notes">গ্রুপিং mode চালু রাখো</h2>
-<div class="callout version"><p>MySQL 8.0.16 আর 8.4-তে aggregate চলে, ONLY_FULL_GROUP_BY সাধারণত চালু। Dependency recognition কিছু expression নিতে পারে, তবু selected প্রতিটি মান গ্রুপের জন্য স্পষ্ট অর্থ চাই।</p></div>
+<div class="callout version"><p>Aggregate MySQL 8.0.16 ও 8.4-এ চলে; দুটোতেই ONLY_FULL_GROUP_BY সাধারণত চালু। Functional-dependency recognition কিছু nonaggregate মান নিতে দিলেও গ্রুপের জন্য প্রতিটি মানের পরিষ্কার অর্থ চাই।</p></div>
 <h2 id="summary">সারাংশ-র পেছনের population বলো</h2>
-<p>ইনপুট রো-ই সারাংশ, তাই সংখ্যা,NULL,ফিল্টার,weight অর্থ ঠিক করে। WHERE রো, HAVING গ্রুপ বাছে। গ্রুপিং স্পষ্ট, অর্ডার explicit। পরের <a href="topic:db-joins">জয়েন</a>-এ related টেবিল মিলে সাবধান সারাংশ।</p>
+<p>ইনপুট রো থেকেই aggregate-এর অর্থ, তাই সংখ্যা, NULL নীতি, ফিল্টার ও weight ঠিক করো। WHERE রো, HAVING গ্রুপ বাছে। গ্রুপিং স্পষ্ট ও রিপোর্ট ordered রাখো। সম্পর্কিত টেবিলে সতর্ক সারাংশ করতে <a href="topic:db-joins">জয়েন</a> পড়ো।</p>

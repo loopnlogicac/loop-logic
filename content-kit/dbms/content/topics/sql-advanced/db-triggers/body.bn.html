@@ -1,27 +1,27 @@
 <h2 id="introduction">রো change-এর সঙ্গে প্রতিক্রিয়া জুড়ো</h2>
-<p class="lead">Mark বদলালেই office log চায়। প্রতিটি screen-কে extra ইনসার্ট মনে রাখতে বললে ভুল সহজ। Trigger টেবিল operation-এ প্রতিক্রিয়া জুড়ে authorized direct আপডেট-এও একই ডেটাবেস আচরণ দেয়।</p>
-<p><dfn>Trigger</dfn> টেবিল event আর timing-এর stored প্রোগ্রাম। INSERT,UPDATE,DELETE-এর প্রতিটি affected রো-তে MySQL চালায়। CALL নয়,মূল change স্টেটমেন্ট নিজেই চালু করে।</p>
-<p>সীমিত validation,normalization,transactional audit-এ ভালো। তবে শুধু UPDATE পড়লে effect দেখা যায় না। ছোট রাখো,dependency বোঝাও;বহু hidden action maintain-diagnose কঠিন।</p>
-<p>উদাহরণ member নাম trim,mark log,loan ইনসার্ট-ডিলিট track আর rollback। Audit ordinary InnoDB,তাই main change-এর একই ট্রানজ্যাকশন outcome।</p>
+<p class="lead">নম্বর বদলালেই office একটি রেকর্ড চায়। প্রতিটি screen-কে আলাদা ইনসার্ট মনে রাখতে বললে ভুল হয়। Trigger টেবিল operation-এর সঙ্গে প্রতিক্রিয়া জুড়ে দেয়; অনুমতিপ্রাপ্ত direct আপডেট-এও একই আচরণ চলে।</p>
+<p><dfn>Trigger</dfn> টেবিল event ও timing-এর stored প্রোগ্রাম। INSERT,UPDATE,DELETE-এর প্রতি affected রো-তে MySQL চালায়। CALL লাগে না; ডেটা-change স্টেটমেন্ট নিজে চালু করে।</p>
+<p>সীমিত validation,normalization ও transactional audit-এ উপকারী। তবে শুধু original UPDATE পড়লে effect বোঝা যায় না। Trigger ছোট রাখো, dependency বোঝাও। অনেক hidden action-এ diagnosis কঠিন।</p>
+<p>উদাহরণে inserted member নাম trim, mark change log, loan ইনসার্ট-ডিলিট history ও rollback আছে। Audit টেবিল সাধারণ InnoDB, তাই মূল change-এর একই ট্রানজ্যাকশন outcome মানে।</p>
 <h2 id="syntax">এক event আর timing বাছো</h2>
-<p>CREATE TRIGGER নাম,timing,event,target,FOR EACH ROW body দেয়। BEFORE স্টোরেজ-এর আগে,AFTER রো operation সফল হলে। তিন event-এ দুই timing,ছয় combination।</p>
-<p>INSERT-এ NEW আছে OLD নেই;DELETE-এ OLD,NEW নেই;UPDATE-এ দুটো। OLD আগের,NEW proposed মান। ভেতরে এই prefix-এ কলাম লেখো।</p>
-<p>OLD read-only। BEFORE INSERT/UPDATE উপযুক্ত writable NEW assign করতে পারে। AFTER পারে না। Generated কলামের restriction আছে,grade expression-ই হিসাব করুক,হাতে assign নয়।</p>
-<p>এক স্টেটমেন্ট body হতে পারে। কয়েকটিতে BEGIN-END,ক্লায়েন্ট-এ procedure-এর মতো temporary DELIMITER। এটি submission,সার্ভার timing নয়।</p>
-<p>Mark log-এ শিক্ষার্থী,সেকশন,old-new mark। Auto audit_id stable display sequence, timestamp বা gapless counter নয়। Rollback-এ ID gap হতে পারে।</p>
+<p>CREATE TRIGGER-এ নাম,timing,event,টেবিল,FOR EACH ROW body। BEFORE রো stored হওয়ার আগে, AFTER operation সফল হওয়ার পরে। তিন event-এ দুই timing, মোট ছয় combination।</p>
+<p>INSERT-এ proposed NEW, OLD নেই। DELETE-এ OLD, replacement NEW নেই। UPDATE-এ আগের OLD ও প্রস্তাবিত NEW দুটো। Trigger-এ এই prefix দিয়ে কলাম নাও।</p>
+<p>OLD read-only। BEFORE INSERT/UPDATE-এ উপযুক্ত writable NEW কলাম বদলানো যায়; AFTER-এ নয়। Generated কলামের extra restriction আছে। Grade expression-কে কাজ করতে দাও, হাতে assign করবে না।</p>
+<p>এক স্টেটমেন্ট body হতে পারে। একাধিক হলে BEGIN-END, তখন ক্লায়েন্ট-এর temporary DELIMITER লাগে procedure-এর মতো। এটি submission নিয়ন্ত্রণ করে, সার্ভার event timing নয়।</p>
+<p>Mark audit-এ শিক্ষার্থী কী,সেকশন কী,old,new mark। Auto-increment audit_id stable display sequence, timestamp বা gapless counter নয়। Rollback-এ numbering gap হতে পারে।</p>
 <pre><code class="language-sql">CREATE TRIGGER &lt;name&gt;
 &lt;BEFORE_or_AFTER&gt; &lt;INSERT_or_UPDATE_or_DELETE&gt; ON &lt;table_name&gt;
 FOR EACH ROW
 &lt;statement_using_available_row_images&gt;;</code></pre>
 <h2 id="how-it-works">স্টেটমেন্ট আর side effect একসঙ্গে</h2>
-<p>Members BEFORE INSERT-এ NEW.member_name-এ Maliha Noor-এর চারপাশে space। TRIM করে NEW-তে ফেরায়। Base রো-ই clean,পরে দ্বিতীয় আপডেট নয়।</p>
-<p>Results AFTER UPDATE OLD-NEW mark তুলনা করে শুধু change-এ log। Existing মান assign-এও আপডেট trigger চলতে পারে। Explicit comparison no-op-এর মিথ্যা history ঠেকায়।</p>
-<p><code>&lt;=&gt;</code> null-safe equality উল্টে change দেখে। এখানে mark NOT NULL,তবু উদ্দেশ্য স্পষ্ট। Nullable-এ ordinary inequality NULL-known transition unknown করে log মিস করত।</p>
-<p>Tanvir MAT101-এ39→41 এক log। Base generated grade নিজস্ব expression-এF→D। Trigger transition রাখে,formula repeat নয়। দায় আলাদা থাকায় দুই grade logic মেলে না এমন ভুল এড়ায়।</p>
-<p>Loan AFTER INSERT NEW.loan_id,AFTER DELETE OLD.loan_id নেয়। Audit ID ইচ্ছা করে deleted loan-এর FK নয়,মূল রো চলে গেলেও history বোঝা চাই।</p>
-<p>Multi-রো স্টেটমেন্ট-এ পৃথক trigger। এগারো mark এক বাড়ালে এগারো log হতে পারে,নিজস্ব OLD-NEW-সহ। MySQL whole রো-set নেওয়া স্টেটমেন্ট-level trigger দেয় না।</p>
-<p>Caller ট্রানজ্যাকশন-এ আপডেট-rollback করলে log-ও ফেরে। আগে one log,পরে zero,mark আগের। দুটোই transactional work।</p>
-<p>Trigger এরর main স্টেটমেন্ট fail করতে পারে। InnoDB ওই স্টেটমেন্ট আর trigger effect ফেরায়,কিন্তু ট্রানজ্যাকশন-এর সব আগের সফল স্টেটমেন্ট সবসময় নয়। Whole operation-এ app এরর policy চাই।</p>
+<p>Members-এর BEFORE INSERT-এ NEW.member_name-এ Maliha Noor-এর পাশে space থাকে। TRIM করে NEW-তে রাখে, তাই base রো-তেই cleaned নাম। পরে দ্বিতীয় আপডেট নয়।</p>
+<p>Results-এর AFTER UPDATE OLD ও NEW mark তুলনা করে; সত্যি বদলালেই log। একই মান assign করলেও MySQL আপডেট trigger ডাকতে পারে। Explicit comparison no-op-এর মিথ্যা history আটকায়।</p>
+<p>Comparison-এ MySQL-এর <code>&lt;=&gt;</code> null-safe equality negate করা। এখানে mark NOT NULL হলেও উদ্দেশ্য পরিষ্কার। Nullable ফিল্ড-এ ordinary inequality unknown হয়ে NULL-known transition বাদ দিতে পারত।</p>
+<p>Tanvir-এর MAT 101 mark 39→41-এ এক audit রো। Base generated grade নিজের expression-এ F→D। Trigger transition লেখে, formula নকল করে না। দায় আলাদা রাখলে grade logic-এর দ্বন্দ্ব কমে।</p>
+<p>Loans AFTER INSERT NEW.loan_id, AFTER DELETE OLD.loan_id পড়ে event লেখে। Audit identifier ইচ্ছা করে deleted loan-এর foreign কী নয়। রো চলে গেলেও historical রেকর্ড অর্থপূর্ণ থাকবে।</p>
+<p>Multi-রো স্টেটমেন্ট-এ প্রতি affected রো-তে আলাদা trigger। এগারো mark এক বাড়ালে এগারো audit হতে পারে। প্রতিবার নিজের OLD-NEW। MySQL-এ পুরো set একবারে পাওয়া স্টেটমেন্ট-level trigger নেই।</p>
+<p>এক ফল আপডেট করে rollback করলে audit ইনসার্ট-ও rollback। আগে সংখ্যা এক, পরে zero; পুরোনো mark ফেরে। মূল change ও log দুটো transactional।</p>
+<p>Trigger এরর স্টেটমেন্ট ব্যর্থ করতে পারে। InnoDB ওই স্টেটমেন্ট ও trigger effect rollback করে। চারপাশের ট্রানজ্যাকশন-এর সব আগের সফল স্টেটমেন্ট সবসময় ফেরে না। পুরো কাজের এরর policy চাই।</p>
 <table class="ref">
 <caption>রো event-এর image</caption>
 <thead><tr><th scope="col">Event</th><th scope="col">BEFORE</th><th scope="col">AFTER</th></tr></thead>
@@ -32,37 +32,37 @@ FOR EACH ROW
 </tbody>
 </table>
 <h2 id="examples">Timing,image,rollback দেখো</h2>
-<p>প্রথমে নাম clean-এ stored রো প্রমাণ। তারপর দুই image,loan-এ একপাশের image। শেষে কেন ordinary log rolled-back attempt-এর evidence নয় দেখো।</p>
-<p>Stock guard negative proposed stock বা stocked পণ্য ডিলিট-এ SIGNAL। Shared CHECK-ও negative ঠেকায়,trigger একমাত্র সুরক্ষা বলা হয়নি। BEFORE UPDATE/DELETE image আর business message শেখায়।</p>
-<p>পুরো invariant declarative কনস্ট্রেইন্ট-এ বলা গেলে সাধারণত সেটি ভালো। NOT NULL,UNIQUE,CHECK,FK কাজে নাও। Special behavior trigger-এ,সহজ rule duplicate-এ consistency বজায়ের কোড বাড়ে।</p>
+<p>BEFORE INSERT cleaning-এ stored রো দেখে বোঝো NEW সময়মতো বদলেছে। Mark-এ দুই image, loan-এ one-sided image। শেষে ট্রানজ্যাকশন দেখায় ordinary audit টেবিল rolled-back attempt-এর evidence নিশ্চয়তা দেয় না।</p>
+<p>Stock guard negative NEW stock বা stocked পণ্য ডিলিট SIGNAL-এ আটকায়। Shared CHECK আগেই negative আটকায়, তাই trigger একমাত্র protection নয়। BEFORE UPDATE/DELETE image ও explicit business message দেখায়।</p>
+<p>পুরো invariant declarative কনস্ট্রেইন্ট-এ বলা গেলে সাধারণত সেটিই ভালো। NOT NULL,UNIQUE,CHECK,foreign কী যার কাজ নাও। Trigger বিশেষ কাজ যোগ করুক; সহজ rule নকল করলে consistent রাখার কোড বাড়ে।</p>
 <h3>ইনসার্ট-এর আগে নাম clean</h3>
-<p>NEW.member_name স্টোরেজ-এর আগেই বদলায়,আগে-পরে space নেই।</p>
+<p>BEFORE INSERT স্টোরেজ-এর আগে NEW.member_name বদলায়। Stored নামে পাশের space নেই।</p>
 <div data-example="ex-1"></div>
 <h3>Old-new mark log</h3>
-<p>39→41 log,grade নিজে D। Generated কলাম trigger লেখে না।</p>
+<p>Audit 39→41 লেখে। Generated grade নিজে D হয়; trigger generated কলাম লেখে না।</p>
 <div data-example="ex-2"></div>
 <h3>ইনসার্ট-ডিলিট log</h3>
-<p>INSERT NEW.loan_id,DELETE OLD.loan_id। Deleted loan-এ FK না রেখেই ID থাকে।</p>
+<p>INSERT-এ NEW.loan_id, DELETE-এ OLD.loan_id। Deleted loan-এর দিকে foreign কী ছাড়াই audit ID রাখে।</p>
 <div data-example="ex-3"></div>
 <h3>Rollback-এ log-ও যায়</h3>
-<p>Count1→0,mark40 ফেরে। দুটো টেবিল InnoDB।</p>
+<p>Rollback-এ সংখ্যা 1→0, mark 40 ফেরে। দুই টেবিল-ই InnoDB।</p>
 <div data-example="ex-4"></div>
 <h3>আপডেট-এর আগে validate,ডিলিট guard</h3>
-<p>Valid আপডেট-এ Bookmark zero-stock। Negative আপডেট বা stocked ডিলিট reject হতো;CHECK-ও negative সামলায়।</p>
+<p>Valid আপডেট Bookmark zero stock রাখে। Negative আপডেট বা stocked পণ্য ডিলিট reject হবে; CHECK-ও negative আটকায়।</p>
 <div data-example="ex-5"></div>
 <h2 id="common-mistakes">Audit coverage-এর সীমা</h2>
 <h3>Cascade আর TRUNCATE আলাদা</h3>
-<p>FK cascade child trigger চালায় না। Student ডিলিট results-এ cascade হলে results AFTER DELETE তা log করে না। Complete mark history দাবি করলে বড় gap। Parent audit বা explicit workflow-এ detail রাখো।</p>
-<p>TRUNCATE-ও DELETE event-এর sequence নয়,schema operation আর implicit commit। প্রতিটি removal log চাইলে access control আর আলাদা admin audit route। রো trigger পুরো security audit নয়।</p>
+<p>MySQL foreign-কী cascade child trigger চালায় না। Student ডিলিট-এ results cascade হলে results AFTER DELETE ওই child deletion লেখে না। Complete history দাবিতে বড় gap। Parent audit বা explicit deletion workflow-তে দরকারি তথ্য রাখো।</p>
+<p>TRUNCATE-ও রো-প্রতি DELETE trigger চালায় না। এটি implicit-commit schema operation। প্রতি removed রো রেকর্ড চাইলে access নিয়ন্ত্রণ ও আলাদা administrative audit route বানাও। রো trigger একা complete security audit নয়।</p>
 <h3>Transactional log autonomous নয়</h3>
-<p>Trigger COMMIT/ROLLBACK করে independent ট্রানজ্যাকশন পারে না। Ordinary log caller-এ বাঁধা। Rolled-back attempt-এর durable evidence চাইলে স্পষ্ট trust boundary-সহ external/সার্ভার audit নাও।</p>
-<p>নিজের trigger-এ একই টেবিল আবার আপডেট করে NEW assign-এর বদলি নয়। Triggering স্টেটমেন্ট-এর টেবিল modify-তে MySQL restriction। Writable normalization-এ BEFORE SET NEW। জটিল workflow hidden recursion নয়,explicit design।</p>
-<p>Audit edit-ডিলিট অধিকার থাকলে history rewrite হয়। Trust model-এ grant,definition আর definer রক্ষা। Automatic INSERT tamper-proof করে না।</p>
+<p>Trigger COMMIT/ROLLBACK দিয়ে স্বাধীন ট্রানজ্যাকশন বানাতে পারে না। সাধারণ InnoDB audit caller-এর ট্রানজ্যাকশন-এ বাঁধা। Rolled-back attempt-এর durable evidence চাইলে স্পষ্ট trust boundary-সহ external বা সার্ভার audit mechanism নাও।</p>
+<p>নিজের trigger থেকে একই টেবিল আবার আপডেট করে NEW assignment-এর বদলি করবে না। Triggering স্টেটমেন্ট-এ ব্যবহৃত টেবিল modify-তে MySQL restriction আছে। Writable normalization-এ BEFORE ও SET NEW নাও। জটিল workflow recursive side effect না করে স্পষ্ট design করো।</p>
+<p>Audit ownership-ও জরুরি। Edit-ডিলিট ক্ষমতা থাকলে ordinary history বদলানো যায়। Trust model অনুযায়ী grant, trigger definition ও definer রক্ষা করো। Automatic INSERT টেবিল-কে tamper-proof করে না।</p>
 <h2 id="best-practices">Automatic effect সহজে খোঁজার মতো</h2>
-<p>Event-purpose-এ নাম,focused body। UPDATE review-তে trigger-target দেখো। Lock,পারফরম্যান্স,failure-এ hidden write ধরো। রো-পিছু extra কোয়েরি ছোট operation দামি করে।</p>
-<p>Real change,no-op,multi-রো,rollback test;cascade-TRUNCATE bypass-ও। এটাই actual coverage,আশ্বস্ত নামের চেয়ে history claim তার সঙ্গে মেলাও।</p>
-<p>Audit ফিল্ড-এর অর্থ স্পষ্ট। Timestamp নিলে স্টেটমেন্ট time,ট্রানজ্যাকশন time নাকি অন্য event ঠিক করো। এখানে mark transition-ID,wall clock-এ আউটপুট নির্ভর নয়।</p>
+<p>Event ও purpose দিয়ে trigger নাম দাও, body focused রাখো। UPDATE review-তে associated trigger ও target টেবিল দেখো। Hidden write lock,পারফরম্যান্স,failure analysis-এ ধরো। রো-প্রতি extra কোয়েরি ছোট operation-ও ব্যয়বহুল করে।</p>
+<p>Real change,no-op,multi-রো,rollback test করো। Cascade ও TRUNCATE-এর মতো bypass-ও দেখো। এই case-ই audit coverage ঠিক করে। আশ্বাসদায়ক নাম নয়, observed scope অনুযায়ী history দাবি করো।</p>
+<p>Audit ফিল্ড-এর অর্থ পরিষ্কার চাই। Timestamp দিলে স্টেটমেন্ট time,ট্রানজ্যাকশন time নাকি অন্য event ঠিক করো। এখানে explicit transition ও ID আছে, তাই wall clock-নির্ভর আউটপুট নয়।</p>
 <h2 id="version-notes">MySQL রো-trigger rule</h2>
-<p>8.0/8.4-তে timing-image চলে। Definer security context-এ যথাযথ privilege। InnoDB,CHECK8.0.16+। Cascade এখনও সংশ্লিষ্ট child trigger ডাকে না।</p>
+<p>Timing ও image MySQL 8.0/8.4-এ চলে। Definer context-এ trigger চলে, উপযুক্ত privilege লাগে। Shared ডেটা InnoDB, CHECK 8.0.16 চায়। Cascade এখনও child রো trigger চালায় না।</p>
 <h2 id="summary">Event আর audit boundary বলো</h2>
-<p>কাজমতো timing,যে image আছে সেটি,log একই ট্রানজ্যাকশন মনে রাখো। Cascade-admin gap স্পষ্ট। পরের <a href="topic:db-transactions-sql">SQL ট্রানজ্যাকশন</a>-এ commit,rollback,savepoint দেখা যাবে।</p>
+<p>কাজ অনুযায়ী timing নাও, event-এর available image ব্যবহার করো। Audit ইনসার্ট একই ট্রানজ্যাকশন মানে। Cascade ও admin gap স্পষ্ট রাখো। এরপর <a href="topic:db-transactions-sql">SQL ট্রানজ্যাকশন</a>-এ commit,rollback,savepoint-এর সীমা দেখো।</p>

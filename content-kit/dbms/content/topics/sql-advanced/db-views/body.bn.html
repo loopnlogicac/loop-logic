@@ -1,24 +1,24 @@
 <h2 id="introduction">দরকারি কোয়েরির স্থির নাম</h2>
-<p class="lead">Librarian বারবার member ID-নাম চায়, email নয়। একই projection না লিখে নাম দিয়ে টেবিলের মতো কোয়েরি করো। ভিউ interface দেয়, আসল member রেকর্ড নিজের টেবিলে থাকে।</p>
-<p><dfn>ভিউ</dfn> stored কোয়েরি definition। সাধারণ MySQL ভিউ আলাদা ফল snapshot রাখে না। কোয়েরি করলে definition দিয়ে ডেটা আসে। Base-এ নাম বদলালে পরের ভিউ কোয়েরি-তেও দেখা যায়।</p>
-<p>ভিউ রিপোর্ট সহজ, public-sensitive কলাম আলাদা, controlled আপডেট route-ও হতে পারে। Readable মানেই updatable নয়; ভিউতে কলাম লুকালেই অন্য access revoke হয় না। আলাদা পরীক্ষা চাই।</p>
-<p>একই রেকর্ড দেখার named window ভাবো। জানালায় কী দেখাবে বদলালে নতুন শিক্ষার্থী copy হয় না। Visible কলাম,population,operation আর security context বলো।</p>
+<p class="lead">Librarian বারবার member ID ও নাম চান, email নয়। একই projection না লিখে নাম দিয়ে টেবিলের মতো কোয়েরি করতে পারো। ভিউ এই interface দেয়; মূল member রেকর্ড নিজের টেবিলেই থাকে।</p>
+<p><dfn>ভিউ</dfn> stored কোয়েরি definition। সাধারণ MySQL ভিউ ফলের private snapshot রাখে না। কোয়েরি করলে definition ধরে ডেটা আনে। Base টেবিলে member নাম বদলালে পরের ভিউ কোয়েরি-তেও দেখা যেতে পারে।</p>
+<p>ভিউ রিপোর্ট সহজ ও sensitive কলাম আলাদা করতে পারে। নিয়ন্ত্রিত আপডেট পথও দিতে পারে। কিন্তু readable কোয়েরি সবসময় updatable নয়; ভিউ-তে কলাম লুকালেই অন্য পথের grant বাতিল হয় না।</p>
+<p>একই রেকর্ড দেখার নাম দেওয়া জানালা ভাবো। কী দেখায় বদলালে দ্বিতীয় শিক্ষার্থী রো set হয় না। Visible কলাম, population, operation ও security context নির্দিষ্ট করো।</p>
 <h2 id="syntax">Interface স্পষ্ট define</h2>
-<p>CREATE VIEW নাম আর SELECT definition দেয়। Explicit কলাম আর meaningful alias। student_directory-তে ID-নাম-বিভাগ, email বাদ। Consumer সব শিক্ষার্থী ফিল্ড নয়, intended shape জানে।</p>
-<p>Controlled security interface-এর উদাহরণ ছাড়া SQL SECURITY INVOKER। Underlying access caller privilege-এ। DEFINER-এ ভিউ owner privilege-এ। কোনোটিই ভিউতে access-এর grant বাদ দেয় না।</p>
-<p>Simple filtered ভিউতে WITH CHECK OPTION। ভিউ দিয়ে write করলে predicate-এর মধ্যে থাকতে হবে। CSE-only-তে বিভাগ 1 থেকে 2 করলে বাইরে যায়, তাই reject।</p>
-<p>CASCADED ডিফল্ট, underlying ভিউতের প্রাসঙ্গিক শর্ত-ও দেখে। LOCAL current শর্ত দেখে, সঙ্গে underlying-এর নিজস্ব check option মানে। Stacked ভিউতে সব definition দেখো, এক ফিল্টার সব write পথ রক্ষা ধরে নয়।</p>
+<p>CREATE VIEW নামের সঙ্গে SELECT definition জোড়ে। Explicit কলাম ও অর্থপূর্ণ alias নাও। student_directory-তে student_id,নাম,বিভাগ রেখে email বাদ দিতে পারো। Consumer তখন পুরো students টেবিলের বদলে উদ্দেশ্যের shape পায়।</p>
+<p>Controlled security interface দেখানো ছাড়া উদাহরণে SQL SECURITY INVOKER। এটি underlying access-এ caller privilege দেখে। DEFINER ভিউ owner-এর privilege নেয়। কোনো mode-এই ভিউ access-এর নিজের grant বাদ যায় না।</p>
+<p>Simple filtered ভিউ-তে WITH CHECK OPTION দিলে ওই পথের write রো-কে ফিল্টার-এর ভেতর রাখবে। CSE-only ভিউ-তে বিভাগ 1 থেকে 2 করলে রো বেরোত; CHECK OPTION ওই আপডেট আটকায়।</p>
+<p>CASCADED ডিফল্ট; underlying ভিউতের applicable শর্ত-ও দেখে। LOCAL নিজের শর্ত দেখে, underlying declared check option-ও মানে। স্তরে ভিউ করলে প্রতিটি definition দেখো; একটি visible ফিল্টার সব write path রক্ষা করে ধরে নিও না।</p>
 <pre><code class="language-sql">CREATE SQL SECURITY INVOKER VIEW &lt;view_name&gt; AS
 SELECT &lt;visible_columns&gt; FROM &lt;base_table&gt;
 WHERE &lt;visible_population&gt;
 WITH CASCADED CHECK OPTION;</code></pre>
 <h2 id="how-it-works">Live ফল আর আপডেট mapping আলাদা</h2>
-<p>Simple projection প্রতি visible রো-কে এক base রো-তে মেলায়। ভিউতে student_name আপডেট একই base কলাম বদলায়। Primary কী দেখালে target সহজ, কিন্তু শুধু কী থাকলেই সব ভিউ writable নয়।</p>
-<p>Aggregate-এ mapping ভাঙে। Enrollment মোট রো তিন registration বোঝাতে পারে; সংখ্যা চার করলে কোন নতুন enrollment চাই জানা যায় না। তাই GROUP BY-aggregate ভিউ non-updatable; DISTINCTসহ অন্য restriction-ও আছে।</p>
-<p>কিছু joined ভিউ MySQL rule-এ সীমিত আপডেট দেয়, সব জয়েন writable নয়। Permitted base-এ mapping ঠিক চাই। শুরুতে single-টেবিল maintenance interface review সহজ।</p>
-<p>Updatable হলেই সবভাবে insertable নয়। Required base কলাম ডিফল্ট ছাড়া বাদ থাকলে রো সম্পূর্ণ হয় না। ইনসার্ট promise-এর আগে NOT NULL,ডিফল্ট,generated কলাম,কনস্ট্রেইন্ট দেখো।</p>
-<p>Stock zero-তে পণ্য 1 ভিউ থেকে যায়, rollback-এ ফেরে। REFRESH লাগে না; stored definition, আলাদা maintained ফল টেবিল নয়।</p>
-<p>CHECK OPTION সব base change বাঁধে না। Authorized direct students আপডেট CSE থেকে সরাতে পারে। Workflow boundary চাইলে privilege-এ অনুপযুক্ত direct write সরাও।</p>
+<p>Simple projection-এর প্রতি রো সরাসরি base রো-তে মেলে। ভিউ দিয়ে student_name আপডেট হলে students-এর একই কলাম বদলায়। Primary কী visible রাখলে target পরিষ্কার, কিন্তু তা একাই updatability নিশ্চিত নয়।</p>
+<p>Aggregate-এ mapping ভাঙে। Enrollment মোট তিন registration বোঝাতে পারে; সংখ্যা চার লিখলে কোন নতুন registration চাই জানা যায় না। তাই GROUP BY ও aggregate ভিউ MySQL-এ non-updatable। DISTINCT-সহ আরও restriction আছে।</p>
+<p>MySQL rule অনুযায়ী কিছু joined ভিউ-তে সীমিত আপডেট চলে; সব জয়েন writable নয়। অনুমোদিত base টেবিলে mapping ঠিক চাই। শুরুতে complex multi-টেবিল পথের চেয়ে স্পষ্ট single-টেবিল ভিউ review সহজ।</p>
+<p>Updatable মানেই সব ইনসার্ট সম্ভব নয়। Required base কলাম ডিফল্ট ছাড়া বাদ থাকলে রো পূর্ণ হয় না। ইনসার্ট interface দেওয়ার আগে NOT NULL, ডিফল্ট, generated কলাম ও কনস্ট্রেইন্ট দেখো।</p>
+<p>Available-products-এ live evaluation দেখো। Stock zero হলে পণ্য 1 হারায়; rollback-এ ফেরে। REFRESH লাগে না, কারণ ordinary ভিউ আলাদা ফল টেবিল নয়, কোয়েরি definition রাখে।</p>
+<p>CHECK OPTION base টেবিলের সব change আটকায় না। অনুমতিপ্রাপ্ত direct আপডেট শিক্ষার্থী-কে CSE থেকে সরাতে পারে। Workflow boundary চাইলে inappropriate direct write grant সরাতে হবে।</p>
 <table class="ref">
 <caption>পড়া,লেখা,ক্ষমতা আলাদা review</caption>
 <thead><tr><th scope="col">Definition choice</th><th scope="col">কী নিয়ন্ত্রণ করে</th></tr></thead>
@@ -30,31 +30,31 @@ WITH CASCADED CHECK OPTION;</code></pre>
 </tbody>
 </table>
 <h2 id="examples">একই ডেটা পড়ো,বদলাও,আবার দেখো</h2>
-<p>Directory-তে দুই MAT শিক্ষার্থী। পরের ভিউ বিভাগ রেখে নাম বদলায়। Grouped ভিউ reporting-only, stock ভিউ ট্রানজ্যাকশন-rollback-এর live প্রভাব দেখায়।</p>
-<p>আপডেট শিখতে base-ভিউ দুটো দেখো, shared স্টোরেজ বোঝো। একই কলাম নামেই একই আপডেট আচরণ নয়, definition ঠিক করে।</p>
+<p>Directory-তে আগে দুই MAT শিক্ষার্থী। পরের ভিউ বিভাগ restriction রেখে নাম বদলায়। Grouped ভিউ রিপোর্ট-only; stock ভিউ-তে ট্রানজ্যাকশন ও rollback দৃশ্যমান।</p>
+<p>আপডেট শেখার সময় base ও ভিউ দুটো দেখো। Shared স্টোরেজ বোঝা যাবে। একই কলাম নাম দেখেই একই আপডেট behavior ধরবে না; definition ঠিক করে।</p>
 <h3>Public শিক্ষার্থী directory-র নাম</h3>
-<p>Rafi-Fahim, email-town ছাড়া। INVOKER caller পারমিশন নেয়।</p>
+<p>MAT directory-তে Rafi,Fahim, email বা hometown নেই। INVOKER caller পারমিশন নেয়।</p>
 <div data-example="ex-1"></div>
 <h3>Filtered ভিউ দিয়ে আপডেট</h3>
-<p>Base রো বদলায়। এই ভিউ দিয়ে বিভাগ 2 করতে CHECK OPTION আটকাত।</p>
+<p>Base শিক্ষার্থী রো বদলায়। এই পথে বিভাগ 2 করতে CHECK OPTION আটকাত।</p>
 <div data-example="ex-2"></div>
 <h3>Read-only enrollment সারাংশ</h3>
-<p>Registered শিক্ষার্থী-এর সাত সারাংশ। এক রো বহু base হতে পারে বলে GROUP BY-COUNT আপডেট আটকায়।</p>
+<p>সাত সারাংশ রো registered শিক্ষার্থী বোঝায়। GROUP BY,COUNT-এ একটি ভিউ রো অনেক base রো হতে পারে বলে আপডেট হয় না।</p>
 <div data-example="ex-3"></div>
 <h3>Live ডেটা আর rollback</h3>
-<p>Zero stock-এ পণ্য 1 নেই, rollback-এ ফেরে। ভিউ গতকালের ফল রাখে না।</p>
+<p>Stock zero-তে পণ্য 1 হারিয়ে rollback-এ ফেরে। ভিউ গতকালের ফল রাখে না।</p>
 <div data-example="ex-4"></div>
 <h2 id="common-mistakes">ছোট কলাম list পুরো security নয়</h2>
 <h3>Direct-টেবিল route বন্ধ</h3>
-<p>নাম-only ভিউতের সঙ্গে students SELECT-ও দিলে email এখনও পড়ে। ভিউ convenience exposure কমালেও broad grant boundary ভাঙে। টেবিল,ভিউ,ডেটাবেস,active role মিলিয়ে effective পারমিশন দেখো।</p>
-<p>Definer ভিউ caller-কে base grant ছাড়া approved ডেটা দিতে পারে। Owner-এ শুধু দরকারি privilege। সর্বক্ষম owner খারাপ definition বা unsafe change-এর ফল বাড়ায়। Owner সরালে interface ভাঙতে পারে, প্ল্যান রাখো।</p>
+<p>Clerk নাম-only ভিউতের সঙ্গে students-এও SELECT পেলে email এখনও পড়তে পারে। ভিউ সুবিধার exposure কমালেও broad grant boundary ভাঙে। টেবিল,ভিউ,ডেটাবেস ও active role জুড়ে effective পারমিশন দেখো।</p>
+<p>Definer ভিউ direct base grant ছাড়াই approved ডেটা দেখাতে পারে। Owner-এর শুধু দরকারি base privilege চাই। অতিরিক্ত শক্ত owner ভুল definition-এর ক্ষতি বাড়ায়। Ownership ও অ্যাকাউন্ট removal পরিকল্পনা করো; missing definer interface ভাঙতে পারে।</p>
 <h3>কোয়েরি-কে history ভেবো না</h3>
-<p>ভিউতের ভেতর ORDER BY দিলেই সব consumer same অর্ডার নয়। Outer কোয়েরি-optimizer বদলায়। Final SELECT-এ অর্ডার দাও। ভিউ relation, printed layout নয়।</p>
-<p>ভিউ old semester freeze করে না। তারিখ ফিল্টার বর্তমান qualifying রো, আগের মান copy নয়। History চাইলে snapshot/history স্টোরেজ design। Current কোয়েরি old_results নাম দিলেই history নয়।</p>
+<p>ভিউতের ভেতরের ORDER BY-কে consumer-এর অর্ডার ভাববে না। Outer কোয়েরি ও optimizer বদলাতে পারে। Display sequence চাইলে final SELECT-এ ORDER BY। ভিউ relation বোঝায়, printed রিপোর্ট layout নয়।</p>
+<p>ভিউ পুরোনো semester জমিয়ে রাখে ভাবাও ভুল। তারিখ ফিল্টার বর্তমান qualifying রো বাছে, আগের মান copy নয়। History চাইলে যথাযথ snapshot/history স্টোরেজ করো। কোয়েরির নাম old_results দিলেই history হয় না।</p>
 <h2 id="best-practices">Definition interface contract</h2>
-<p>Public ভিউতে stable নাম আর explicit কলাম, SELECT * নয়। Creation-এ star expand হয়, পরে টেবিল change-এ expectation অদ্ভুত হতে পারে। Explicit projection exposure-migration review সহজ।</p>
-<p>Maintenance-এ IS_UPDATABLE metadata দেখো, actual intended operation test-ও। Insertability base-required আর কনস্ট্রেইন্ট-এও নির্ভর। DROP VIEW definition সরায়, base রো নয়; DELETE থেকে আলাদা।</p>
+<p>Public রিপোর্ট-এ stable নাম ও explicit কলাম নাও। Creation-এর সময় star expand হয়; পরে টেবিল change expectation গুলিয়ে দিতে পারে। Explicit projection exposure ও migration review পরিষ্কার করে।</p>
+<p>Maintenance বোঝার সময় IS_UPDATABLE metadata দেখো, তারপর actual operation test করো। Insertability required base value ও কনস্ট্রেইন্ট-ও মানে। DROP VIEW definition সরায়, base রো রাখে; DELETE থেকে আলাদা।</p>
 <h2 id="version-notes">MySQL security-আপডেট rule</h2>
-<p>8.0/8.4-তে ফিচার আছে, CHECK-এ 8.0.16+। Ordinary ভিউ native materialized নয়। Stored কোয়েরি,ট্রানজ্যাকশন visibility,write পারমিশন,definer ownership আলাদা, দেখতে টেবিল হলেও।</p>
+<p>এই ফিচার MySQL 8.0/8.4-এ আছে; shared CHECK 8.0.16 চায়। Ordinary MySQL ভিউ native materialized ভিউ নয়। Convenience, ট্রানজ্যাকশন visibility, আপডেট পারমিশন ও owner আলাদা বিষয়, ফল টেবিলের মতো হলেও।</p>
 <h2 id="summary">কোয়েরির নাম আর authority দেখো</h2>
-<p>ভালো ভিউতে projection,population,আপডেট policy স্পষ্ট। SQL SECURITY-র সঙ্গে boundary-মেলা grant। পরের <a href="topic:db-indexes">ইনডেক্স</a> logical ফল না বদলে access path দ্রুত করে।</p>
+<p>ভালো ভিউ-তে explicit projection, clear population ও আপডেট policy থাকে। SQL SECURITY-এর সঙ্গে boundary মানানো grant মেলাও। Logical ফল না বদলে access দ্রুত করতে <a href="topic:db-indexes">ইনডেক্স</a> পড়ো।</p>

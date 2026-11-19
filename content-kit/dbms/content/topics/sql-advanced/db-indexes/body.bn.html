@@ -1,24 +1,24 @@
 <h2 id="introduction">দরকারি রো-তে যাওয়ার পথ</h2>
-<p class="lead">মোটা register-এ প্রতিটি page পড়ে শিক্ষার্থী পাওয়া যায়, নাম directory থাকলে কাছে যাওয়া যায়। ইনডেক্স এমনই আরেক পথ, সব lookup দ্রুত হবে তার promise নয়।</p>
-<p><dfn>ইনডেক্স</dfn> টেবিল ডেটা-র পাশে রাখা সহায়ক স্ট্রাকচার। B-tree কী ক্রমে রেখে equality বা রেঞ্জ পেতে দেয়। বাঁচা search কাজ traversal,স্টোরেজ,রো-fetch খরচের বেশি হতে হবে।</p>
-<p>Shared dataset ছোট, হাতে দেখা যায়; production speedup মাপা যায় না। Declaration-প্ল্যান শব্দ শেখো, পারফরম্যান্স representative size,কোয়েরি,write,concurrency-তে দেখো।</p>
-<p>Correctness আর access আলাদা। Normal secondary ইনডেক্স যোগ-সরালে membership একই। ORDER BY নেই বলে print অর্ডার বদলালে কোয়েরির ordering ত্রুটি, ইনডেক্স predicate-এর অর্থ বদলায়নি।</p>
+<p class="lead">মোটা register-এ শিক্ষার্থী খুঁজতে সব page পড়া যায়, কিন্তু নাম directory সঠিক page-এর কাছে নিয়ে যায়। ডেটাবেস ইনডেক্স একই ধরনের পথ দেয়। তবে প্রতিটি lookup দ্রুত হবেই এমন প্রতিশ্রুতি নয়।</p>
+<p><dfn>ইনডেক্স</dfn> টেবিল ডেটা-র সঙ্গে বজায় রাখা সহায়ক ডেটা স্ট্রাকচার। B-tree কী ক্রমে রাখে; সার্ভার equality বা রেঞ্জ-এ যেতে পারে। বাঁচা search work traversal, স্টোরেজ ও রো fetch-এর খরচের চেয়ে বেশি চাই।</p>
+<p>Shared dataset হাতে দেখার মতো ছোট। এর timing দিয়ে production speedup প্রমাণ হয় না। Declaration ও প্ল্যান-এর শব্দ শেখো। আসল মাপ, realistic কোয়েরি, write ও concurrent কাজ দিয়ে পারফরম্যান্স বিচার করো।</p>
+<p>Correctness ও access path আলাদা। Normal secondary ইনডেক্স যোগ-বিয়োগে ফল membership বদলানোর কথা নয়। ORDER BY না থাকলে printed অর্ডার বদলাতে পারে; সেটি কোয়েরি ordering-এর ত্রুটি, ইনডেক্স predicate-এর অর্থ বদলানো নয়।</p>
 <h2 id="syntax">দরকারি ক্রমে কী</h2>
-<p>CREATE INDEX নাম আর কলাম অর্ডার বলে। <code>Composite index</code>-এ কয়েক কী part। <code>(department_id, student_name)</code>-এ আগে বিভাগ, ভেতরে নাম। উল্টো দিলে অন্য path।</p>
-<p>B-tree সাধারণত leftmost prefix-এ শুরু। Department equality first part, সঙ্গে নাম equality দুটো। নাম-only-তে leading interval নেই, তবে MySQL scan,প্রযোজ্য skip-scan বা অন্য ইনডেক্স ভাবতে পারে।</p>
-<p>রেঞ্জ-এর পরে কী use বদলায়। <code>(department_id, admitted_on, student_id)</code>-এ বিভাগ equality আর তারিখ রেঞ্জ clear interval। পরের কলাম ফিল্টার,cover,অর্ডার-এ কাজে লাগে, কিন্তু আরেক leading equality-র মতো interval সংকুচিত করে না-ও পারে।</p>
-<p>DROP INDEX secondary স্ট্রাকচার সরায়, রো নয়। Primary,unique,FK-support ইনডেক্সের বাড়তি দায়। এক SELECT ব্যবহার করছে না বলেই কী মুছো না।</p>
+<p>CREATE INDEX নাম ও ordered কী কলাম নেয়। <code>Composite index</code>-এ একাধিক কী part। <code>(department_id, student_name)</code>-এ আগে বিভাগ, ভেতরে নাম। ক্রম উল্টালে অন্য access path।</p>
+<p>সাধারণ B-tree lookup leftmost prefix থেকে শুরু। department_id equality প্রথম part, নাম-সহ equality দুটো নেয়। শুধু নাম-এ leading বিভাগ interval নেই; তবে MySQL scan, প্রযোজ্য skip-scan বা অন্য ইনডেক্স ভাবতে পারে।</p>
+<p>রেঞ্জ-এর পরে কী use বদলায়। <code>(department_id, admitted_on, student_id)</code>-এ বিভাগ equality ও তারিখ রেঞ্জ স্পষ্ট interval। পরের কলাম ফিল্টারিং, coverage বা অর্ডার-এ সাহায্য করলেও আরেক leading equality-এর মতো interval ছোট করবেই নয়।</p>
+<p>DROP INDEX named secondary স্ট্রাকচার সরায়, টেবিল রো নয়। Primary, unique ও foreign-কী-support ইনডেক্সের বাড়তি দায় আছে। একটি SELECT নেয় না বলেই কনস্ট্রেইন্ট-এর কী ফেলবে না।</p>
 <pre><code class="language-sql">CREATE INDEX &lt;index_name&gt;
 ON &lt;table_name&gt; (&lt;leading_equality_column&gt;, &lt;range_column&gt;);
 EXPLAIN &lt;query_to_inspect&gt;;
 DROP INDEX &lt;index_name&gt; ON &lt;table_name&gt;;</code></pre>
 <h2 id="how-it-works">প্ল্যান choice পড়ো, stopwatch নয়</h2>
-<p>InnoDB clustered primary-কী স্ট্রাকচার-এ রো রাখে। Secondary entry-তে রো পেতে primary কী-ও। তাই secondary tree পরে clustered fetch লাগতে পারে। Requested সব মান ইনডেক্স-এ থাকলে extra fetch বাঁচে।</p>
-<p><code>Covering index</code> ওই কোয়েরির দরকারি মান রাখে। এটি কোয়েরি-ইনডেক্স সম্পর্ক, universal property নয়। আরেক unindexed কলাম select-এ সুবিধা যায়। Wide ইনডেক্স-এ স্টোরেজ-maintenance বাড়ে।</p>
-<p>EXPLAIN proposed প্ল্যান। Traditional-এ type,possible_keys,কী,key_len,ref,রো,filtered,Extra। Fixed primary-ID উদাহরণে const। পরের SELECT actual রো, EXPLAIN planning তথ্য।</p>
-<p>type-এ const,ref,রেঞ্জ,ইনডেক্স,ALL ইত্যাদি access। ALL টেবিল scan, ইনডেক্স full ইনডেক্স scan-ও হতে পারে। লেবেল একা bad প্ল্যান নয়। ছয়-পণ্য টেবিল scan secondary lookup-এর চেয়ে সস্তা হতে পারে।</p>
-<p>possible_keys lookup candidate, কী বাছা ইনডেক্স। রো examined estimate, exact আউটপুট সংখ্যা নয়। filtered শর্ত-এর পরে শতাংশের estimate। Statistics-ভার্সন-এ বদলায়।</p>
-<p>Extra-তে Using where,ইনডেক্স,filesort সূত্র। Using ইনডেক্স সাধারণত covering। Filesort সর্ট method, disk ফাইল লেখা proof নয়। Predicate,projection,অর্ডার-এর সঙ্গে লেবেল মেলাও।</p>
+<p>InnoDB clustered primary-কী স্ট্রাকচার-এ রো রাখে। Secondary entry-তে রো খোঁজার primary কী থাকে। তাই secondary tree-এর পরে clustered রো fetch লাগতে পারে। ইনডেক্স-এ সব requested value থাকলে বাড়তি fetch বাঁচে।</p>
+<p><code>Covering index</code> নির্দিষ্ট কোয়েরির সব দরকারি মান রাখে। Covering ইনডেক্স-কোয়েরি সম্পর্ক, universal গুণ নয়। আরেক unindexed কলাম নিলে সুবিধা হারায়। Wide ইনডেক্স-এ স্টোরেজ ও maintenance-ও বাড়ে।</p>
+<p>EXPLAIN optimizer-এর প্রস্তাবিত প্ল্যান। Traditional আউটপুট-এ type,possible_keys,কী,key_len,ref,রো,filtered,Extra থাকে। Fixed primary ID উদাহরণ const access নেয়। পরের SELECT actual রো দেখায়; EXPLAIN planning তথ্য।</p>
+<p>Type-এ const,ref,রেঞ্জ,ইনডেক্স,ALL-এর মতো access বোঝায়। ALL টেবিল scan; ইনডেক্স পুরো ইনডেক্স scan-ও হতে পারে। একা লেবেল খারাপ প্ল্যান প্রমাণ নয়। ছয়-রো products scan কয়েক secondary lookup-এর চেয়ে সস্তা হতে পারে।</p>
+<p>Possible_keys দরকারি candidate, কী নির্বাচিত ইনডেক্স। রো examined রো-এর estimate, exact আউটপুট সংখ্যা নয়। Filtered শর্তের পরে থাকা percentage-এর estimate। Statistics ও ভার্সন এগুলো বদলাতে পারে।</p>
+<p>Extra-তে Using where,ইনডেক্স,filesort-এর মতো clue। Using ইনডেক্স সাধারণত covering access। Using filesort সর্টিং method-এর নাম; disk ফাইল লেখা হয়েছে তার প্রমাণ নয়। Predicate,projection,অর্ডার-এর সঙ্গে লেবেল মেলাও।</p>
 <table class="ref">
 <caption>Traditional প্ল্যান ফিল্ড planning evidence</caption>
 <thead><tr><th scope="col">ফিল্ড</th><th scope="col">অর্থ</th></tr></thead>
@@ -31,31 +31,31 @@ DROP INDEX &lt;index_name&gt; ON &lt;table_name&gt;;</code></pre>
 </tbody>
 </table>
 <h2 id="examples">Access declaration আর stable answer</h2>
-<p>Department-নাম composite path CSE নাম নির্দিষ্ট ক্রমে দেয়। পরে Rafi-কে leading বিভাগ equality ছাড়া-সহ খোঁজে। দুই কোয়েরি বৈধ, efficient option আলাদা।</p>
-<p>Primary-কী প্ল্যান সহজ করে রাখা, captured কলাম MySQL 8.4.7-এর। বড় রিপোর্ট-এ stats,selectivity,ইনডেক্স,সেটিং-এ প্ল্যান বদলায়। Sample estimate সব install-এর promise নয়।</p>
+<p>Department-নাম উদাহরণ composite path বানিয়ে CSE নাম নির্দিষ্ট ক্রমে দেয়। পরে Rafi-র search leading বিভাগ equality-সহ ও ছাড়া তুলনা। দুটো logical বৈধ, efficient path আলাদা।</p>
+<p>Primary-কী EXPLAIN সহজ রাখা হয়েছে। Captured কলাম MySQL 8.4.7-এর। বড় রিপোর্ট-এ statistics,selectivity,ইনডেক্স ও সেটিং-এ প্ল্যান বদলায়। Sample estimate-কে সব installation-এর প্রতিশ্রুতি কোরো না।</p>
 <h3>Department-নাম path যোগ</h3>
-<p>Leading equality রেঞ্জ ছোট করে, ভেতরে নাম সাজানো। Optimizer ইনডেক্স নেবে কি না-তে ফল correctness নির্ভর নয়।</p>
+<p>Leading বিভাগ equality রেঞ্জ ছোট করে, ভেতরে নাম ordered। Optimizer এই ইনডেক্স নিক বা না নিক ফল সঠিক থাকে।</p>
 <div data-example="ex-1"></div>
 <h3>Primary-কী lookup দেখো</h3>
-<p>PRIMARY,const,estimated এক রো। প্ল্যান-এর পরে SELECT Exercise book ফেরায়।</p>
+<p>প্ল্যান-এ PRIMARY,const ও এক estimated রো। EXPLAIN প্ল্যান বলে; পরের SELECT Exercise book ফেরায়।</p>
 <div data-example="ex-2"></div>
 <h3>Suffix-only ফিল্টার-ও সঠিক</h3>
-<p>দুটোই Rafi। দ্বিতীয়তে leftmost equality, প্রথমে scan বা অন্য access লাগতে পারে।</p>
+<p>দুটোতেই Rafi। শুধু দ্বিতীয়তে composite ইনডেক্সের leftmost equality আছে; প্রথমে scan বা অন্য path লাগতে পারে।</p>
 <div data-example="ex-3"></div>
 <h3>অদরকারি secondary ইনডেক্স সরাও</h3>
-<p>Drop-এর পরেও Desk lamp zero-stock। Access choice বদলায়, logical উত্তর নয়।</p>
+<p>ইনডেক্স বাদেও desk lamp zero-stock পণ্য থাকে। Secondary স্ট্রাকচার সরালে access choice বদলায়, logical answer নয়।</p>
 <div data-example="ex-4"></div>
 <h2 id="common-mistakes">সাশ্রয়ের চেয়ে খরচ বেশি ইনডেক্স এড়াও</h2>
 <h3>কম selectivity আর write খরচ</h3>
-<p>শর্ত খুব কম candidate বাদ দিলে low selectivity, ইনডেক্স অনেক টেবিল ফেরায়। অল্প common status composite-এ ভালো হতে পারে, একা ইনডেক্স দিলেই লাভ নয়।</p>
-<p>INSERT ইনডেক্স entry যোগ,DELETE সরায়,UPDATE কী-ও বদলাতে পারে। CPU,buffer,log,স্টোরেজ খরচ। শুধু রিপোর্ট experiment-এ প্রতি অর্ডার entry-র খরচ মিস হয়।</p>
+<p>Low-selectivity কলাম অনেক রো ফেরাতে পারে। Selectivity শর্ত কতটা candidate কমায় বলে। কয়েক common status-ও composite কী-তে কাজে লাগতে পারে; একা ইনডেক্স করলেই lookup সার্থক নয়।</p>
+<p>অতিরিক্ত ইনডেক্স write ব্যয় বাড়ায়। INSERT entry যোগ, DELETE সরায়, UPDATE কী বদলাতে পারে। CPU,buffer,log ও স্টোরেজ লাগে। শুধু রিপোর্ট পরীক্ষা করলে প্রতিটি অর্ডার entry-র খরচ চোখ এড়ায়।</p>
 <h3>Expression আর display অর্ডার</h3>
-<p>Indexed কলাম ঘিরে ফাংশন সাধারণ lookup আটকাতে পারে। <code>YEAR(admitted_on) = 2026</code>-এর বদলে 2026-01-01 থেকে 2027-01-01-এর আগের half-open রেঞ্জ contiguous তারিখ interval। Functional ইনডেক্স আলাদা option-rule।</p>
-<p>ইনডেক্স scan থেকে সর্ট ধরে নিও না, কাল অন্য path হতে পারে। Sequence চাইলে ORDER BY। রিপোর্ট-এর tie rule দাও, incidental primary suffix নয়।</p>
+<p>Indexed কলামের ওপর ফাংশন সাধারণ lookup আটকাতে পারে। <code>YEAR(admitted_on) = 2026</code>-এর বদলে 2026-01-01 থেকে 2027-01-01-এর আগে half-open রেঞ্জ ভাবো; stored তারিখ-এ contiguous interval। Functional ইনডেক্স আলাদা option, নিজস্ব rule আছে।</p>
+<p>ইনডেক্স scan দেখে অর্ডার ধরে নেওয়াও ভুল। কাল optimizer অন্য path নিতে পারে। Sequence চাইলে SELECT-এ ORDER BY। Incidental primary-কী suffix নয়, রিপোর্ট অনুযায়ী tie-breaker নাও।</p>
 <h2 id="best-practices">Workload দেখে design, তারপর মাপো</h2>
-<p>জরুরি predicate-জয়েন থেকে শুরু। Equality,রেঞ্জ,অর্ডার,projection একসঙ্গে ভাবো। প্রতিটি কলাম-এ আলাদা ইনডেক্স নয়। Overlap খরচ বাড়িয়েও উপযোগী composite অর্ডার মিস করতে পারে।</p>
-<p>Representative ডেটা-তে before-after প্ল্যান, read লাভ-write খরচ রাখো। EXPLAIN ANALYZE actual তথ্য দেয় কিন্তু কোয়েরি চালায়, তাই সচেতন ব্যবহার। কোয়েরি-distribution বদলালে ইনডেক্স আবার দেখো।</p>
+<p>গুরুত্বপূর্ণ predicate ও জয়েন থেকে শুরু। Equality,রেঞ্জ,অর্ডার,projection একসঙ্গে ভাবো। প্রতিটি কলাম আলাদা ইনডেক্স করবে না। Overlapping ইনডেক্স খরচ নকল করেও দরকারি composite অর্ডার মিস করতে পারে।</p>
+<p>Representative ডেটা-তে আগে-পরে প্ল্যান তুলনা করো। Read benefit ও write cost রাখো। EXPLAIN ANALYZE actual execution তথ্য দেয়, কিন্তু কোয়েরি চালায়। কোয়েরি ও distribution বদলালে ইনডেক্স আবার দেখো।</p>
 <h2 id="version-notes">প্ল্যান detail বদলাবে</h2>
-<p>CREATE INDEX,composite B-tree,traditional EXPLAIN 8.0/8.4-তে। ANALYZE 8.0.18 থেকে, shared CHECK 8.0.16। Estimate আর optimizer strategy ভার্সন-sensitive, logical উত্তর এক হলেও।</p>
+<p>CREATE INDEX,composite B-tree ও traditional EXPLAIN MySQL 8.0/8.4-এ আছে। ANALYZE 8.0.18 থেকে; shared CHECK 8.0.16 চায়। Logical answer এক হলেও estimate ও নতুন strategy ভার্সন-sensitive।</p>
 <h2 id="summary">আসল কাজে লাগে এমন path-এর খরচ দাও</h2>
-<p>উপযোগী leading কী-র ইনডেক্স maintenance-এর চেয়ে বেশি lookup বাঁচায়। প্ল্যান পড়ো, estimate দেখো, representative কোয়েরি মাপো। পরের <a href="topic:db-window-functions">window ফাংশন</a> পৃথক রো রেখেই ranking আর cumulative হিসাব দেয়।</p>
+<p>ভালো ইনডেক্স কাজে লাগা leading কী ধরে maintenance-এর যথেষ্ট বেশি search বাঁচায়। প্ল্যান পড়ো, estimate দেখো, representative কোয়েরি মাপো। এরপর <a href="topic:db-window-functions">window ফাংশন</a>-এ রো রেখেই rank ও cumulative calculation করো।</p>
