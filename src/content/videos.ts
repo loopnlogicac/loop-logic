@@ -774,7 +774,23 @@ function parse() {
 const DATA = parse();
 export const VIDEOS: ReadonlyMap<string, ChannelVideo> = DATA.videos;
 export const PLAYLISTS: readonly ChannelPlaylist[] = DATA.playlists;
-export const getPlaylist = (id: string) => PLAYLISTS.find((p) => p.id === id);
-export const getVideo = (id: string) => VIDEOS.get(id);
+// Playlists and videos added from the admin site (read from YouTube), kept beside the built-in ones.
+const EXTRA_PLAYLISTS = new Map<string, ChannelPlaylist>();
+const EXTRA_VIDEOS = new Map<string, ChannelVideo>();
+/** Replaces every admin-added playlist and video (called whenever admin courses change). */
+export function setExtraVideos(playlists: ChannelPlaylist[], videos: ChannelVideo[]) {
+  EXTRA_PLAYLISTS.clear();
+  EXTRA_VIDEOS.clear();
+  for (const v of videos) EXTRA_VIDEOS.set(v.id, v);
+  for (const p of playlists) EXTRA_PLAYLISTS.set(p.id, p);
+}
+export const getPlaylist = (id: string) => EXTRA_PLAYLISTS.get(id) ?? PLAYLISTS.find((p) => p.id === id);
+export const getVideo = (id: string) => VIDEOS.get(id) ?? EXTRA_VIDEOS.get(id);
+/** Display length for a number of seconds: "4:05", "1:02:09". */
+export function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = Math.floor(seconds % 60);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
 /** Every video title we parsed; used by the tests to check nothing is missing. */
 export const TITLE_IDS: ReadonlySet<string> = new Set(TITLES.trim().split('\n').map((l) => l.slice(0, l.indexOf('|'))));

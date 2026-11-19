@@ -11,6 +11,7 @@ import { AppError } from './service.ts';
 import type { Store } from '../store/store.ts';
 import { LANGUAGES } from './video-extras.ts';
 import { getVideo } from '../content/videos.ts';
+import { markdownToHtml } from './markdown.ts';
 
 type Lang = 'en' | 'bn';
 type Bi = { en: string; bn: string };
@@ -28,12 +29,21 @@ export const TRACK_INFO: Record<string, { title: Bi; blurb: Bi; course?: string;
 };
 
 interface Topic {
-  id: string; track: string; module: string; dir: string;
+  id: string; track: string; module: string; dir: string; custom?: boolean;
   json: Json; bodyEn: string; bodyBn: string | null;
   examples: { id: string; title: string; language: string; code: string; output: string | null; explanationHtml: string; tryNow: boolean; outputNote?: string; demonstrates?: string }[];
   text: string;
 }
-interface Track { id: string; root: string; curriculum: Json; manifest: Json; language: string; topics: Map<string, Topic>; order: string[] }
+interface Track { id: string; root: string; curriculum: Json; manifest: Json; language: string; topics: Map<string, Topic>; order: string[]; custom?: boolean }
+
+/** A track started from the admin site. */
+export interface CustomTrackDef { id: string; title: Bi; blurb: Bi; language: string; course?: string | null; modules: { id: string; title: Bi }[] }
+/** A topic written in the admin site (Markdown text, examples with their output, multiple-choice quiz). */
+export interface CustomTopicDef {
+  id: string; track: string; module: string; title: Bi; summary: Bi; level: string; minutes: number;
+  body: Bi; examples: { title: string; language: string; code: string; output: string }[];
+  quiz: { prompt: string; options: string[]; answer: number; explanation: string }[];
+}
 
 // ── HTML safety: content already passed the checker's tag whitelist; this is a second fence ──
 const TAGS = new Set(['h2', 'h3', 'h4', 'p', 'br', 'hr', 'ul', 'ol', 'li', 'strong', 'em', 'code', 'pre', 'kbd', 'dfn', 'abbr', 'sup', 'sub', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'blockquote', 'a', 'figure', 'figcaption', 'img', 'div', 'span']);
@@ -72,6 +82,8 @@ export class TutorialService {
 
   private store: Store;
   private kitDir: string;
+  private hidden = new Set<string>();
+  private labCache = new Map<string, Json | null>();
 
   constructor(store: Store, kitDir: string) {
     this.store = store;
@@ -121,14 +133,94 @@ export class TutorialService {
     return { id: tid, track: track.id, module: moduleId, dir, json, bodyEn: cleanHtml(bodyEn), bodyBn: bodyBn ? cleanHtml(bodyBn) : null, examples, text: textOf(bodyEn) };
   }
 
+  // ── admin: hidden tracks, admin-written topics and tracks ──
+  setHiddenTracks(ids: string[]) { this.hidden = new Set(ids); }
+  isHidden(id: string) { return this.hidden.has(id); }
+
+  /** Replaces every admin-added track and topic with the given ones. */
+  applyCustom(tracks: CustomTrackDef[], topics: CustomTopicDef[]) {
+    for (const [id, t] of [...this.tracks]) if (t.custom) { this.tracks.delete(id); delete TRACK_INFO[id]; }
+    for (const t of this.tracks.values()) {
+      for (const m of t.curriculum.modules ?? []) m.topics = (m.topics ?? []).filter((pt: Json) => !pt.custom);
+      for (const [id, x] of [...t.topics]) if (x.custom) { t.topics.delete(id); this.topicTrack.delete(id); }
+      t.order = t.order.filter((id) => t.topics.has(id));
+    }
+    tracks.forEach((d, i) => {
+      if (this.tracks.has(d.id) || TRACK_INFO[d.id]) return; // never replace a Codex track
+      TRACK_INFO[d.id] = { order: 100 + i, course: d.course ?? undefined, title: d.title, blurb: d.blurb };
+      this.tracks.set(d.id, { id: d.id, root: '', custom: true, manifest: { packageVersion: null }, language: d.language || 'c', topics: new Map(), order: [],
+        curriculum: { title: d.title.en, modules: d.modules.map((m) => ({ id: m.id, title: m.title, summary: { en: '', bn: '' }, topics: [] })) } });
+    });
+    for (const d of topics) {
+      const t = this.tracks.get(d.track);
+      const m = t?.curriculum.modules.find((mm: Json) => mm.id === d.module);
+      if (!t || !m || t.topics.has(d.id) || this.topicTrack.has(d.id)) continue;
+      const bodyEn = cleanHtml(markdownToHtml(d.body.en));
+      const bodyBn = d.body.bn?.trim() ? cleanHtml(markdownToHtml(d.body.bn)) : null;
+      const json: Json = {
+        id: d.id, title: d.title, summary: d.summary, level: d.level, kind: 'lesson', estMinutes: d.minutes, labs: [], practice: [], keyPoints: [], examQuestions: [], videos: [], references: [],
+        quiz: d.quiz.map((q, i) => ({ id: `q-${i + 1}`, type: 'mcq', difficulty: 'medium', prompt: q.prompt, options: q.options, answer: q.answer, explanation: q.explanation })),
+      };
+      t.topics.set(d.id, {
+        id: d.id, track: t.id, module: d.module, dir: '', custom: true, json, bodyEn, bodyBn, text: textOf(bodyEn),
+        examples: d.examples.map((e, i) => ({ id: `ex-${i + 1}`, title: e.title, language: e.language || t.language, code: e.code, output: e.output || null, explanationHtml: '', tryNow: Boolean(TRY_NOW[e.language || t.language]) })),
+      });
+      m.topics.push({ id: d.id, title: d.title.en, level: d.level, kind: 'lesson', custom: true });
+      this.topicTrack.set(d.id, t.id);
+    }
+    for (const t of this.tracks.values()) {
+      const inCurriculum = (t.curriculum.modules ?? []).flatMap((m: Json) => (m.topics ?? []).map((pt: Json) => pt.id)).filter((id: string) => t.topics.has(id));
+      const rest = t.order.filter((id) => !inCurriculum.includes(id));
+      t.order = [...inCurriculum, ...rest];
+    }
+  }
+
+  /** Every track with its modules, hidden ones included (admin site). */
+  adminTracks() {
+    return Object.keys(TRACK_INFO).map((id) => {
+      const t = this.tracks.get(id);
+      const info = TRACK_INFO[id]!;
+      const topics = t ? [...t.topics.values()] : [];
+      return {
+        id, title: info.title.en, order: info.order, custom: Boolean(t?.custom), hidden: this.hidden.has(id), language: t?.language ?? null,
+        delivered: topics.length, planned: t ? t.curriculum.modules.reduce((n: number, m: Json) => n + (m.topics ?? []).length, 0) : this.plannedCount(id),
+        labs: topics.reduce((n, x) => n + (x.json.labs?.length ?? 0), 0), bangla: topics.filter((x) => x.bodyBn).length, customTopics: topics.filter((x) => x.custom).length,
+        modules: (t?.curriculum.modules ?? []).map((m: Json) => ({ id: m.id, title: pick(m.title, 'en'), topics: (m.topics ?? []).length })),
+      };
+    }).sort((a, b) => a.order - b.order);
+  }
+
+  /** Every lab of a track, grouped by topic in course order (homepage Labs tab). */
+  labIndex(trackId: string, lang: Lang) {
+    const t = this.tracks.get(trackId);
+    if (!t || this.hidden.has(trackId)) throw new AppError('not_found', 404, 'No such track.');
+    const topics: { id: string; title: string; module: string; labs: { id: string; title: string; summary: string; kind: string }[] }[] = [];
+    for (const id of t.order) {
+      const x = t.topics.get(id)!;
+      const ids: string[] = x.json.labs ?? [];
+      if (!ids.length) continue;
+      const module = t.curriculum.modules.find((m: Json) => m.id === x.module);
+      topics.push({
+        id, title: pick(x.json.title, lang), module: pick(module?.title, lang),
+        labs: ids.map((lid) => {
+          const key = join(x.dir, 'labs', lid);
+          if (!this.labCache.has(key)) this.labCache.set(key, readJsonFile(join(key, 'lab.json')));
+          const lab = this.labCache.get(key);
+          return lab ? { id: lid, title: pick(lab.title, lang), summary: pick(lab.summary, lang), kind: String(lab.kind) } : null;
+        }).filter(Boolean) as { id: string; title: string; summary: string; kind: string }[],
+      });
+    }
+    return { track: { id: t.id, title: TRACK_INFO[t.id]?.title[lang] ?? t.id }, labs: topics.reduce((n, x) => n + x.labs.length, 0), topics };
+  }
+
   // ── catalogue ──
   list(lang: Lang) {
-    const all = Object.keys(TRACK_INFO).map((id) => {
+    const all = Object.keys(TRACK_INFO).filter((id) => !this.hidden.has(id)).map((id) => {
       const info = TRACK_INFO[id]!;
       const t = this.tracks.get(id);
       const planned = t ? t.curriculum.modules.reduce((n: number, m: Json) => n + m.topics.length, 0) : this.plannedCount(id);
       const labs = t ? [...t.topics.values()].reduce((n, x) => n + (x.json.labs?.length ?? 0), 0) : 0;
-      return { id, title: info.title[lang], blurb: info.blurb[lang], course: info.course ?? null, language: t?.language ?? null, delivered: t?.topics.size ?? 0, planned, labs, order: info.order, available: Boolean(t) };
+      return { id, title: info.title[lang], blurb: info.blurb[lang], course: info.course ?? null, language: t?.language ?? null, delivered: t?.topics.size ?? 0, planned, labs, order: info.order, available: Boolean(t?.topics.size) };
     });
     return { tracks: all.sort((a, b) => a.order - b.order), totals: { topics: all.reduce((n, x) => n + x.delivered, 0), labs: all.reduce((n, x) => n + x.labs, 0) } };
   }
@@ -136,9 +228,9 @@ export class TutorialService {
   private plannedCount(id: string) { let n = 0; for (const tr of this.topicTrack.values()) if (tr === id) n++; return n; }
 
   track(id: string, lang: Lang) {
-    const t = this.tracks.get(id);
+    const t = this.hidden.has(id) ? undefined : this.tracks.get(id);
     const info = TRACK_INFO[id];
-    if (!t || !info) throw new AppError('not_found', 404, lang === 'bn' ? 'এই টিউটোরিয়াল এখনো আসেনি।' : 'This tutorial is not available yet.');
+    if (!t || !info || !t.topics.size) throw new AppError('not_found', 404, lang === 'bn' ? 'এই টিউটোরিয়াল এখনো আসেনি।' : 'This tutorial is not available yet.');
     return {
       id, title: info.title[lang], blurb: info.blurb[lang], course: info.course ?? null, language: t.language,
       delivered: t.topics.size, version: t.manifest.packageVersion ?? null,
@@ -153,7 +245,7 @@ export class TutorialService {
   }
 
   private topicOr404(trackId: string, topicId: string, lang: Lang): { t: Track; x: Topic } {
-    const t = this.tracks.get(trackId);
+    const t = this.hidden.has(trackId) ? undefined : this.tracks.get(trackId);
     const x = t?.topics.get(topicId);
     if (!t || !x) throw new AppError('not_found', 404, lang === 'bn' ? 'এই টপিক এখনো আসেনি।' : 'This topic is not available yet.');
     return { t, x };
@@ -228,6 +320,7 @@ export class TutorialService {
     if (!words.length) return { q, results: [] };
     const results: { track: string; trackTitle: string; topic: string; title: string; summary: string; level: string; score: number }[] = [];
     for (const t of this.tracks.values()) for (const x of t.topics.values()) {
+      if (this.hidden.has(t.id)) continue;
       const title = `${x.json.title?.en ?? ''} ${x.json.title?.bn ?? ''}`.toLowerCase();
       const keys = (x.json.keywords ?? []).join(' ').toLowerCase();
       const summary = `${x.json.summary?.en ?? ''} ${x.json.summary?.bn ?? ''}`.toLowerCase();

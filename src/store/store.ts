@@ -63,7 +63,18 @@ export interface Store {
   /** Pro waitlist. Returns false when the email was already on the list. */
   addWaitlist(row: WaitlistRow): Promise<boolean>;
   waitlistCount(): Promise<number>;
+  listWaitlist(limit?: number): Promise<WaitlistRow[]>;
+  // admin content: courses, posts, ads, coupons, members, roles, settings (one JSON document per row)
+  listDocs(kind: string): Promise<DocRow[]>;
+  getDoc(kind: string, id: string): Promise<DocRow | undefined>;
+  putDoc(row: DocRow): Promise<void>;
+  deleteDoc(kind: string, id: string): Promise<void>;
+  addAudit(row: AuditRow): Promise<void>;
+  listAudit(limit?: number): Promise<AuditRow[]>;
 }
+
+export interface DocRow { kind: string; id: string; data: Record<string, any>; updatedAt: string }
+export interface AuditRow { at: string; actor: string; action: string; target: string; detail: Record<string, unknown> }
 
 export interface WaitlistRow { email: string; plan: string; lang: string; learnerId: string | null; createdAt: string }
 
@@ -171,6 +182,30 @@ export class MemoryStore implements Store {
   }
   async waitlistCount() {
     return this.waitlist.size;
+  }
+  async listWaitlist(limit = 500) {
+    return [...this.waitlist.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit).map((r) => ({ ...r }));
+  }
+  private docs = new Map<string, DocRow>();
+  private audit: AuditRow[] = [];
+  async listDocs(kind: string) {
+    return [...this.docs.values()].filter((d) => d.kind === kind).map((d) => structuredClone(d));
+  }
+  async getDoc(kind: string, id: string) {
+    const d = this.docs.get(`${kind}\u0000${id}`);
+    return d ? structuredClone(d) : undefined;
+  }
+  async putDoc(row: DocRow) {
+    this.docs.set(`${row.kind}\u0000${row.id}`, structuredClone(row));
+  }
+  async deleteDoc(kind: string, id: string) {
+    this.docs.delete(`${kind}\u0000${id}`);
+  }
+  async addAudit(row: AuditRow) {
+    this.audit.push(structuredClone(row));
+  }
+  async listAudit(limit = 200) {
+    return structuredClone(this.audit.slice(-limit).reverse());
   }
 
 }

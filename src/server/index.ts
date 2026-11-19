@@ -19,6 +19,7 @@ import { AiPracticeTutor } from '../ai/tutor.ts';
 import { LiveSearch } from '../library/live.ts';
 import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
 import { createApp } from './app.ts';
+import { AdminService } from '../app/admin.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -52,6 +53,9 @@ const labs = new LabService(store);
 const extras = new VideoExtrasService(store);
 const watch = new WatchService(store, extras);
 const tutorials = new TutorialService(store, join(here, '../../content-kit'));
+// Admins: everyone in ADMIN_EMAILS, plus people an admin gives the role in the admin site.
+const admin = new AdminService(store, tutorials, watch, { adminEmails: (env.ADMIN_EMAILS ?? '').split(','), youtubeKey: env.YOUTUBE_API_KEY || null });
+await admin.init().catch((e) => console.warn(`admin: could not load admin content: ${(e as Error).message}`));
 
 const server = createApp({
   learning,
@@ -62,6 +66,7 @@ const server = createApp({
   watch,
   extras,
   tutorials,
+  admin,
   store,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),
@@ -90,4 +95,5 @@ server.listen(port, host, () => {
   console.log(`  tutorials:   ${tutorials.list('en').totals.topics} topics, ${tutorials.list('en').totals.labs} labs`);
   console.log(`  live search: ${live.enabled ? 'on (approved sites only)' : 'off'}`);
   console.log(`  instructor:  ${env.INSTRUCTOR_KEY ? 'key required' : 'open (set INSTRUCTOR_KEY before sharing)'}`);
+  console.log(`  admin:       ${(env.ADMIN_EMAILS ?? '').split(',').filter((e) => e.trim()).length} email(s) in ADMIN_EMAILS; YouTube import ${env.YOUTUBE_API_KEY ? 'on' : 'off (set YOUTUBE_API_KEY)'}`);
 });

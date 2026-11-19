@@ -4,7 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Store, ReadingEventRow } from '../store/store.ts';
 import { AppError } from './service.ts';
-import { COURSES, getCourse, playlistUrl, type Course } from '../content/courses.ts';
+import { allCourses, getCourse, coursePlaylistUrl, type Course } from '../content/courses.ts';
 import { getPlaylist, getVideo } from '../content/videos.ts';
 import type { Lang } from '../content/pricing-pack.ts';
 import { VideoExtrasService, COURSE_TRY_NOW, LANGUAGES } from './video-extras.ts';
@@ -37,14 +37,29 @@ const hm = (seconds: number) => ({ hours: Math.floor(seconds / 3600), minutes: M
 export class WatchService {
   private readonly store: Store;
   private readonly extras: VideoExtrasService;
+  private canWatch: (learnerId: string, courseId: string) => Promise<boolean> = async () => false;
   constructor(store: Store, extras?: VideoExtrasService) {
     this.store = store;
     this.extras = extras ?? new VideoExtrasService(store);
   }
 
+  /** Who has bought a paid course (set by the admin service). */
+  setAccessCheck(fn: (learnerId: string, courseId: string) => Promise<boolean>) {
+    this.canWatch = fn;
+  }
+
+  /** For a paid course the learner has not bought: true for every video that is not a free sample. */
+  private async lockFor(course: Course, learnerId: string): Promise<(id: string) => boolean> {
+    if (course.access !== 'paid') return () => false;
+    if (await this.canWatch(learnerId, course.id)) return () => false;
+    const samples = new Set(course.sampleIds ?? []);
+    return (id: string) => !samples.has(id);
+  }
+
   async quiz(courseId: string, videoId: string, learnerId: string, answers: unknown) {
     const course = this.courseOr404(courseId);
     if (!courseVideoOrder(course).includes(videoId)) throw new AppError('bad_video', 400, 'This video is not part of the course');
+    if ((await this.lockFor(course, learnerId))(videoId)) throw new AppError('locked', 403, 'Buy the course to open this video.');
     return this.extras.gradeQuiz(course.id, videoId, learnerId, answers);
   }
 
@@ -57,40 +72,48 @@ export class WatchService {
   /** Sections and progress for a course page or the player. */
   async view(courseId: string, learnerId: string, lang: Lang, current?: string | null) {
     const course = this.courseOr404(courseId);
-    const [events, marks] = await Promise.all([this.store.readingEvents(learnerId), this.extras.summary()]);
+    const [events, marks, locked] = await Promise.all([this.store.readingEvents(learnerId), this.extras.summary(), this.lockFor(course, learnerId)]);
     const watched = watchedSet(course.id, events);
     const order = courseVideoOrder(course);
+    const playable = order.filter((id) => !locked(id));
     const shown = new Set<string>();
+    let lockedN = 0;
     const sections = course.playlists.map((p) => {
       const data = getPlaylist(p.id);
       return {
-        playlistId: p.id,
+        playlistId: course.access === 'paid' ? null : p.id,
         title: p.title || data?.title,
-        url: playlistUrl(p.id),
+        url: coursePlaylistUrl(course, p),
         items: (data?.videoIds ?? []).map((id, i) => {
           const v = getVideo(id)!;
           const repeat = shown.has(id);
           shown.add(id);
-          return { id, n: i + 1, title: v.title, duration: v.duration, by: v.by, watched: watched.has(id), repeat, materials: marks.get(id)?.materials ?? 0, quiz: marks.get(id)?.quiz ?? 0 };
+          // A locked video's YouTube id is never sent: it would let anyone watch it on YouTube.
+          if (locked(id)) return { id: `locked-${++lockedN}`, n: i + 1, title: v.title, duration: v.duration, by: v.by, watched: false, repeat, materials: 0, quiz: 0, locked: true, sample: false };
+          return { id, n: i + 1, title: v.title, duration: v.duration, by: v.by, watched: watched.has(id), repeat, materials: marks.get(id)?.materials ?? 0, quiz: marks.get(id)?.quiz ?? 0, locked: false, sample: course.access === 'paid' && (course.sampleIds ?? []).includes(id) };
         }),
       };
     });
     const totalSeconds = order.reduce((n, id) => n + getVideo(id)!.seconds, 0);
-    const watchedSeconds = order.filter((id) => watched.has(id)).reduce((n, id) => n + getVideo(id)!.seconds, 0);
-    const nextUp = order.find((id) => !watched.has(id)) ?? order[0] ?? null;
-    const currentId = current && order.includes(current) ? current : nextUp;
-    const idx = currentId ? order.indexOf(currentId) : -1;
+    const watchedSeconds = playable.filter((id) => watched.has(id)).reduce((n, id) => n + getVideo(id)!.seconds, 0);
+    const nextUp = playable.find((id) => !watched.has(id)) ?? playable[0] ?? null;
+    const currentId = current && playable.includes(current) ? current : nextUp;
+    const idx = currentId ? playable.indexOf(currentId) : -1;
     const cur = currentId ? getVideo(currentId)! : null;
     const extras = cur ? await this.extras.forLearner(course.id, cur.id, learnerId) : null;
+    const owned = course.access === 'paid' ? !locked('\u0000') : true;
     return {
-      course: { id: course.id, title: course.title[lang], code: course.code, hasLessons: course.lessons.length > 0, tryNowDefault: COURSE_TRY_NOW[course.id] ? LANGUAGES[COURSE_TRY_NOW[course.id]!].label : null },
+      course: {
+        id: course.id, title: course.title[lang], code: course.code, hasLessons: course.lessons.length > 0, tryNowDefault: COURSE_TRY_NOW[course.id] ? LANGUAGES[COURSE_TRY_NOW[course.id]!].label : null,
+        access: course.access ?? 'free', price: course.access === 'paid' ? course.price ?? null : null, owned, samples: course.access === 'paid' ? (course.sampleIds ?? []).length : null, locked: lockedN,
+      },
       sections,
       progress: {
         total: order.length,
-        watched: order.filter((id) => watched.has(id)).length,
+        watched: playable.filter((id) => watched.has(id)).length,
         totalTime: hm(totalSeconds),
         watchedTime: hm(watchedSeconds),
-        percent: order.length ? Math.round((order.filter((id) => watched.has(id)).length / order.length) * 100) : 0,
+        percent: order.length ? Math.round((playable.filter((id) => watched.has(id)).length / order.length) * 100) : 0,
         nextUp,
       },
       current: cur
@@ -100,11 +123,11 @@ export class WatchService {
             duration: cur.duration,
             by: cur.by,
             watched: watched.has(cur.id),
-            position: idx + 1,
+            position: order.indexOf(cur.id) + 1,
             embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(cur.id)}?rel=0&modestbranding=1`,
-            youtubeUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(cur.id)}`,
-            prev: idx > 0 ? order[idx - 1]! : null,
-            next: idx >= 0 && idx < order.length - 1 ? order[idx + 1]! : null,
+            youtubeUrl: course.access === 'paid' ? null : `https://www.youtube.com/watch?v=${encodeURIComponent(cur.id)}`,
+            prev: idx > 0 ? playable[idx - 1]! : null,
+            next: idx >= 0 && idx < playable.length - 1 ? playable[idx + 1]! : null,
             extras,
           }
         : null,
@@ -115,6 +138,7 @@ export class WatchService {
     const course = this.courseOr404(courseId);
     const videoId = String(input.videoId ?? '');
     if (!courseVideoOrder(course).includes(videoId)) throw new AppError('bad_video', 400, 'This video is not part of the course');
+    if ((await this.lockFor(course, learnerId))(videoId)) throw new AppError('locked', 403, 'Buy the course to open this video.');
     const watched = input.watched !== false;
     await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: courseKey(course.id), blockId: videoId, type: 'video', payload: { watched }, at: new Date().toISOString() }]);
     const events = await this.store.readingEvents(learnerId);
@@ -131,7 +155,8 @@ export class WatchService {
     const course = getCourse(latest.lessonId.slice('course:'.length));
     if (!course) return null;
     const set = watchedSet(course.id, events);
-    const order = courseVideoOrder(course);
+    const locked = await this.lockFor(course, learnerId);
+    const order = courseVideoOrder(course).filter((id) => !locked(id));
     const next = order.find((id) => !set.has(id));
     if (!next) return null;
     return {
@@ -148,7 +173,7 @@ export class WatchService {
 
   /** Total videos and hours across all courses (for the catalog and landing page). */
   static totals() {
-    const ids = new Set(COURSES.flatMap((c) => courseVideoOrder(c)));
+    const ids = new Set(allCourses().flatMap((c) => courseVideoOrder(c)));
     const seconds = [...ids].reduce((n, id) => n + getVideo(id)!.seconds, 0);
     return { videos: ids.size, hours: Math.round(seconds / 3600) };
   }

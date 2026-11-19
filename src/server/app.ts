@@ -13,6 +13,7 @@ import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
+import type { AdminService } from '../app/admin.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
@@ -40,6 +41,7 @@ export interface AppDeps {
   watch: WatchService;
   extras: VideoExtrasService;
   tutorials: TutorialService;
+  admin?: AdminService;
   store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
@@ -67,8 +69,8 @@ interface Route {
   pattern: RegExp;
   keys: string[];
   handler: Handler;
-  /** editor = instructor, but refused outright when editing is locked (public deploy without a key). */
-  auth: 'learner' | 'instructor' | 'editor' | 'none';
+  /** editor = instructor, but refused outright when editing is locked (public deploy without a key). admin = signed in and an admin. */
+  auth: 'learner' | 'instructor' | 'editor' | 'admin' | 'none';
   maxBody?: number;
 }
 
@@ -109,6 +111,10 @@ function sameSecret(a: string, b: string): boolean {
 export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
+  const adm = () => {
+    if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
+    return d.admin;
+  };
   return [
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
@@ -123,7 +129,11 @@ export function buildRoutes(d: AppDeps): Route[] {
       freeDailyAi: d.config.freeDailyAi ?? 10,
       lessons: LESSONS.map((l) => ({ id: l.id, subject: l.subject, title: l.title, summary: l.summary })),
     }), 'none'),
-    route('GET', '/api/me', ({ learnerId, email, signedIn }) => ({ learnerId, email, signedIn: Boolean(signedIn) || d.auth.mode === 'supabase' })),
+    route('GET', '/api/me', async ({ learnerId, email, signedIn }) => {
+      const isIn = Boolean(signedIn) || d.auth.mode === 'supabase';
+      if (isIn && d.admin) await d.admin.touchMember(learnerId, email);
+      return { learnerId, email, signedIn: isIn, role: isIn && d.admin ? d.admin.roleOf(email) : 'learner' };
+    }),
     route('POST', '/api/auth/claim', async ({ req, learnerId, anonId, signedIn, headers }) => {
       if (!signedIn || !anonId || anonId === learnerId || !d.store) return { moved: 0 };
       const moved = await d.store.claimLearner(anonId, learnerId);
@@ -210,6 +220,61 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/ask/limit', ({ learnerId }) => ({ left: reading.aiCallsLeft(learnerId) })),
     route('POST', '/api/selection-help/feedback', ({ body, learnerId }) => reading.feedback(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), value: String(body.value ?? ''), lang: lang(body.lang) })),
 
+
+    // public: announcement bar, homepage tabs, ads, posts, course-wise labs, coupons
+    route('GET', '/api/site', ({ query }) => adm().publicSite(lang(query.get('lang'))), 'none'),
+    route('GET', '/api/ads', ({ query, signedIn }) => adm().publicAds(String(query.get('page') ?? ''), Boolean(signedIn) || d.auth.mode === 'supabase', lang(query.get('lang')))),
+    route('POST', '/api/ads/:id/event', ({ params, body }) => adm().adEvent(params.id!, body.type), 'none'),
+    route('GET', '/api/posts', ({ query }) => adm().publicPosts(lang(query.get('lang'))), 'none'),
+    route('GET', '/api/posts/:slug', ({ params, query }) => adm().publicPost(params.slug!, lang(query.get('lang'))), 'none'),
+    route('GET', '/api/learn-labs/:track', ({ params, query }) => tutorials.labIndex(params.track!, lang(query.get('lang'))), 'none'),
+    route('POST', '/api/coupons/check', ({ body, email }) => adm().checkCoupon(body.code, String(body.target ?? 'all'), email)),
+
+    // admin site (signed in, and an admin)
+    route('GET', '/api/admin/me', ({ email }) => ({ email, role: adm().roleOf(email), config: adm().config() }), 'admin'),
+    route('GET', '/api/admin/overview', () => adm().overview(), 'admin'),
+    route('GET', '/api/admin/tutorials', () => adm().tutorialsAdmin(), 'admin'),
+    route('POST', '/api/admin/tracks/:id/visibility', ({ params, body, email }) => adm().setBuiltInHidden(email!, 'track', params.id!, body.hidden === true), 'admin'),
+    route('POST', '/api/admin/custom-tracks', ({ body, email }) => adm().saveTrack(email!, body), 'admin'),
+    route('POST', '/api/admin/custom-tracks/:id', ({ params, body, email }) => adm().saveTrack(email!, body, params.id!), 'admin'),
+    route('GET', '/api/admin/topics/:id', ({ params }) => adm().getTopic(params.id!), 'admin'),
+    route('POST', '/api/admin/topics', ({ body, email }) => adm().saveTopic(email!, body), 'admin', 512 * 1024),
+    route('POST', '/api/admin/topics/:id', ({ params, body, email }) => adm().saveTopic(email!, body, params.id!), 'admin', 512 * 1024),
+    route('DELETE', '/api/admin/topics/:id', ({ params, email }) => adm().deleteTopic(email!, params.id!), 'admin'),
+    route('GET', '/api/admin/courses', () => adm().adminCourses(), 'admin'),
+    route('POST', '/api/admin/youtube/playlist', ({ body }) => adm().importPlaylist(body.url), 'admin'),
+    route('GET', '/api/admin/courses/:id', ({ params }) => adm().getCourse(params.id!), 'admin'),
+    route('POST', '/api/admin/courses', ({ body, email }) => adm().saveCourse(email!, body), 'admin', 256 * 1024),
+    route('POST', '/api/admin/courses/:id', ({ params, body, email }) => adm().saveCourse(email!, body, params.id!), 'admin', 256 * 1024),
+    route('DELETE', '/api/admin/courses/:id', ({ params, email }) => adm().deleteCourse(email!, params.id!), 'admin'),
+    route('POST', '/api/admin/courses/:id/sync', ({ params, email }) => adm().syncCourse(email!, params.id!), 'admin'),
+    route('POST', '/api/admin/builtin-courses/:id/visibility', ({ params, body, email }) => adm().setBuiltInHidden(email!, 'course', params.id!, body.hidden === true), 'admin'),
+    route('GET', '/api/admin/courses/:id/access', ({ params }) => adm().courseGrants(params.id!), 'admin'),
+    route('POST', '/api/admin/courses/:id/access', ({ params, body, email }) => adm().grantAccess(email!, params.id!, body.email), 'admin'),
+    route('DELETE', '/api/admin/courses/:id/access/:learner', ({ params, email }) => adm().revokeAccess(email!, params.id!, params.learner!), 'admin'),
+    route('GET', '/api/admin/posts', () => ({ posts: adm().posts() }), 'admin'),
+    route('GET', '/api/admin/posts/:id', ({ params }) => adm().getPost(params.id!), 'admin'),
+    route('POST', '/api/admin/posts', ({ body, email }) => adm().savePost(email!, body), 'admin', 512 * 1024),
+    route('POST', '/api/admin/posts/:id', ({ params, body, email }) => adm().savePost(email!, body, params.id!), 'admin', 512 * 1024),
+    route('DELETE', '/api/admin/posts/:id', ({ params, email }) => adm().deletePost(email!, params.id!), 'admin'),
+    route('GET', '/api/admin/ads', () => ({ ads: adm().ads() }), 'admin'),
+    route('POST', '/api/admin/ads', ({ body, email }) => adm().saveAd(email!, body), 'admin'),
+    route('POST', '/api/admin/ads/:id', ({ params, body, email }) => adm().saveAd(email!, body, params.id!), 'admin'),
+    route('DELETE', '/api/admin/ads/:id', ({ params, email }) => adm().deleteAd(email!, params.id!), 'admin'),
+    route('GET', '/api/admin/coupons', () => ({ coupons: adm().coupons() }), 'admin'),
+    route('POST', '/api/admin/coupons', ({ body, email }) => adm().saveCoupon(email!, body), 'admin'),
+    route('POST', '/api/admin/coupons/:code', ({ params, body, email }) => adm().saveCoupon(email!, body, params.code!), 'admin'),
+    route('DELETE', '/api/admin/coupons/:code', ({ params, email }) => adm().deleteCoupon(email!, params.code!), 'admin'),
+    route('GET', '/api/admin/announcement', () => adm().announcementAdmin(), 'admin'),
+    route('POST', '/api/admin/announcement', ({ body, email }) => adm().saveAnnouncement(email!, body), 'admin'),
+    route('POST', '/api/admin/hub-tabs', ({ body, email }) => adm().saveHubTabs(email!, body.tabs), 'admin'),
+    route('GET', '/api/admin/users', () => adm().users(), 'admin'),
+    route('POST', '/api/admin/roles', ({ body, email }) => adm().setRole(email!, body.email, body.role), 'admin'),
+    route('GET', '/api/admin/waitlist', async () => ({ waitlist: await adm().waitlist(), count: await d.store!.waitlistCount() }), 'admin'),
+    route('POST', '/api/admin/waitlist/export', async ({ email }) => ({ csv: await adm().waitlistCsv(email!) }), 'admin'),
+    route('GET', '/api/admin/ai', () => adm().ai(), 'admin'),
+    route('GET', '/api/admin/audit', () => adm().auditLog(), 'admin'),
+
     // instructor
     route('GET', '/api/instructor/overview', () => instructor.overview(), 'instructor'),
     route('POST', '/api/instructor/seed-demo', async () => {
@@ -267,13 +332,18 @@ export function createApp(d: AppDeps) {
       let email: string | null = null;
       let anonId: string | undefined;
       let signedIn: boolean | undefined;
-      if (match.r.auth === 'learner') {
+      if (match.r.auth === 'learner' || match.r.auth === 'admin') {
         const id = await d.auth.identify(req);
         learnerId = id.learnerId;
         email = id.email;
         anonId = id.anonId;
         signedIn = id.signedIn;
         if (id.setCookie) headers['set-cookie'] = id.setCookie;
+        if (match.r.auth === 'admin') {
+          const isIn = Boolean(id.signedIn) || d.auth.mode === 'supabase';
+          if (!isIn || !id.email) throw new AuthError('Sign in with your admin account.');
+          if (!d.admin?.isAdmin(id.email)) throw new AppError('forbidden', 403, 'This account is not an admin. Ask an admin to give you the role.');
+        }
       } else if (match.r.auth === 'editor' && !d.config.instructorKey && d.config.editLocked) {
         throw new AppError('edit_locked', 403, 'Editing is turned off until an instructor key (INSTRUCTOR_KEY) is set on the server.');
       } else if ((match.r.auth === 'instructor' || match.r.auth === 'editor') && d.config.instructorKey) {

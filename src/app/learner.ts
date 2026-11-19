@@ -15,7 +15,7 @@ import { getLab } from '../content/labs.ts';
 import { labProgress } from './labs.ts';
 import { WatchService, courseVideoOrder } from './watch.ts';
 import { getVideo } from '../content/videos.ts';
-import { CHANNEL, COURSES, SUBJECTS, getCourse, courseForLesson, playlistUrl, type Course } from '../content/courses.ts';
+import { CHANNEL, allCourses, SUBJECTS, getCourse, courseForLesson, coursePlaylistUrl, type Course } from '../content/courses.ts';
 
 const DIAGNOSIS_NAMES: Record<string, Bi> = {
   ai_over_reliance: { en: 'Followed the AI without checking', bn: 'যাচাই না করে এআই-এর কথা মেনেছ' },
@@ -69,11 +69,15 @@ export class LearnerService {
       practice: c.practice,
       lessonIds: c.lessons,
       adaptive: c.lessons.length > 0,
+      access: c.access ?? 'free',
+      price: c.access === 'paid' ? c.price ?? null : null,
+      samples: c.access === 'paid' ? (c.sampleIds ?? []).length : null,
+      tint: c.tint ?? null,
     };
   }
 
   catalog(lang: Lang) {
-    const courses = COURSES.map((c) => this.courseCard(c, lang));
+    const courses = allCourses().map((c) => this.courseCard(c, lang));
     return {
       channel: CHANNEL,
       totals: WatchService.totals(),
@@ -88,7 +92,7 @@ export class LearnerService {
     const progress = await this.lessonProgress(learnerId);
     return {
       ...this.courseCard(c, lang),
-      playlists: c.playlists.map((p) => ({ ...p, url: playlistUrl(p.id) })),
+      playlists: c.access === 'paid' ? [] : c.playlists.map((p) => ({ id: p.youtubeId ?? p.id, title: p.title, videos: p.videos, url: coursePlaylistUrl(c, p) })),
       lessonList: c.lessons.map((lid) => {
         const l = getLesson(lid)!;
         const lab = getLab(l.id);

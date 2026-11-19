@@ -4,7 +4,7 @@
 
 import type { EvidenceEvent } from '../core/evidence.ts';
 import type { SessionRecord, TraceRecord } from '../app/types.ts';
-import { type LlmCallRow, type ReadingEventRow, type Store, StaleStateError } from './store.ts';
+import { type AuditRow, type DocRow, type LlmCallRow, type ReadingEventRow, type Store, type WaitlistRow, StaleStateError } from './store.ts';
 
 export type HttpFetch = (url: string, init: { method: string; headers: Record<string, string>; body?: string }) => Promise<{
   ok: boolean;
@@ -176,4 +176,32 @@ export class SupabaseStore implements Store {
     return rows.length;
   }
 
+  async listWaitlist(limit = 500): Promise<WaitlistRow[]> {
+    const rows = await this.rest<{ email: string; plan: string; lang: string; learner_id: string | null; created_at: string }[]>('GET', `ll_waitlist?select=*&order=created_at.desc&limit=${Math.max(1, Math.min(5000, limit))}`);
+    return rows.map((r) => ({ email: r.email, plan: r.plan, lang: r.lang, learnerId: r.learner_id, createdAt: r.created_at }));
+  }
+
+  // ── admin documents (db/migrations/004_admin.sql) ──
+  async listDocs(kind: string): Promise<DocRow[]> {
+    const rows = await this.rest<{ kind: string; id: string; data: Record<string, any>; updated_at: string }[]>('GET', `ll_docs?kind=eq.${this.q(kind)}&select=*&order=updated_at.desc&limit=10000`);
+    return rows.map((r) => ({ kind: r.kind, id: r.id, data: r.data, updatedAt: r.updated_at }));
+  }
+  async getDoc(kind: string, id: string): Promise<DocRow | undefined> {
+    const rows = await this.rest<{ kind: string; id: string; data: Record<string, any>; updated_at: string }[]>('GET', `ll_docs?kind=eq.${this.q(kind)}&id=eq.${this.q(id)}&select=*`);
+    const r = rows[0];
+    return r ? { kind: r.kind, id: r.id, data: r.data, updatedAt: r.updated_at } : undefined;
+  }
+  async putDoc(row: DocRow) {
+    await this.rest('POST', 'll_docs?on_conflict=kind,id', { kind: row.kind, id: row.id, data: row.data, updated_at: row.updatedAt }, 'resolution=merge-duplicates,return=minimal');
+  }
+  async deleteDoc(kind: string, id: string) {
+    await this.rest('DELETE', `ll_docs?kind=eq.${this.q(kind)}&id=eq.${this.q(id)}`, undefined, 'return=minimal');
+  }
+  async addAudit(row: AuditRow) {
+    await this.rest('POST', 'll_audit', { at: row.at, actor: row.actor, action: row.action, target: row.target, detail: row.detail }, 'return=minimal');
+  }
+  async listAudit(limit = 200): Promise<AuditRow[]> {
+    const rows = await this.rest<AuditRow[]>('GET', `ll_audit?select=at,actor,action,target,detail&order=at.desc&limit=${Math.max(1, Math.min(2000, limit))}`);
+    return rows;
+  }
 }

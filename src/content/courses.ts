@@ -27,7 +27,7 @@ export const SUBJECTS: Record<CourseSubject, Bi> = {
   science: { en: 'General science', bn: 'সাধারণ বিজ্ঞান' },
 };
 
-export interface Playlist { id: string; title: string; videos: number }
+export interface Playlist { id: string; title: string; videos: number; /** the real YouTube playlist, when id is an internal one */ youtubeId?: string }
 
 export interface Course {
   id: string;
@@ -38,6 +38,14 @@ export interface Course {
   playlists: Playlist[];
   lessons: string[]; // adaptive lesson ids
   practice: boolean; // has the "judge the AI coworker" practice
+  /** Courses added from the admin site. Built-in courses leave these out (free). */
+  access?: 'free' | 'paid';
+  /** Display price, e.g. "৳ 499" (paid courses). */
+  price?: string | null;
+  /** Videos anyone can watch in a paid course. */
+  sampleIds?: string[];
+  tint?: string | null;
+  dynamic?: boolean;
 }
 
 const pl = (id: string, title: string, videos: number): Playlist => ({ id, title, videos });
@@ -207,6 +215,18 @@ for (const course of COURSES) {
   }
 }
 
-export const getCourse = (id: string) => COURSES.find((c) => c.id === id);
+// Courses added from the admin site, and built-in courses an admin has hidden.
+let EXTRA_COURSES: Course[] = [];
+let HIDDEN_COURSES = new Set<string>();
+export function setExtraCourses(courses: Course[], hidden: string[] = []) {
+  EXTRA_COURSES = courses;
+  HIDDEN_COURSES = new Set(hidden);
+}
+/** Every visible course: built-in ones first, then admin-added ones. */
+export const allCourses = (): Course[] => [...COURSES, ...EXTRA_COURSES].filter((c) => !HIDDEN_COURSES.has(c.id));
+export const isBuiltInCourse = (id: string) => COURSES.some((c) => c.id === id);
+export const getCourse = (id: string) => allCourses().find((c) => c.id === id);
 export const courseForLesson = (lessonId: string) => COURSES.find((c) => c.lessons.includes(lessonId));
 export const playlistUrl = (id: string) => `https://www.youtube.com/playlist?list=${encodeURIComponent(id)}`;
+/** YouTube link for one of a course's playlists, or null when it has none (paid courses). */
+export const coursePlaylistUrl = (c: Course, p: Playlist) => (c.access === 'paid' ? null : playlistUrl(p.youtubeId ?? p.id));
