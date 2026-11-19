@@ -64,7 +64,7 @@ test('notes use the generic Supabase docs contract', async () => {
     const u = new URL(String(url)); const id = u.searchParams.get('id')?.slice(3);
     if (init.method === 'POST') { const row = JSON.parse(init.body); rows.set(row.id, row); return new Response(null, { status: 201 }); }
     if (init.method === 'DELETE') { rows.delete(id!); return new Response(null, { status: 204 }); }
-    return Response.json(id ? (rows.has(id) ? [rows.get(id)] : []) : [...rows.values()]);
+    return Response.json(id ? (rows.has(id) ? [rows.get(id)] : []) : [...rows.values()].slice(Number(u.searchParams.get('offset') ?? 0)));
   };
   const store = new SupabaseStore('https://test.invalid', 'test', fakeFetch as any);
   const tutorials = new TutorialService(store, join(root, 'content-kit'));
