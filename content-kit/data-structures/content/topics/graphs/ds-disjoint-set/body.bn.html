@@ -1,0 +1,71 @@
+<h2 id="introduction">সব route না রেখেও দল চেনো</h2>
+<p class="lead">শিক্ষার্থীর club আলাদা শুরু, যৌথ team হলে মিশে যায় ধরো। বারবার জানতে চাও দুই শিক্ষার্থী এখন একই দলে কি না। আগের meeting-এর ক্রম লাগবে না। <dfn>Disjoint-set</dfn> partition রাখে: প্রতিটি item ঠিক এক set-এ, set-গুলো overlap করে না।</p>
+<p>Union-find নামেই দুই মূল কাজ। Find item-এর বর্তমান set-এর representative দেয়। Union জোড়ার item-ধারী দুই set মেলায়। Make-set item-কে একা শুরু করে। Undirected edge যোগ হতে থাকলে connectivity-তে বিশেষ কাজে লাগে।</p>
+<p>Representative implementation-এর পছন্দ, সবচেয়ে ছোট item হতেই হবে না। Size সমান হলে আমাদের tie rule প্রথম root রাখে। Edge order বদলালে connected vertex না বদলিয়েও representative আর parent-array shape বদলাতে পারে। আলাদা tie policy যাচাইয়ে raw root ID নয়, partition তুলনা করো।</p>
+<h2 id="syntax">নিজেই parent এমন root আর root size</h2>
+<p>Parent array rooted tree-র forest। শুরুতে parent[i]=i, সবাই নিজের root। Size এক দিয়ে শুরু। Merge-এর পরে শুধু root-এর size অর্থপূর্ণ; nonroot-এ পুরোনো size থাকলেও component-size query-তে ব্যবহার কোরো না।</p>
+<p>Find self-parent index পর্যন্ত link ধরে। Iterative implementation দুই pass: আগে root খোঁজে, তারপর আগের path আবার হেঁটে প্রতিটি visited parent root করে। Overwrite-এর আগে next parent রাখে, তাই পথের বাকি অংশ হারায় না।</p>
+<p>Union আগে দুই root খোঁজে। মিললে শূন্য, component count অপরিবর্তিত। না মিললে size তুলনা করে দরকারে root variable swap, ছোট root বড়টির নিচে জোড়ে, surviving root-এ size যোগ করে। সফল merge এক ফেরায়, caller component count থেকে তা বিয়োগ করে।</p>
+<pre><code class="language-text">make-set: parent[i] = i; size[i] = 1
+find: follow parent links to a self-parent root
+compress each visited parent to that root
+union: if roots match, do nothing
+otherwise attach smaller root below larger; ties keep first
+increase the surviving root size; decrement components
+find query and report its root, size and component count</code></pre>
+<p>Lab array parent value দেখায়, ওপরে current root-search pointer। পাশের list-এ stale nonroot-সহ size। Size পড়ার আগে root index নাও। শেষ variables panel queried root, তার বৈধ size আর component count দেয়।</p>
+<h2 id="how-it-works">খাটো forest বানিয়ে path compress</h2>
+<p>চার singleton দিয়ে শুরু। Union(0,1)-এ zero থাকে, one zero দেখায়। Union(2,3)-এ two থাকে, three two দেখায়। দুই root-এর size দুই। Union(0,2)-এ equal-size tie rule zero রেখে parent[2]=0 করে।</p>
+<pre class="diagram">দুই equal-size merge-এর পরে:
+root 0(size 2)       root 2(size 2)
+       ^                   ^
+       1                   3
+Union(0,2)-এর পরে:       Find(3)-এর পরে:
+       0(size 4)               0(size 4)
+      / \                     / | \
+     1   2                   1  2  3
+         |
+         3
+parents [0,0,0,2]       parents [0,0,0,0]</pre>
+<p>Find(3) root পেতে 3,2,0 ধরে। Compression parent[3] দুই থেকে শূন্য করে। parent[2]=0 আবার লিখতে পারে, ক্ষতি নেই। Find set মেলায় না, তাই size আর component count বদলায় না। Parent link implementation shortcut, নতুন graph edge নয়।</p>
+<p>Union by size ভুল attachment-এ লম্বা chain ঠেকায়। Root অন্যত্র জুড়ে vertex-এর depth বাড়লে নতুন component-এ অন্তত দ্বিগুণ member থাকে। Component সর্বোচ্চ floor(log2 n) বার দ্বিগুণ হয়। তাই শুধু size balancing-এই height O(log n)।</p>
+<div data-lab="union-find"></div>
+<p>Balanced-merge preset শেষ query-র আগে একাধিক link-এর পথ বানায়। Query ছয়, তারপর তিন চেষ্টা করো। একই partition-এ আলাদা path compress করে। No-edge preset সাত singleton parent রাখে। Dense preset-এ অনেক union attempt পায় endpoint আগে থেকেই connected।</p>
+<h2 id="examples">Merge আর শুধু compression তুলনা</h2>
+<h3>Union by size দিয়ে graph edge মেলাও</h3>
+<p>ছয় connected vertex-এর root শূন্য। Isolated vertex singleton, তাই দুই component।</p>
+<div data-example="ex-1"></div>
+<h3>গভীর forest বানায় এমন pair union</h3>
+<p>সমান size-এ প্রথম root থাকে। Compression-এর আগে তিন খুঁজতে দুই link লাগে; পরের union চারকেও একই দলে আনে।</p>
+<div data-example="ex-2"></div>
+<h3>আগে বানানো parent chain সমান করো</h3>
+<p>Prepared chain শুধু compression দেখায়। চার থেকে পথের সব vertex এখন সরাসরি zero দেখায়।</p>
+<div data-example="ex-3"></div>
+<h3>Balanced merge-এর পরে path compress</h3>
+<p>ছয় চার ধরে শূন্যে গিয়ে সরাসরি zero-র child হয়। তিন আর পাঁচের unqueried দুই-link পথ থাকে, পুরো set flatten হয়নি।</p>
+<div data-example="ex-4"></div>
+<h2 id="comparison">Selector আর edge order বোঝো</h2>
+<p>প্রথম উদাহরণ আর lab-এ সাত vertex। Selector শূন্যে diamond pair-এর ক্রম (0,1),(0,2),(1,3),(1,4),(2,4),(3,5),(4,5)। একে path pair (0,1) থেকে (5,6)। দুইয়ে pair নেই। তিনে সব u&lt;v pair lexicographic order-এ।</p>
+<p>Selector চারে ইচ্ছা করে balanced ক্রম: (0,1),(2,3),(0,2),(4,5),(4,6),(0,4)। তারপর ছয় query করলে চার দিয়ে শূন্যের পথ compress হয়। তিন এখনও দুই দিয়ে, পাঁচ চার দিয়ে যেতে পারে, কারণ শেষ find ওদের দেখেনি। Compression visited path-এ, বিশ্বজুড়ে সব vertex-এ নয়।</p>
+<p>দ্বিতীয় উদাহরণ সর্বোচ্চ বারো vertex আর বিশ custom pair নেয়। Repeated edge আর self-pair চলে: representative সমান বলে merge নেই। সব union-এর পরে প্রতি vertex-এর find result প্রিন্ট করায় insertion-এর বাইরেও আরও path compress হতে পারে।</p>
+<p>তৃতীয়টি compression আলাদা দেখাতে prepared long chain দিয়ে শুরু। Forest হিসেবে বৈধ, কিন্তু size-balanced union থেকে হয়েছে বলা হয়নি। গভীর শুরুতে find-এর correctness দেখায়। Flatten-এর পরেও প্রতিটি index-এর node একই set-এ থাকে।</p>
+<p>Representative ID বা exact parent shape graph path-এর উত্তর নয়। Original edge না থাকলেও union-find zero আর four সরাসরি জুড়তে পারে। আসল route চাইলে adjacency list রেখে <a href="topic:ds-graph-bfs">parent-সহ BFS</a> নাও। Union-find membership রাখে, edge history উদ্ধার নয়।</p>
+<h2 id="edge-cases">খরচের model স্পষ্ট বলো</h2>
+<p>n item-এর make-set n parent আর size entry initialize করে O(n) সময়, O(n) storage। Root check সঙ্গে সঙ্গে শেষ হতে পারে। গভীর find path ধরে compress করে, এই iterative version-এ extra local variable O(1)। Recursive হলে পথজুড়ে stack frame-ও লাগত।</p>
+<p>Union by size বা rank-এর সঙ্গে compression মিলে sequence-এ প্রতি operation O(alpha(n)) amortized, alpha inverse Ackermann function। বাস্তব input size-এ অত্যন্ত ধীরে বাড়ে। এটি sequence bound, প্রতিটি আলাদা find শুধু এক parent access করবে এমন নিশ্চয়তা নয়।</p>
+<p>Compression ছাড়া size balancing-এ worst-case find O(log n)। Balancing ছাড়া যেকোনো root attachment chain বানিয়ে এক find O(n) করতে পারে। Compression পরের query সহজ করে, ছোটকে বড়র নিচে জোড়া query-র আগেই structure bound দেয়।</p>
+<p>Union by rank exact member count-এর বদলে height-bound estimate। Rank শূন্যে শুরু, কম rank বেশি rank-এর নিচে; সমান rank merge হলেই surviving rank বাড়ে। Compression-এর পরে rank বর্তমান height নয়, তবু future union-এ কাজে লাগে। Flattened ছবি দেখে rank কমিও না।</p>
+<p>Empty disjoint-set-এ বৈধ find নেই। দ্বিতীয় উদাহরণ zero vertex শুধু কোনো pair item reference না করলে নেয়। Singleton নিজের ID আর size এক দেয়। Index-এর আগে invalid endpoint reject। Repeated union size দ্বিগুণ করে না, component count শূন্যের নিচে নামে না।</p>
+<p>Incremental undirected connectivity-তে প্রতি আসা edge-এর endpoint union করো। Successful merge count হলো n বিয়োগ final component count। আগে connected endpoint-এর edge connectivity-তে redundant। Simple undirected graph-এ আগের edge-এর তুলনায় cycle বন্ধ করে। সাধারণ union-find deletion undo পারে না; edge সরাতে rebuild বা উন্নত dynamic-connectivity পদ্ধতি লাগে।</p>
+<h2 id="common-mistakes">যেকোনো record নয়, representative মেলাও</h2>
+<h3>Root না খুঁজে parent[v]=u</h3>
+<p>Set-এর অংশ আলাদা বা parent link-এ cycle হতে পারে। দুই representative খুঁজে এক root অন্যটিতে জুড়ো।</p>
+<h3>Root সমান হলেও size যোগ</h3>
+<p>নতুন member আসেনি। আগের edge আবার হলেও size আর component না বদলে ফেরো।</p>
+<h3>Queried vertex-এর size পড়া</h3>
+<p>Nonroot-এ পুরোনো মান থাকে। root=find(vertex) করে size[root] পড়ো।</p>
+<p>Charging argument দিয়েও size balancing বোঝা যায়। Vertex-এর পুরো component merge-এর ছোট পাশ হলেই depth increase তার নামে ধরো। তখন তার দল অন্তত দ্বিগুণ। k বার হলে অন্তত 2-এর k ঘাত member, তাই k, log2 n ছাড়ায় না। Random edge বা average order ধরে না।</p><p>Compression আলাদা: এখন path-এ খরচ করে পরে repeated কাজ কমায়। Root খোঁজা অন্য branch সব flatten করে না। তাই এক component-এ সরাসরি root child আর গভীর path মিশে থাকে। Balanced preset শেষে এমন unqueried path ইচ্ছা করে দেখায়।</p><p>u আর v connected জানতে immediate parent নয়, find(u) আর find(v) তুলনা। আলাদা parent-ও একই representative-এ যায়। Representative আলাদা হলে union মেলায়, সমান হলে merge লাগে না। এই পার্থক্যেই repeated edge component count নষ্ট করে না।</p><p>Fixed lab-এ সাত item, তাই দুই array-তে সাত cell। ছোট demonstration size সাধারণ O(n) initialization আর storage বদলায় না। Complexity-তে n-কে item count বলো, ছোট classroom bound-কে algorithmic constant নয়।</p>
+<h2 id="version-notes">C17 iterative compression</h2>
+<div class="callout version"><p>Find loop আর local int variable-এ compression করে, recursive stack লাগে না। উদাহরণে parent আর size fixed bound-এর; বড় implementation-এ প্রতি access-এর আগে endpoint আর capacity যাচাই করো।</p></div>
+<h2 id="summary">খাটো link বারবার membership সস্তা করে</h2>
+<p>Union-find representative root দিয়ে partition রাখে। Size balancing depth কমায়, compression membership না বদলে পথ ছোট করে। Traversal tree আর অন্য structure-এর সঙ্গে নিশ্চয়তা তুলতে <a href="topic:ds-exam-questions">exam question</a> দেখো।</p>

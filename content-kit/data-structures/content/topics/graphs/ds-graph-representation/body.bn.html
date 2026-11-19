@@ -1,0 +1,56 @@
+<h2 id="introduction">এক network আলাদা গঠনে রাখো</h2>
+<p class="lead">মানচিত্র C প্রোগ্রামকে বলে না সংযোগ মেমরিতে কোথায়। Record আর indexing rule বেছে নিতে হবে। প্রচলিত তিনটি হলো adjacency matrix, adjacency list আর edge list। একই graph দেখালেও আলাদা কাজ সস্তা করে।</p>
+<p>বারবার ভবন দুই আর সাত সরাসরি যুক্ত কি না জানতে table cell দ্রুত উত্তর দেয়। Sparse campus map-এ ভবনের সব neighbor চাইলে ছোট list শত শত ফাঁকা cell scan বাঁচায়। তাই representation অ্যালগরিদমের খরচের অংশ, শুধু format পছন্দ নয়।</p>
+<p>Vertex ID শূন্য থেকে n-1, input simple undirected। প্রতি pair input-এ একবার, neighbor storage-এ দুইবার। Loop, repeated pair আর range-এর বাইরের ID reject হয়। এতে layout-গুলো তুলনা করা যায়।</p>
+<h2 id="syntax">Matrix pair-এর, list সংযোগের জায়গা রাখে</h2>
+<p><dfn>Adjacency matrix</dfn>-এ প্রতি ordered vertex pair-এর cell। Unweighted graph-এ a[u][v]=1 edge, শূন্য মানে নেই। Undirected graph a[u][v] আর a[v][u] দুটো লেখে। Directed graph শুধু ওই arc লেখে, reverse arc থাকলে সেটিও।</p>
+<p><dfn>Adjacency list</dfn> প্রতি vertex-এ নিজস্ব neighbor sequence দেয়। Linked record-এ destination ID আর next pointer। Array-backed রূপে active neighbor ID পাশাপাশি, count বা offset pair দিয়ে vertex-এর range। দুটোই traversal-এ absent edge scan এড়ায়।</p>
+<p><dfn>Edge list</dfn>-এ {from,to,weight}-এর মতো record। Undirected edge সাধারণত এক record; directed record-এ দিক আছে। সব edge নিয়ে কাজ, যেমন spanning-tree algorithm-এর edge sort-এ সুবিধা। আলাদা index না থাকলে এক vertex-এর neighbor পেতে scan লাগে।</p>
+<p>Weight-এর presence শূন্য থেকে আলাদা রাখো। বিনা খরচের সংযোগে weight শূন্য। Matrix-এ আলাদা boolean presence বা স্পষ্ট optional-value representation চলবে। বড় infinity marker নিলেও পরে path cost যোগে overflow নিয়ে ভাবতে হবে।</p>
+<h2 id="how-it-works">Undirected pair একভাবে allocate করো</h2>
+<p>0-1,0-2,2-3 edge-এ matrix row source থেকে destination বলে। Linked রূপ সামনে insert করে, তাই প্রতি vertex-এ input আগমনের উল্টো ক্রম প্রিন্ট হয়। Array রূপ matrix ascending scan করে sorted neighbor ID দেয়। List order আলাদা হলেও graph এক।</p>
+<pre class="diagram">Edge 0-2-এর আগে:
+head[0] -&gt; [to:1|NULL]     head[2] -&gt; NULL
+Edge 0-2-এর পরে, সামনে insert:
+head[0] -&gt; [to:2|next] -&gt; [to:1|NULL]
+head[2] -&gt; [to:0|NULL]
+Matrix বদল: a[0][2] = 1 আর a[2][0] = 1
+Edge list-এ এক নতুন record: [from:0 | to:2]</pre>
+<p>Linked undirected insertion-এ দুই allocation। connect helper কোনো header বদলানোর আগে দুটো record নেয়। যেকোনোটি ব্যর্থ হলে পাওয়া record free করে failure ফেরায়। দ্বিতীয় allocation-এর আগে প্রথম record প্রকাশ করলে সাময়িকভাবে undirected graph-এ একমুখী সংযোগ দেখা যেত।</p>
+<p>Caller প্রতিটি list header আর পৌঁছানো neighbor record-এর মালিক। Release list ধরে next রেখে current free করে। এক undirected সংযোগে দুই record হলেও প্রতিটি allocation এক endpoint list-এর, তাই একবার free। দুই আলাদা next chain-এ এক singly linked record ভাগ কোরো না।</p>
+<p>তৃতীয় উদাহরণ তৈরি সহজ করতে সীমিত rectangular neighbor array রাখে। Traversal-এ প্রতি row-তে শুধু count[u] active entry। তবু reserved C array-র capacity O(V squared)। মোট 2E active neighbor আর V+1 offset-এর compact implementation-এ প্রচলিত O(V+E) storage মেলে।</p>
+<h2 id="examples">তিন view-ই বানাও</h2>
+<h3>Symmetric adjacency matrix বানাও</h3>
+<p>প্রতি undirected pair দুই cell লেখে। Input loop reject করায় diagonal শূন্য থাকে।</p>
+<div data-example="ex-1"></div>
+<h3>Edge প্রকাশের আগে দুই neighbor record allocate</h3>
+<p>Front insertion-এ neighbor input-এর উল্টো ক্রমে আসে। কোনো header বদলানোর আগে দুই allocation সফল হয়।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted array-backed neighbor list</h3>
+<p>Vertex-এর বাড়তে থাকা ক্রমে matrix scan sorted list দেয়। এই bounded rectangular array compact list-এর চেয়ে বেশি জায়গা রাখে।</p>
+<div data-example="ex-3"></div>
+<h3>Edge list-এ zero-weight edge রাখো</h3>
+<p>সরাসরি edge record শূন্য weight আর no edge আলাদা করে। Weighted matrix-এও presence flag দিয়ে পার্থক্য চাই।</p>
+<div data-example="ex-4"></div>
+<h2 id="comparison">Storage অনুযায়ী খরচের table বেছে নাও</h2>
+<table class="ref"><thead><tr><th scope="col">কাজ</th><th scope="col">Matrix</th><th scope="col">Unsorted adjacency list</th><th scope="col">Edge list</th></tr></thead><tbody><tr><td>রাখার জায়গা</td><td>O(V squared)</td><td>O(V+E)</td><td>O(V+E), vertex-সহ</td></tr><tr><td>Edge u-v দেখা</td><td>O(1)</td><td>O(degree(u))</td><td>O(E)</td></tr><tr><td>u-এর neighbor দেওয়া</td><td>O(V)</td><td>O(degree(u))</td><td>O(E)</td></tr><tr><td>সব সংযোগ scan</td><td>O(V squared)</td><td>O(V+E)</td><td>O(E)</td></tr></tbody></table>
+<p>Endpoint record জানা আর allocation সফল হলে linked edge append বা front attachment constant time হতে পারে। আগে unique edge নিশ্চিত করতে neighbor search লাগতে পারে। Unsorted linked list থেকে undirected pair সরাতে দুই incoming link খুঁজে দুই record ছাড়তে হয়। Matrix দুই জানা cell O(1)-এ মুছে।</p>
+<p>Sorted neighbor array-তে binary-search adjacency test চলে, কিন্তু মাঝখানে insert-এ পরের entry সরবে। Dynamic per-vertex array-তে amortized append; compact offset layout-এ নতুন edge-তে segment size বদলালে বড় rebuild লাগতে পারে। এসব বিশেষ workload ভালো করে, basic table-এর সব খরচ নিজে বদলে দেয় না।</p>
+<p>Dense graph-এ E, V squared-এর সমানুপাতে, matrix storage যুক্তিসংগত হতে পারে। Sparse graph-এ E অনেক ছোট, compact list ভালো। Edge list input/output আর সব edge-এর কাজে উপযোগী, তবে বারবার neighbor query-তে আগে adjacency index বানানো ভালো।</p>
+<h2 id="edge-cases">ফাঁকা row আর isolated vertex রাখো</h2>
+<p>Edge না থাকলে matrix শূন্য, linked header NULL, edge list-এ সংযোগ record নেই। তবু vertex count জরুরি। আট isolated vertex আর zero-vertex graph-এর edge list দুটোই ফাঁকা হলেও graph আলাদা।</p>
+<p>এক-vertex simple graph-এ neighbor list ফাঁকা, diagonal শূন্য। Complete n-vertex graph-এ প্রত্যেকের n-1 neighbor। উদাহরণে সর্বোচ্চ আট vertex, n*(n-1)/2 distinct undirected pair হতে পারে। Input limit আর duplicate check fixed array বাঁচায়।</p>
+<p>Linked উদাহরণ duplicate pair ঠেকাতে ছোট seen matrix-ও নেয়। শুধু linked representation O(V+E) হলেও validation aid O(V squared) cell রাখে। বড় sparse প্রোগ্রামে matrix বাদ দিলে uniqueness-এর জন্য neighbor search বা উপযুক্ত set নাও।</p>
+<p>Array-conversion উদাহরণ matrix দিয়ে বানায়, সময় O(V squared)। সরাসরি compact build-এ endpoint degree গুনে offset prefix-sum করে neighbor segment ভরলে O(V+E)। Traversal order লাগলে পরে segment আলাদা sort করে খরচ ধরো।</p>
+<h2 id="common-mistakes">যেকোনো cell value থেকে adjacency ধরো না</h2>
+<h3>Weight শূন্যকে absent ভাবা</h3>
+<p>বিনা খরচের edge-ও edge। Presence flag বা explicit record রাখো, model অস্পষ্ট হবে না।</p>
+<h3>Rectangular array-তে compact-list space দাবি</h3>
+<p>Active count কাজ সীমিত করে, reserved cell ছাড়ে না। মেমরির হিসাবে আসল allocated capacity ধরো।</p>
+<h3>উল্টো undirected record ভুলে যাওয়া</h3>
+<p>তাহলে অন্য endpoint থেকে traversal সংযোগ মিস করবে। দুই list update করো, deletion-এ দুই record cleanup করো।</p>
+<p>যেকোনো representation-এর আগে vertex label compact integer ID-তে map করা যায়। Display-তে reverse label array রাখো, প্রতিটি edge endpoint mapping-এ আছে যাচাই করো। তাতে failed label lookup out-of-range index হয় না।</p>
+<h2 id="version-notes">C17 record আর pointer</h2>
+<div class="callout version"><p>Linked neighbor record সাধারণ C17 structure, compound literal আর explicit release ব্যবহার করে। Pointer width আর padding implementation-ভেদে বদলায়, তাই record count-কে universal byte count বলা চলে না।</p></div>
+<h2 id="summary">Representation ঠিক করে কী scan হবে</h2>
+<p>Matrix pair সরাসরি index করে, adjacency list থাকা neighbor সরাসরি দেয়। Edge list সংযোগকে record রাখে। Storage বাছার পরে <a href="topic:ds-graph-bfs">breadth-first search</a> দিয়ে distance layer ধরে reachable vertex দেখো।</p>
