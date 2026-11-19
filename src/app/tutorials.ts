@@ -155,8 +155,10 @@ export class TutorialService {
       const t = this.tracks.get(d.track);
       const m = t?.curriculum.modules.find((mm: Json) => mm.id === d.module);
       if (!t || !m || t.topics.has(d.id) || this.topicTrack.has(d.id)) continue;
-      const bodyEn = cleanHtml(markdownToHtml(d.body.en));
-      const bodyBn = d.body.bn?.trim() ? cleanHtml(markdownToHtml(d.body.bn)) : null;
+      // Examples are shown where the text has a slot for them; admin topics put them after the text.
+      const slots = d.examples.map((_e, i) => `<div data-example="ex-${i + 1}"></div>`).join('');
+      const bodyEn = cleanHtml(markdownToHtml(d.body.en) + slots);
+      const bodyBn = d.body.bn?.trim() ? cleanHtml(markdownToHtml(d.body.bn) + slots) : null;
       const json: Json = {
         id: d.id, title: d.title, summary: d.summary, level: d.level, kind: 'lesson', estMinutes: d.minutes, labs: [], practice: [], keyPoints: [], examQuestions: [], videos: [], references: [],
         quiz: d.quiz.map((q, i) => ({ id: `q-${i + 1}`, type: 'mcq', difficulty: 'medium', prompt: q.prompt, options: q.options, answer: q.answer, explanation: q.explanation })),

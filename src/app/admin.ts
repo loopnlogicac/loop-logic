@@ -653,8 +653,14 @@ export class AdminService {
   }
 
   // ── site: announcement bar, homepage, settings ──
+  /** Until an admin saves one, the bar shows the tutorials launch message ({topics} and {labs} are filled in on the page). */
+  static readonly DEFAULT_ANNOUNCEMENT = {
+    on: true, everyPage: false, href: '/learn.html', version: 'tut-1',
+    text: { en: 'Written tutorials are live: {topics} topics and {labs} interactive labs, free for every student.', bn: 'লিখিত টিউটোরিয়াল চালু হয়েছে: {topics}টি টপিক আর {labs}টি ইন্টারঅ্যাকটিভ ল্যাব, সব শিক্ষার্থীর জন্য ফ্রি।' },
+    linkText: { en: 'Start learning', bn: 'শেখা শুরু করো' },
+  };
   announcementAdmin() {
-    return this.doc('site', 'announcement')?.data ?? { on: false, text: { en: '', bn: '' }, linkText: { en: '', bn: '' }, href: '/learn.html', everyPage: false, resetClosed: false };
+    return this.doc('site', 'announcement')?.data ?? AdminService.DEFAULT_ANNOUNCEMENT;
   }
   async saveAnnouncement(actor: string, body: Json) {
     const text = bi(body.text, 220);
@@ -668,7 +674,7 @@ export class AdminService {
     return data;
   }
   publicSite(lang: Lang) {
-    const a = this.doc('site', 'announcement')?.data;
+    const a = this.announcementAdmin() as Json;
     return {
       announcement: a?.on ? { text: (lang === 'bn' && a.text.bn) || a.text.en, linkText: (lang === 'bn' && a.linkText?.bn) || a.linkText?.en || null, href: a.href, everyPage: a.everyPage, version: a.version } : null,
       hubTabs: (this.settings().hubTabs ?? ['tutorials', 'courses', 'labs', 'exam']) as string[],

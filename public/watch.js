@@ -1,5 +1,5 @@
 // Video course player: plays a course's YouTube playlists in order, inside the site.
-import { api, getLang, applyI18n, mountNav, el, num, errorBox, toast, ensureSignedIn, getConfig } from './common.js';
+import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast, ensureSignedIn, getConfig } from './common.js';
 import { tryNowButton, learnerSections, editLink, openEditor } from './video-extras.js';
 
 const T = {
@@ -43,6 +43,14 @@ function render() {
     el('span', { text: cur ? L.of(num(cur.position), num(progress.total)) : '' }));
 
   const left = el('div', {});
+  const bn = getLang() === 'bn';
+  if (course.access === 'paid' && !course.owned) {
+    left.append(el('div', { class: 'card paid-note' },
+      el('strong', { text: bn ? `এটি একটি পেইড কোর্স · ${course.price ?? ''}` : `This is a paid course · ${course.price ?? ''}` }),
+      el('p', { class: 'muted', text: bn ? `${num(course.samples ?? 0)}টি নমুনা ভিডিও ফ্রি দেখা যাবে। বাকি ${num(course.locked)}টি কোর্স কিনলে খুলবে।` : `${num(course.samples ?? 0)} sample videos are free to watch. The other ${num(course.locked)} open when you buy the course.` }),
+      el('a', { class: 'btn primary small', href: `/pricing.html?course=${encodeURIComponent(course.id)}#waitlist`, text: bn ? 'কীভাবে কিনবে' : 'How to buy' })));
+  }
+  left.append(el('div', { id: 'ad-video', class: 'ad-slot' }));
   if (cur) {
     left.append(
       el('div', { class: 'player' },
@@ -58,7 +66,7 @@ function render() {
             : el('button', { class: 'btn primary small', type: 'button', onclick: () => mark(cur.id, true, cur.next), text: cur.next ? L.doneNext : L.markDone }),
           cur.next ? el('a', { class: 'btn secondary small', href: watchUrl(cur.next), 'data-v': cur.next, onclick: go, text: L.next }) : null,
           tryNowButton(cur.extras?.tryNow),
-          el('a', { class: 'btn ghost small', href: cur.youtubeUrl, target: '_blank', rel: 'noopener noreferrer', text: L.onYt }))),
+          cur.youtubeUrl ? el('a', { class: 'btn ghost small', href: cur.youtubeUrl, target: '_blank', rel: 'noopener noreferrer', text: L.onYt }) : null)),
     );
     const extrasBox = el('div', { class: 'vx-stack' }, ...learnerSections(course.id, cur));
     left.append(extrasBox, el('p', { style: 'margin:10px 0 0' }, editLink(config, () => {
@@ -74,10 +82,13 @@ function render() {
     const holdsCurrent = cur && s.items.some((i) => i.id === cur.id && !i.repeat);
     list.append(el('details', { open: holdsCurrent || sections.length === 1 },
       el('summary', {}, el('span', { text: s.title }), el('span', { text: `${num(done)}/${num(s.items.length)}` })),
-      el('ol', {}, ...s.items.map((i) => el('li', {},
+      el('ol', {}, ...s.items.map((i) => i.locked ? el('li', { class: 'locked' },
+        el('span', { class: 'vlocked', title: bn ? 'কিনলে খুলবে' : 'Opens when you buy the course' },
+          el('span', { class: 'tick', 'aria-hidden': 'true', text: '🔒' }), el('span', {}, i.title, el('span', { class: 'by', text: bn ? 'কিনলে খুলবে' : 'Locked' })), el('span', { class: 'dur', text: i.duration })))
+        : el('li', {},
         el('a', { href: watchUrl(i.id), 'data-v': i.id, onclick: go, 'aria-current': cur && i.id === cur.id && !i.repeat ? 'true' : null },
           el('span', { class: `tick ${i.watched ? 'on' : ''}`, 'aria-label': i.watched ? 'watched' : null, text: i.watched ? '✓' : num(i.n) }),
-          el('span', {}, i.title, i.by ? el('span', { class: 'by', text: L.by(i.by) }) : null, i.repeat ? el('span', { class: 'by', style: 'color:var(--muted)', text: L.repeat }) : null,
+          el('span', {}, i.title, i.sample ? el('span', { class: 'by sample', text: bn ? 'ফ্রি নমুনা' : 'Free sample' }) : null, i.by ? el('span', { class: 'by', text: L.by(i.by) }) : null, i.repeat ? el('span', { class: 'by', style: 'color:var(--muted)', text: L.repeat }) : null,
             i.materials || i.quiz ? el('span', { class: 'marks', text: [i.materials ? `📎 ${num(i.materials)}` : null, i.quiz ? `📝 ${L.quizMark}` : null].filter(Boolean).join('  ') }) : null),
           el('span', { class: 'dur', text: i.duration })))))));
   }
@@ -89,6 +100,7 @@ function render() {
     list);
 
   main.replaceChildren(crumbs, el('div', { class: 'watch', style: 'margin-top:12px' }, left, right));
+  fillAdSlots();
   main.querySelector('.vlist a[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 

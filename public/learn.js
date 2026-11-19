@@ -1,6 +1,6 @@
 // Tutorials: track list → topic list → topic page (lesson, runnable examples, labs,
 // quiz graded on the server, practice with solutions, exam questions).
-import { api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
+import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
 import { mountLab, renderFigure } from './lab-player.js';
 
 const T = {
@@ -171,7 +171,8 @@ async function renderTopic() {
             d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
             d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
           el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
-        langNote, toc, body, keyPts, quiz, practice, exam, videos, refs, pager)));
+        langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, quiz, practice, exam, videos, refs, pager)));
+  fillAdSlots();
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 }
 
@@ -192,7 +193,7 @@ function wireBody(body, d) {
     if (ex) slot.replaceWith(exampleBlock(ex)); else slot.remove();
   }
   for (const slot of body.querySelectorAll('div[data-lab]')) {
-    const host = el('div', { class: 'lp-host' });
+    const host = el('div', { class: 'lp-host', id: `lab-${slot.dataset.lab}` });
     slot.replaceWith(host);
     mountLab(host, { track: d.track.id, topic: d.topic.id, labId: slot.dataset.lab });
   }

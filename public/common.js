@@ -155,6 +155,9 @@ async function mountAccount(actions, bn) {
     el('a', { href: '/profile.html', text: bn ? 'প্রোফাইল ও ডেটা' : 'Profile and data' }),
     el('a', { href: '/instructor.html', text: bn ? 'শিক্ষকের পাতা' : 'Instructor area' }),
     el('button', { type: 'button', text: bn ? 'সাইন আউট' : 'Sign out', onclick: () => signOut() }));
+  api('GET', '/api/me').then((me) => {
+    if (me.role === 'admin' && !menu.querySelector('.acct-admin')) menu.insertBefore(el('a', { class: 'acct-admin', href: '/admin.html', text: bn ? 'অ্যাডমিন' : 'Admin site' }), menu.querySelector('button'));
+  }).catch(() => {});
   const btn = el('button', { type: 'button', class: 'acct-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-label': bn ? 'তোমার অ্যাকাউন্ট' : 'Your account', text: initials,
     onclick: (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); } });
   document.addEventListener('click', () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); });
@@ -182,12 +185,10 @@ export function mountNav(active, onLang) {
   const nav = document.getElementById('nav');
   const bn = getLang() === 'bn';
   if (nav) {
+    // Tutorials, video courses, labs and exam prep live in the homepage hub; the top bar keeps three links.
     const links = [
       ['dashboard', '/dashboard.html', bn ? 'ড্যাশবোর্ড' : 'Dashboard'],
-      ['courses', '/courses.html', bn ? 'কোর্স' : 'Courses'],
-      ['learn', '/learn.html', bn ? 'টিউটোরিয়াল' : 'Tutorials'],
       ['pricing', '/pricing.html', bn ? 'মূল্য' : 'Pricing'],
-      ['practice', '/practice.html', bn ? 'অনুশীলন' : 'Practice'],
       ['profile', '/profile.html', bn ? 'প্রোফাইল' : 'Profile'],
     ];
     nav.replaceChildren(...links.map(([id, href, label]) => el('a', { href, class: id === active ? 'active' : '', 'aria-current': id === active ? 'page' : null, text: label })));
@@ -213,6 +214,8 @@ export function mountNav(active, onLang) {
     if (pro) pro.textContent = bn ? 'প্রো নাও' : 'Go Pro';
   }
   if (actions) mountAccount(actions, bn);
+  mountAnnouncement(active);
+  mountAds();
   const authErr = store.get('ll_auth_error', 'session');
   if (authErr) { store.del('ll_auth_error', 'session'); setTimeout(() => toast(authErr), 300); }
   const btn = document.getElementById('lang');
@@ -256,4 +259,90 @@ export function errorBox(target, message, retry) {
     el('h2', { text: getLang() === 'bn' ? 'লোড করা যায়নি' : 'Couldn’t load this' }),
     el('p', { text: message }),
     retry ? el('button', { class: 'btn secondary', type: 'button', text: getLang() === 'bn' ? 'আবার চেষ্টা' : 'Try again', onclick: retry }) : null));
+}
+
+
+// ── announcement bar, page key and ad spots (all set from the admin site) ──
+
+/** Which page this is, for page-specific ads: "home", "learn/<track>/<topic>", "course/<id>", "pricing"… */
+export function pageKey() {
+  const p = location.pathname.replace(/\/+$/, '') || '/';
+  const q = new URLSearchParams(location.search);
+  const parts = (...xs) => xs.filter(Boolean).map((x) => String(x).toLowerCase().replace(/[^a-z0-9_-]/g, '')).join('/');
+  if (p === '/' || p === '/index.html') return 'home';
+  if (p === '/learn.html') return parts('learn', q.get('track'), q.get('topic'));
+  if (p === '/course.html') return parts('course', q.get('id'));
+  if (p === '/watch.html') return parts('course', q.get('course'), 'watch');
+  if (p === '/courses.html') return 'course';
+  if (p === '/lab.html') return parts('labs', q.get('id'));
+  if (p === '/post.html') return parts('blog', q.get('slug'));
+  if (p === '/blog.html') return 'blog';
+  return parts(p.replace(/^\//, '').replace(/\.html$/, '')) || 'home';
+}
+
+let siteInfo = null;
+export async function getSite() {
+  siteInfo ??= fetch(`/api/site?lang=${getLang()}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+  return siteInfo;
+}
+
+const X_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+async function mountAnnouncement(active) {
+  document.getElementById('promo-bar')?.remove();
+  siteInfo = null; // language may have changed
+  const site = await getSite();
+  const a = site.announcement;
+  if (!a || (!a.everyPage && active !== 'home') || store.get('ll_ann_closed') === a.version) return;
+  const bn = getLang() === 'bn';
+  let text = a.text;
+  if (/\{(topics|labs)\}/.test(text)) {
+    const totals = await fetch(`/api/learn?lang=${getLang()}`).then((r) => r.json()).then((d) => d.totals).catch(() => null);
+    if (!totals) return;
+    text = text.replace('{topics}', num(totals.topics)).replace('{labs}', num(totals.labs));
+  }
+  const close = el('button', { type: 'button', class: 'promo-x', 'aria-label': bn ? 'ঘোষণা বন্ধ করো' : 'Close announcement', onclick: () => { store.set('ll_ann_closed', a.version); bar.remove(); } });
+  close.innerHTML = X_ICON;
+  const bar = el('div', { id: 'promo-bar', class: 'promo', role: 'region', 'aria-label': bn ? 'ঘোষণা' : 'Announcement' },
+    el('span', { class: 'promo-new', text: bn ? 'নতুন' : 'NEW' }), el('span', { text }), a.href && a.linkText ? el('a', { href: a.href, text: a.linkText }) : null, close);
+  const old = document.getElementById('promo');
+  if (old) old.replaceChildren(bar); else document.body.prepend(bar);
+}
+
+const adClosed = (ad) => {
+  const at = Number(store.get(`ll_ad_${ad.id}`) ?? 0);
+  return at && (ad.reshowDays === 0 || Date.now() - at < ad.reshowDays * 86_400_000);
+};
+const adEvent = (id, type) => fetch(`/api/ads/${encodeURIComponent(id)}/event`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type }), keepalive: true }).catch(() => {});
+
+function adCard(ad, place) {
+  const bn = getLang() === 'bn';
+  const box = el('aside', { class: `ad ad-${place} ad-${ad.theme}`, 'aria-label': bn ? 'বিজ্ঞাপন' : 'Advertisement' });
+  const close = el('button', { type: 'button', class: 'ad-x', 'aria-label': bn ? 'বিজ্ঞাপন বন্ধ করো' : 'Close ad', onclick: () => { store.set(`ll_ad_${ad.id}`, String(Date.now())); adEvent(ad.id, 'close'); box.remove(); } });
+  close.innerHTML = X_ICON;
+  box.append(el('span', { class: 'ad-tag', text: bn ? 'বিজ্ঞাপন' : 'AD' }), el('strong', { class: 'ad-head', text: ad.head }),
+    el('a', { class: 'ad-cta', href: ad.href, text: ad.cta, onclick: () => adEvent(ad.id, 'click') }), close);
+  adEvent(ad.id, 'view');
+  return box;
+}
+
+let adsPromise = null;
+/** Fills the page's ad spots: a bar under the main bar, and #ad-inline, #ad-side, #ad-video when the page has them. */
+export async function mountAds() {
+  document.querySelectorAll('.ad').forEach((n) => n.remove());
+  adsPromise = api('GET', `/api/ads?page=${encodeURIComponent(pageKey())}&lang=${getLang()}`).catch(() => null);
+  const ads = await adsPromise;
+  if (!ads) return;
+  const top = document.querySelector('header.top');
+  if (ads.top && top && !adClosed(ads.top)) top.after(adCard(ads.top, 'top'));
+  fillAdSlots();
+}
+/** Pages that draw their ad slots later call this after rendering. */
+export async function fillAdSlots() {
+  const ads = await (adsPromise ?? Promise.resolve(null));
+  if (!ads) return;
+  for (const place of ['inline', 'side', 'video']) {
+    const slot = document.getElementById(`ad-${place}`);
+    if (ads[place] && slot && !slot.firstChild && !adClosed(ads[place])) slot.append(adCard(ads[place], place));
+  }
 }

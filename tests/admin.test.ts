@@ -160,7 +160,7 @@ test('coupon codes are checked for dates, uses, target and email', async () => {
 test('the announcement bar and hidden tracks reach the public side', async () => {
   const { admin, tutorials } = setup();
   await admin.init();
-  assert.equal(admin.publicSite('en').announcement, null);
+  assert.ok(admin.publicSite('en').announcement?.text.includes('{topics}'), 'the launch message shows until an admin saves one');
   await admin.saveAnnouncement('boss@example.com', { on: true, text: { en: 'New labs are live', bn: 'নতুন ল্যাব এসেছে' }, href: '/learn.html', linkText: { en: 'Start' } });
   assert.equal(admin.publicSite('bn').announcement?.text, 'নতুন ল্যাব এসেছে');
   await admin.setBuiltInHidden('boss@example.com', 'track', 'dbms', true);
