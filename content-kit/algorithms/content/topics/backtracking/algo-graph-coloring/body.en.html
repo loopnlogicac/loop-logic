@@ -1,0 +1,79 @@
+<h2 id="introduction">Turn timetable conflicts into edges</h2>
+<p class="lead">Suppose a department schedules five course exams. A student enrolled in both A and B cannot sit those exams at the same time. Draw one vertex per exam and an edge for each such conflict. A colour represents an available time slot.</p>
+<p>A proper colouring gives different colours to the endpoints of every edge. Vertices without an edge between them may share a colour. This model separates the conflict rule from room capacity, exam duration and other real scheduling constraints.</p>
+<p>The m-colouring decision problem asks whether at most m colours suffice. Finding the smallest possible m is an optimisation problem; its answer is the chromatic number. A backtracking solver can answer the decision question by trying every legal assignment until it finds a witness or exhausts all possibilities.</p>
+<p>A greedy solver makes the earliest available choice and never revises it. It is much faster on large graphs but may use more colours than necessary. This lesson compares their guarantees, not only their running times.</p>
+
+<h2 id="syntax">Colour a fixed prefix of vertices</h2>
+<p>The sample graph has vertices A through E, indexed zero through four. Its edges are AB, AC, BC, CD and DE. A, B and C form a triangle, which immediately requires three distinct colours.</p>
+<p>The exact solver stores colors[v] in one through m, with zero meaning unassigned. The function paint(v) assumes vertices before v already have a proper partial colouring. The allowed test scans earlier neighbours and rejects a colour used by any of them.</p>
+<p>For each allowed colour, assign it and call paint(v+1). A successful child returns one all the way to main, leaving its witness in colors. A failed child clears its colour before another attempt. Reaching v==5 means every vertex is assigned.</p>
+<p>This success-return convention differs from an all-solutions counter. Keeping the successful state is intentional because the caller wants one timetable. An unsuccessful return must restore the entry state so its parent can safely try another choice.</p>
+<pre><code class="language-text">paint(v):
+    if v == V: return true
+    for c = 1 to m:
+        if no earlier neighbour has colour c:
+            colors[v] = c
+            if paint(v + 1): return true
+            colors[v] = 0
+    return false</code></pre>
+
+<h2 id="how-it-works">Search a palette before changing it</h2>
+<p>With m=3, assign A=1. B conflicts with A, so B takes 2. C conflicts with both and takes 3. D conflicts only with C among its earlier neighbours, so D may take 1. E conflicts with D and takes 2. The vector [1,2,3,1,2] is a valid timetable.</p>
+<p>With m=2, the triangle blocks C once A and B have different colours. Backtracking changes earlier choices, but every arrangement of that triangle still needs a third colour. Only after all branches fail may the exact solver report Impossible.</p>
+<p>The first-fit greedy method uses the same local safety rule but commits permanently. It assigns the smallest available positive colour to each vertex in the selected order. The fixed graph's order A,B,C,D,E happens to give the optimal three-colouring.</p>
+<p>That agreement is not a general proof of optimality. For path 0-1-2-3, process vertices in order 0,3,1,2. First-fit chooses colours 1,1,2,3 in that order. Yet alternating colours along the path gives a valid two-colouring.</p>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Decide whether the exam slots suffice</h3>
+<p>The exact program reads a palette size. Three slots yield A:1, B:2, C:3, D:1, E:2. Two slots produce Impossible after exhaustive search. The fixed graph keeps the search small enough to follow.</p>
+<div data-example="ex-1"></div>
+<h3>Colour greedily in vertex order</h3>
+<p>The greedy program assigns the first safe colour among one through five. It reports three slots for this order. It does not claim the result is optimal on every graph or every ordering.</p>
+<div data-example="ex-2"></div>
+<h3>Count labelled triangle colourings</h3>
+<p>The final program tries every palette assignment to three pairwise adjacent vertices. For three colours it reports six assignments. Relabelling colours produces different assignments here, even though all six share the same structural pattern.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Compare a rejected and accepted colour</h2>
+<p>The table records the first successful exact route with three available slots. A rejected trial does not alter an earlier assignment. The search can reuse colour one at D because D is not adjacent to A.</p>
+<p>A timetable drawing should distinguish sharing a slot from sharing an edge. Graph connectivity alone does not prohibit a shared colour. Only a direct conflict edge imposes that inequality.</p>
+<table class="ref"><caption>First successful assignment for the exam graph</caption><thead><tr><th scope="col">Vertex</th><th scope="col">Rejected colours</th><th scope="col">Assigned colour</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>A</td><td>none</td><td>1</td><td>No earlier neighbours</td></tr><tr><td>B</td><td>1</td><td>2</td><td>Edge BA</td></tr><tr><td>C</td><td>1,2</td><td>3</td><td>Edges CA and CB</td></tr><tr><td>D</td><td>none</td><td>1</td><td>Only earlier neighbour C has 3</td></tr><tr><td>E</td><td>1</td><td>2</td><td>Edge ED</td></tr></tbody></table>
+
+<h2 id="correctness">A witness and an exhaustion proof</h2>
+<p>The exact-search invariant is that assigned vertices form a proper colouring and future vertices are unassigned. The empty prefix satisfies it. The allowed test checks every new edge to an earlier endpoint, so accepting a candidate preserves it.</p>
+<p>At a complete prefix, every edge has been checked when its later endpoint was assigned. The retained assignment is therefore proper. To show completeness, take any valid m-colouring. Its colour at each vertex is among the loop choices and conflicts with no earlier neighbour. The search eventually follows that sequence unless it has already found another valid witness.</p>
+<p>If every branch fails, no valid m-colouring remains unexplored. Reporting failure is then a proof of impossibility within this finite model. A single unsuccessful greedy pass has no such guarantee because it never revisits its early choices.</p>
+<p>Greedy colouring is still correct as a construction when it may introduce new colours. Each new vertex avoids all colours on earlier neighbours. Later neighbours will avoid its colour in turn. Thus the result is proper, though its colour count may exceed the minimum.</p>
+
+<h2 id="complexity">Exact search and first-fit costs</h2>
+<p>A full m-ary assignment tree has m^V leaves. For m&gt;=2, it has O(m^V) total candidate edges up to a constant depending on that branching factor. Our adjacency-matrix safety test scans at most V earlier vertices per candidate, giving O(V*m^V) time as a conservative bound.</p>
+<p>For m=1 the tree degenerates to a chain. Scanning earlier entries over all levels costs O(V^2) rather than interpreting the exponential expression too literally. The demonstration reserves a V-by-V matrix and O(V) colour and recursion storage. Its auxiliary search state is linear, separate from the input matrix.</p>
+<p>The presented greedy routine may try up to V colours at each vertex and scan up to V neighbours for each trial. Its straightforward worst-case bound is O(V^3). A better implementation marks forbidden neighbour colours once per vertex, then finds the smallest unmarked colour. With a matrix that takes O(V^2) total work; adjacency lists can reduce neighbour scanning.</p>
+<p>For a simple graph with maximum degree Delta, first-fit uses at most Delta+1 colours. At most Delta earlier neighbours can forbid colours, so one among the first Delta+1 remains available. This is an upper bound, not a statement that every graph requires that many colours.</p>
+
+<h2 id="edge-cases">Model assumptions affect feasibility</h2>
+<p>An isolated vertex can share any existing colour. A graph with vertices but no edges needs one colour. A self-loop makes a proper colouring impossible because it demands that one vertex differ from itself. The fixed demonstration graph is simple and has no loops.</p>
+<p>Parallel copies of an ordinary conflict edge add no new restriction. Directed prerequisite edges are a different model; an exam conflict is symmetric. Build an undirected conflict graph before applying these colouring rules.</p>
+<p>An empty graph can use zero colours under the usual convention. This program always has five exams and accepts one through five slots. Changing the graph size would require changing the input model, loops and array bounds together.</p>
+<p>Colour labels carry no ranking in this abstract problem. Swapping labels one and two everywhere preserves validity. In a real timetable, morning and afternoon may have unequal availability; such restrictions require additional per-vertex domains.</p>
+
+<h2 id="common-mistakes">A greedy miss is not impossibility</h2>
+<p>The most serious reporting error is saying no m-colouring exists because one greedy order used m+1 colours. The path counterexample disproves that inference. Use complete search for a guaranteed decision, or describe the heuristic result honestly.</p>
+<p>Do not test only the most recently coloured neighbour. Every earlier adjacent vertex constrains the new colour. Conversely, do not forbid colours merely because they occur somewhere in the graph. Nonadjacent exams are allowed to share slots.</p>
+<p>Leaving a failed child colour in place violates the unassigned-suffix contract. Clearing it on failure makes the state readable and prevents bugs when the safety test later changes to inspect every neighbour.</p>
+<p>Do not confuse the number of feasible labelled assignments with the chromatic number. The triangle example counts six assignments at palette size three. Its minimum number of colours is three, not six.</p>
+
+<h2 id="best-practices">State what a colour represents</h2>
+<p>Begin with the conflict rule and draw the small graph before searching. Validate a proposed assignment by checking the palette range and every edge. That verification is inexpensive even when finding an assignment took many branches.</p>
+<p>For harder instances, choosing the most constrained vertex first can reduce search. The invariant must then track an assignment set rather than a numeric prefix. Such ordering is an optimisation of exhaustive search, not a replacement for its correctness argument.</p>
+<p>Timetable software also needs room limits, unavailable slots and perhaps different exam lengths. Add those requirements explicitly. A valid graph colouring satisfies the conflict model only, so do not silently claim that it resolves every scheduling rule.</p>
+
+<h2 id="version-notes">A small fixed matrix in C17</h2>
+<p>Five vertices and at most five colours keep every index in its array bounds. The recursive solver's depth is five, and the triangle counter fits int. C17 provides the language mechanics; it does not make exhaustive search scalable. General graphs need size validation and a deliberate memory representation.</p>
+
+<h2 id="summary">Know the guarantee you need</h2>
+<p>Backtracking decides m-colourability by exploring every legal prefix until it finds a witness or proves failure. Greedy first-fit always builds a proper colouring with enough colours, but its order can waste slots. Match that guarantee to the timetable question.</p>
+
+<p>Revisit the connected idea:</p>
+<p><a href="topic:algo-backtracking-intro">Backtracking Intro</a></p>
