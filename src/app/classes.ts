@@ -6,9 +6,9 @@
 // when fewer than `minGroup` students contribute, as on the old instructor page.
 // Questions asked to the AI are never shown as text, only counted by page.
 
-import { csv } from './csv.ts';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { AppError } from './service.ts';
+import { csv } from './csv.ts';
 import type { DocRow, ReadingEventRow, Store } from '../store/store.ts';
 import type { TutorialService } from './tutorials.ts';
 import { getCourse } from '../content/courses.ts';
