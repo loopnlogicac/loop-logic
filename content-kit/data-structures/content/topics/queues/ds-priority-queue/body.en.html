@@ -1,0 +1,56 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A service queue usually follows arrival order, but some work has different urgency. A task with an earlier deadline may need to run before an older low-urgency task. A <dfn>priority queue</dfn> removes the best key according to a comparison rule.</p>
+<p>Here smaller priority numbers mean greater urgency. This is a min-priority convention. Another application may use a max-priority queue instead. Always state the direction; the word priority alone does not tell you which number wins.</p>
+<p>The priority queue is an ADT, not one particular array layout. An unsorted array, a sorted array and a heap can all implement the same public behavior. Their costs differ because they do the ordering work at different times.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>Each Job stores id, priority and arrival. Id labels the job. Priority decides urgency. Arrival records the input sequence number so equal priorities can follow FIFO order. This tie rule is explicit rather than an accidental property of storage.</p>
+<p>The better helper compares priority first, then arrival. It uses relational comparisons instead of subtracting priorities, avoiding overflow for extreme integer keys. Every implementation uses the same helper, so storage changes do not change the ordering policy.</p>
+<p>An unsorted array appends a new job at its next free position. Removal scans for the best key. A sorted array pays for shifts on insertion and keeps the best job at the final live index. Removal then decrements count and reads that end.</p>
+<p>A binary heap is a complete binary tree stored in an array. A parent is no worse than its children under better. For zero-based index i, children are 2*i+1 and 2*i+2; the parent of a non-root is (i-1)/2. The whole array need not be sorted.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>In the sorted-array example, insertion begins at count and shifts existing better jobs one cell right while searching for the new position. The live array runs from worse keys to better keys. Therefore the best job is at count-1. A later equal-priority arrival belongs before an earlier arrival in this physical order, so the earlier one leaves first.</p>
+<p>The unsorted example scans every live entry on removal. After selecting best, it fills the gap with the last entry. This destroys physical arrival order, but the stored arrival key still preserves the required tie behavior.</p>
+<p>Heap insertion adds a job at the next array position, then sifts it upward while it is better than its parent. Each copied parent moves down into the hole. Finally the new job occupies the first position where the parent rule holds.</p><pre class="diagram">sorted insertion, keys shown as priorities:
+before: [5][2][1]   insert 3
+after:  [5][3][2][1] ; remove end -&gt; [5][3][2]
+unsorted removal:
+[5][1][3] -&gt; choose 1 -&gt; [5][3]
+heap insertion 1:
+    2             1
+   / \    -&gt;     /   5   3         2   3
+ /             /
+1             5
+heap remove-min: remove root, move last into hole, sift down</pre><p>Heap removal saves the root result and removes the last array entry. It repeatedly chooses the better child and moves that child upward if it beats the saved last job. The saved job then fills the remaining hole. For a singleton, count becomes zero and no replacement is written.</p>
+<p>The three examples read the same jobs and produce the same service order. Jobs twenty-two and thirty-three share priority one, so twenty-two leaves first by arrival. Job forty-four with priority two follows them; priority-three job eleven leaves last.</p>
+<p>A heap only compares along one root-to-leaf path during an update. This is why it can serve mixed insert/remove workloads efficiently without paying to keep every pair of entries globally sorted.</p><h3>A closer trace</h3><p>A comparison table should state worst-case update costs under spare capacity. The unsorted array defers comparisons until removal. The sorted array pays for a potentially long shifted prefix during insertion. The heap spreads its ordering work across both updates, but follows only one path at a time. These are different schedules for maintaining the same selection behavior.</p>
+<p>Consider n insertions followed by one removal. An unsorted array performs linear total work: n constant-time appends and one scan. Repeated sorted insertion can take quadratic total work. A heap built by repeated inserts takes O(n log n), though a separate bottom-up build can reduce construction to O(n). Workload shape therefore changes the best choice.</p>
+<p>Now consider a long stream of alternating insertion and removal with many waiting jobs. The heap’s logarithmic updates are often attractive. If only a few jobs can ever wait, a compact array may still be easier and faster in practice. Asymptotic analysis describes growth, while constants and capacity also affect engineering choices.</p>
+<p>FIFO tie handling needs care in Dijkstra-style examples. Tentative distances are the primary key, but ties may use vertex id or insertion order without changing shortest distances. The choice changes traversal order, so a demonstration should state it. A general priority queue does not impose a universal tie policy.</p>
+<p>A real scheduler may also need to cancel an existing job or change its priority. Finding that job in these simple arrays can require O(n). A heap with an auxiliary location map can support faster key updates. Those additional operations require more invariants than the insert/remove interface shown here.</p><pre class="diagram">heap remove-min, before: [1,2,3,5]
+remove root, save last=5: [hole,2,3]
+move better child 2 up:  [2,hole,3]
+place saved 5:           [2,5,3]</pre>
+
+<h2 id="examples">Examples</h2>
+<h3>Keep best jobs at the sorted-array end</h3><p>Smaller priorities leave first. Arrival breaks the tie between jobs twenty-two and thirty-three.</p><div data-example="ex-1"></div><h3>Search an unsorted array on removal</h3><p>A scan finds the best pair on every removal. Swapping the last entry into the gap does not change the tie rule.</p><div data-example="ex-2"></div><h3>Maintain a binary min-heap</h3><p>Sift-up and sift-down preserve the parent-before-child order. The same jobs leave in the same order.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>With spare capacity, unsorted insertion is O(1); finding and removing the best is O(n). Sorted insertion is O(n) in the worst case because of shifts; removing the best end is O(1). A heap gives O(log n) insertion and removal, with O(1) inspection of its root.</p>
+<p>All three array implementations reserve O(C) storage and use O(1) extra working variables for one update. Heap height is logarithmic because each additional complete level can hold roughly twice as many nodes. Bottom-up heap construction can build n existing entries in O(n), though the example uses repeated insertion.</p>
+<p>An empty priority queue has no best element. A fixed-capacity implementation must reject growth before writing outside storage. The examples accept at most sixteen jobs, and each input insertion stays within that bound. A single job leaves without any comparison against nonexistent children.</p>
+<p>For repeated urgent arrivals, a scheduler may starve less urgent work. Aging can gradually improve waiting jobs’ effective priority. That policy requires updating keys carefully; changing a stored priority without restoring the ordering invariant can break sorted arrays and heaps.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Assuming a heap is a sorted array</h3><p>The root is best, but siblings need not be ordered. Printing heap cells from index zero does not generally produce service order. Repeated remove-min operations do.</p><h3>Forgetting ties during swaps</h3><p>An unsorted removal may replace a gap with a later arrival. Comparing priority alone can then change equal-priority behavior. Include arrival consistently in every ordering decision.</p><h3>Choosing a structure by one operation</h3><p>Cheap insertion may be ideal when removals are rare. A heap is often better when both updates occur frequently. Count the workload’s operations before selecting the representation.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Scheduling priority can mean urgency, deadline or another application key. Dijkstra uses tentative distance: the smallest current distance is expanded first. Its algorithm also needs a policy for improved distances, such as decrease-key or duplicate candidates with stale-entry checks.</p>
+<p>Use a total tie policy when deterministic results matter. Arrival is one choice; an application could choose job id instead. The ADT permits either, but the lesson, comparator and expected order must agree.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>The examples are C17 and compare int fields without subtraction. Heap indices remain small under the sixteen-job bound. General unbounded containers must guard capacity growth and index arithmetic before allocation or child-index calculation.</p>
+
+<h2 id="summary">Summary</h2>
+<p>Priority queues order service by a key and a tie rule. Different representations trade insertion cost for removal cost. Study <a href="topic:ds-heap">binary heaps</a> further when you reach tree-based structures.</p>

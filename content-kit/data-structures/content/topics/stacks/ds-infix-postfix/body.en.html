@@ -1,0 +1,57 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">In ordinary arithmetic you write the operator between its operands, as in A+B. This is <dfn>infix</dfn> notation. You also rely on rules that are not written beside every operator: multiplication binds more tightly than addition, and parentheses can override that order.</p>
+<p><dfn>Postfix</dfn> places an operator after its operands. A+B becomes AB+. <dfn>Prefix</dfn> places it before them, giving +AB. Both forms can show the same expression structure without grouping parentheses. The goal is to preserve that structure while changing the written order.</p>
+<p>Imagine operators waiting at a desk until their operands are ready. An operator stack keeps the delayed work. This lesson uses uppercase single-letter operands and binary operators. Numeric evaluation comes later; here the letters represent values whose actual numbers do not matter.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>The precedence helper gives addition and subtraction rank one, multiplication and division rank two, and exponentiation rank three. A larger rank binds more tightly. An opening parenthesis acts as a boundary rather than an ordinary ranked operator.</p>
+<p><dfn>Associativity</dfn> resolves a chain with equal precedence. Subtraction groups left: A-B-C means (A-B)-C. Exponentiation groups right in this expression language: A^B^C means A^(B^C). Associativity matters even when no parentheses appear.</p>
+<p>The C converter stores operators in items, tracks top, and appends characters to output using used. The flag need_operand rejects adjacent operands, empty groups and trailing operators. Spaces are ignored. Unary minus, function calls, implicit multiplication and multi-character operands are outside this small grammar.</p>
+<p>The symbol ^ means exponentiation only in this lesson’s expression grammar. In C17 source it is bitwise XOR. The converter handles characters; it never evaluates a C expression using ^.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>Scan the infix line from left to right. An operand goes directly to output. An opening parenthesis is pushed. A closing parenthesis pops operators until an opening parenthesis is reached, then discards that opener. Failure to find it means the grouping is invalid.</p>
+<p>For an incoming operator, repeatedly inspect the top. Pop an operator if it has greater precedence. Also pop equal precedence when the incoming operator is left associative. Stop at a parenthesis boundary, a lower rank, or an equal right-associative operator. Then push the incoming operator.</p>
+<p>At the end, reject a missing operand and drain the remaining operators. A surviving opening parenthesis signals an unfinished group. Parentheses never enter the postfix output.</p><table class="ref"><thead><tr><th scope="col">Token in A+B*C</th><th scope="col">Stack bottom to top</th><th scope="col">Output</th></tr></thead><tbody><tr><td>A</td><td>[]</td><td>A</td></tr><tr><td>+</td><td>[+]</td><td>A</td></tr><tr><td>B</td><td>[+]</td><td>AB</td></tr><tr><td>*</td><td>[+,*]</td><td>AB</td></tr><tr><td>C</td><td>[+,*]</td><td>ABC</td></tr><tr><td>end</td><td>[]</td><td>ABC*+</td></tr></tbody></table><pre class="diagram">operator push:
+[+] -&gt; [+,*]          * waits for C
+operator pop at end:
+[+,*] -&gt; [+]          append *
+[+]   -&gt; []           append +
+parentheses:
+[*,(,+] -&gt; [*]        append +, discard (</pre><p>To produce prefix, first obtain valid postfix. Scan that postfix with a stack of expression strings. A letter pushes a one-letter string. An operator pops right, then left, and pushes operator+left+right. For AB-C*, the subtraction produces -AB, and multiplication combines it with C to produce *-ABC.</p>
+<p>This ordered-fragment method avoids the associativity trap in careless reverse-and-swap conversions. Reversing raw text alone is not a complete infix-to-prefix algorithm. If you use a reversal method in an exam, you must also explain how equal-precedence decisions change.</p><h3>A closer trace</h3><p>Here is an associativity comparison you can draw without assigning numbers. For A-B-C, read A, push minus, then read B. The next minus has equal rank and is left associative, so emit the earlier minus before pushing the new one. After C and draining, the result is AB-C-. Its first subtraction therefore combines A and B.</p>
+<p>For A^B^C, the second exponentiation has equal rank but is right associative. Keep the first exponentiation waiting and push the second above it. After reading C, draining emits the later operator first. The result ABC^^ combines B and C before combining that result with A.</p>
+<p>Parentheses can force either structure explicitly. (A^B)^C produces AB^C^, while A^(B^C) produces ABC^^. A conversion table should show the opener boundary, the operators removed at the closer, and the opener being discarded. Writing only the final string hides which rule controlled the grouping.</p>
+<p>You can verify a prefix result by reading its expression tree aloud, even before studying tree storage. For *-ABC, multiplication is the outer operation. Its left expression is subtraction of A and B, and its right operand is C. That reading matches (A-B)*C and helps detect accidentally swapped fragments.</p>
+<p>The syntax flag also rejects A(B), because this grammar does not define implicit multiplication. It rejects A++B because the second plus arrives while an operand is required. Spaces cannot repair either form. A more capable parser could support additional syntax, but its grammar and tokenization rules would need to be stated first.</p><h3>Operation plan</h3><pre><code class="language-text">items = []; output = []; need_operand = true
+for each token, ignoring spaces
+    operand: require need_operand, then append output
+    opening parenthesis: require need_operand, then push
+    closing parenthesis: pop to matching opener; discard opener
+    operator: pop greater rank, or equal left-associative rank
+    push operator; need_operand = true
+reject missing operand or unmatched parenthesis; else drain
+return output</code></pre><div data-lab="infix-to-postfix"></div>
+
+<p>For prefix fragments, draw the intermediate stack as [A,B] before subtraction and [-AB] afterward. The two operand fragments disappear and one combined fragment replaces them. Multiplication with C then changes [-AB,C] into [*-ABC]. This view makes the fragment stack comparable to the operand stack used for numerical evaluation.</p>
+<h2 id="examples">Examples</h2>
+<h3>Convert infix with an operator stack</h3><p>Multiplication leaves the operator stack before addition, producing ABC*+.</p><div data-example="ex-1"></div><h3>Keep exponentiation right associative</h3><p>Equal ^ operators stay stacked, producing ABC^^ for A^(B^C).</p><div data-example="ex-2"></div><h3>Build prefix from completed postfix subexpressions</h3><p>AB-C* combines into *-ABC; the left and right operands retain their roles.</p><div data-example="ex-3"></div><h3>Reject a missing operand</h3><p>The scan finishes while need_operand is true, so it rejects incomplete syntax.</p><div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Shunting-yard conversion performs O(n) stack work and uses O(n) storage. An operator enters and leaves the stack at most once. The repeated popping loop therefore does not imply quadratic operator processing.</p>
+<p>The prefix example uses copied character strings for clarity. Repeatedly joining long fragments can require O(n squared) copied characters. A tree or indexed output construction can avoid this cost. Do not claim the fragment-copying implementation is linear merely because its stack operations are linear.</p>
+<p>The twenty-four-character input bound limits both operator and output arrays. A singleton operand converts to itself. Empty input is rejected because an expression needs an operand. Missing openers, missing closers, doubled operands and consecutive binary operators each trigger a syntax rejection.</p>
+<p>The lab accepts the same small alphabet and validates malformed input rather than pretending every typed string is an expression. Its output panel contains the actual postfix characters emitted so far. Pending operators remain on the main stack.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Popping every equal operator</h3><p>That rule changes A^B^C into (A^B)^C. Equal incoming ^ must stay above the earlier ^ so the right subtree completes first.</p><h3>Emitting parentheses</h3><p>A grouping marker tells the converter where to stop popping. It is not part of postfix arithmetic. Remove the matching opener without appending it.</p><h3>Swapping prefix operands</h3><p>The first fragment popped from postfix is right, not left. Combining operator+right+left reverses subtraction and division. Name the fragments before joining them.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>For conversion tables, show the state after processing each token and include a final drain row. A table that stops at the last operand can omit operators still waiting on the stack.</p>
+<p>Mark precedence and associativity separately. Priority says which kinds bind tighter; associativity says what happens at equal rank. These two questions deserve separate decisions in your explanation.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>These implementations compile as C17 and use bounded character arrays. String concatenation assumes the proven input bound and sufficient destination storage. No C version automatically assigns arithmetic meaning to a character stored in an expression string.</p>
+
+<h2 id="summary">Summary</h2>
+<p>An operator stack delays work while precedence, associativity and parentheses preserve grouping. Prefix can be built from ordered postfix fragments. Continue with <a href="topic:ds-postfix-evaluation">evaluating the resulting operand order</a>.</p>

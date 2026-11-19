@@ -1,0 +1,56 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Picture four chairs arranged in a circle. After reaching the last chair, your next step returns to the first. A <dfn>circular queue</dfn> uses the same idea for array indices. It reuses cells released at the front without moving the waiting values.</p>
+<p>The logical service order remains FIFO. Only the mapping between that order and physical cells changes. After wrapping, an older value can sit at a larger index than a newer value. Reading the array from zero upward no longer necessarily shows queue order.</p>
+<p>This lesson keeps a count so every cell can hold a live value. You will also compare the alternative that leaves one cell unused. Understanding both conventions is useful because full and empty formulas depend on the chosen representation.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>The Queue structure contains items, front, rear and count. Front identifies the next removal cell. Rear identifies the next insertion cell. Both cursors stay between zero and capacity minus one, unlike the linear queue’s one-past rear.</p>
+<p>Empty means count is zero. Full means count equals capacity. Successful insertion increases count; successful removal decreases it. A failed request leaves the array, cursors and count unchanged.</p>
+<p>Modulo arithmetic wraps a cursor. With capacity four, <code>(3+1)%4</code> produces zero. The input and index bounds make the addition safe. Modulo does not grow the array or move a value; it selects a different physical location.</p>
+<p>Equal front and rear indices are ambiguous by themselves. They occur initially, after a complete fill and after a complete drain. Count resolves the ambiguity. A payload of zero does not mean empty, because zero can be valid queue data in the underlying helpers.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>Enqueue checks count before writing items[rear]. It advances rear with modulo and increments count. Dequeue checks count, copies items[front], advances front with modulo, and decrements count. This example also clears the vacated integer cell to zero so its printed physical state is easy to follow.</p>
+<p>Fill the queue with ten, twenty, thirty and forty. Rear wraps to zero while front remains zero and count becomes four. Remove ten and twenty. Front becomes two and count becomes two. The next insertions can use indices zero and one.</p><pre class="diagram">fill:
+[10][20][30][40] front=0 rear=0 count=4
+remove twice:
+[ 0][ 0][30][40] front=2 rear=0 count=2
+insert 50,60:
+[50][60][30][40] front=2 rear=2 count=4
+logical links: index 2 -&gt; 3 -&gt; 0 -&gt; 1</pre><p>Logical offset k maps to (front+k)%capacity. Starting at front and taking count steps therefore prints FIFO order. Traversing physical indices zero through three instead prints the storage picture, which serves a different purpose.</p>
+<p>The lab is an array visualization because cursor locations matter. It uses zero for unused cells to match the C example, but the count still defines occupancy. Front and rear arrows remain visible even for an empty or full ring, where they can share a cell.</p>
+<p>A one-empty-slot ring removes the count field and reserves a gap. It is empty when front equals rear and full when (rear+1)%capacity equals front. With four physical cells it stores only three values. Do not combine that full test with the counted design’s advertised four-value capacity.</p><h3>A closer trace</h3><p>You can prove FIFO preservation using logical offsets. Before an enqueue, live values occupy offsets zero through count minus one from front. Rear equals (front+count)%capacity. Writing there appends exactly the next offset. Since count was below capacity, this location cannot overlap any live offset.</p>
+<p>Before a dequeue, offset zero contains the oldest value. Advancing front removes that value and relabels every remaining logical offset one lower. Their physical cells stay unchanged. Decreasing count completes the new live interval. This argument explains both order and the safety of cell reuse.</p>
+<p>Consider capacity four with front three, rear one and count two. The queue uses cells three and zero. Removing once moves front to zero and count to one. Enqueue writes cell one and moves rear to two. The new logical order uses cells zero then one. No copied suffix or special wrap branch is required.</p>
+<p>A practical ring may keep old bytes in vacated cells instead of clearing them. Our clearing step is only a display choice for integer payloads. Correctness still follows the count and indices. For payloads that own other resources, removal would also need an explicit ownership policy, just as linked nodes need release.</p>
+<p>When comparing two implementations, compare logical sequences first. Their front and rear numbers can differ if one resets empty rings and another leaves wrapped cursors in place. Both may implement FIFO correctly. Within one lesson and its lab, however, keeping the same reset convention makes index traces directly comparable.</p><h3>Operation plan</h3><pre><code class="language-text">front = rear = count = 0; capacity = 4
+for each command
+    if zero and count &gt; 0: read and clear items[front]
+        front = (front + 1) % capacity; count--
+    else if nonzero and count &lt; capacity: items[rear] = command
+        rear = (rear + 1) % capacity; count++
+    else: report empty or full without changing state
+return cells, cursors, count and logical items</code></pre><div data-lab="circular-queue"></div>
+
+<p>The front and rear arrows identify candidate cells, while count controls permission to read or write. Always interpret the three values together.</p>
+<h2 id="examples">Examples</h2>
+<h3>Wrap rear into a freed prefix</h3><p>Five is written at index zero after two removals. The count becomes three.</p><div data-example="ex-1"></div><h3>Distinguish full from empty at equal indices</h3><p>Front equals rear in both the full and empty states; count distinguishes them.</p><div data-example="ex-2"></div><h3>Use the fourth cell without a reserved gap</h3><p>All four entries fit because this implementation stores count separately.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Each counted-ring update performs O(1) time and uses O(1) temporary space. The array owns O(C) cells. Printing logical or physical contents costs O(n) or O(C), respectively. Index wrapping does not change the cost of a single update.</p>
+<p>A singleton removal can wrap front independently of rear’s numeric value, yet the empty state still has count zero and matching cursors. There is no need to reset both cursors to zero. Leaving them at their wrapped position remains valid for the next insertion.</p>
+<p>For a full ring, the cell at rear is occupied even though rear means next write. Fullness prevents the write until a removal frees that location. Trying to infer insertion permission from the cursor target alone would overwrite the oldest value.</p>
+<p>Repeated equal payloads and negative values behave like any other values. The operation-stream interface reserves zero for a dequeue command, so it does not enqueue zero through that interface. This restriction belongs to command encoding; the Queue helper can store a zero payload.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Using equality as the only empty test</h3><p>Front equals rear when this counted ring is full too. Consult count. Otherwise a completely filled queue could appear empty and lose its stored data.</p><h3>Printing physical order as FIFO</h3><p>After wrapping, the oldest cell may be in the middle of the array. Traverse from front for count entries with modulo. Start at index zero only when you intend to show the storage layout.</p><h3>Updating on refusal</h3><p>Advancing a full ring’s rear before rejecting a push breaks the next-write rule. Validate first. Successful updates change their cursor and count together.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>For an exam cycle trace, record front, rear and count after every action. Include states immediately before and after wrapping. Equal cursor values should be explained by the count rather than treated as an error.</p>
+<p>Choose either a counted ring or a reserved-gap ring before writing formulas. State usable capacity, not merely physical array length. The distinction matters when an exercise asks how many more values can be inserted.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>The examples use C17 integer remainder with nonnegative index arithmetic. Capacity is a positive constant, so modulo is defined. A generalized implementation must also reject zero capacity before using it as a divisor.</p>
+
+<h2 id="summary">Summary</h2>
+<p>A circular queue preserves FIFO while mapping live positions around an array. Count or a reserved gap separates full from empty. Next, compare wrapping with <a href="topic:ds-queue-linked-list">a queue built from linked nodes</a>.</p>

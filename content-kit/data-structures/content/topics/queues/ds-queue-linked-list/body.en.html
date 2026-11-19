@@ -1,0 +1,50 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A queue can grow as a chain of allocated nodes instead of a reserved array. Think of a line whose people each know who follows them. You keep one marker at the oldest person and another at the newest. New arrivals join the newest end; service removes the oldest.</p>
+<p>The front marker is a pointer to the head. The rear marker points to the tail. Saving both endpoints is what makes this linked queue efficient. A singly linked list with only a head would need a walk to find its final node on every append.</p>
+<p>The FIFO rule is unchanged from an array queue. What changes is storage and ownership. Each successful enqueue creates one allocation. Dequeue transfers the integer back to the caller and ends the removed node’s lifetime.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>Node contains value and next. Queue contains front and rear pointers. When the queue is empty, both pointers are NULL. For a nonempty queue, rear->next is NULL, and following next links from front eventually reaches rear.</p>
+<p>This is an invariant: a rule every public operation must preserve. The empty state and the tail link are part of that rule, not decorative details. A function that prints correct values once can still be broken if it leaves rear dangling.</p>
+<p>Enqueue accepts a Queue pointer because it may change both endpoints. It allocates and initializes a new node before modifying existing links. The returned status tells the caller whether the node was actually accepted.</p>
+<p>Dequeue also accepts the Queue pointer and an integer output pointer. It refuses an empty state. A successful call returns the oldest payload and releases exactly its node. The caller owns the copied integer value, while no ownership of the node itself escapes.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>For an empty enqueue, initialize node->next to NULL and set front to node. Then set rear to node. The new node is simultaneously the oldest and newest value. Both markers must identify it.</p>
+<p>For a nonempty enqueue, link rear->next to node and advance rear. Front stays unchanged. The existing line keeps its order, and the new tail’s next is already NULL. These are constant local link changes.</p>
+<p>For dequeue, save old=front and copy old->value. Advance front to old->next. If that makes front NULL, set rear NULL too. Then free old. The singleton case is the reason for the rear reset.</p><pre class="diagram">empty enqueue 11:
+front=NULL rear=NULL -&gt; front -&gt; [11|NULL] &lt;- rear
+append 22:
+front -&gt; [11|next] -&gt; [22|NULL] &lt;- rear
+dequeue 11:
+front -------------&gt; [22|NULL] &lt;- rear; [11] freed
+last dequeue:
+front=NULL rear=NULL; [22] freed</pre><p>Suppose the final removal forgets rear. Front becomes NULL, but rear still points at freed storage. A later enqueue might attempt rear->next=node and access an invalid object. Resetting rear when front becomes NULL prevents that error.</p>
+<p>The refill example drains every input node before adding seventy-seven. It specifically exercises emptying and reuse. A queue that only works until its first complete drain has not preserved its representation rules.</p>
+<p>The clear helper repeatedly dequeues until empty. It is used both after successful work and on input or allocation failure. Cleanup cannot discard front without walking the chain, because that would lose the only route to remaining allocations.</p><h3>A closer trace</h3><p>A strong invariant can be stated as three cases. Empty: front and rear are both NULL. Singleton: they identify the same node, whose next is NULL. Longer chain: front reaches rear through one or more next links, and rear->next is NULL. Every enqueue and dequeue must move between these cases without creating a fourth invalid case.</p>
+<p>For a singleton enqueue, the old node stays front and its next becomes the new node. Rear moves to the new node. For a two-node dequeue, the old rear becomes both endpoints after front advances. Its next was already NULL, so the singleton rule follows naturally from the longer-chain rule.</p>
+<p>Failure handling follows ownership. If allocation fails before publication, no existing pointer changes and the queue still owns its old nodes. If reading the next input value fails, the caller still owns every previous node. Clear must release them before the function returns, because local endpoint variables will no longer provide a route to them afterward.</p>
+<p>A read-only queue walk can compute count without removing anything. Begin with a temporary cursor equal to front and follow next until NULL. This takes linear time. If frequent size queries matter, store a count field and maintain it on every successful insertion and removal. That extra field introduces another invariant rather than eliminating responsibility.</p>
+<p>Queue payload equality does not affect linkage. Two arrivals with the same integer are still separate nodes and separate service events. Removing one must not accidentally skip or free the other. Draw unique boxes in memory traces even when their displayed values are identical.</p>
+
+<h2 id="examples">Examples</h2>
+<h3>Serve linked nodes in arrival order</h3><p>The head leaves first while rear stays on the last node until the final removal.</p><div data-example="ex-1"></div><h3>Drain, then enqueue again</h3><p>Draining sets both endpoints to NULL; the next insertion creates a valid singleton containing 77.</p><div data-example="ex-2"></div><h3>Consume a queue while summing</h3><p>The total is six, and each serviced node is released.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Enqueue and dequeue use O(1) link work and O(1) temporary storage. With n values, total node storage is O(n). Each node includes a next pointer and may have padding. Allocator metadata can add further real memory use outside the visible struct.</p>
+<p>The saved rear changes enqueue from O(n) traversal to constant link work. This benefit depends on maintaining rear on every insertion and the final removal. A stale endpoint is both an efficiency failure and a memory-safety problem.</p>
+<p>Compared with a circular array, the linked queue needs no fixed physical capacity or wrap arithmetic. It pays for individual allocations, extra pointers and scattered memory. Array queues often have better locality when a useful capacity bound is known.</p>
+<p>An empty dequeue returns failure without writing the output. A singleton dequeue clears both endpoints. Allocation failure preserves the old chain. If later input is malformed, the caller clears already queued nodes before leaving. These paths matter even though ordinary valid input follows the happy path.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Moving only rear on the first insertion</h3><p>If front remains NULL, the queue appears empty and the new node becomes unreachable from service. Initialize front when the old rear is NULL, then assign rear for every successful insertion.</p><h3>Freeing before copying links</h3><p>The old front holds both its payload and successor. Read them while the node is alive. Freeing first makes later field access invalid.</p><h3>Sharing one node between owners</h3><p>These helpers assume each node belongs to this queue alone. Reusing the same node in another owning chain could lead to double release. Enqueue creates its own node instead of accepting ownership ambiguously.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>When reviewing a queue diagram, follow next from front and confirm that the final box is exactly rear. Then check that its next is NULL. The picture should explain both reachability and endpoints.</p>
+<p>Keep a cleanup path near every failure after allocation begins. The code uses clear rather than duplicating the link-release logic. After clear, both pointers are NULL, so another enqueue can safely rebuild the queue.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>These C17 programs include stdlib.h for allocation and free every node they create. C does not clear pointer variables automatically after free. Assigning NULL to the owning endpoint is an explicit part of the algorithm.</p>
+
+<h2 id="summary">Summary</h2>
+<p>A linked queue saves front for removal and rear for insertion. Correct endpoint repairs let empty, singleton and longer queues share the same helpers. Extend the endpoint choices in <a href="topic:ds-deque">double-ended queues</a>.</p>

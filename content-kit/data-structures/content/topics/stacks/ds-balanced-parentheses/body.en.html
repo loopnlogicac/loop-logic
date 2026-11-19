@@ -1,0 +1,54 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">When you open a small box inside a larger box, you must close the small one first. Brackets follow the same nesting rule. In <code>{[()]}</code>, the round pair closes before the square pair, and the square pair closes before the braces. A stack remembers that order.</p>
+<p><dfn>Balanced brackets</dfn> have both the correct partners and the correct nesting. Counting opening and closing symbols is not enough. The expression <code>([)]</code> has equal counts, yet its pairs cross. The next closer must match the most recent opener still waiting.</p>
+<p>You will check three families: round parentheses, square brackets and braces. Other characters are ignored. This is a bracket test, not a complete C parser. A line can have balanced brackets and still contain invalid operators, declarations or types.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>The array named items holds pending opening characters from bottom to top. A parallel positions array stores their locations in the input. The same top index selects both the character and its position. Keeping these arrays aligned lets the program explain an unfinished opening bracket.</p>
+<p>The helper match returns true only for one of the three allowed pairs. It does not compare bracket characters numerically. Character codes do not form a portable pairing formula for this purpose.</p>
+<p>The function check returns zero for balanced input. A positive result identifies a 1-based character position. When a closer has no valid partner, report that closer immediately. If scanning ends with pending openers, report the oldest remaining opener. This end-of-input policy is explicit; another application could choose the newest instead.</p>
+<p>The line reader accepts at most twenty-four characters and removes the newline before checking. Spaces count toward character positions even though they do not affect nesting. ASCII bracket symbols occupy one byte each in these examples; byte positions are not general Unicode character positions.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>For an opening symbol, increment top and save both token and position. It represents unfinished work. For a closing symbol, first check whether the stack is empty. Reading items[top] before that check could access index minus one.</p>
+<p>If the stack is nonempty, compare its top opener with the closer. A match allows one pop. A mismatch ends the scan immediately, because later text cannot repair an incorrectly closed inner group. Do not search deeper in the stack for a convenient partner.</p>
+<p>After the last character, an empty stack proves that every opener found a correctly ordered closer. A nonempty stack proves that something remains unfinished. Use positions[0] for the oldest unmatched opener under this lesson’s reporting policy.</p><pre class="diagram">text: { [ ] }
+read { : []       -&gt; [{]       top=0
+read [ : [{]      -&gt; [{,[]     top=1
+read ] : [{,[]    -&gt; [{]       top=0
+read } : [{]      -&gt; []        top=-1
+mismatch:
+read ) : [(,[]    -&gt; [(,[]     error; top expects ]</pre><p>Consider <code>a{b[c]</code>. The brace enters at position two and the square opener at position four. The square closer at position six removes only the square opener. At the end the brace remains, so the answer points to position two.</p>
+<p>For <code>())</code>, the first round pair empties the stack. The third character is a closer with no opener. Report three without attempting a pop. For an empty line, the stack starts and ends empty, giving success.</p>
+<p>The lab follows the same check order and position convention. Its pending opener boxes appear in opening order. At a mismatch, they remain visible, so you can inspect which partner was expected and why the current closer fails.</p><h3>A closer trace</h3><p>The central invariant is about the accepted prefix, meaning the part of the line processed without an error. The stack contains exactly its unmatched opening brackets, in their original opening order. Initially both prefix and stack are empty. An opener extends that list. A valid closer removes its last entry. An ordinary character changes neither list nor stack.</p>
+<p>This invariant explains the mismatch rule. If the top is square and the next closer is round, the innermost unfinished group is being closed with the wrong family. Finding a round opener deeper down does not help; the square group would remain crossed. Stopping immediately points to the first prefix that can no longer be valid.</p>
+<p>Maximum nesting depth can be measured during the same scan. After every successful opener push, compare top+1 with the largest previous depth. For ()() the maximum is one. For (()) it is two. Both have two pairs, so total pair count and maximum pending depth describe different properties.</p>
+<p>Suppose a source-code line contains bracket characters inside quoted strings. This bracket-only function still treats them as brackets. A full language tool must first recognize quoted strings, escapes and comments, then decide which characters count as syntax. Ignoring non-brackets is deliberately narrower than recognizing all source-language contexts.</p>
+<p>Try inserting a letter before a known mismatch. The stack decisions remain the same, but its reported character position increases by one. That small experiment checks that diagnostics refer to the complete input line rather than to a filtered list of bracket tokens.</p><h3>Operation plan</h3><pre><code class="language-text">top = -1; error = 0
+for each token at position i + 1
+    if opener: push token and save its position
+    if closer: require matching items[top], then pop
+if openers remain: error = oldest saved position
+return error</code></pre><div data-lab="bracket-matching"></div>
+
+<h2 id="examples">Examples</h2>
+<h3>Track three bracket families</h3><p>Every closer matches the most recent opener, so Error: 0 means success.</p><div data-example="ex-1"></div><h3>Detect a crossed pair immediately</h3><p>Position three contains a round closer while the pending opener is square.</p><div data-example="ex-2"></div><h3>Locate an opener left at the end</h3><p>The square pair closes, leaving the brace at position two unmatched.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Scanning n characters takes O(n) time. Each opener is pushed once and, if matched, popped once. The nested structure does not create repeated rescanning. The worst space requirement is O(n), reached when every character opens another group.</p>
+<p>Flat pairs such as ()()() need little simultaneous stack space even though the whole line still takes linear time. The useful measure is maximum nesting depth. The fixed twenty-four-character input bound makes a twenty-five-cell local array sufficient for this implementation.</p>
+<p>The earliest invalid closer is discovered during scanning. An unfinished opener can only be confirmed after reaching the end. These are different diagnostic situations. The return policy should explain both, rather than treating every failure as the final character’s fault.</p>
+<p>A single opening bracket, a single closer, an empty line and crossed families exercise different branches. A line of letters exercises the ignored-character branch. None should cause a stack operation on invalid storage.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Using only a counter</h3><p>A depth counter can detect excess closing parentheses for one family, but it cannot remember bracket families. Use characters on the stack when round, square and brace groups can nest.</p><h3>Popping before matching</h3><p>Popping immediately loses the opener that explains a mismatch. Test the top first. Only a valid family match removes it.</p><h3>Reporting the wrong position base</h3><p>C array indices begin at zero; the diagnostic positions here begin at one. Add one when storing an input index, then return the saved position unchanged.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>When tracing by hand, make one column for the character, one for the pending stack and one for the reason. A non-bracket character should leave the pending stack exactly as it was.</p>
+<p>Keep the diagnostic policy consistent between the algorithm and its caller. Zero means success, not character zero. A positive value refers to the original line, including spaces, rather than to the count of bracket symbols.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>The bracket algorithm requires no newer C feature than ordinary arrays and loops. The programs use C17 and fgets for bounded line input. The strlen-family indices use size_t, while the bounded stack positions fit in int.</p>
+
+<h2 id="summary">Summary</h2>
+<p>Correct nesting depends on the latest unmatched opener. Store its family and position, refuse invalid closers, and check for unfinished groups at the end. Next, use a stack to rearrange operators in <a href="topic:ds-infix-postfix">expression conversion</a>.</p>

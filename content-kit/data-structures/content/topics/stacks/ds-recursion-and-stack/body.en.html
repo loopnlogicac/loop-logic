@@ -1,0 +1,52 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A recursive function can pause its own calculation while a smaller call runs. Imagine leaving a note on your desk before asking someone to solve the smaller task. The note records what you were doing and what you must do when the answer returns.</p>
+<p>A running program uses an <dfn>activation record</dfn>, or call frame, for that saved state. A frame can include parameters, local variables and the place to resume. The most recent unfinished call resumes first, so recursive execution has stack order.</p>
+<p>You already know the base case and recursive case from <a href="topic:ds-recursion-review">recursion review</a>. Here the focus is the suspended work. By representing it explicitly, you can turn a recursive algorithm into a loop without losing the order of its actions.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>For factorial, a call with n greater than zero must remember n while factorial(n-1) runs. After the child returns, the parent multiplies its saved n by the child result. Different calls have different n values, even though the source code uses the same variable name.</p>
+<p>The factorial example prints Resume lines after the child call. Those lines reveal the return order. The deepest non-base call resumes first. The final output then reports the completed factorial.</p>
+<p>The explicit factorial program stores pending n values in frames. Its top variable names the latest saved multiplication. Descending pushes n, then lowers n. Unwinding pops factors and multiplies them into result. The base contribution is one, so zero factorial needs no stored factor.</p>
+<p>Hanoi requires a richer Frame. It stores n, from, spare, to and phase. The peg roles differ across children. The phase records which action comes next when control returns to that frame. A disk count alone cannot describe the suspended computation.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>Recursive Hanoi moves n-1 disks from source to spare, moves the largest disk to destination, then moves n-1 from spare to destination. The two child calls surround one action. An explicit simulation must remember all three stages.</p>
+<p>A phase-zero frame advances its phase to one and pushes the first child. Advancing before the push is essential: when the child finishes, the parent must continue rather than schedule that child again. A phase-one frame prints its move, advances to phase two, then pushes the second child.</p>
+<p>A phase-two frame has completed both branches and is popped. A zero-disk frame is also popped immediately without printing a move. The loop always acts on frames[top], which is the most recent active task.</p><pre class="diagram">factorial(3), descent:
+[] -&gt; [3] -&gt; [3,2] -&gt; [3,2,1]
+unwind:
+[3,2,1] -&gt; [3,2] result=1
+[3,2]   -&gt; [3]   result=2
+[3]     -&gt; []    result=6
+Hanoi parent:
+[n,A,B,C,phase=0]
+       -&gt; [n,A,B,C,phase=1] [n-1,A,C,B,phase=0]
+child finishes -&gt; parent phase=1 resumes</pre><p>For two disks, the simulation first moves disk one from A to B. It then moves disk two from A to C. Finally it moves disk one from B to C. All three moves arise from the same phased rules; no special two-disk shortcut is needed.</p>
+<p>The C code copies a child frame into a temporary before increasing top. This avoids depending on a pointer to the old top while writing the new slot. Its local frame array is fixed, and the input bound keeps the deepest zero-disk frame within it.</p>
+<p>The explicit stack contains pending calls, not the three physical disk piles. The printed moves describe those piles indirectly. To verify legality, you can maintain separate peg stacks and check that each moved disk is on top and never lands on a smaller disk.</p><h3>A closer trace</h3><p>For three-disk Hanoi, verify the moves against actual peg contents. Begin with A holding three, two, one from bottom to top. The first move places one on C. The second places two on B. The third places one on B above two. Only then can three move from A to C. The remaining three moves transfer the two-disk pile from B to C.</p>
+<p>That replay separates a correct execution trace from a plausible count. Seven arbitrary moves are not sufficient. Every move must remove the source top, identify the printed disk correctly, and either use an empty destination or land on a larger disk. The final pile must be entirely on C.</p>
+<p>Frame depth can be bounded before execution. For input n, each pushed child has disk count one smaller than its parent. The longest chain ends at zero, so it contains n+1 frames. Since the example limits n to eight, ten frame slots leave room for every supported branch. Branch count does not increase simultaneous depth.</p>
+<p>The factorial conversion retains one factor per suspended multiplication. Tail recursion, where no work remains after the recursive call, can sometimes become a loop with fewer stored frames. Hanoi is different: a move and another child remain after its first child. The phase field records that unfinished schedule.</p>
+<p>When designing an explicit simulation, write a table with phase, next action and saved state. For Hanoi, zero schedules the first child, one performs the move and schedules the second child, and two returns. That table is a direct guide to the loop branches and their transitions.</p>
+
+<h2 id="examples">Examples</h2>
+<h3>Watch factorial calls resume</h3><p>The base returns one, then calls resume in the order one, two, three, four.</p><div data-example="ex-1"></div><h3>Replace pending calls with integers</h3><p>Pushing four through one records the pending multiplications; popping computes twenty-four.</p><div data-example="ex-2"></div><h3>Simulate Hanoi with phased frames</h3><p>Each frame remembers whether its first child, move or second child is next. Seven legal moves result.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Factorial performs O(n) multiplications and has O(n) recursive depth. The explicit factorial stack also occupies O(n) auxiliary space. Replacing calls with a loop does not erase the stored pending factors. A different iterative formulation could multiply directly using O(1) space, but that changes the representation of unfinished work.</p>
+<p>Hanoi has M(0)=0 and M(n)=2M(n-1)+1 moves. Expanding the recurrence gives 2^n-1. Time is therefore O(2^n). The deepest active branch descends from n through zero, so simultaneous frames number n+1 and space is O(n).</p>
+<p>Total calls and maximum depth are different quantities. Many branches run one after another while reusing the same frame slots. Counting every call as simultaneously live would overstate the memory cost.</p>
+<p>The examples bound factorial input at ten and Hanoi input at eight. Factorial uses long, whose guaranteed range covers ten factorial. Hanoi’s bound keeps both frame storage and printed output manageable. Zero inputs exercise the base path without any move or multiplication.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Forgetting the return point</h3><p>An explicit stack of parameters is insufficient when work occurs between recursive children. Store a phase or another continuation marker so the loop knows what the parent still owes.</p><h3>Changing peg roles incorrectly</h3><p>The first Hanoi child moves from source to spare using destination. The second moves from spare to destination using source. Copying identical peg roles for both children produces an invalid sequence.</p><h3>Assuming loops guarantee constant space</h3><p>A loop with a growing frame array still uses memory proportional to that array. Analyze the stored state rather than the presence of the recursive-call syntax.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>When converting recursion, list each point where the function can pause. Give those points distinct phases. Then write the state that must survive each pause into the frame.</p>
+<p>Check the zero and one cases before tracing larger inputs. For Hanoi, also count moves and replay their legality. A correct count alone does not prove that peg roles or disk order are correct.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>C17 does not guarantee a particular machine layout for call frames or a portable recursion-depth limit. The conceptual stack explains execution order without assuming exact byte offsets. Explicit frame structures have their ordinary C object layout, which can include padding.</p>
+
+<h2 id="summary">Summary</h2>
+<p>Frames preserve parameters and the next action, allowing a loop to reproduce recursive order. Hanoi shows why phase matters when a call branches. Move on to FIFO processing in <a href="topic:ds-queue-array">queues using arrays</a>.</p>
