@@ -1,0 +1,56 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Writing every scanner branch yourself gives you control, but it can become repetitive as a language grows. A lexer generator lets you write token patterns and actions instead. Flex translates that rule description into a scanner implementation.</p>
+<p>A <dfn>lexer generator</dfn> is a tool that builds a scanner from lexical rules. The generated scanner reads the student's program; the generator itself reads the language designer's rules. Keeping those two inputs separate helps explain what happens during construction and what happens during scanning.</p>
+<p>Flex is commonly used to produce C scanner code from a file ending in .l. Its patterns resemble regular expressions, but their notation is not identical to Python re. This topic shows Flex descriptions for reading and tracing. The runnable scanner implementations in this course use Python.</p>
+<p>The key ideas are the file's three sections, pattern-action rules, matched text, and deterministic recognition. You can understand these ideas before learning a full parser generator interface. A scanner can first print category names, then later return token codes to a parser.</p>
+<h2 id="worked-examples">Worked examples</h2>
+<h3>Read the three-part rule file</h3>
+<p>A Flex file has a definitions section, a rules section, and an optional user-code section. Two separator lines containing %% divide them. Definitions contain options, named patterns, and C declarations. Rules pair patterns with C actions. User code supplies helper functions or a main function.</p>
+<table class="ref"><caption>The section boundaries are part of the .l format</caption><thead><tr><th scope="col">Section</th><th scope="col">Typical contents</th><th scope="col">Purpose</th></tr></thead><tbody><tr><td>Before first %%</td><td>Options, named definitions, declarations inside %{ and %}</td><td>Configure generation and make declarations available.</td></tr><tr><td>Between %% separators</td><td>Pattern followed by an action</td><td>Decide what each matched spelling does.</td></tr><tr><td>After second %%</td><td>C helper functions and main</td><td>Support or start the generated scanner.</td></tr></tbody></table>
+<p>The compact description below prints categories for a restricted language. It recognises only let as a keyword, identifiers, integers, equality, and assignment. It skips whitespace and reports other characters. This rule set is intentionally narrower than the hand-written classroom scanner.</p>
+<pre><code class="language-text">%option noyywrap
+%{
+#include &lt;stdio.h&gt;
+%}
+%%
+[ \t\r\n]+ ;
+&quot;let&quot; { printf(&quot;LET %s\n&quot;, yytext); }
+[A-Za-z_][A-Za-z0-9_]* { printf(&quot;ID %s\n&quot;, yytext); }
+[0-9]+ { printf(&quot;INT %s\n&quot;, yytext); }
+&quot;==&quot; { printf(&quot;EQ %s\n&quot;, yytext); }
+&quot;=&quot; { printf(&quot;ASSIGN %s\n&quot;, yytext); }
+. { printf(&quot;ERROR %s\n&quot;, yytext); }
+%%
+int main(void) { yylex(); return 0; }</code></pre>
+<p>The option noyywrap removes the need to supply the usual yywrap end-of-input callback. The declaration block includes the printing header. The rule for whitespace uses an empty action, so matching whitespace performs no token action. The main function calls yylex, the scanner entry function.</p>
+<p>The fallback dot catches one non-newline character. Newlines are already covered by the whitespace rule. Without a suitable fallback, Flex's default rule can echo unmatched input. An intentional catch-all makes unexpected source characters visible rather than silently treating them as valid tokens.</p>
+<h3>Apply longest match, then rule order</h3>
+<p>At the current input position, Flex selects the rule matching the most characters. When rules tie on length, the earlier rule wins. These are two separate decisions. Earlier placement does not let a short keyword prefix defeat a longer identifier.</p>
+<table class="ref"><caption>A manual trace of Flex rule selection, not an execution record</caption><thead><tr><th scope="col">Input remaining</th><th scope="col">Matching candidates</th><th scope="col">Chosen spelling</th><th scope="col">Action</th></tr></thead><tbody><tr><td>let x==25</td><td>keyword let: 3; identifier let: 3</td><td>let</td><td>Earlier keyword rule prints LET let.</td></tr><tr><td> x==25</td><td>whitespace: 1</td><td>space</td><td>The empty action skips it.</td></tr><tr><td>x==25</td><td>identifier x: 1</td><td>x</td><td>Print ID x.</td></tr><tr><td>==25</td><td>equality ==: 2; assignment =: 1; fallback: 1</td><td>==</td><td>Print EQ ==.</td></tr><tr><td>25</td><td>integer 25: 2; fallback 2: 1</td><td>25</td><td>Print INT 25.</td></tr></tbody></table>
+<p>For let, the keyword and identifier rules match the same three characters. The earlier keyword rule wins. For letter, the identifier rule matches six characters, while the keyword rule matches only three. Longest match chooses the whole identifier despite the keyword appearing first.</p>
+<p>For ==, the equality rule matches two characters. Assignment and fallback can match only one. Equality wins even if the one-character assignment rule is written earlier. This differs from assuming that the first successful Python regex alternative automatically implements longest token matching.</p>
+<table class="ref"><caption>Priority examples with a shared rule set</caption><thead><tr><th scope="col">Spelling</th><th scope="col">Winning category</th><th scope="col">Why</th></tr></thead><tbody><tr><td>let</td><td>LET</td><td>Equal-length keyword/identifier tie uses earlier rule.</td></tr><tr><td>letter</td><td>ID</td><td>Six-character identifier is longer than the keyword prefix.</td></tr><tr><td>let2</td><td>ID</td><td>Four-character identifier beats the three-character keyword.</td></tr><tr><td>==</td><td>EQ</td><td>Two-character match beats one-character alternatives.</td></tr><tr><td>@</td><td>ERROR</td><td>Only the fallback rule matches.</td></tr></tbody></table>
+<h3>Use yytext and yyleng in an action</h3>
+<p><dfn>yytext</dfn> gives access to the spelling matched by the selected rule. <dfn>yyleng</dfn> gives its length. For integer 25, the text contains the two digit characters and the length is two. The action can convert those digits to a numeric attribute if needed.</p>
+<p>A matched spelling and its converted value are different things. The text 0025 has length four even when its integer value is 25. Preserve the spelling when an error message or source display needs it. Use checked conversion routines when a real scanner must handle values outside the target type's range.</p>
+<p>Do not assume yytext remains unchanged after the next scanner operation. Later scanning can reuse the underlying storage. If a parser or symbol table needs a name for longer, copy or intern it using an ownership rule. An action that returns a pointer without considering its lifetime can corrupt later name information.</p>
+<h2 id="how-it-works">From patterns to a scanner automaton</h2>
+<p>The conceptual generator pipeline begins with automata for token patterns. Epsilon edges combine them under one start. Accepting states remember which rule they belong to. Subset construction creates a deterministic machine whose states can include several candidate rule finals.</p>
+<table class="ref"><caption>A conceptual explanation; generated representations can be optimised</caption><thead><tr><th scope="col">Construction stage</th><th scope="col">What is retained</th><th scope="col">Why it matters</th></tr></thead><tbody><tr><td>Pattern fragments</td><td>The language of each pattern</td><td>Each token spelling still has the intended rule.</td></tr><tr><td>Combined NFA</td><td>A shared start and rule-labelled finals</td><td>All rules compete at the same input position.</td></tr><tr><td>DFA construction</td><td>Sets of NFA possibilities and winning final labels</td><td>Recognise characters deterministically while preserving tie priority.</td></tr><tr><td>Scanner tables or code</td><td>Transitions and accepting-rule actions</td><td>Execute the recogniser efficiently.</td></tr></tbody></table>
+<p>The scanner may pass through several accepting states while exploring a longer match. It remembers the most recent accepting point and the corresponding winning rule. When no transition can continue, it returns to that point, exposes the matched text, and performs the action.</p>
+<p>This last-accepting-point rule explains why finding one accepted prefix is not enough to emit immediately. An identifier may grow with each new character. A one-character operator may become a two-character operator. The scanner must establish that no longer candidate wins before committing.</p>
+<p>Rule labels matter during automaton optimisation. Ordinary yes/no DFA minimisation preserves only acceptance. A token scanner must also preserve which action wins. Two accepting states with different winning actions cannot be merged merely because both accept some word.</p>
+<p>In a parser-based system, an action often returns an integer token code instead of printing a label. A parser may also need the token's semantic value and location. Flex and Bison integrations define interfaces for these details; the exact declarations depend on the chosen parser settings.</p>
+<p>Skipping whitespace with an empty action makes yylex continue looking for a meaningful token. Returning a token pauses that call so a parser can process it. End of input is a separate condition; it should not be disguised as a bad source character.</p>
+<p>Location tracking still requires a policy. Newline rules or scanner options can update a line counter. Columns need updates for all matched text, including skipped whitespace and comments. Generating the recogniser does not automatically settle whether a tab counts as one character or several display columns.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Putting a general identifier rule before a keyword</h3>
+<p>Equal-length keyword matches then lose to the identifier rule. Place keyword rules earlier or classify complete identifiers in an action. Longest match still protects longer names such as letter.</p>
+<h3>Reusing Python pattern syntax without checking it</h3>
+<p>Flex definitions and escapes follow Flex's syntax. A Python raw-string prefix is not part of a .l pattern. Translate the intended spelling rule, rather than pasting host-language notation blindly.</p>
+<h3>Believing an empty action returns a token</h3>
+<p>The whitespace rule performs no return. Scanning continues. If a grammar requires newlines as tokens, the whitespace rule must not swallow them without an action that communicates them.</p>
+<h3>Losing the winning action during minimisation</h3>
+<p>Recognising a token spelling is only half the job. The scanner must also select its category and action. Preserve rule priority in accepting labels when combining or reducing states.</p>
+<h2 id="summary">Summary</h2>
+<p>Flex separates definitions, rules, and supporting code. Its longest-match rule uses file order only for equal lengths. Actions read yytext and yyleng, then skip text, report errors, or deliver tokens. Continue toward <a href="topic:cd-context-free-grammars">Context-Free Grammars</a>, where the parser organises those tokens into structure.</p>

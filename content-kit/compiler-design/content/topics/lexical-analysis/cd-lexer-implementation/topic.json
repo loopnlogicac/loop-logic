@@ -1,0 +1,459 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-lexer-implementation",
+  "module": "lexical-analysis",
+  "order": 7,
+  "kind": "lesson",
+  "title": {
+    "en": "Writing a Lexer",
+    "bn": "নিজে লেক্সার লেখা"
+  },
+  "summary": {
+    "en": "Implement a complete small-language lexer with longest operators, comments, EOF, and line-numbered recovery.",
+    "bn": "দীর্ঘ অপারেটর, কমেন্ট, ইনপুটের শেষ এবং লাইনসহ ভুলের তথ্য সামলে ছোট ভাষার লেক্সার বানাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-dfa-minimization"
+  ],
+  "related": [
+    "cd-flex"
+  ],
+  "keywords": [
+    "hand written lexer",
+    "tokenisation",
+    "line numbers",
+    "error recovery",
+    "maximal munch",
+    "EOF"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14 and use only the standard library."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Define the small language first"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Implement the advancing loop"
+    },
+    {
+      "id": "examples",
+      "title": "Examples"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Progress, errors, and resource costs"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Version notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Assignment and arithmetic",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "language": "python",
+      "tryNow": true,
+      "explanationHtml": "<p>The assignment occupies line 1 and the print expression occupies line 2. The final newline places EOF at 3:1.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "Longest operator and full names",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "language": "python",
+      "tryNow": true,
+      "explanationHtml": "<p>printable remains ID at 1:1. EQ starts at 1:10 and consumes both equals signs. The integer and semicolon follow.</p>",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Recover at a forbidden character",
+      "level": "intermediate",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "language": "python",
+      "tryNow": true,
+      "explanationHtml": "<p>The @ character is reported at 2:7. Scanning then continues with integer 7 and the semicolon, preserving their later columns.</p>",
+      "stdin": "examples/ex-3.in"
+    },
+    {
+      "id": "ex-4",
+      "title": "Whole-line and trailing comments",
+      "level": "intermediate",
+      "file": "examples/ex-4.py",
+      "output": "examples/ex-4.out",
+      "language": "python",
+      "tryNow": true,
+      "explanationHtml": "<p>The first comment contributes no tokens. The next code begins at line 2. Its trailing comment is also skipped, and line 3 begins normally.</p>",
+      "stdin": "examples/ex-4.in"
+    }
+  ],
+  "practice": [
+    {
+      "type": "code",
+      "title": "Count recognised token categories",
+      "statementHtml": "<p>Read source until end of input using the documented language. Ignore ERROR and EOF. Print KIND count for each present category in alphabetical category order. For empty or comment-only input, print nothing.</p>",
+      "hints": [
+        "Reuse tokenisation and count only successful non-EOF records."
+      ],
+      "difficulty": "medium",
+      "id": "p-1",
+      "solution": "practice/p-1.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "title": "Collect lexical diagnostics",
+      "statementHtml": "<p>Read source until end of input. Print line:column followed by a space and Python repr of the bad character for every ERROR. End with errors N. Use the lexer rules and one-character tab columns.</p>",
+      "hints": [
+        "Filter ERROR records without stopping at the first one."
+      ],
+      "difficulty": "hard",
+      "id": "p-2",
+      "solution": "practice/p-2.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "title": "A three-equals boundary",
+      "statementHtml": "<p>Tokenise x===y; and give the start column of each token, including EOF.</p>",
+      "hints": [
+        "The longest valid operator is only two characters."
+      ],
+      "answerHtml": "<p>ID x at 1:1, EQ == at 1:2, ASSIGN = at 1:4, ID y at 1:5, SEMI at 1:6, EOF at 1:7. The scanner does not invent a three-character operator.</p>",
+      "difficulty": "easy",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Comment at end of file",
+      "statementHtml": "<p>For source //hi with no newline, list the tokens and EOF location.</p>",
+      "hints": [
+        "The comment consumes all four stored characters."
+      ],
+      "answerHtml": "<p>No ordinary tokens are emitted. The four-character comment moves the column from 1 to 5. EOF is emitted at 1:5. No newline means the line remains 1.</p>",
+      "difficulty": "easy",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "title": "Lexical versus syntax failure",
+      "statementHtml": "<p>Does the lexer reject print + ; as a malformed expression? Explain the next stage.</p>",
+      "hints": [
+        "Each visible spelling has an allowed category."
+      ],
+      "answerHtml": "<p>The lexer emits PRINT, PLUS, SEMI, and EOF. These are valid tokens. A parser must report that plus has no suitable operand under the expression grammar.</p>",
+      "difficulty": "medium",
+      "id": "p-5"
+    },
+    {
+      "type": "written",
+      "title": "State a progress argument",
+      "statementHtml": "<p>Show that the main scan cannot report @ forever at one offset.</p>",
+      "hints": [
+        "Inspect the error branch after its yield."
+      ],
+      "answerHtml": "<p>After yielding ERROR, the resumed generator increments both offset and column, then continues. Thus the next iteration sees a later character. Every other loop branch also advances, and the loop exits at source length.</p>",
+      "difficulty": "hard",
+      "id": "p-6"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "Why does the lexer read printable before keyword lookup?",
+      "explanation": "A keyword prefix cannot defeat a longer identifier.",
+      "difficulty": "easy",
+      "id": "q-1",
+      "options": [
+        "To turn every name into PRINT",
+        "To skip all words",
+        "To preserve the complete identifier",
+        "To delay reading any input"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why is == checked before =?",
+      "explanation": "Checking = first would split the valid two-character operator.",
+      "difficulty": "easy",
+      "id": "q-2",
+      "options": [
+        "It always appears earlier in source",
+        "It consumes no characters",
+        "It is whitespace",
+        "It is the longer overlapping token"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "What record is emitted once after scanning finishes?",
+      "explanation": "EOF explicitly marks input completion at the final cursor.",
+      "difficulty": "easy",
+      "id": "q-3",
+      "options": [
+        "EOF with empty spelling",
+        "A second copy of the last token",
+        "ERROR even for valid input",
+        "A newline token always"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "How are tabs counted in this implementation?",
+      "explanation": "The lesson defines character columns rather than editor display widths.",
+      "difficulty": "easy",
+      "id": "q-4",
+      "options": [
+        "Always eight columns",
+        "One character column",
+        "Zero columns",
+        "A new line"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does the lexer do with an isolated slash?",
+      "explanation": "Only // opens a line comment.",
+      "difficulty": "easy",
+      "id": "q-5",
+      "options": [
+        "Start a comment without a second slash",
+        "Stop at EOF immediately",
+        "Emit SLASH",
+        "Delete the rest of the line"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which text is a semantic concern after tokenisation?",
+      "explanation": "Declaration checks need name information beyond spelling.",
+      "difficulty": "easy",
+      "id": "q-6",
+      "options": [
+        "A forbidden @ character",
+        "Whether == has one or two equals",
+        "The start column of a lexeme",
+        "Use of a well-spelled but undeclared name"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why is this implementation not constant-memory overall?",
+      "explanation": "The source occupies O(n) memory even if tokens are consumed lazily.",
+      "difficulty": "easy",
+      "id": "q-7",
+      "options": [
+        "It reads the whole source into a string",
+        "Every DFA needs infinite memory",
+        "A generator stores every past token automatically",
+        "Integers cannot be represented"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "output",
+      "prompt": "Which category does exact keyword lookup give printable?",
+      "code": "keywords = {\"let\": \"LET\", \"print\": \"PRINT\"}\nprint(keywords.get(\"printable\", \"ID\"))\n",
+      "explanation": "The full spelling printable is absent from the keyword dictionary.",
+      "difficulty": "medium",
+      "id": "q-8",
+      "language": "python",
+      "options": [
+        "PRINT",
+        "ID",
+        "LET",
+        "ERROR"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "output",
+      "prompt": "Where is EOF after scanning two characters and a newline?",
+      "code": "line, column = 1, 1\nfor char in \"x;\\n\":\n    if char == \"\\n\":\n        line, column = line + 1, 1\n    else:\n        column += 1\nprint(f\"{line}:{column}\")\n",
+      "explanation": "The newline moves to line 2 and resets the column.",
+      "difficulty": "medium",
+      "id": "q-9",
+      "language": "python",
+      "options": [
+        "1:4",
+        "2:3",
+        "2:1",
+        "1:3"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "output",
+      "prompt": "How many ERROR characters does this progress loop report?",
+      "code": "source = \"@@\"\npos = 0\nerrors = 0\nwhile pos < len(source):\n    errors += 1\n    pos += 1\nprint(errors)\n",
+      "explanation": "Each iteration consumes one bad character, so both are reported once.",
+      "difficulty": "medium",
+      "id": "q-10",
+      "language": "python",
+      "options": [
+        "1",
+        "0",
+        "3",
+        "2"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "What happens to 12roll under the documented token contract?",
+      "explanation": "The scanner ends a digit sequence before the following letter; grammar checks come later.",
+      "difficulty": "medium",
+      "id": "q-11",
+      "options": [
+        "INT 12 followed by ID roll",
+        "One identifier",
+        "An automatic declaration error",
+        "One decimal token"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why can a comment end at EOF without an error here?",
+      "explanation": "A // comment runs to newline or end of input by the stated language rule.",
+      "difficulty": "easy",
+      "id": "q-12",
+      "options": [
+        "EOF is always a newline character",
+        "Line comments do not require a closing delimiter",
+        "Every comment becomes a string",
+        "The scanner ignores its own bounds"
+      ],
+      "answer": 1
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Read a complete identifier before checking its keyword status.",
+      "bn": "পুরো নাম পড়ার পর সেটি কীওয়ার্ড কি না দেখি।"
+    },
+    {
+      "en": "Check double-character operators before their single-character prefixes.",
+      "bn": "দুই অক্ষরের অপারেটর তার এক অক্ষরের শুরুর অংশের আগে দেখি।"
+    },
+    {
+      "en": "Each scanner branch must advance or terminate.",
+      "bn": "স্ক্যানারের প্রতিটি শাখাকে সামনে এগোতে বা থামতে হবে।"
+    },
+    {
+      "en": "Tokens keep their starting line and column.",
+      "bn": "টোকেনে শুরুর লাইন আর কলাম রাখি।"
+    },
+    {
+      "en": "Comments are skipped while their characters still affect positions.",
+      "bn": "কমেন্ট বাদ দিলেও তার অক্ষরগুলো অবস্থানের হিসাবে থাকে।"
+    },
+    {
+      "en": "Recognised tokens still need syntax and semantic checks.",
+      "bn": "টোকেন চিনলেও গঠন আর অর্থের নিয়ম যাচাই বাকি থাকে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "design",
+      "question": "Design a lexer record and cursor update policy for the classroom language.",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>The complete classroom lexer contract</caption><thead><tr><th scope=\"col\">Category</th><th scope=\"col\">Spelling</th><th scope=\"col\">Priority or boundary rule</th></tr></thead><tbody><tr><td>LET, PRINT</td><td>Exact names let and print</td><td>Read a complete identifier before keyword lookup.</td></tr><tr><td>ID</td><td>ASCII letter or underscore, then ASCII letters, underscores, or digits</td><td>Consume all identifier characters.</td></tr><tr><td>INT</td><td>One or more ASCII digits</td><td>A sign is a separate operator.</td></tr><tr><td>EQ</td><td>==</td><td>Check before the shorter = operator.</td></tr><tr><td>ASSIGN, PLUS, MINUS, STAR, SLASH</td><td>= + - * /</td><td>A // prefix starts a comment instead of two slash tokens.</td></tr><tr><td>LPAREN, RPAREN, SEMI</td><td>( ) ;</td><td>Each consumes one character.</td></tr><tr><td>ERROR</td><td>Any unsupported character</td><td>Report its location, consume it, and continue.</td></tr><tr><td>EOF</td><td>No source spelling</td><td>Emitted once at the final cursor location.</td></tr></tbody></table><p>Yield category, spelling, start line, and start column. Advance for every consumed character and emit EOF at the final position.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Trace let marks=85; with token offsets and positions.",
+      "marks": 5,
+      "answerHtml": "<table class=\"ref\"><caption>Cursor movement for let marks=85; without a trailing newline</caption><thead><tr><th scope=\"col\">Offset</th><th scope=\"col\">Line:column</th><th scope=\"col\">Recognised spelling</th><th scope=\"col\">Category</th><th scope=\"col\">Next offset</th></tr></thead><tbody><tr><td>0</td><td>1:1</td><td>let</td><td>LET</td><td>3</td></tr><tr><td>3</td><td>1:4</td><td>space</td><td>skipped</td><td>4</td></tr><tr><td>4</td><td>1:5</td><td>marks</td><td>ID</td><td>9</td></tr><tr><td>9</td><td>1:10</td><td>=</td><td>ASSIGN</td><td>10</td></tr><tr><td>10</td><td>1:11</td><td>85</td><td>INT</td><td>12</td></tr><tr><td>12</td><td>1:13</td><td>;</td><td>SEMI</td><td>13</td></tr><tr><td>13</td><td>1:14</td><td>end of input</td><td>EOF</td><td>13</td></tr></tbody></table>"
+    },
+    {
+      "type": "long",
+      "question": "Explain longest matching, keyword lookup, and a progress invariant in the hand-written scanner.",
+      "marks": 6,
+      "answerHtml": "<p>Read identifiers completely, then look up reserved spellings. Check == before = and // before slash. Every branch advances the cursor or finishes; the error branch consumes one character. These choices prevent false keyword prefixes, split operators, and repeated diagnostics at the same offset.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Extend the lexer to decimal literals while keeping a lone dot invalid. Describe the lookahead before consuming a dot.",
+      "marks": 5,
+      "answerHtml": "<p>After initial digits, consume a dot only if a following character exists and is an ASCII digit. Then consume all following digits. A dot without that evidence remains an unsupported character for the next scan iteration. This preserves progress and the stated requirement for digits after a decimal point.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Python string operations",
+      "url": "https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str"
+    },
+    {
+      "title": "Python generators",
+      "url": "https://docs.python.org/3/tutorial/classes.html#generators"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

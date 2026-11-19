@@ -1,0 +1,355 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-dfa-minimization",
+  "module": "lexical-analysis",
+  "order": 6,
+  "kind": "theory",
+  "title": {
+    "en": "Minimising a DFA",
+    "bn": "DFA ছোট করা"
+  },
+  "summary": {
+    "en": "Remove unreachable states, refine partitions, and prove the remaining DFA states have different futures.",
+    "bn": "অপৌঁছানো স্টেট বাদ দিয়ে পার্টিশন ভাগ করো এবং কোন ভবিষ্যৎ ইনপুট স্টেটগুলোকে আলাদা করে তা দেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-subset-construction"
+  ],
+  "related": [
+    "cd-lexer-implementation"
+  ],
+  "keywords": [
+    "DFA minimisation",
+    "partition refinement",
+    "equivalent states",
+    "distinguishing suffix",
+    "quotient DFA"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "The mathematical construction is independent of Python versions."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Why refinement finds equivalent futures"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "type": "written",
+      "title": "Immediate distinction",
+      "statementHtml": "<p>Can final state p merge with nonfinal q if their transition rows match?</p>",
+      "hints": [
+        "Try a suffix of length zero."
+      ],
+      "answerHtml": "<p>No. The empty suffix accepts from p and rejects from q. Transition agreement cannot erase the difference in final status.</p>",
+      "difficulty": "easy",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "title": "Reachability cleanup",
+      "statementHtml": "<p>From start A, transitions reach only A, B, C, D, E, G. What happens to F even if F has a self-loop?</p>",
+      "hints": [
+        "A loop does not create an incoming path from A."
+      ],
+      "answerHtml": "<p>F is unreachable and is removed before minimising the reachable recogniser. Its self-loop supports only runs that already start at F, which is not the declared start.</p>",
+      "difficulty": "easy",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "title": "Refine the nonfinal block",
+      "statementHtml": "<p>Using the main table and P0, give signatures for A, B, C, and E.</p>",
+      "hints": [
+        "Destination blocks are N and Y."
+      ],
+      "answerHtml": "<p>A and C have (N,N). B and E have (N,Y). Split N into {A,C} and {B,E}. Do not merge these with final {D,G}, even when some signatures match.</p>",
+      "difficulty": "medium",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Witness a necessary split",
+      "statementHtml": "<p>Find a distinguishing suffix for X={A,C} and Z={B,E} in the quotient.</p>",
+      "hints": [
+        "Use one b transition."
+      ],
+      "answerHtml": "<p>The suffix b rejects from X because it reaches X. It accepts from Z because it reaches Y. Therefore X and Z cannot be equivalent.</p>",
+      "difficulty": "medium",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "title": "Propagate distinctions",
+      "statementHtml": "<p>For the unary chain p→q→r→f with f final and looping, show all refinement rounds.</p>",
+      "hints": [
+        "One extra predecessor separates in each round."
+      ],
+      "answerHtml": "<p>P0: {p,q,r}|{f}. P1: {p,q}|{r}|{f}, since r reaches f on a. P2: {p}|{q}|{r}|{f}, since q now reaches r's block. The next round is unchanged. aa distinguishes p from q.</p>",
+      "difficulty": "hard",
+      "id": "p-5"
+    },
+    {
+      "type": "written",
+      "title": "All-final edge case",
+      "statementHtml": "<p>A complete reachable DFA has five states and all five are final. What is its minimal form?</p>",
+      "hints": [
+        "Every possible continuation ends final."
+      ],
+      "answerHtml": "<p>All words, including ε, are accepted. Every state has the same future language. Merge them into one accepting start state with a self-loop for each alphabet symbol.</p>",
+      "difficulty": "hard",
+      "id": "p-6"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "What defines equivalent DFA states?",
+      "explanation": "Equivalence concerns all possible future inputs.",
+      "difficulty": "easy",
+      "id": "q-1",
+      "options": [
+        "Having consecutive labels",
+        "Agreement on acceptance for every suffix",
+        "Having the same incoming arrow count",
+        "Appearing on the same diagram row"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which suffix immediately distinguishes final from nonfinal?",
+      "explanation": "With no more input, final status itself determines acceptance.",
+      "difficulty": "easy",
+      "id": "q-2",
+      "options": [
+        "Only a long word",
+        "Only an invalid character",
+        "ε",
+        "No suffix can"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "What should happen to unreachable F in the main machine?",
+      "explanation": "No run from A visits F, so it does not affect the language.",
+      "difficulty": "easy",
+      "id": "q-3",
+      "options": [
+        "Make it the new start",
+        "Force it final",
+        "Merge every state into it",
+        "Remove it"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "What is the first partition for the reachable main machine?",
+      "explanation": "Separate rejecting and accepting states before examining transitions.",
+      "difficulty": "easy",
+      "id": "q-4",
+      "options": [
+        "{A,B,C,E} | {D,G}",
+        "{A,D} | {B,C,E,G}",
+        "All singleton states are required initially",
+        "{A,B,C,D,E,G} only"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Under P0, why do B and E separate from A and C?",
+      "explanation": "B and E have signature (N,Y); A and C have (N,N).",
+      "difficulty": "easy",
+      "id": "q-5",
+      "options": [
+        "Their names contain different letters",
+        "Their b transitions reach final states",
+        "They have no a transitions",
+        "They are unreachable"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "When can refinement stop?",
+      "explanation": "A complete unchanged round establishes stability.",
+      "difficulty": "easy",
+      "id": "q-6",
+      "options": [
+        "One state is final",
+        "One pair has equal labels",
+        "No block changes after a full round",
+        "The first split occurs"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which quotient block is the start?",
+      "explanation": "Runs must begin with the block representing the original start.",
+      "difficulty": "easy",
+      "id": "q-7",
+      "options": [
+        "The largest block",
+        "The first accepting block",
+        "Any block with a loop",
+        "The block containing the old start"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which suffix distinguishes quotient X from Z?",
+      "explanation": "b reaches rejecting X from X and accepting Y from Z.",
+      "difficulty": "medium",
+      "id": "q-8",
+      "options": [
+        "b",
+        "ε",
+        "a",
+        "aa"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why can B and E merge despite different raw a targets?",
+      "explanation": "Equivalent future behaviour can use different state labels.",
+      "difficulty": "easy",
+      "id": "q-9",
+      "options": [
+        "Only labels matter",
+        "Their targets lie in the same stable block",
+        "Every nonfinal state must merge",
+        "One is unreachable"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "How many states remain in the main quotient?",
+      "explanation": "The stable reachable blocks are X, Z, and Y.",
+      "difficulty": "easy",
+      "id": "q-10",
+      "options": [
+        "2",
+        "6",
+        "3",
+        "7"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does a minimal all-rejecting complete DFA need?",
+      "explanation": "A start is still required; every input must remain rejecting.",
+      "difficulty": "easy",
+      "id": "q-11",
+      "options": [
+        "No states at all",
+        "One final state",
+        "A different state per word",
+        "One rejecting state with all-symbol self-loops"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why can several refinement rounds be necessary?",
+      "explanation": "A longer distinguishing suffix becomes visible through repeated backward propagation.",
+      "difficulty": "hard",
+      "id": "q-12",
+      "options": [
+        "Newly found distinctions affect predecessor states",
+        "The alphabet changes each round",
+        "Final states stop being final",
+        "The start is removed each round"
+      ],
+      "answer": 0
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Equivalent states agree on every remaining suffix.",
+      "bn": "সমতুল্য স্টেট বাকি সব সম্ভাব্য ইনপুটে একই সিদ্ধান্ত দেয়।"
+    },
+    {
+      "en": "Final and nonfinal states differ on the empty suffix.",
+      "bn": "খালি ইনপুটেই ফাইনাল আর ননফাইনাল স্টেটের পার্থক্য ধরা পড়ে।"
+    },
+    {
+      "en": "Unreachable states do not affect runs from the start.",
+      "bn": "শুরু থেকে পৌঁছানো যায় না এমন স্টেট শব্দ চেনায় প্রভাব ফেলে না।"
+    },
+    {
+      "en": "Refinement compares destination blocks rather than labels.",
+      "bn": "রিফাইনমেন্টে স্টেটের নাম নয়, গন্তব্যের ব্লক তুলনা করি।"
+    },
+    {
+      "en": "A stable block becomes one quotient state.",
+      "bn": "স্থির হয়ে যাওয়া একটি ব্লক নতুন DFA-তে একটি স্টেট হয়।"
+    },
+    {
+      "en": "A distinguishing suffix prevents a merge.",
+      "bn": "পার্থক্য ধরতে পারে এমন একটি সাফিক্স থাকলেই স্টেট জোড়া যাবে না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Minimise the seven-state DFA, showing reachability, every partition round, and the quotient table.",
+      "marks": 10,
+      "answerHtml": "<table class=\"ref\"><caption>Complete original DFA over {a,b}</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">Final?</th><th scope=\"col\">Reachable?</th></tr></thead><tbody><tr><td>A, start</td><td>B</td><td>C</td><td>No</td><td>Yes</td></tr><tr><td>B</td><td>B</td><td>D</td><td>No</td><td>Yes</td></tr><tr><td>C</td><td>E</td><td>C</td><td>No</td><td>Yes</td></tr><tr><td>D</td><td>E</td><td>C</td><td>Yes</td><td>Yes</td></tr><tr><td>E</td><td>E</td><td>G</td><td>No</td><td>Yes</td></tr><tr><td>G</td><td>B</td><td>C</td><td>Yes</td><td>Yes</td></tr><tr><td>F</td><td>F</td><td>F</td><td>No</td><td>No</td></tr></tbody></table><table class=\"ref\"><caption>N = {A,B,C,E}, Y = {D,G}; P1 = {X,Z,Y}</caption><thead><tr><th scope=\"col\">Round</th><th scope=\"col\">Block</th><th scope=\"col\">a target block</th><th scope=\"col\">b target block</th><th scope=\"col\">Decision</th></tr></thead><tbody><tr><td>P0</td><td>A, C</td><td>N</td><td>N</td><td>Stay together as X.</td></tr><tr><td>P0</td><td>B, E</td><td>N</td><td>Y</td><td>Stay together as Z.</td></tr><tr><td>P0</td><td>D, G</td><td>N</td><td>N</td><td>Stay together as Y, already final.</td></tr><tr><td>P1</td><td>A, C</td><td>Z</td><td>X</td><td>Stable.</td></tr><tr><td>P1</td><td>B, E</td><td>Z</td><td>Y</td><td>Stable.</td></tr><tr><td>P1</td><td>D, G</td><td>Z</td><td>X</td><td>Stable.</td></tr></tbody></table><table class=\"ref\"><caption>Three reachable states recognise strings ending in ab</caption><thead><tr><th scope=\"col\">New state</th><th scope=\"col\">Members</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">Final</th></tr></thead><tbody><tr><td>X, start</td><td>{A,C}</td><td>Z</td><td>X</td><td>No</td></tr><tr><td>Z</td><td>{B,E}</td><td>Z</td><td>Y</td><td>No</td></tr><tr><td>Y</td><td>{D,G}</td><td>Z</td><td>X</td><td>Yes</td></tr></tbody></table>"
+    },
+    {
+      "type": "long",
+      "question": "Prove the three quotient states cannot be reduced further using distinguishing suffixes.",
+      "marks": 5,
+      "answerHtml": "<p>Y differs from X and Z on ε because Y alone is accepting. X and Z differ on b: X goes to nonfinal X, while Z goes to final Y. All three states are reachable, by ε, a, and ab respectively, so all three distinct futures are necessary.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Minimise the unary chain p→q→r→f, where f alone is final and loops on a.",
+      "marks": 6,
+      "answerHtml": "<p>Partitions: {p,q,r}|{f}; then {p,q}|{r}|{f}; then {p}|{q}|{r}|{f}. No pair merges. The states require at least three, two, one, and zero remaining a symbols respectively before acceptance.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT automata lectures",
+      "url": "https://ocw.mit.edu/courses/6-045j-automata-computability-and-complexity-spring-2011/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

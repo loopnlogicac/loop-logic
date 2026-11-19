@@ -1,0 +1,344 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-subset-construction",
+  "module": "lexical-analysis",
+  "order": 5,
+  "kind": "theory",
+  "title": {
+    "en": "NFA to DFA (Subset Construction)",
+    "bn": "NFA থেকে DFA তৈরি"
+  },
+  "summary": {
+    "en": "Compute epsilon-closures, expand reachable subsets, and build complete DFA tables with worked word traces.",
+    "bn": "এপসিলন-ক্লোজার বের করে পৌঁছানো যায় এমন সেটগুলো থেকে DFA টেবিল বানাও এবং শব্দের পথ দেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-thompson-construction"
+  ],
+  "related": [
+    "cd-dfa-minimization"
+  ],
+  "keywords": [
+    "subset construction",
+    "epsilon closure",
+    "move",
+    "NFA to DFA",
+    "dead state"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "The mathematical construction is independent of Python versions."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "The conversion invariant"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "type": "written",
+      "title": "Start closure",
+      "statementHtml": "<p>For 0 --ε→ 1 --ε→ 2 and 2 --a→ 3, compute closure({0}) and move(closure({0}),a).</p>",
+      "hints": [
+        "Closure cannot cross the a edge."
+      ],
+      "answerHtml": "<p>Start with 0, add 1, then 2. Closure({0}) = {0,1,2}. Only state 2 consumes a, so move is {3}. The a edge does not put 3 in the initial closure.</p>",
+      "difficulty": "easy",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "title": "Fill a subset row",
+      "statementHtml": "<p>Using the main NFA, compute both transitions from {1,2}.</p>",
+      "hints": [
+        "Union destinations from both members."
+      ],
+      "answerHtml": "<p>On a, state 1 contributes {1,2} and state 2 contributes ∅, giving {1,2}. On b, they contribute {1} and {3}, giving {1,3}. Neither set grows under epsilon closure.</p>",
+      "difficulty": "medium",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "title": "Classify accepting sets",
+      "statementHtml": "<p>With final set {3,5}, classify {1,3}, {0,2}, ∅, and {5}.</p>",
+      "hints": [
+        "Use nonempty intersection with the final set."
+      ],
+      "answerHtml": "<p>{1,3} and {5} accept because they contain a final state. {0,2} rejects. ∅ also rejects because it contains no state, so it cannot contain a final one.</p>",
+      "difficulty": "easy",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Build a singleton-language DFA",
+      "statementHtml": "<p>Convert the NFA with only 0 --a→ 1, start 0 and final 1, over {a,b}. Include every reachable set.</p>",
+      "hints": [
+        "The empty set needs its own row."
+      ],
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Set</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">Final</th></tr></thead><tbody><tr><td>{0}</td><td>{1}</td><td>∅</td><td>No</td></tr><tr><td>{1}</td><td>∅</td><td>∅</td><td>Yes</td></tr><tr><td>∅</td><td>∅</td><td>∅</td><td>No</td></tr></tbody></table><p>All three sets are reachable: ε reaches {0}, a reaches {1}, and b reaches ∅. The DFA accepts exactly a.</p>",
+      "difficulty": "hard",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "title": "Close after consuming",
+      "statementHtml": "<p>NFA edges: 0 --a→ 1, 1 --ε→ 2, 2 --ε→ 1. Start 0, final 2. Find the DFA state after a.</p>",
+      "hints": [
+        "Remember visited states while following the epsilon cycle."
+      ],
+      "answerHtml": "<p>move({0},a) = {1}. Closure adds 2, then sees 1 again and stops expanding that repeated state. The result is {1,2}, which accepts because 2 is final.</p>",
+      "difficulty": "hard",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "What does subset state {1,2} mean?",
+      "explanation": "A subset records alternatives after the same prefix.",
+      "difficulty": "easy",
+      "id": "q-1",
+      "options": [
+        "Both NFA states remain possible",
+        "The machine consumed two symbols",
+        "States 1 and 2 are both final",
+        "Only state 2 is active"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which formula defines a deterministic transition from subset S on x?",
+      "explanation": "One symbol is consumed before epsilon continuation is added.",
+      "difficulty": "easy",
+      "id": "q-2",
+      "options": [
+        "move(∅,x) always",
+        "ε-closure(move(S,x))",
+        "ε-closure({start}) always",
+        "S intersect {x}"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "If final set is {3}, which subset accepts?",
+      "explanation": "Containing one final state is enough for an NFA accepting path.",
+      "difficulty": "easy",
+      "id": "q-3",
+      "options": [
+        "{1,2}",
+        "{0}",
+        "{1,3}",
+        "∅"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why does closure contain its starting states?",
+      "explanation": "Closure includes paths with zero steps as well as longer epsilon paths.",
+      "difficulty": "easy",
+      "id": "q-4",
+      "options": [
+        "Every state is final",
+        "Epsilon consumes one letter",
+        "The DFA chooses a new start each time",
+        "Zero epsilon steps are allowed"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Where does the empty subset go on a valid symbol?",
+      "explanation": "No active paths means no consuming destination.",
+      "difficulty": "easy",
+      "id": "q-5",
+      "options": [
+        "Itself",
+        "The start subset",
+        "An arbitrary final subset",
+        "Every NFA state"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "When is the subset worklist finished?",
+      "explanation": "All reachable rows must have transitions, including accepting rows.",
+      "difficulty": "easy",
+      "id": "q-6",
+      "options": [
+        "One accepting subset is found",
+        "Every discovered subset has been processed",
+        "Every mathematical subset is named",
+        "The first row is complete"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "How should {2,1} compare with {1,2}?",
+      "explanation": "Set membership ignores order.",
+      "difficulty": "easy",
+      "id": "q-7",
+      "options": [
+        "They require two different DFA states",
+        "Only the first accepts",
+        "They are the same subset",
+        "Only the second is reachable"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "What is the maximum number of subsets of n NFA states?",
+      "explanation": "Every state may be present or absent, giving two choices per state.",
+      "difficulty": "easy",
+      "id": "q-8",
+      "options": [
+        "n squared always",
+        "Exactly n",
+        "Exactly n minus 1",
+        "2 to the power n"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why can subset construction leave equivalent states?",
+      "explanation": "Determinisation and minimisation solve different problems.",
+      "difficulty": "easy",
+      "id": "q-9",
+      "options": [
+        "Different NFA sets can have identical future acceptance",
+        "It never preserves language",
+        "It ignores transitions",
+        "All subsets must be final"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "In the main conversion, which sequence recognises ab?",
+      "explanation": "The a step reaches B and the b step reaches accepting D.",
+      "difficulty": "easy",
+      "id": "q-10",
+      "options": [
+        "A → C → C",
+        "A → B → D",
+        "A → D → B",
+        "A → A → A"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why is aba rejected by the main DFA?",
+      "explanation": "Acceptance depends on the complete word and its final state.",
+      "difficulty": "medium",
+      "id": "q-11",
+      "options": [
+        "An accepting prefix accepts every extension",
+        "The start state vanishes from memory",
+        "The final a moves from D to nonfinal B",
+        "The alphabet contains no a"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "How do you avoid looping forever on epsilon cycles?",
+      "explanation": "Expand each state once in a closure search while retaining all discovered members.",
+      "difficulty": "medium",
+      "id": "q-12",
+      "options": [
+        "Consume an input character at each epsilon edge",
+        "Delete every accepting state",
+        "Stop after visiting the start only",
+        "Track visited states during closure"
+      ],
+      "answer": 3
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A DFA subset records all surviving NFA possibilities.",
+      "bn": "DFA-এর একটি সেটে NFA-এর টিকে থাকা সব সম্ভাবনা থাকে।"
+    },
+    {
+      "en": "The start subset is the epsilon-closure of the NFA start.",
+      "bn": "NFA-এর শুরুর স্টেটের এপসিলন-ক্লোজারই প্রথম সেট।"
+    },
+    {
+      "en": "Each transition closes the result of one consuming move.",
+      "bn": "প্রতি ট্রানজিশনে একটি অক্ষরের মুভের পরে ক্লোজার নিই।"
+    },
+    {
+      "en": "A subset accepts when it contains any NFA final state.",
+      "bn": "সেটে NFA-এর একটি ফাইনাল স্টেট থাকলেই সেটটি গ্রহণকারী।"
+    },
+    {
+      "en": "The empty subset loops to itself on every alphabet symbol.",
+      "bn": "খালি সেট বর্ণমালার প্রতিটি অক্ষরে নিজের কাছেই ফিরে আসে।"
+    },
+    {
+      "en": "Only reachable subsets need to be constructed.",
+      "bn": "শুধু পৌঁছানো যায় এমন সেটগুলো তৈরি করলেই চলে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Convert the given four-state NFA ending in ab into a DFA, showing move and closure columns.",
+      "marks": 10,
+      "answerHtml": "<table class=\"ref\"><caption>NFA for strings ending in ab: start 0, final 3</caption><thead><tr><th scope=\"col\">NFA state</th><th scope=\"col\">a successors</th><th scope=\"col\">b successors</th><th scope=\"col\">ε successors</th></tr></thead><tbody><tr><td>0</td><td>∅</td><td>∅</td><td>{1}</td></tr><tr><td>1</td><td>{1,2}</td><td>{1}</td><td>∅</td></tr><tr><td>2</td><td>∅</td><td>{3}</td><td>∅</td></tr><tr><td>3</td><td>∅</td><td>∅</td><td>∅</td></tr></tbody></table><table class=\"ref\"><caption>Process every discovered set on both alphabet symbols</caption><thead><tr><th scope=\"col\">Work item</th><th scope=\"col\">Input</th><th scope=\"col\">move result</th><th scope=\"col\">ε-closure</th><th scope=\"col\">DFA name</th></tr></thead><tbody><tr><td>A = {0,1}</td><td>a</td><td>{1,2}</td><td>{1,2}</td><td>B, new</td></tr><tr><td>A = {0,1}</td><td>b</td><td>{1}</td><td>{1}</td><td>C, new</td></tr><tr><td>B = {1,2}</td><td>a</td><td>{1,2}</td><td>{1,2}</td><td>B, known</td></tr><tr><td>B = {1,2}</td><td>b</td><td>{1,3}</td><td>{1,3}</td><td>D, new; accepting</td></tr><tr><td>C = {1}</td><td>a</td><td>{1,2}</td><td>{1,2}</td><td>B, known</td></tr><tr><td>C = {1}</td><td>b</td><td>{1}</td><td>{1}</td><td>C, known</td></tr><tr><td>D = {1,3}</td><td>a</td><td>{1,2}</td><td>{1,2}</td><td>B, known</td></tr><tr><td>D = {1,3}</td><td>b</td><td>{1}</td><td>{1}</td><td>C, known</td></tr></tbody></table><table class=\"ref\"><caption>Complete reachable deterministic transition table</caption><thead><tr><th scope=\"col\">DFA state</th><th scope=\"col\">NFA set</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">Accepting</th></tr></thead><tbody><tr><td>A, start</td><td>{0,1}</td><td>B</td><td>C</td><td>No</td></tr><tr><td>B</td><td>{1,2}</td><td>B</td><td>D</td><td>No</td></tr><tr><td>C</td><td>{1}</td><td>B</td><td>C</td><td>No</td></tr><tr><td>D</td><td>{1,3}</td><td>B</td><td>C</td><td>Yes</td></tr></tbody></table>"
+    },
+    {
+      "type": "numerical",
+      "question": "Trace aab and aba in the constructed DFA and justify both results.",
+      "marks": 4,
+      "answerHtml": "<p>aab: A→B→B→D, accepted. aba: A→B→D→B, rejected. D contains NFA final 3, while B does not. An earlier visit to D cannot accept remaining characters automatically.</p>"
+    },
+    {
+      "type": "long",
+      "question": "State and justify the invariant that makes subset construction language-preserving.",
+      "marks": 6,
+      "answerHtml": "<p>After each consumed prefix, the current subset equals all NFA states reachable after that prefix and epsilon continuation. It holds initially by start closure. A move collects every one-character successor, and closure adds all zero-character continuations. The final intersection rule then matches NFA acceptance.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT finite automata course materials",
+      "url": "https://ocw.mit.edu/courses/6-045j-automata-computability-and-complexity-spring-2011/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

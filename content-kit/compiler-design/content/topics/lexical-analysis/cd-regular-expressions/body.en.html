@@ -1,0 +1,48 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Suppose students invent identifiers for a marks program. You cannot list every valid name: marks, roll2, total_marks, and many more. A regular expression gives one compact spelling rule. You can then ask whether a candidate name follows that rule.</p>
+<p>A <dfn>regular expression</dfn> describes a set of strings. Concatenation joins patterns, a vertical bar offers alternatives, and repetition operators control how many copies are allowed. These operations help describe token spellings without storing every possible token in a list.</p>
+<p>A <dfn>regular definition</dfn> gives a name to a useful pattern. You might define digit first, then use that idea in integer and decimal patterns. Python's re module does not automatically expand a textbook name such as digit inside a string. You must expand or compose the actual pattern yourself.</p>
+<p>These examples use a deliberately small ASCII language. Identifiers start with A through Z, a through z, or underscore. Numbers use digits 0 through 9. This choice makes the accepted alphabet explicit, even when the host language supports a wider set of characters.</p>
+<h2 id="syntax">Spelling building blocks</h2>
+<table class="ref"><caption>Regular definitions expanded into Python re patterns</caption><thead><tr><th scope="col">Definition</th><th scope="col">Pattern</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>letter</td><td>[A-Za-z_]</td><td>An ASCII letter or underscore.</td></tr><tr><td>digit</td><td>[0-9]</td><td>One ASCII digit.</td></tr><tr><td>identifier</td><td>[A-Za-z_][A-Za-z0-9_]*</td><td>A letter-like start, followed by zero or more name characters.</td></tr><tr><td>integer</td><td>[0-9]+</td><td>One or more digits.</td></tr><tr><td>decimal</td><td>[0-9]+(?:\.[0-9]+)?</td><td>Digits, optionally followed by a dot and more digits.</td></tr><tr><td>exponent</td><td>(?:[eE][+-]?[0-9]+)?</td><td>An optional exponent with required digits.</td></tr></tbody></table>
+<p>A character class matches one character from a set. Thus <code>[0-9]</code> consumes one digit, while <code>[0-9]+</code> consumes one or more. Star permits zero copies, plus requires at least one, and question mark permits zero or one. Parentheses group a larger expression before a repetition applies.</p>
+<p>The group <code>(?:...)</code> groups without capturing a result. Captures are useful when you need subparts later, but a token classifier often only needs success or failure. Avoid extra captures when they distract from the rule you are expressing.</p>
+<p>A dot normally matches almost any character, rather than a literal decimal point. Escape it as <code>\.</code> inside a raw pattern string. A Python raw string keeps backslashes available for the regex engine instead of interpreting them as Python string escapes first.</p>
+<h2 id="how-it-works">Choose the matching operation</h2>
+<p><code>re.fullmatch</code> asks whether the whole candidate belongs to the pattern's language. <code>re.match</code> asks whether a pattern matches at the beginning. <code>re.search</code> can find a match later in the text. Those are different questions, and each can be useful in the right interface.</p>
+<table class="ref"><caption>Whole-word validation differs from scanning a prefix</caption><thead><tr><th scope="col">Candidate</th><th scope="col">Identifier prefix with match</th><th scope="col">Whole identifier with fullmatch</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>roll</td><td>roll</td><td>Yes</td><td>Every character follows the identifier rule.</td></tr><tr><td>roll@</td><td>roll</td><td>No</td><td>The final @ is outside the rule.</td></tr><tr><td>2roll</td><td>No match</td><td>No</td><td>The first character is not allowed.</td></tr><tr><td>_</td><td>_</td><td>Yes</td><td>The tail can contain zero characters.</td></tr></tbody></table>
+<p>A scanner normally needs a prefix at the current input position. After recognising it, the scanner continues at the next position. A form that asks for one complete identifier instead needs fullmatch. Rejecting roll@ as a complete name does not mean the valid prefix roll cannot be a token in a longer source.</p>
+<p>Keywords create an overlap with identifier syntax. The spelling print follows the identifier pattern. After reading the entire name, look it up in the keyword set. This accepts print2 as an identifier while classifying exactly print as a keyword.</p>
+<p>Numeric rules need equally clear choices. Our decimal pattern accepts 85 and 85.5, but rejects .5 and 85. The latter two are accepted by some real languages. They are rejected here because our rule requires digits on both sides of a present decimal point.</p>
+<p>A leading minus is not included in these number patterns. A small language can recognise it as an operator, so x-5 becomes an identifier, a minus token, and a number. Including signs inside numbers can make tokenisation depend on spacing unless you carefully design the surrounding grammar.</p>
+<h2 id="examples">Examples</h2>
+<h3>Classify names and decimal numbers</h3>
+<p>The classifier compiles reusable patterns and checks the keyword table first. The non-ASCII digit example shows why explicit [0-9] differs from wider host-language digit tests.</p>
+<div data-example="ex-1"></div>
+<h3>Reject a valid prefix with an invalid tail</h3>
+<p>The two matching operations see the same candidate roll@. Prefix recognition succeeds, but whole-word validation refuses the trailing character.</p>
+<div data-example="ex-2"></div>
+<h3>Expose ordered alternation</h3>
+<p>Python re alternatives are tried from left to right. A successful short branch can win before a longer branch is attempted. Put overlapping fixed operators in descending length, or compare all token candidates explicitly.</p>
+<div data-example="ex-3"></div>
+<h3>Add an optional exponent</h3>
+<p>The exponent group allows a sign only after e or E. Its digits remain mandatory. Watch the rejected 8e and 8.e2 candidates to see the two missing-digit rules.</p>
+<div data-example="ex-4"></div>
+<h2 id="edge-cases">Token overlap and longest match</h2>
+<p><dfn>Longest match</dfn> means taking the greatest number of characters that forms any allowed token at the current position. It compares token candidates, not merely alternatives in one Python pattern. If two candidates have equal length, a language can resolve the tie by rule priority.</p>
+<p>For text ==, ASSIGN can match one character and EQ can match two. Longest match chooses EQ. For text print, both the keyword rule and identifier rule match five characters. A keyword table or explicit tie priority chooses the keyword.</p>
+<p>A master pattern can implement some priorities by ordering alternatives, but Python re does not automatically provide a lexer generator's longest-match semantics. In particular, <code>=|==</code> matches only the first = at the start of ==. Greedy repetition within one branch does not change the order of alternative branches.</p>
+<p>The longest-prefix practice solution checks each token pattern and compares candidate lengths. Python's max keeps the first candidate on equal keys, so the listed order supplies tie priority. This method is readable for a small language, though repeatedly slicing a long source is inefficient. A position-aware matcher can avoid those copies.</p>
+<p>Regular expressions describe spelling, not every structural relationship. Balanced parentheses of unbounded depth require more than an ordinary finite-state token rule. A lexer can return LPAREN and RPAREN tokens, while a parser checks how they nest. Do not burden the number pattern with an entire expression grammar.</p>
+<p>Python's regex engine also supports features beyond the basic regular-expression model used in automata theory. Backreferences, for example, compare earlier captured text. The token patterns here use ordinary regular operations, so the finite-automaton connection remains appropriate.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Using star when empty input is invalid</h3>
+<p>[0-9]* accepts the empty candidate. If a number needs at least one digit, use plus. Test an empty line explicitly; it is an easy case to overlook when every visible example contains digits.</p>
+<h3>Forgetting to escape a decimal point</h3>
+<p>A bare dot can allow a spelling like 8x5. Use a literal escaped dot when the language requires a decimal separator. Then test a letter where that separator should be.</p>
+<h3>Assuming backslash-d means ASCII only</h3>
+<p>With Python string patterns, backslash-d can recognise Unicode decimal digits. Use [0-9] when your source language specifies ASCII digits. Wider acceptance can be intentional, but must follow a stated rule.</p>
+<h2 id="version-notes">Version notes</h2>
+<p>All four examples use established re operations available before Python 3.10. Their patterns avoid recent syntax additions. Raw strings, fullmatch, and noncapturing groups behave consistently in the Python 3.12 environment used here.</p>
+<h2 id="summary">Summary</h2>
+<p>Define the token alphabet, compose patterns, and choose prefix matching or whole-word validation deliberately. Keyword ties and longest operators require a clear policy. In <a href="topic:cd-finite-automata">Finite Automata</a>, the same regular languages become state transitions you can trace.</p>

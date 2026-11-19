@@ -1,0 +1,55 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine a switch that changes position whenever a b arrives. It stays in place when an a arrives. The switch has only two positions, yet it can recognise whether a word contains an even number of b symbols. A finite automaton turns that idea into a precise model.</p>
+<p>A <dfn>finite automaton</dfn> reads symbols while remembering one of finitely many states. Its state summarises relevant history. It does not need to store the entire word. For the even-b problem, remembering parity is enough; the exact count is unnecessary.</p>
+<p>Finite automata connect token patterns with executable scanners. A state can remember that a name has begun or that digits have followed a decimal point. The automaton's accepting states identify complete allowed spellings. For now, we recognise whole words before adding the scanner's boundary and priority rules.</p>
+<h2 id="syntax">Define a DFA and an NFA</h2>
+<p>A <dfn>deterministic finite automaton</dfn>, or DFA, is described by five parts: states Q, alphabet Σ, transition function δ, start state q0, and final-state set F. For a complete DFA, δ maps every state-symbol pair to exactly one state.</p>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Even-b machine</th><th scope="col">Purpose</th></tr></thead><tbody><tr><td>Q</td><td>{E,O}</td><td>The finite memory choices.</td></tr><tr><td>Σ</td><td>{a,b}</td><td>The permitted input symbols.</td></tr><tr><td>δ</td><td>Given by the transition table below</td><td>The next-state rule.</td></tr><tr><td>q0</td><td>E</td><td>The state before reading input.</td></tr><tr><td>F</td><td>{E}</td><td>The states that accept at end of input.</td></tr></tbody></table>
+<p>A <dfn>nondeterministic finite automaton</dfn>, or NFA, permits zero, one, or several destinations for a state-symbol pair. For an epsilon-free NFA, δ maps a pair to a set of states. An epsilon-NFA additionally allows transitions that consume no symbol. Some texts use NFA to include that extension.</p>
+<p>A DFA follows one state sequence. An NFA may have many possible paths, but a simulator can track their active set together. NFA acceptance means at least one path consumes the whole input and ends final. Every path does not need to succeed.</p>
+<h2 id="how-it-works">Simulate one state or a set</h2>
+<table class="ref"><caption>A complete DFA for even b count over {a,b}</caption><thead><tr><th scope="col">State</th><th scope="col">a</th><th scope="col">b</th><th scope="col">Accepting?</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>E, start</td><td>E</td><td>O</td><td>Yes</td><td>Even number of b symbols seen so far.</td></tr><tr><td>O</td><td>O</td><td>E</td><td>No</td><td>Odd number of b symbols seen so far.</td></tr></tbody></table>
+<pre class="diagram">        a loop                  a loop
+       +------+                +------+
+       |      |                |      |
+       v      |       b        v      |
+start → E(final) ------------→ O
+         ^                     |
+         +--------- b ---------+</pre>
+<p>The DFA starts in E because zero b symbols is an even count. Reading a leaves parity unchanged. Reading b changes even to odd or odd to even. Test final status only after all symbols have been consumed. The empty string is accepted because it leaves the start state unchanged.</p>
+<table class="ref"><caption>A complete trace for abba</caption><thead><tr><th scope="col">Consumed prefix</th><th scope="col">State</th><th scope="col">b count parity</th><th scope="col">Explanation</th></tr></thead><tbody><tr><td>ε</td><td>E</td><td>Even</td><td>Zero b symbols.</td></tr><tr><td>a</td><td>E</td><td>Even</td><td>a does not change the count.</td></tr><tr><td>ab</td><td>O</td><td>Odd</td><td>The first b toggles the state.</td></tr><tr><td>abb</td><td>E</td><td>Even</td><td>The second b toggles it back.</td></tr><tr><td>abba</td><td>E</td><td>Even</td><td>The last a leaves E unchanged.</td></tr></tbody></table>
+<p>The simulator stores a current state and looks up each next state. If a character is outside the alphabet, the interface returns rejection. This is separate from a transition inside the mathematical alphabet. Our table is complete for a and b, but it does not pretend that x belongs to Σ.</p>
+<p>For a word of length n, this table-driven simulation uses n transitions. With constant-time table lookup, the running time is O(n). The current state uses constant extra space relative to input length. A printed trace can use additional output proportional to n.</p>
+<h2 id="examples">Examples</h2>
+<h3>Accept words with an even b count</h3>
+<p>The first simulator follows the parity table directly. Its cases include empty input, one b, two b symbols, and an out-of-alphabet character.</p>
+<div data-example="ex-1"></div>
+<h3>Trace a machine that ends in b</h3>
+<p>The second DFA remembers whether the most recent symbol is b. Its state meanings differ from parity, even though it also uses two states. Trace aab to see why the final state accepts.</p>
+<div data-example="ex-2"></div>
+<h3>Track all paths of an NFA</h3>
+<p>The final program recognises words ending in ab. It uses sets of active states rather than selecting one branch. This NFA has no epsilon edges, so each update needs only a union of consuming destinations.</p>
+<div data-example="ex-3"></div>
+<table class="ref"><caption>An epsilon-free NFA for strings ending in ab</caption><thead><tr><th scope="col">State</th><th scope="col">a</th><th scope="col">b</th><th scope="col">Final?</th></tr></thead><tbody><tr><td>0</td><td>{0,1}</td><td>{0}</td><td>No</td></tr><tr><td>1</td><td>∅</td><td>{2}</td><td>No</td></tr><tr><td>2</td><td>∅</td><td>∅</td><td>Yes</td></tr></tbody></table>
+<p>State 0 keeps a scanning path alive for any prefix. On a, it also starts a possible final pair at state 1. State 1 can finish the pair on b by reaching final 2. State 2 has no outgoing edges, so that particular completed path cannot accept an extra trailing character.</p>
+<table class="ref"><caption>Set simulation keeps alternatives after the same prefix</caption><thead><tr><th scope="col">Prefix of aab</th><th scope="col">Active set</th><th scope="col">Calculation</th></tr></thead><tbody><tr><td>ε</td><td>{0}</td><td>Start state only.</td></tr><tr><td>a</td><td>{0,1}</td><td>Both a destinations from 0 survive.</td></tr><tr><td>aa</td><td>{0,1}</td><td>0 contributes {0,1}; 1 contributes ∅.</td></tr><tr><td>aab</td><td>{0,2}</td><td>0 contributes {0}; 1 contributes {2}.</td></tr></tbody></table>
+<p>The final active set contains 2, so aab is accepted. If another a arrives, 2 contributes no destination and 0 contributes {0,1}. The resulting set rejects until a later b completes a fresh pair. A path's earlier acceptance is not permanent acceptance of a longer word.</p>
+<h2 id="comparison">Compare deterministic and nondeterministic models</h2>
+<table class="ref"><thead><tr><th scope="col">Property</th><th scope="col">DFA</th><th scope="col">NFA</th></tr></thead><tbody><tr><td>Current description</td><td>One active state.</td><td>A set of possible active states.</td></tr><tr><td>Transition result</td><td>Exactly one state per pair in a complete table.</td><td>A set that may be empty or contain several states.</td></tr><tr><td>Acceptance</td><td>The ending state is final.</td><td>Some ending possibility is final.</td></tr><tr><td>Expressive power</td><td>Regular languages.</td><td>The same regular languages.</td></tr><tr><td>Practical tradeoff</td><td>Direct per-symbol lookup; conversion can increase states.</td><td>Compact construction; simulation tracks alternatives.</td></tr></tbody></table>
+<p>Nondeterminism does not let a finite automaton recognise every possible language. NFAs and DFAs recognise the same class of regular languages. Their difference is how conveniently they represent possibilities. Subset construction converts those sets into deterministic states.</p>
+<p>In a lexer, final states may also carry token categories. Two final states can represent different kinds of tokens even when both mean acceptance in a yes/no recogniser. Later scanner construction must preserve those labels when applying priority or minimisation. This lesson's simulators answer only whole-word membership.</p>
+<h2 id="edge-cases">Boundaries that reveal wrong models</h2>
+<p>Empty input tests the start state's status. A single symbol tests whether one transition is correct. Two repeated b symbols test both directions of the parity toggle. An invalid character tests the interface rather than the parity calculation.</p>
+<p>A dead state is a rejecting state from which no suffix can lead to acceptance. It usually loops on every symbol in a complete DFA. An NFA can instead represent a failed group of paths by an empty active set. These are related descriptions, but an empty set is not a missing step to be ignored.</p>
+<p>When drawing a diagram, show the start arrow and all final marks. Include one edge or a grouped label for every table entry. If the diagram and table disagree, students cannot know which machine they are meant to simulate. Use traces to check both representations.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Accepting after any visited final state</h3>
+<p>The whole word must be consumed. The parity machine visits E repeatedly, but a final trailing b can leave it in O. Decide at the end, not at the first accepting prefix.</p>
+<h3>Choosing one NFA branch</h3>
+<p>An arbitrary branch can reject a word that another branch accepts. Track all destinations. A set naturally removes duplicate states while preserving every possible future.</p>
+<h3>Using equal state counts as equal meaning</h3>
+<p>The parity DFA and ending-b DFA both have two states but recognise different languages. Explain each state's invariant. A shared size or diagram shape is not an equivalence proof.</p>
+<h2 id="version-notes">Version notes</h2>
+<p>Python dictionaries and sets provide the transition tables here. The implementations need no external package and work on Python 3.10 onward. Sets are not printed in arbitrary iteration order; displayed traces use chosen labels or deterministic formatting.</p>
+<h2 id="summary">Summary</h2>
+<p>A DFA remembers one state, while an NFA represents several possible paths. Both recognise regular languages. Define the alphabet, state meanings, start, finals, and complete transition rules before simulating. Continue with <a href="topic:cd-thompson-construction">Thompson Construction</a> to build an NFA from a regular expression.</p>
