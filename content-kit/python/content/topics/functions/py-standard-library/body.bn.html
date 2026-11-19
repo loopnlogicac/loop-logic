@@ -1,0 +1,78 @@
+<h2 id="introduction">আবার বানানোর আগে পরীক্ষিত tool</h2>
+<p class="lead">শব্দ গোনা, তারিখে দিন যোগ আর কিউ চালানো পরিচিত কাজ। Python-এর <dfn>standard library</dfn>, interpreter-এর সঙ্গে দেওয়া collection-এ এর module আছে। Third-party package install ছাড়াই import করা যায়।</p>
+<p>সঠিক contract-এর tool বাছাই আসল দক্ষতা। Float square root আর integer square root আলাদা প্রশ্ন। List আর কিউতেও দক্ষ operation আলাদা। ফাংশন নেওয়ার আগে ইনপুট, ফল আর edge case পড়ো।</p>
+<p>এই tour পরিচিত structure-কে library tool-এ মেলায়। ফল দেখতে ছোট fixed input। Advanced app-এও validation আর উপযুক্ত resource limit চাই।</p>
+
+<h2 id="syntax">Module বা বাছা tool import</h2>
+<pre><code class="language-python">import math
+from collections import Counter, deque
+from datetime import date, timedelta
+from pathlib import Path</code></pre>
+<p>math.isqrt-এর মতো qualified নাম উৎস দেখায়। Counter-এর মতো ঘনঘন ব্যবহৃত ক্লাসে selected import সুবিধা। দরকারি নামই নাও, একই scope-এ অন্য অর্থে assign কোরো না।</p>
+<table class="ref"><caption>কাজের সঙ্গে library মেলাও</caption><thead><tr><th scope="col">কাজ</th><th scope="col">Tool</th></tr></thead><tbody>
+<tr><td>Exact integer root আর GCD</td><td>math.isqrt, math.gcd</td></tr><tr><td>Repeatable pseudo-random draw</td><td>random.Random</td></tr><tr><td>Calendar date আর interval</td><td>datetime.date, timedelta</td></tr><tr><td>Count, group আর কিউ</td><td>Counter, defaultdict, deque</td></tr><tr><td>Iterator combination</td><td>itertools</td></tr><tr><td>Filesystem নাম আর কাজ</td><td>os, pathlib</td></tr></tbody></table>
+
+<h2 id="how-it-works">কাজের আগে representation</h2>
+<p>Integer উত্তর চাইলে exact tool। math.isqrt বড় integer approximate float-এ নেয় না। সাধারণ real হিসাবের sqrt আর trigonometric ফাংশন float। isclose বলা relative-absolute tolerance-এ approximate মান তুলনা করে।</p>
+<p>date calendar day, datetime-এ সময়ও। timedelta duration। Aware datetime-এ ব্যবহারযোগ্য timezone, naive-এ নিজের offset জানা যায় না। Naive মানই UTC আন্দাজ কোরো না।</p>
+<p>Path-ও অবজেক্ট। Path বানালে location বলা হয়, সেখানে কিছু তৈরি নয়। Read, write, existence check আলাদা কাজ। Pure path class filesystem না ছুঁয়েও syntax parse করে।</p>
+
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>অনেক কাজে C-তে আলাদা library বা custom structure লাগে। Python date, কিউ আর path দেয়, তবু representation-এ খরচ বদলায়। Front removal-এ deque, repeated direct indexing-এ list ভালো।</p></div>
+
+<h2 id="examples">Fixed data আর bounded কাজ</h2>
+<p>উদাহরণ current-clock output আর machine-specific absolute path এড়ায়। File উদাহরণের temporary folder নিজে cleanup করে। with resource lifetime সামলায়; <a href="topic:py-file-handling">ফাইল handling</a> পাঠে text file বিস্তারিত।</p>
+
+<h3>Number type অনুযায়ী mathematical tool</h3>
+<p>isqrt exact integer root, sqrt float। floor negative infinity-র, ceil positive infinity-র দিকে। isclose exact binary equality না চেয়ে tolerance-এ float তুলনা।</p>
+<div data-example="ex-1"></div>
+
+<h3>Local seeded random generator</h3>
+<p>Local Random নিজের state রাখে। একই seed-এর দ্বিতীয় generator প্রথম random() মান মেলায়। Draw zero-inclusive থেকে one-exclusive; formatting শুধু display round করে।</p>
+<div data-example="ex-2"></div>
+
+<h3>Fixed calendar date-এর হিসাব</h3>
+<p>Date arithmetic February পার হয়। বিয়োগে তিন দিনের timedelta। Aware datetime UTC instant-কে fixed plus-six-hour offset-এ একই instant দেখায়।</p>
+<div data-example="ex-3"></div>
+
+<h3>মান গোনা আর observation group</h3>
+<p>Counter frequency mapping বানায়, missing count zero। defaultdict(list)-এ missing room-এ প্রথম bracket access fresh group বানায়। Room A-তে roll 12 আর 25।</p>
+<div data-example="ex-4"></div>
+
+<h3>কিউর দুই প্রান্তে কাজ</h3>
+<p>appendleft roll 5-কে সামনে দেয়, popleft সেটি serve। Rotate বাকি কিউর 25 সামনে আনে। Bounded deque capacity পেরোলে শুধু নতুন দুই মান রাখে।</p>
+<div data-example="ex-5"></div>
+
+<h3>Iterator মেলাও, সীমা দাও</h3>
+<p>chain input পরপর দেখে, product group-এর সব ordered choice, combinations একই order repeat না করে position group। count unbounded, তাই islice report চার মানে সীমিত করে।</p>
+<div data-example="ex-6"></div>
+
+<h3>Temporary directory-তে path</h3>
+<p>Path হাতে separator আন্দাজ ছাড়া component জোড়ে। TemporaryDirectory private working folder বানিয়ে পরে সরায়। পড়ার আগে with ফাইল close করে। শুধু stable filename-content প্রিন্ট, temporary absolute path নয়।</p>
+<div data-example="ex-7"></div>
+
+<h2 id="random-dates-and-collections">State আর missing value বোঝো</h2>
+<p>Pseudo-random generator internal state এগিয়ে sequence দেয়। Seed initial state বাছে। Local Random এক experiment-কে অন্যের generator reset করা থেকে বাঁচায়। Fixed seed repeatability দেয়, তবে random-module-এর কিছু algorithm version-এ বদলায়।</p>
+<p>random() zero-inclusive one-exclusive float দেয়। অন্য method integer, sample বা shuffled sequence বাছে। এগুলো simulation, password generation নয়; নিরাপত্তার randomness-এ অন্য facility।</p>
+<p>Date arithmetic মাস আর leap-year সামলায়। February 27, 2026-এ তিন দিন যোগ March 2। Aware UTC instant fixed plus-six-এ দেখালেও instant এক। Fixed offset historical daylight-saving নয়; named regional zone-এ zoneinfo।</p>
+<p>Counter dictionary-র মতো frequency tool। Missing count পড়লে key না যোগ করে zero। most_common-এ equal count first-encounter order রাখে; alphabetic tie চাইলে explicit sort।</p>
+<p>defaultdict missing bracket access-এ factory কল করে ফল রাখে। defaultdict(list) independent list দেয়। list-এর বদলে list() ভুল, callable factory চাই। get missing-key factory চালায় না।</p>
+<p>deque দুই প্রান্তে efficient append-remove। List front removal পরের reference সরায়, deque.popleft তা এড়ায়। Deque-র মাঝে frequent random indexing ভালো নয়। বারবার কোন কাজ হবে দেখে container নাও।</p>
+
+<h2 id="iterators-and-paths">Combination সীমিত, filename portable রাখো</h2>
+<p>itertools.chain iterable stream পরপর জোড়ে। product group-পিছু সব combination, combinations position বাছে order repeat ছাড়া। Iterator বলে পুরো output list না বানিয়েও consume করা যায়।</p>
+<p>Laziness বিশাল ফল সস্তা করে না। a আর b size-এর product-এ a গুণ b ফল। কিছু itertools tool input pool-ও রাখে। count endless arithmetic sequence, তাই islice বা finite stop দাও।</p>
+<p>Path-এর slash path rule-এ component জোড়ে। name শেষ filename, stem শেষ suffix বাদ, suffix সেই অংশ। Absolute component আগের অংশ ফেলে দিতে পারে, location জরুরি হলে বাইরের নাম validate।</p>
+<p>os lower-level listdir আর environ দেয়। Directory listing sorted হওয়ার নিশ্চয়তা নেই, উদাহরণ filename sort করে। পরিবেশের সব variable ছাপবে না; প্রোগ্রামের দরকারি setting-ই দেখো।</p>
+<p>Temporary উদাহরণ explicit UTF-8-এ পরিচিত text লেখে। পড়ার আগে with close করে। Block শেষে TemporaryDirectory folder সরায়, আগের user file-এ নির্ভর নয়।</p>
+
+<h2 id="common-mistakes">Tool-এর exact আচরণ দেখো</h2>
+<h3>Infinite iterator list করা</h3><p>list(count()) প্রাকৃতিক শেষ ছাড়া চাইতেই থাকে। আগে finite bound। বিশাল finite Cartesian product-এও collect-এর আগে output size গুনো।</p>
+<h3>Missing group আগেই রাখা ভাবা</h3><p>Bracket access missing-key machinery ডাকলেই defaultdict insert। Membership বা get group বানায় না। Group count মাপায় পার্থক্য জরুরি।</p>
+<h3>Path parsing-কে file check ভাবা</h3><p>ফাইল না থাকলেও নামের .csv suffix হয়। Existence চাইলে is_file বা explicit filesystem operation। Relative path working directory থেকে, যা script directory থেকে আলাদা হতে পারে।</p>
+<h3>Empty queue-তে ভুল operation</h3><p>Empty deque-তে popleft IndexError। Empty স্বাভাবিক হলে আগে item আছে দেখো। Bounded deque পুরোনো item নিজে ফেলে, ইচ্ছা করেই হারানো চললে নাও।</p>
+
+<h2 id="version-notes">Version-sensitive detail স্পষ্ট</h2>
+<div class="callout version"><p>সব API Python 3.10–3.12-তে আছে। Compatible seeding-এ seeded random()-এর documented reproducibility আছে, অন্য random algorithm বদলাতে পারে। Path suffix-এ সাধারণ নাম, নতুন version-এর trailing-dot আচরণ নয়।</p></div>
+
+<h2 id="summary">স্পষ্ট contract-এর ছোট library tool</h2>
+<p>Standard library বাইরের installation ছাড়াই building block দেয়। Exact-approximate সংখ্যা, bounded-unbounded iteration, lexical-real filesystem কাজ বুঝে বাছো। পরের module-এ <a href="topic:py-classes-objects">ক্লাস আর অবজেক্ট</a> দিয়ে নিজের state-behavior গুছাবে।</p>
