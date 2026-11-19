@@ -1,0 +1,330 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-transactions-acid",
+  "module": "internals",
+  "order": 1,
+  "kind": "theory",
+  "title": {
+    "en": "Transactions and ACID",
+    "bn": "ট্রানজ্যাকশন ও ACID"
+  },
+  "summary": {
+    "en": "Trace a bank transfer through transaction states and distinguish the four ACID promises.",
+    "bn": "টাকা ট্রান্সফারের ধাপ দিয়ে ট্রানজ্যাকশন স্টেট আর ACID-এর চারটি নিয়ম বোঝো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 35,
+  "prerequisites": [
+    "db-transactions-sql"
+  ],
+  "related": [
+    "db-concurrency-control",
+    "db-recovery"
+  ],
+  "keywords": [
+    "transactions and acid",
+    "internals",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Treat a transfer as one decision"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow the transaction states"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Trace the unit of work"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Locate the failed promise"
+    },
+    {
+      "id": "summary",
+      "title": "Connect logic, isolation and persistence"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Cancel an unfinished debit",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>After rollback, balances are 1000 and 500. The debit never becomes part of the committed transfer history.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Commit both sides of a transfer",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>Both affected-row counts are one. The committed balances are 900 and 600, while the total remains 1500 BDT. Locking both accounts in identifier order establishes a clear transfer protocol.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Reject an unaffordable transfer",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>Zero affected rows means the debit did not succeed. The caller chooses rollback and never credits the recipient. A zero-row statement is a business failure even though SQL itself succeeded.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Name the broken guarantee",
+      "statementHtml": "<p>A crash leaves a committed debit but no matching credit from one intended transfer. Which property was violated?</p>",
+      "hints": [
+        "Distinguish a partial operation from a wrong complete operation."
+      ],
+      "answerHtml": "<p>Atomicity was violated because only part of the intended unit became committed. The balance-total invariant also becomes false, but the immediate all-or-nothing failure is atomicity. Both statements must share one transaction and one successful commit boundary.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "A missing recipient",
+      "statementHtml": "<p>The debit changes one account but the credit UPDATE affects zero rows. Should the caller commit?</p>",
+      "hints": [
+        "Check expected row counts."
+      ],
+      "answerHtml": "<p>No. The destination did not match, so the intended transfer is incomplete. Issue ROLLBACK, report the missing destination and avoid generating a new debit blindly. SQL success without the expected affected row is not business success.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Classify a wrong amount",
+      "statementHtml": "<p>A transaction subtracts 100 but adds 90, and commits both. Has atomicity guaranteed the total invariant?</p>",
+      "hints": [
+        "All-or-nothing can still be wholly wrong."
+      ],
+      "answerHtml": "<p>No. Both changes can commit atomically while incorrect logic violates consistency. With no fee in the stated model, the total falls by 10 BDT. Enforce a single amount parameter, validate affected rows and check the operation’s invariant.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace a failure state",
+      "statementHtml": "<p>The last update completes, then power fails before the commit is durable. Trace the conceptual states.</p>",
+      "hints": [
+        "The final update is not the commit boundary."
+      ],
+      "answerHtml": "<p>Active becomes partially committed after the final logical operation. Failure before durable commit moves it to failed. Recovery undoes uncommitted effects, reaching aborted, after which the business request may be restarted safely.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which ACID letter addresses all-or-nothing transfer effects?",
+      "options": [
+        "Atomicity",
+        "Isolation",
+        "Durability"
+      ],
+      "answer": 0,
+      "explanation": "An incomplete transactional unit must not become a partial commit."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which property relies on correct transfer arithmetic?",
+      "options": [
+        "Only durability",
+        "Consistency",
+        "Only isolation"
+      ],
+      "answer": 1,
+      "explanation": "Correct invariants require correct application logic."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What separates partially committed from committed?",
+      "options": [
+        "Completion of the first SELECT",
+        "The presence of a savepoint",
+        "Completion of commit persistence"
+      ],
+      "answer": 2,
+      "explanation": "The final logical statement can finish before commit is durable."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should a zero-row recipient UPDATE trigger?",
+      "options": [
+        "Rollback of the intended transfer",
+        "An unconditional COMMIT",
+        "A second debit"
+      ],
+      "answer": 0,
+      "explanation": "The intended destination change did not occur."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which type is suitable for the example’s exact BDT balances?",
+      "options": [
+        "FLOAT only",
+        "DECIMAL",
+        "A random string"
+      ],
+      "answer": 1,
+      "explanation": "DECIMAL avoids binary floating point approximation for money."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a nonnegative CHECK prove the two-account total is preserved?",
+      "options": [
+        "Yes",
+        "Only with an integer key",
+        "No"
+      ],
+      "answer": 2,
+      "explanation": "The cross-row invariant needs correct transaction logic."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What makes a retry safe after an uncertain COMMIT?",
+      "options": [
+        "A unique request identity and reconciliation",
+        "A second unconditional payment",
+        "Ignoring the first response"
+      ],
+      "answer": 0,
+      "explanation": "The first commit may have succeeded despite a lost response."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which facility helps redo committed changes after a crash?",
+      "options": [
+        "A display alias",
+        "InnoDB redo logging",
+        "A SELECT without ORDER BY"
+      ],
+      "answer": 1,
+      "explanation": "Redo can restore committed page changes not yet in their final files."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which property controls observations between concurrent sessions?",
+      "options": [
+        "Table naming",
+        "Projection",
+        "Isolation"
+      ],
+      "answer": 2,
+      "explanation": "The chosen isolation level restricts interference and visibility."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a transaction rollback undo a payment accepted by an independent external system?",
+      "options": [
+        "No",
+        "Always",
+        "Only for integer payments"
+      ],
+      "answer": 0,
+      "explanation": "External effects need their own coordination and reconciliation."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Atomicity makes the intended transfer succeed or fail as a unit.",
+      "bn": "Atomicity থাকলে ট্রান্সফারের সব ধাপ একসঙ্গে সফল হয় বা বাতিল হয়।"
+    },
+    {
+      "en": "Consistency depends on correct transaction logic and declared constraints.",
+      "bn": "Consistency রাখতে সঠিক ট্রানজ্যাকশন লজিক আর কনস্ট্রেইন্ট দুটোই লাগে।"
+    },
+    {
+      "en": "Isolation controls which effects concurrent transactions may observe.",
+      "bn": "Isolation ঠিক করে পাশাপাশি চলা ট্রানজ্যাকশন কোন পরিবর্তন দেখতে পাবে।"
+    },
+    {
+      "en": "Durability protects acknowledged commits according to the storage configuration.",
+      "bn": "Durability কমিট হওয়া পরিবর্তন টিকে থাকার নিশ্চয়তা দেয়, তবে স্টোরেজ সেটিংও ঠিক থাকতে হয়।"
+    },
+    {
+      "en": "A failed transaction must abort or be retried from a safe boundary.",
+      "bn": "ব্যর্থ ট্রানজ্যাকশন বাতিল করো বা নিরাপদ শুরু থেকে আবার চালাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "A crash leaves a committed debit but no matching credit from one intended transfer. Which property was violated?",
+      "marks": 6,
+      "answerHtml": "<p>Atomicity was violated because only part of the intended unit became committed. The balance-total invariant also becomes false, but the immediate all-or-nothing failure is atomicity. Both statements must share one transaction and one successful commit boundary.</p>"
+    },
+    {
+      "type": "long",
+      "question": "The debit changes one account but the credit UPDATE affects zero rows. Should the caller commit?",
+      "marks": 6,
+      "answerHtml": "<p>No. The destination did not match, so the intended transfer is incomplete. Issue ROLLBACK, report the missing destination and avoid generating a new debit blindly. SQL success without the expected affected row is not business success.</p>"
+    },
+    {
+      "type": "long",
+      "question": "A transaction subtracts 100 but adds 90, and commits both. Has atomicity guaranteed the total invariant?",
+      "marks": 6,
+      "answerHtml": "<p>No. Both changes can commit atomically while incorrect logic violates consistency. With no fee in the stated model, the total falls by 10 BDT. Enforce a single amount parameter, validate affected rows and check the operation’s invariant.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/mysql-acid.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

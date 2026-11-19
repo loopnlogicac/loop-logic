@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-recovery",
+  "module": "internals",
+  "order": 3,
+  "kind": "theory",
+  "title": {
+    "en": "Recovery",
+    "bn": "ডেটাবেস রিকভারি"
+  },
+  "summary": {
+    "en": "Distinguish failures and trace how logs, checkpoints and backups support recovery.",
+    "bn": "Failure-এর ধরন আলাদা করো আর log, checkpoint ও backup দিয়ে ডেটা ফেরানোর ধাপ বোঝো।"
+  },
+  "level": "advanced",
+  "estMinutes": 45,
+  "prerequisites": [
+    "db-transactions-acid"
+  ],
+  "related": [
+    "db-concurrency-control",
+    "db-security-sql-injection"
+  ],
+  "keywords": [
+    "recovery",
+    "internals",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Recover the last valid history"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Understand the buffer, undo and redo"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Trace winners, losers and restart"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid three recovery shortcuts"
+    },
+    {
+      "id": "summary",
+      "title": "Match the recovery tool to the failure"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Recover a teaching log",
+      "statementHtml": "<p>A=1000,B=500. T1 changes A to 900 and B to 600, then commits. T2 changes A to 1 without committing. A crash follows. Give the recovered values.</p>",
+      "hints": [
+        "Classify winners and losers before discussing pages."
+      ],
+      "answerHtml": "<p>A=900 and B=600. T1 is committed and its effects must survive. T2 is uncommitted and must be undone. Redo may first restore logged page history, including changes later undone; the final logical state is the committed transfer only.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain a fuzzy checkpoint",
+      "statementHtml": "<p>Can a checkpoint finish while transactions remain active?</p>",
+      "hints": [
+        "A checkpoint is not a transaction boundary."
+      ],
+      "answerHtml": "<p>Yes. A fuzzy checkpoint advances recovery progress while transactions continue. It does not commit them. Dirty-page state and log positions govern safe advancement; active transactions can retain undo needs across that checkpoint.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Choose a media-failure response",
+      "statementHtml": "<p>The disk containing all data files and local redo is lost. Is ordinary crash restart enough?</p>",
+      "hints": [
+        "Consider what persistent material still exists."
+      ],
+      "answerHtml": "<p>No. Restore a separately retained valid backup, recover required keys and configuration, then replay available retained binary logs to the intended recovery point. A redo area on the lost disk cannot supply missing files. Verify the restored database before resuming service.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Distinguish a committed mistake",
+      "statementHtml": "<p>A wrong DELETE committed successfully. Why does restart not restore the rows?</p>",
+      "hints": [
+        "The engine does not know which successful action was unintended."
+      ],
+      "answerHtml": "<p>Restart preserves committed history, including mistakes. Recover the prior state using backup plus retained log replay in an isolated environment or a verified compensating repair. A later ROLLBACK cannot undo an already committed transaction.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Calculate the recovery gap",
+      "statementHtml": "<p>With one backup each midnight and no retained changes, what can be lost after a failure at 23:00?</p>",
+      "hints": [
+        "Measure from the latest usable recovery point."
+      ],
+      "answerHtml": "<p>Up to 23 hours of changes since the last valid backup, assuming that backup is usable. The actual acceptable RPO must be decided separately. More frequent retained recovery material can reduce the gap, and a restore test determines RTO.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is a dirty page?",
+      "options": [
+        "A modified memory page not yet written to its data file",
+        "A corrupted backup by definition",
+        "A page with NULL values"
+      ],
+      "answer": 0,
+      "explanation": "Dirty describes persistence status, not corruption."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does no-force commit require redo capability?",
+      "options": [
+        "Every page is already backed up",
+        "Committed pages may still be only in memory",
+        "Undo has been disabled"
+      ],
+      "answer": 1,
+      "explanation": "Redo restores committed changes missing from final data pages."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can steal buffer management require undo?",
+      "options": [
+        "All commits are forbidden",
+        "SELECT always writes files",
+        "Uncommitted changes may reach disk"
+      ],
+      "answer": 2,
+      "explanation": "Uncommitted disk effects must be reversible."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does write-ahead logging order before a dependent page flush?",
+      "options": [
+        "Required log persistence",
+        "Every future transaction commit",
+        "A full backup"
+      ],
+      "answer": 0,
+      "explanation": "Recovery information must survive before the page depends on it."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a checkpoint commit active transactions?",
+      "options": [
+        "Yes",
+        "No",
+        "Only transactions with SELECT"
+      ],
+      "answer": 1,
+      "explanation": "Checkpoint progress and transaction decisions are separate."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which material commonly supports point-in-time replay after a backup?",
+      "options": [
+        "An ORDER BY clause",
+        "Only an ER drawing",
+        "Retained binary logs"
+      ],
+      "answer": 2,
+      "explanation": "Binary logs can replay changes after the backup recovery point."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a replica replace a historical backup against committed deletion?",
+      "options": [
+        "No",
+        "Yes",
+        "Only with identical schemas"
+      ],
+      "answer": 0,
+      "explanation": "Replication can copy the mistaken deletion too."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does RTO measure?",
+      "options": [
+        "Maximum permitted tuple width",
+        "Acceptable time to restore service",
+        "Number of rollback statements"
+      ],
+      "answer": 1,
+      "explanation": "RTO is a time-to-recovery objective."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What did the isolated process-crash experiment establish?",
+      "options": [
+        "Every power-loss scenario is safe",
+        "Exactly which physical pages were replayed",
+        "Committed balances survived and the uncommitted edit disappeared"
+      ],
+      "answer": 2,
+      "explanation": "The observed result is narrower than a hardware-failure guarantee."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why test a restore rather than only checking backup-job success?",
+      "options": [
+        "The recovery material must actually reconstruct a usable database",
+        "Backups cannot fail silently",
+        "A restore always changes production"
+      ],
+      "answer": 0,
+      "explanation": "A successful file copy alone does not demonstrate recoverability."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can a later ROLLBACK reverse yesterday’s committed transaction?",
+      "options": [
+        "Yes",
+        "No",
+        "Only if a checkpoint has not happened"
+      ],
+      "answer": 1,
+      "explanation": "Committed repairs require historical recovery or a new compensating transaction."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Undo removes uncommitted transactional effects.",
+      "bn": "Undo দিয়ে কমিট না হওয়া ট্রানজ্যাকশনের পরিবর্তন সরানো হয়।"
+    },
+    {
+      "en": "Redo can restore logged page changes after a crash.",
+      "bn": "Crash-এর পর log থেকে পেজের পরিবর্তন ফেরাতে redo লাগে।"
+    },
+    {
+      "en": "Write-ahead logging persists required log information before dependent page writes.",
+      "bn": "পেজ লেখার আগে দরকারি log স্থায়ী করাই write-ahead logging-এর মূল নিয়ম।"
+    },
+    {
+      "en": "A checkpoint reduces recovery work without committing active transactions.",
+      "bn": "Checkpoint রিকভারির কাজ কমায়, কিন্তু চলমান ট্রানজ্যাকশন কমিট করে না।"
+    },
+    {
+      "en": "Backups and tested restores cover failures beyond ordinary crash recovery.",
+      "bn": "সাধারণ crash recovery-এর বাইরের failure সামলাতে backup আর restore টেস্ট লাগে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "A=1000,B=500. T1 changes A to 900 and B to 600, then commits. T2 changes A to 1 without committing. A crash follows. Give the recovered values.",
+      "marks": 6,
+      "answerHtml": "<p>A=900 and B=600. T1 is committed and its effects must survive. T2 is uncommitted and must be undone. Redo may first restore logged page history, including changes later undone; the final logical state is the committed transfer only.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Can a checkpoint finish while transactions remain active?",
+      "marks": 6,
+      "answerHtml": "<p>Yes. A fuzzy checkpoint advances recovery progress while transactions continue. It does not commit them. Dirty-page state and log positions govern safe advancement; active transactions can retain undo needs across that checkpoint.</p>"
+    },
+    {
+      "type": "long",
+      "question": "The disk containing all data files and local redo is lost. Is ordinary crash restart enough?",
+      "marks": 6,
+      "answerHtml": "<p>No. Restore a separately retained valid backup, recover required keys and configuration, then replay available retained binary logs to the intended recovery point. A redo area on the lost disk cannot supply missing files. Verify the restored database before resuming service.</p>"
+    },
+    {
+      "type": "long",
+      "question": "A wrong DELETE committed successfully. Why does restart not restore the rows?",
+      "marks": 6,
+      "answerHtml": "<p>Restart preserves committed history, including mistakes. Recover the prior state using backup plus retained log replay in an isolated environment or a verified compensating repair. A later ROLLBACK cannot undo an already committed transaction.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-recovery.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

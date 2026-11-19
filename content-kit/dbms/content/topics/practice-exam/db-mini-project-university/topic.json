@@ -1,0 +1,362 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-mini-project-university",
+  "module": "practice-exam",
+  "order": 3,
+  "kind": "project",
+  "title": {
+    "en": "Mini Project: University Database",
+    "bn": "মিনি প্রজেক্ট: বিশ্ববিদ্যালয়ের ডেটাবেস"
+  },
+  "summary": {
+    "en": "Build a bounded enrollment workflow, result audit trail and section reports on the university schema.",
+    "bn": "বিশ্ববিদ্যালয়ের ডেটাবেসে seat মেনে enrollment, result audit আর section report বানাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 120,
+  "prerequisites": [
+    "db-security-sql-injection",
+    "db-normalization",
+    "db-concurrency-control",
+    "db-triggers"
+  ],
+  "related": [
+    "db-exam-questions",
+    "db-sql-practice-set"
+  ],
+  "keywords": [
+    "mini project: university database",
+    "practice-exam",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Deliver a small registration service"
+    },
+    {
+      "id": "requirements",
+      "title": "Turn requests into invariants"
+    },
+    {
+      "id": "design",
+      "title": "Draw Chen relationships and map keys"
+    },
+    {
+      "id": "implementation",
+      "title": "Load the schema and run the workflows"
+    },
+    {
+      "id": "validation",
+      "title": "Exercise failures and concurrent callers"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Protect the protocol as well as the SQL"
+    },
+    {
+      "id": "summary",
+      "title": "Connect design to observable behaviour"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Register a previously unregistered student",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>Section 36 starts empty. The procedure registers Fahim once, commits the enrollment and reduces remaining seats by one.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Audit a pending result and a real revision",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The insert and 79→80 revision create two audit rows. The unchanged second update creates none. Rolling back removes both the result and its transactional audit records.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Read a section report without multiplied children",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>Independent per-section counts are joined after aggregation. Section 35 has one pending result; section 36 is empty and has a NULL mean, not a fabricated zero.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Exercise an empty section report",
+      "statementHtml": "<p>Show pending counts for sections 35 and 36; insert the missing result for student 107 at 40 marks, show the counts again, then roll back.</p>",
+      "hints": [
+        "Only the pending result should change, not the enrollment count."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Audit one real mark change",
+      "statementHtml": "<p>Inside a transaction set result 101,31 to its current 85 and then 86. Show the audit rows and roll back. Count audit rows again after rollback.</p>",
+      "hints": [
+        "An unchanged value should not create an update event."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain the capacity race",
+      "statementHtml": "<p>Why is SELECT COUNT followed by INSERT unsafe when two clients see one remaining seat?</p>",
+      "hints": [
+        "A read of an aggregate alone does not reserve a seat."
+      ],
+      "answerHtml": "<p>Both can count before either inserts, then both insert and exceed the limit. Lock the same section row before the count and keep the lock through insertion and commit. Restrict writes that bypass this protocol and make capacity reductions follow compatible locking.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Extend the audit honestly",
+      "statementHtml": "<p>What is missing before result_audit can serve a production security audit?</p>",
+      "hints": [
+        "Separate convenient history from authenticated evidence."
+      ],
+      "answerHtml": "<p>It needs trustworthy actor identity, protected retention and a defined policy for deletes, cascades, failed attempts and administrator changes. Current rows are transactional and disappear on rollback. Adding a caller-supplied actor string alone would not establish who acted.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many pending results does section 35 start with in the project?",
+      "language": "sql",
+      "code": "SELECT pending FROM section_overview WHERE section_id=35 ORDER BY section_id;\n",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "options": [
+        "+---------+\n| pending |\n+---------+\n|       1 |\n+---------+",
+        "+---------+\n| pending |\n+---------+\n|       2 |\n+---------+",
+        "+---------+\n| pending |\n+---------+\n|       0 |\n+---------+"
+      ],
+      "answer": 0,
+      "explanation": "One enrollment has no recorded result."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many audit events does a same-value marks update create?",
+      "language": "sql",
+      "code": "UPDATE results SET marks=85 WHERE student_id=101 AND section_id=31;\nSELECT COUNT(*) AS n FROM result_audit;\n",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "The update trigger checks for a real marks change."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What is the remaining-seat count after the first registration in section 36?",
+      "language": "sql",
+      "code": "CALL register_student(108,36);\nSELECT remaining_seats FROM section_overview WHERE section_id=36 ORDER BY section_id;\n",
+      "setup": [
+        "shared/datasets/university.sql",
+        "topics/practice-exam/db-mini-project-university/project/extension.sql"
+      ],
+      "options": [
+        "+-----------------+\n| remaining_seats |\n+-----------------+\n|              40 |\n+-----------------+",
+        "+-----------------+\n| remaining_seats |\n+-----------------+\n|              0 |\n+-----------------+",
+        "+-----------------+\n| remaining_seats |\n+-----------------+\n|              39 |\n+-----------------+"
+      ],
+      "answer": 2,
+      "explanation": "The section starts at capacity 40 and receives one enrollment."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which row serialises project capacity checks?",
+      "options": [
+        "The section row",
+        "An arbitrary result row",
+        "Every department row"
+      ],
+      "answer": 0,
+      "explanation": "All registration callers lock the same offering before counting."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Who owns the transaction in register_student?",
+      "options": [
+        "The caller’s unrelated savepoint",
+        "The procedure",
+        "The reporting view"
+      ],
+      "answer": 1,
+      "explanation": "The caller must have no active transaction before invoking this routine."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why preaggregate enrollment and result counts separately?",
+      "options": [
+        "To remove primary keys",
+        "To hide missing results",
+        "To avoid child-row multiplication"
+      ],
+      "answer": 2,
+      "explanation": "Joining raw collections can distort counts."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does rollback retain the project’s result audit rows?",
+      "options": [
+        "No",
+        "Yes",
+        "Only the UPDATE event"
+      ],
+      "answer": 0,
+      "explanation": "The InnoDB audit writes share the caller’s transaction."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which identity lets a result reference its enrollment?",
+      "options": [
+        "The student name",
+        "The student-section pair",
+        "The section label alone"
+      ],
+      "answer": 1,
+      "explanation": "Both identifiers are needed to identify one registration."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "The student-section pair identifies one enrollment and its result.",
+      "bn": "একটি enrollment আর তার result চেনার কি হলো student ও section-এর জোড়া।"
+    },
+    {
+      "en": "Locking a section row serialises capacity checks that follow the same protocol.",
+      "bn": "সব enrollment একই নিয়ম মানলে section row lock করে seat পরীক্ষা একে একে করা যায়।"
+    },
+    {
+      "en": "An owned transaction routine needs a clear caller contract.",
+      "bn": "নিজে ট্রানজ্যাকশন চালানো routine ডাকতে caller-এর নিয়ম স্পষ্ট থাকতে হয়।"
+    },
+    {
+      "en": "Audit triggers share the transaction of the result change.",
+      "bn": "Result বদলানোর ট্রানজ্যাকশনেই audit trigger-এর লেখাও থাকে।"
+    },
+    {
+      "en": "Reports must distinguish an empty section from a pending result.",
+      "bn": "Report-এ খালি section আর pending result আলাদা করে দেখাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Why is SELECT COUNT followed by INSERT unsafe when two clients see one remaining seat?",
+      "marks": 6,
+      "answerHtml": "<p>Both can count before either inserts, then both insert and exceed the limit. Lock the same section row before the count and keep the lock through insertion and commit. Restrict writes that bypass this protocol and make capacity reductions follow compatible locking.</p>"
+    },
+    {
+      "type": "long",
+      "question": "What is missing before result_audit can serve a production security audit?",
+      "marks": 6,
+      "answerHtml": "<p>It needs trustworthy actor identity, protected retention and a defined policy for deletes, cascades, failed attempts and administrator changes. Current rows are transactional and disappear on rollback. Adding a caller-supplied actor string alone would not establish who acted.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Map the university enrollment relationship to tables and state key integrity rules.",
+      "marks": 8,
+      "answerHtml": "<p>An M:N Student–Section relationship becomes Enrollment(student_id,section_id,enrolled_on), keyed by the pair and referencing both parents. Result uses the same pair as a primary key and composite foreign key to Enrollment. This permits one result per registered student-offering pair and rejects results without registration.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

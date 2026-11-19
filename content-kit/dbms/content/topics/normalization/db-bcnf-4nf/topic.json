@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-bcnf-4nf",
+  "module": "normalization",
+  "order": 3,
+  "kind": "theory",
+  "title": {
+    "en": "BCNF and 4NF",
+    "bn": "BCNF ও 4NF: আরও ভালো টেবিল ডিজাইন"
+  },
+  "summary": {
+    "en": "Compare overlapping keys, prove a BCNF split, and separate independent multivalued facts.",
+    "bn": "ওভারল্যাপ করা কি, BCNF decomposition আর স্বাধীন বহু মানের 4NF সমস্যা বুঝে নাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 45,
+  "prerequisites": [
+    "db-normalization"
+  ],
+  "related": [
+    "db-decomposition",
+    "db-functional-dependencies"
+  ],
+  "keywords": [
+    "bcnf and 4nf",
+    "normalization",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "When 3NF still repeats a fact"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Test determinants and independence"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Work through two different kinds of redundancy"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep the two dependency languages distinct"
+    },
+    {
+      "id": "summary",
+      "title": "Choose stronger forms with a proof"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "An overlapping-key decision",
+      "statementHtml": "<p>For SCI with SC → I and I → C, establish the strongest of 3NF and BCNF and decompose if needed.</p>",
+      "hints": [
+        "Find both candidate keys before testing prime attributes."
+      ],
+      "answerHtml": "<p>S must be in every key. SC+ and SI+ are SCI, with no removable attribute, so keys are SC and SI. All attributes are prime; I → C therefore passes 3NF. I+ = IC lacks S, violating BCNF. Decompose into IC and SI; intersection I determines IC, so the split is lossless. SC → I is not locally preserved.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Count independent combinations",
+      "statementHtml": "<p>Student 102 has three languages and two independent hobbies. How many Interest rows and decomposed rows are needed?</p>",
+      "hints": [
+        "Multiply before the split and add afterwards."
+      ],
+      "answerHtml": "<p>Independence requires 3 × 2 = 6 Interest rows. StudentLanguage stores three rows and StudentHobby stores two, for five rows total. Joining the projections on student yields exactly six combinations because the MVD is part of the requirements.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Expose a false MVD",
+      "statementHtml": "<p>Given only (101,Bangla,cricket) and (101,English,chess), does S ↠ L hold in that relation?</p>",
+      "hints": [
+        "Use the tuple-swapping definition."
+      ],
+      "answerHtml": "<p>No. The swapped tuples (101,Bangla,chess) and (101,English,cricket) are absent. The original relation lacks the cross combinations required by S ↠ L. A projection join would add unsupported associations.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain preserved and lost rules",
+      "statementHtml": "<p>Why does the lossless IC,SI split not guarantee SC → I after independent component updates?</p>",
+      "hints": [
+        "Separate reconstruction from enforcement."
+      ],
+      "answerHtml": "<p>Losslessness concerns projections of a valid original relation. Independent IC and SI states can link one student to two instructors teaching the same course while satisfying local rules. Their FD union gives SC+ = SC, so it cannot enforce SC → I without a cross-table check.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Test a two-column bridge",
+      "statementHtml": "<p>Does a StudentCourse(S,C) relation automatically violate 4NF because each student has many courses?</p>",
+      "hints": [
+        "Read the definition of a trivial MVD."
+      ],
+      "answerHtml": "<p>No. S ↠ C is trivial because S ∪ C is the entire heading. With no other dependencies the relation is in 4NF. An ordinary many-to-many bridge is not evidence of independent third-attribute combinations.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which determinant is allowed by BCNF for a nontrivial FD?",
+      "options": [
+        "A superkey",
+        "Any prime attribute alone",
+        "Any foreign key"
+      ],
+      "answer": 0,
+      "explanation": "BCNF requires the full determinant to determine the relation."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "In SCI with SC → I and I → C, what is I+?",
+      "options": [
+        "SCI",
+        "IC",
+        "I only"
+      ],
+      "answer": 1,
+      "explanation": "The only reachable extra attribute is C."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does I → C pass 3NF in the overlapping-key example?",
+      "options": [
+        "I is a superkey",
+        "Every FD passes 3NF",
+        "C is prime"
+      ],
+      "answer": 2,
+      "explanation": "C belongs to the candidate key SC."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What proves the IC,SI binary split is lossless?",
+      "options": [
+        "I determines IC",
+        "S determines I",
+        "C determines S"
+      ],
+      "answer": 0,
+      "explanation": "The intersection I determines one component."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which dependency is not preserved locally by IC and SI?",
+      "options": [
+        "I → C",
+        "SC → I",
+        "IC → C"
+      ],
+      "answer": 1,
+      "explanation": "SC closure under projected FDs cannot reach I."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does S ↠ L require alongside a separate hobby attribute?",
+      "options": [
+        "Only one language for each S",
+        "A different student for every language",
+        "All language-hobby combinations for each fixed S"
+      ],
+      "answer": 2,
+      "explanation": "An MVD expresses independent combinations."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which form can a relation satisfy while violating 4NF?",
+      "options": [
+        "BCNF",
+        "Only unnormalised form",
+        "No normal form"
+      ],
+      "answer": 0,
+      "explanation": "Independent collections can have no nontrivial FDs but still violate 4NF."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is X ↠ Y trivial?",
+      "options": [
+        "X has many rows",
+        "Y ⊆ X or XY is the whole heading",
+        "Y is a string"
+      ],
+      "answer": 1,
+      "explanation": "These cases place no independent-combination restriction."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does 4NF imply because every FD is also an MVD?",
+      "options": [
+        "Every relation has one column",
+        "No foreign keys are needed",
+        "BCNF"
+      ],
+      "answer": 2,
+      "explanation": "Any violating FD would also violate the stronger MVD rule."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When would splitting languages and hobbies invent information?",
+      "options": [
+        "When the pairs describe specific associations",
+        "When both projections have composite keys",
+        "When a student speaks Bangla"
+      ],
+      "answer": 0,
+      "explanation": "Without independence the join can add unsupported pairs."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does losing FD preservation invalidate a proven lossless decomposition?",
+      "options": [
+        "Yes",
+        "No",
+        "Only on MySQL"
+      ],
+      "answer": 1,
+      "explanation": "The properties ask different questions about the decomposition."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "BCNF requires every nontrivial FD determinant to be a superkey.",
+      "bn": "BCNF-এ প্রতিটি nontrivial FD-এর determinant superkey হতে হয়।"
+    },
+    {
+      "en": "A relation may satisfy 3NF while violating BCNF.",
+      "bn": "একটি টেবিল 3NF-এ থেকেও BCNF-এর নিয়ম ভাঙতে পারে।"
+    },
+    {
+      "en": "BCNF decomposition can lose local enforcement of an FD.",
+      "bn": "BCNF decomposition-এর পর কোনো FD যাচাই করতে জয়েন লাগতে পারে।"
+    },
+    {
+      "en": "An MVD expresses independent combinations for a fixed determinant.",
+      "bn": "MVD-তে determinant স্থির রেখে দুই দিকের স্বাধীন কম্বিনেশন বোঝানো হয়।"
+    },
+    {
+      "en": "4NF separates independent multivalued facts when their determinant is not a superkey.",
+      "bn": "4NF করতে nonkey determinant-এর স্বাধীন বহু মানের তথ্য আলাদা টেবিলে রাখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "For SCI with SC → I and I → C, establish the strongest of 3NF and BCNF and decompose if needed.",
+      "marks": 6,
+      "answerHtml": "<p>S must be in every key. SC+ and SI+ are SCI, with no removable attribute, so keys are SC and SI. All attributes are prime; I → C therefore passes 3NF. I+ = IC lacks S, violating BCNF. Decompose into IC and SI; intersection I determines IC, so the split is lossless. SC → I is not locally preserved.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Student 102 has three languages and two independent hobbies. How many Interest rows and decomposed rows are needed?",
+      "marks": 6,
+      "answerHtml": "<p>Independence requires 3 × 2 = 6 Interest rows. StudentLanguage stores three rows and StudentHobby stores two, for five rows total. Joining the projections on student yields exactly six combinations because the MVD is part of the requirements.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Given only (101,Bangla,cricket) and (101,English,chess), does S ↠ L hold in that relation?",
+      "marks": 6,
+      "answerHtml": "<p>No. The swapped tuples (101,Bangla,chess) and (101,English,cricket) are absent. The original relation lacks the cross combinations required by S ↠ L. A projection join would add unsupported associations.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Why does the lossless IC,SI split not guarantee SC → I after independent component updates?",
+      "marks": 6,
+      "answerHtml": "<p>Losslessness concerns projections of a valid original relation. Independent IC and SI states can link one student to two instructors teaching the same course while satisfying local rules. Their FD union gives SC+ = SC, so it cannot enforce SC → I without a cross-table check.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

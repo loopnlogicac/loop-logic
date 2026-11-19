@@ -1,0 +1,621 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-interview-questions",
+  "module": "practice-exam",
+  "order": 4,
+  "kind": "question-bank",
+  "title": {
+    "en": "DBMS Interview Questions",
+    "bn": "DBMS ইন্টারভিউর ৫০টি প্রশ্ন"
+  },
+  "summary": {
+    "en": "Give fifty concise explanations of design, SQL, transactions, storage and distributed tradeoffs.",
+    "bn": "ডিজাইন, SQL, ট্রানজ্যাকশন, স্টোরেজ আর distributed ডেটার ৫০টি প্রশ্নের সংক্ষিপ্ত উত্তর দাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 90,
+  "prerequisites": [
+    "db-exam-questions"
+  ],
+  "related": [
+    "db-mini-project-university",
+    "db-nosql-intro"
+  ],
+  "keywords": [
+    "dbms interview questions",
+    "practice-exam",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Answer briefly, then defend the boundary"
+    },
+    {
+      "id": "design",
+      "title": "Design and identity"
+    },
+    {
+      "id": "sql",
+      "title": "SQL meaning and result shape"
+    },
+    {
+      "id": "dependencies",
+      "title": "Dependencies and decomposition"
+    },
+    {
+      "id": "transactions",
+      "title": "Transaction boundaries and concurrency"
+    },
+    {
+      "id": "operations",
+      "title": "Recovery, storage and security"
+    },
+    {
+      "id": "summary",
+      "title": "Replace slogans with one concrete example"
+    }
+  ],
+  "examples": [],
+  "practice": [],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Interview check: how many non-NULL hometown values are present?",
+      "language": "sql",
+      "code": "SELECT COUNT(hometown) AS n FROM students;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 6 |\n+---+",
+        "+---+\n| n |\n+---+\n| 7 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "Six students have a known hometown."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Interview check: how many rows does COUNT(*) include in the student table?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 9 |\n+---+",
+        "+---+\n| n |\n+---+\n| 8 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "All eight student rows are counted."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Interview check: how many duplicate-free identifiers does a self-UNION retain?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM (SELECT student_id FROM students\nUNION SELECT student_id FROM students) AS combined;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 9 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 8 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "UNION removes the duplicated second copy of each identifier."
+    },
+    {
+      "id": "q-4",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Interview check: what is ROW_NUMBER for a query returning only student 101?",
+      "language": "sql",
+      "code": "SELECT ROW_NUMBER() OVER (ORDER BY student_id) AS n\nFROM students WHERE student_id=101 ORDER BY student_id;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "The window sees the one filtered row and numbers it one."
+    },
+    {
+      "id": "q-5",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Interview check: how many courses have the unique code CSE 212?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM courses WHERE course_code='CSE 212';\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "One catalogued course has that code."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which brief answer correctly describes a candidate key?",
+      "options": [
+        "Every set of two columns",
+        "Only the selected PRIMARY KEY",
+        "A minimal superkey"
+      ],
+      "answer": 2,
+      "explanation": "Minimality distinguishes candidate keys from larger superkeys."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should follow a claim that a decomposition is safe?",
+      "options": [
+        "Its reconstruction and constraint arguments",
+        "Only shorter table names",
+        "A random sample output"
+      ],
+      "answer": 0,
+      "explanation": "Different safety properties require separate evidence."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which read can use another transaction’s uncommitted value?",
+      "options": [
+        "A uniqueness check by definition",
+        "A dirty read",
+        "Every locking read"
+      ],
+      "answer": 1,
+      "explanation": "The writer may still undo that value."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which result does parameter binding guarantee by itself?",
+      "options": [
+        "Every user may access every row",
+        "All database actions are reversible",
+        "Input remains data rather than SQL structure"
+      ],
+      "answer": 2,
+      "explanation": "Authorisation and recovery remain separate controls."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the strongest accurate claim about NoSQL schemas?",
+      "options": [
+        "Applications still impose data-shape expectations",
+        "No types or rules ever exist",
+        "Every document has identical fields"
+      ],
+      "answer": 0,
+      "explanation": "Flexible storage still needs validation and versioning."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a foreign key primarily protect?",
+      "options": [
+        "Global alphabetical ordering",
+        "Referential integrity",
+        "All cross-row business totals"
+      ],
+      "answer": 1,
+      "explanation": "Repeated child references can remain valid."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is a graph cycle relevant to a deadlock answer?",
+      "options": [
+        "All query graphs must be acyclic",
+        "Cycles prove disk corruption",
+        "Waits can form a circular dependency"
+      ],
+      "answer": 2,
+      "explanation": "A wait-for cycle prevents the participants from making progress unaided."
+    },
+    {
+      "id": "q-13",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which read-plan statement avoids an unsupported timing promise?",
+      "options": [
+        "The cost is an estimate used to compare alternatives",
+        "The displayed rows value is elapsed milliseconds",
+        "Any index is always faster"
+      ],
+      "answer": 0,
+      "explanation": "Plans require observation on representative data."
+    },
+    {
+      "id": "q-14",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should a concise ACID answer distinguish from CAP consistency?",
+      "options": [
+        "They are exactly the same definition",
+        "Invariant preservation versus distributed linearizability",
+        "Neither uses any conditions"
+      ],
+      "answer": 1,
+      "explanation": "The two contexts use consistency for different guarantees."
+    },
+    {
+      "id": "q-15",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What additional evidence makes a backup claim useful?",
+      "options": [
+        "Only its filename",
+        "Only a large byte count",
+        "A successful restore and integrity validation"
+      ],
+      "answer": 2,
+      "explanation": "Recovery depends on usability rather than existence alone."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A concise answer should still state its conditions.",
+      "bn": "ছোট উত্তরেও প্রযোজ্য শর্তগুলো বলো।"
+    },
+    {
+      "en": "Use a counterexample when a claimed guarantee is too broad.",
+      "bn": "বেশি বড় দাবি হলে ছোট counterexample দিয়ে ভুলটা দেখাও।"
+    },
+    {
+      "en": "Distinguish a SQL feature from the business rule it supports.",
+      "bn": "SQL feature আর সেটি দিয়ে রাখা ব্যবসার নিয়ম আলাদা করে বোঝাও।"
+    },
+    {
+      "en": "Name the failure boundary before proposing a retry or recovery action.",
+      "bn": "Retry বা recovery বলার আগে কোন সীমা পর্যন্ত কাজ ব্যর্থ হয়েছে বুঝে নাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "What does a DBMS add beyond unrelated data files?",
+      "marks": 3,
+      "answerHtml": "<p>It coordinates queries, shared updates, integrity, authority and recovery. Those facilities reduce repeated application work, but the schema and business rules still need design.</p>"
+    },
+    {
+      "type": "short",
+      "question": "How do logical and physical data independence differ?",
+      "marks": 3,
+      "answerHtml": "<p>Logical independence concerns changes in the conceptual structure without unnecessary external-view changes. Physical independence concerns storage and access changes without changing the logical interface.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Is a relation the same thing as any SQL table?",
+      "marks": 3,
+      "answerHtml": "<p>A mathematical relation is a set of tuples over defined domains. An unconstrained SQL table may permit duplicates and NULL, so the mapping needs explicit assumptions.</p>"
+    },
+    {
+      "type": "short",
+      "question": "How does a candidate key differ from a superkey?",
+      "marks": 3,
+      "answerHtml": "<p>A candidate key has no removable attribute while still identifying tuples. A superkey can include additional attributes that do not contribute to identification.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why can a foreign key contain repeated values?",
+      "marks": 3,
+      "answerHtml": "<p>Several child rows can reference the same parent. The foreign key protects valid references; it does not make every child reference unique.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What makes an entity weak?",
+      "marks": 3,
+      "answerHtml": "<p>Its identification depends on an owner’s key together with a partial key. A room number that repeats across buildings is a typical example.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is total participation in an ER relationship?",
+      "marks": 3,
+      "answerHtml": "<p>Every entity instance on that side must participate. This is a minimum requirement and differs from the maximum number of allowed partners.</p>"
+    },
+    {
+      "type": "short",
+      "question": "How is an M:N relationship mapped?",
+      "marks": 3,
+      "answerHtml": "<p>Introduce a bridge relation with references to both participants and a key matching the relationship’s event identity. Store relationship attributes on that bridge.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why might an enrollment need a section rather than only a course?",
+      "marks": 3,
+      "answerHtml": "<p>A course can have repeated offerings. The section distinguishes the specific event in which the student registers and receives a result.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Does adding a surrogate identifier remove redundancy?",
+      "marks": 3,
+      "answerHtml": "<p>No. The original determinants still describe business facts. Preserve necessary uniqueness and analyse those dependencies rather than treating a new id as normalisation.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why does NULL = NULL not behave like ordinary equality?",
+      "marks": 3,
+      "answerHtml": "<p>SQL NULL represents missing or unknown information. Equality yields UNKNOWN in that comparison, so use IS NULL for a missing-value test.</p>"
+    },
+    {
+      "type": "short",
+      "question": "How do COUNT(*) and COUNT(column) differ?",
+      "marks": 3,
+      "answerHtml": "<p>The first counts input rows. The second counts rows where the expression is non-NULL. This distinction is essential after an outer join.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is the difference between WHERE and HAVING?",
+      "marks": 3,
+      "answerHtml": "<p>WHERE filters input rows before grouping. HAVING filters the resulting groups. Their placement can change both counts and which groups remain.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why can a LEFT JOIN lose its unmatched parents?",
+      "marks": 3,
+      "answerHtml": "<p>A later WHERE condition can reject the NULL-extended child values. Put a child-matching restriction in ON when the parent must survive without a match.</p>"
+    },
+    {
+      "type": "short",
+      "question": "When is EXISTS preferable to joining raw children?",
+      "marks": 3,
+      "answerHtml": "<p>When the question asks whether at least one child exists, EXISTS expresses membership without multiplying the parent by every matching child.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why is NOT IN risky with a nullable subquery result?",
+      "marks": 3,
+      "answerHtml": "<p>A NULL in the comparison set can make the predicate UNKNOWN for otherwise unmatched values. NOT EXISTS often expresses the intended absence more directly.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What does UNION ALL preserve that UNION removes?",
+      "marks": 3,
+      "answerHtml": "<p>UNION ALL keeps duplicate occurrences from both inputs. UNION performs distinct set-style combination. Choose according to whether repeated events have meaning.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why does a window aggregate differ from GROUP BY?",
+      "marks": 3,
+      "answerHtml": "<p>A window can attach a group-related value to each input row without collapsing those rows. GROUP BY produces one output row per group.</p>"
+    },
+    {
+      "type": "short",
+      "question": "How do RANK and DENSE_RANK treat ties?",
+      "marks": 3,
+      "answerHtml": "<p>Both assign equal positions to equal ordering values. RANK leaves gaps after ties, while DENSE_RANK numbers distinct levels consecutively.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why does LIMIT need a complete ordering for repeatable choices?",
+      "marks": 3,
+      "answerHtml": "<p>Equal ordering values leave the selected tied rows ambiguous. Add a unique tie-breaker when a particular limited subset must be reproducible.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Can a few distinct sample rows prove a functional dependency?",
+      "marks": 3,
+      "answerHtml": "<p>No. A dependency is a rule for every permitted state. Sample rows may refute it, but requirements must justify its universal promise.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is the purpose of attribute closure?",
+      "marks": 3,
+      "answerHtml": "<p>It collects every attribute determined by a starting set under the given FDs. You can use it to test implication and superkey status.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What causes a 2NF violation?",
+      "marks": 3,
+      "answerHtml": "<p>A nonprime attribute depends on a proper subset of a candidate key. Check all candidate keys rather than only the selected primary key.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is the formal 3NF condition for X → A?",
+      "marks": 3,
+      "answerHtml": "<p>For a nontrivial dependency, X must be a superkey or A must be prime. The prime-right-side exception matters when candidate keys overlap.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What stronger demand does BCNF make?",
+      "marks": 3,
+      "answerHtml": "<p>Every nontrivial functional determinant must be a superkey. BCNF removes the 3NF exception for a prime right-side attribute.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What information does an MVD express?",
+      "marks": 3,
+      "answerHtml": "<p>For a fixed determinant, one attribute set varies independently of the remaining attributes, requiring the corresponding cross combinations of tuples.</p>"
+    },
+    {
+      "type": "short",
+      "question": "How can a decomposition be lossless but fail preservation?",
+      "marks": 3,
+      "answerHtml": "<p>Its projections may reconstruct every valid original relation, while independently maintained components cannot enforce one original FD locally. Reconstruction and enforcement are separate tests.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is a spurious tuple?",
+      "marks": 3,
+      "answerHtml": "<p>It is an extra row created when projected components join parts that did not belong together in the original relation.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why does 3NF synthesis sometimes add a key relation?",
+      "marks": 3,
+      "answerHtml": "<p>FD-based components may enforce every rule yet lose associations between groups. Including a candidate key completes the synthesis construction’s lossless guarantee.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Does denormalisation always mean a design mistake?",
+      "marks": 3,
+      "answerHtml": "<p>No. A deliberate read optimisation or historical snapshot can duplicate facts. It needs a clear update, staleness and reconstruction policy.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is the unit protected by atomicity?",
+      "marks": 3,
+      "answerHtml": "<p>The intended transaction boundary. If a business action spans two transactions or an external service, one local transaction cannot make all effects atomic automatically.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Can an atomic transaction violate consistency?",
+      "marks": 3,
+      "answerHtml": "<p>Yes. Committing an incorrect debit and credit together preserves all-or-nothing behaviour while breaking the total-balance rule.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is a dirty read?",
+      "marks": 3,
+      "answerHtml": "<p>A transaction observes another transaction’s uncommitted change. If the writer later aborts, the reader used a value that never became committed history.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is a nonrepeatable read?",
+      "marks": 3,
+      "answerHtml": "<p>A transaction reads a row again and sees another committed value. READ COMMITTED can allow this because consistent reads use fresh snapshots.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What is a phantom?",
+      "marks": 3,
+      "answerHtml": "<p>Repeating a predicate query sees a changed matching row set, such as an additional row. Its occurrence depends on isolation and access behaviour.</p>"
+    },
+    {
+      "type": "short",
+      "question": "How do precedence and wait-for graphs differ?",
+      "marks": 3,
+      "answerHtml": "<p>Precedence edges describe ordering of conflicting data operations for serialisability. Wait-for edges describe blocked transactions depending on lock holders for deadlock analysis.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Does basic 2PL eliminate deadlocks?",
+      "marks": 3,
+      "answerHtml": "<p>No. Transactions can acquire locks in opposite orders and wait in a cycle. Common acquisition order reduces that pattern.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What should a deadlock retry repeat?",
+      "marks": 3,
+      "answerHtml": "<p>The complete aborted transaction, using current data and bounded retry logic. Preserve request identity so an uncertain previous outcome does not duplicate the business action.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why is a savepoint not a nested transaction?",
+      "marks": 3,
+      "answerHtml": "<p>It marks an undo position within one transaction. Releasing it does not commit independently, and a full rollback removes the surrounding work.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Can ordinary DDL be rolled back with earlier DML in MySQL?",
+      "marks": 3,
+      "answerHtml": "<p>Many DDL statements cause implicit commits. Atomic DDL protects the DDL operation itself; it does not make it part of an ordinary user rollback group.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What does redo contribute after a crash?",
+      "marks": 3,
+      "answerHtml": "<p>It can reconstruct logged page changes that are not yet safely present in final data pages. Uncommitted logical effects still require rollback handling.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What does undo contribute besides rollback?",
+      "marks": 3,
+      "answerHtml": "<p>Undo records support older row versions for consistent reads. Retention therefore depends on active snapshot needs as well as transaction completion.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why is a checkpoint not a backup?",
+      "marks": 3,
+      "answerHtml": "<p>It tracks recovery progress inside the running storage system. It does not provide an independent historical copy after media loss or committed mistakes.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What does an InnoDB secondary index use to find the full row?",
+      "marks": 3,
+      "answerHtml": "<p>The clustered primary-key value stored with its entry. A noncovering lookup can therefore involve both secondary and clustered trees.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why do B+ tree leaves help range queries?",
+      "marks": 3,
+      "answerHtml": "<p>Their key order and neighbour links support scanning adjacent values after locating the starting leaf. A hash layout lacks that natural interval order.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What does EXPLAIN rows describe?",
+      "marks": 3,
+      "answerHtml": "<p>An estimate of examined input rows for a plan operation, not necessarily the exact final result count or an observed runtime measurement.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Why do prepared statements not replace authorisation?",
+      "marks": 3,
+      "answerHtml": "<p>They protect how values enter SQL syntax. The application must still decide whether this caller may access the particular valid identifier being requested.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Can a stored procedure contain an injection flaw?",
+      "marks": 3,
+      "answerHtml": "<p>Yes. Dynamic SQL assembled from untrusted text can remain unsafe inside a procedure. Bind values and restrict unavoidable structural choices.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Does NoSQL mean there is no schema?",
+      "marks": 3,
+      "answerHtml": "<p>No. Application code still expects field names, types and relationships. Those expectations need validation, versioning and migration even without a rigid table definition.</p>"
+    },
+    {
+      "type": "short",
+      "question": "What does CAP require deciding during a network partition?",
+      "marks": 3,
+      "answerHtml": "<p>Whether to sacrifice linearizable responses or availability for affected operations. It is not a permanent instruction to choose any two unrelated product features.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

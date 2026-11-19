@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-storage-indexing",
+  "module": "internals",
+  "order": 4,
+  "kind": "theory",
+  "title": {
+    "en": "File Organisation and Indexing",
+    "bn": "ফাইল অর্গানাইজেশন ও ইনডেক্সিং"
+  },
+  "summary": {
+    "en": "Follow pages through heap, sorted, B+ tree and hash organisations and map the ideas to InnoDB.",
+    "bn": "Heap, sorted file, B+ tree আর hashing দিয়ে পেজ খোঁজার খরচ বুঝে নাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 45,
+  "prerequisites": [
+    "db-indexes"
+  ],
+  "related": [
+    "db-query-processing",
+    "db-recovery"
+  ],
+  "keywords": [
+    "file organisation and indexing",
+    "internals",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Count page visits, not only comparisons"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Compare basic file organisations"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Walk the tree and its references"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not confuse logical and physical order"
+    },
+    {
+      "id": "summary",
+      "title": "Choose routes for the workload"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Calculate full-scan pages",
+      "statementHtml": "<p>A simplified heap contains 240,000 records with 60 records per page. How many data pages does a full scan read?</p>",
+      "hints": [
+        "Divide record count by records per page."
+      ],
+      "answerHtml": "<p>240000/60 = 4000 pages, assuming full pages and no extra metadata reads. A cold full scan visits those data pages. This is a page-access estimate; caching and sequential I/O affect elapsed time.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Calculate a B+ tree height",
+      "statementHtml": "<p>Leaves hold 100 records and internal nodes have 100 children. How many levels hold 1,000,000 records at full capacity?</p>",
+      "hints": [
+        "Count leaves before working upwards."
+      ],
+      "answerHtml": "<p>There are 10,000 leaves, then 100 internal pages, then one root. That is three page levels. A cold point search visits one page at each level; caching may reduce physical reads.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain a secondary lookup",
+      "statementHtml": "<p>Why can SELECT student_name WHERE hometown=Dhaka require two tree routes with a hometown index?</p>",
+      "hints": [
+        "Secondary leaves carry clustered identity."
+      ],
+      "answerHtml": "<p>The secondary tree locates matching hometown entries and their student_id values. InnoDB then uses those primary keys to retrieve student_name from clustered leaf records unless the secondary index covers the requested columns.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Choose for a range",
+      "statementHtml": "<p>Would a hash index naturally accelerate ordered marks from 60 to 80 like a B+ tree?</p>",
+      "hints": [
+        "Hashing destroys the useful numeric ordering."
+      ],
+      "answerHtml": "<p>No. Hash order does not keep that interval contiguous, so a range may need many bucket inspections. A B+ tree locates the first matching leaf and traverses ordered neighbours. Equality and range workloads need different routes.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain wider identity",
+      "statementHtml": "<p>Why might replacing a narrow primary key with a long string enlarge other InnoDB indexes?</p>",
+      "hints": [
+        "Consider all secondary trees, not only the primary tree."
+      ],
+      "answerHtml": "<p>Each secondary entry contains the clustered primary-key value. A wider primary key increases secondary-entry width, reduces entries per page and can increase page count and maintenance cost.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where do InnoDB clustered-index leaf records store full rows?",
+      "options": [
+        "In the clustered leaves",
+        "Only in an independent heap file",
+        "Only in the redo log"
+      ],
+      "answer": 0,
+      "explanation": "The clustered index is the table’s row organisation."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What helps a B+ tree read a range after locating its start?",
+      "options": [
+        "A random hash seed",
+        "Ordered leaf links",
+        "A new primary key for every read"
+      ],
+      "answer": 1,
+      "explanation": "Leaf traversal follows adjacent keys."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does fanout count?",
+      "options": [
+        "Rows returned by a join",
+        "Number of users",
+        "Children of an internal node"
+      ],
+      "answer": 2,
+      "explanation": "High fanout makes the tree shallow."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can an index-covering query save work?",
+      "options": [
+        "It avoids fetching missing columns from clustered rows",
+        "It removes every lock",
+        "It guarantees zero disk reads"
+      ],
+      "answer": 0,
+      "explanation": "Requested values can be available in index entries alone."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a heap file promise key-sorted rows?",
+      "options": [
+        "Yes",
+        "No",
+        "Only for string keys"
+      ],
+      "answer": 1,
+      "explanation": "Heap placement has no search-key order."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens when different keys map to one hash bucket?",
+      "options": [
+        "Both rows are necessarily duplicates",
+        "The server must crash",
+        "A collision must be handled"
+      ],
+      "answer": 2,
+      "explanation": "Original keys still need comparison."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can one InnoDB table have two independent clustered orders?",
+      "options": [
+        "No",
+        "Yes",
+        "Only if both are UNIQUE"
+      ],
+      "answer": 0,
+      "explanation": "The row records have one clustered organisation."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What can an overflowing B+ leaf insertion cause?",
+      "options": [
+        "An automatic full-table DELETE",
+        "A split and parent separator update",
+        "Removal of every index"
+      ],
+      "answer": 1,
+      "explanation": "Structural maintenance can propagate towards the root."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why may a full scan beat a secondary index for most rows?",
+      "options": [
+        "Indexes cannot return many rows",
+        "Scans always use no memory",
+        "It can avoid many scattered full-row lookups"
+      ],
+      "answer": 2,
+      "explanation": "The access cost includes clustered-row retrieval, not just matches."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Is InnoDB adaptive hashing a user-declared replacement for every B-tree index?",
+      "options": [
+        "No",
+        "Yes",
+        "Only when ORDER BY is absent"
+      ],
+      "answer": 0,
+      "explanation": "It is an internal optimisation with version and configuration considerations."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which SQL clause guarantees displayed key order?",
+      "options": [
+        "PRIMARY KEY declaration alone",
+        "ORDER BY",
+        "ENGINE=InnoDB alone"
+      ],
+      "answer": 1,
+      "explanation": "The result contract must request ordering explicitly."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A page is the unit that makes disk-oriented access costs meaningful.",
+      "bn": "ডিস্কে ডেটা খোঁজার খরচ বুঝতে পেজকে কাজের একক হিসেবে ধরো।"
+    },
+    {
+      "en": "InnoDB stores table rows in its clustered primary-key index.",
+      "bn": "InnoDB টেবিলের সারি clustered primary-key index-এ রাখে।"
+    },
+    {
+      "en": "A secondary InnoDB index stores primary-key values to locate full rows.",
+      "bn": "InnoDB-এর secondary index থেকে পুরো সারি খুঁজতে primary key লাগে।"
+    },
+    {
+      "en": "Linked B+ tree leaves support ordered range traversal.",
+      "bn": "B+ tree-এর যুক্ত leaf ধরে সাজানো range-এর ডেটা পড়া যায়।"
+    },
+    {
+      "en": "Hashing helps equality access but does not naturally provide range order.",
+      "bn": "Hashing সমান মান খুঁজতে কাজে লাগে, কিন্তু range-এর ক্রম নিজে থেকে দেয় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "A simplified heap contains 240,000 records with 60 records per page. How many data pages does a full scan read?",
+      "marks": 6,
+      "answerHtml": "<p>240000/60 = 4000 pages, assuming full pages and no extra metadata reads. A cold full scan visits those data pages. This is a page-access estimate; caching and sequential I/O affect elapsed time.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Leaves hold 100 records and internal nodes have 100 children. How many levels hold 1,000,000 records at full capacity?",
+      "marks": 6,
+      "answerHtml": "<p>There are 10,000 leaves, then 100 internal pages, then one root. That is three page levels. A cold point search visits one page at each level; caching may reduce physical reads.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Why can SELECT student_name WHERE hometown=Dhaka require two tree routes with a hometown index?",
+      "marks": 6,
+      "answerHtml": "<p>The secondary tree locates matching hometown entries and their student_id values. InnoDB then uses those primary keys to retrieve student_name from clustered leaf records unless the secondary index covers the requested columns.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Would a hash index naturally accelerate ordered marks from 60 to 80 like a B+ tree?",
+      "marks": 6,
+      "answerHtml": "<p>No. Hash order does not keep that interval contiguous, so a range may need many bucket inspections. A B+ tree locates the first matching leaf and traverses ordered neighbours. Equality and range workloads need different routes.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-index-types.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "server": "8.4.7",
+  "setup": [
+    "shared/datasets/university.sql",
+    "topics/practice-exam/db-mini-project-university/project/extension.sql"
+  ],
+  "events": [
+    {
+      "case": "duplicate registration",
+      "sql": "CALL register_student(101,31)",
+      "errorCode": 1062,
+      "status": "rejected as expected"
+    },
+    {
+      "case": "missing student",
+      "sql": "CALL register_student(999,33)",
+      "errorCode": 1452,
+      "status": "rejected as expected"
+    },
+    {
+      "case": "missing section",
+      "sql": "CALL register_student(108,999)",
+      "errorCode": 1644,
+      "status": "rejected as expected"
+    },
+    {
+      "case": "negative marks",
+      "sql": "INSERT INTO results(student_id,section_id,marks) VALUES(107,35,-1)",
+      "errorCode": 3819,
+      "status": "rejected as expected"
+    },
+    {
+      "case": "marks above 100",
+      "sql": "INSERT INTO results(student_id,section_id,marks) VALUES(107,35,101)",
+      "errorCode": 3819,
+      "status": "rejected as expected"
+    },
+    {
+      "case": "result without registration",
+      "sql": "INSERT INTO results(student_id,section_id,marks) VALUES(108,31,50)",
+      "errorCode": 1452,
+      "status": "rejected as expected"
+    },
+    {
+      "case": "two callers compete for one seat",
+      "results": [
+        {
+          "student": 101,
+          "status": "rejected",
+          "errorCode": 1644
+        },
+        {
+          "student": 108,
+          "status": "committed"
+        }
+      ],
+      "finalEnrollments": 1,
+      "capacity": 1
+    },
+    {
+      "case": "registrar can call definer routine",
+      "sql": "CALL register_student(107,36)",
+      "rows": null,
+      "status": "accepted"
+    },
+    {
+      "case": "registrar can read limited report",
+      "sql": "SELECT section_id,enrolled FROM section_overview WHERE section_id=36 ORDER BY section_id",
+      "rows": [
+        [
+          36,
+          2
+        ]
+      ],
+      "status": "accepted"
+    },
+    {
+      "case": "registrar cannot bypass enrollment routine",
+      "sql": "INSERT INTO enrollments VALUES(102,36,'2026-03-02')",
+      "errorCode": 1142,
+      "status": "rejected as expected"
+    },
+    {
+      "case": "registrar cannot read private student details",
+      "sql": "SELECT email FROM students ORDER BY student_id",
+      "errorCode": 1142,
+      "status": "rejected as expected"
+    }
+  ]
+}

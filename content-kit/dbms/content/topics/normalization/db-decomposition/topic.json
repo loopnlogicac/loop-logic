@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-decomposition",
+  "module": "normalization",
+  "order": 4,
+  "kind": "theory",
+  "title": {
+    "en": "Lossless and Dependency-Preserving Decomposition",
+    "bn": "টেবিল ভাঙার পর lossless join ও FD যাচাই"
+  },
+  "summary": {
+    "en": "Prove reconstruction and local enforcement separately using intersection tests, closures and a chase.",
+    "bn": "টেবিল ভাঙলে তথ্য ঠিক থাকে কি না আর FD আলাদাভাবে যাচাই করা যায় কি না প্রমাণ করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 45,
+  "prerequisites": [
+    "db-bcnf-4nf"
+  ],
+  "related": [
+    "db-functional-dependencies",
+    "db-normalization"
+  ],
+  "keywords": [
+    "lossless and dependency-preserving decomposition",
+    "normalization",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Prove that the split keeps its promises"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Apply two different tests"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Reconstruct, challenge and chase"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Use the correct heading at each step"
+    },
+    {
+      "id": "summary",
+      "title": "Finish with two explicit conclusions"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Lossless with preservation",
+      "statementHtml": "<p>For ABCD and A → B, B → C, C → D, test AB and BCD.</p>",
+      "hints": [
+        "Write the two tests independently."
+      ],
+      "answerHtml": "<p>Intersection B has closure BCD, so it determines the second component and the split is lossless. The AB projection has A → B; BCD has B → C and C → D. Their union includes all original FDs, so it preserves dependencies.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Produce spurious tuples",
+      "statementHtml": "<p>For ABC and A → B only, show why AB,BC can be lossy.</p>",
+      "hints": [
+        "Choose two rows sharing B but differing in A and C."
+      ],
+      "answerHtml": "<p>Use r = {(a1,b,c1),(a2,b,c2)}, which satisfies A → B. AB and BC join to four rows, adding (a1,b,c2) and (a2,b,c1). B+ = B determines neither component, agreeing with the binary test.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Find a missing key component",
+      "statementHtml": "<p>Synthesis for ABCDE and A → B, B → C, C → A, D → E gives AB,BC,CA,DE. What must be added?</p>",
+      "hints": [
+        "The ABC cycle cannot produce D."
+      ],
+      "answerHtml": "<p>The original keys include AD, BD and CD. None is contained in the four components. Add AD, for example. Original dependencies already have local homes, but the added key relation is required for the synthesis lossless guarantee.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Project an implied dependency",
+      "statementHtml": "<p>For F = {A → B,B → C}, does the projection onto AC contain A → C?</p>",
+      "hints": [
+        "Projection applies to F+, not just the printed F list."
+      ],
+      "answerHtml": "<p>Yes. A+ under F contains C, and both A and C lie in AC. Dependency projection includes all implied rules on the component, not only arrows explicitly written in the input.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Finish a chase",
+      "statementHtml": "<p>For AB,BC,CD on ABCD with B → C,C → D, which merges create an all-distinguished row?</p>",
+      "hints": [
+        "Preserve distinguished symbols when merging."
+      ],
+      "answerHtml": "<p>AB and BC share aB, so B → C changes AB’s missing C to aC. Then all rows share aC; C → D makes the missing D symbols aD. AB becomes aA,aB,aC,aD, proving losslessness.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What can a projection join add when a decomposition is lossy?",
+      "options": [
+        "Spurious tuples",
+        "Missing attribute names",
+        "A new FD by definition"
+      ],
+      "answer": 0,
+      "explanation": "The original tuples survive, but unrelated parts can combine."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For AB and BCD, which intersection drives the binary test?",
+      "options": [
+        "A",
+        "B",
+        "CD"
+      ],
+      "answer": 1,
+      "explanation": "The common heading is exactly B."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Must a binary intersection determine both components?",
+      "options": [
+        "Yes, both are mandatory",
+        "It must determine neither",
+        "No, one is sufficient"
+      ],
+      "answer": 2,
+      "explanation": "The lossless FD criterion uses an either-side condition."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which dependency set is unioned for a preservation test?",
+      "options": [
+        "FD closures projected onto each component",
+        "Foreign keys alone",
+        "Only dependencies with empty left sides"
+      ],
+      "answer": 0,
+      "explanation": "Implied local FDs belong to the projections."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does SC+ under {I → C} fail to reach I?",
+      "options": [
+        "SC is empty",
+        "No rule supplies I from S or C",
+        "I is already a member of SC"
+      ],
+      "answer": 1,
+      "explanation": "This missing implication demonstrates lost SC → I preservation."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What marks success in the FD lossless-join chase?",
+      "options": [
+        "A row with all different missing symbols",
+        "No equal determinant symbols anywhere",
+        "An all-distinguished row"
+      ],
+      "answer": 2,
+      "explanation": "One all-distinguished tuple establishes reconstruction."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must each initially missing tableau cell receive?",
+      "options": [
+        "A fresh symbol",
+        "The same b in every row",
+        "A NULL SQL value"
+      ],
+      "answer": 0,
+      "explanation": "Fresh symbols avoid unjustified equalities."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What step does 3NF synthesis need if no component contains a key?",
+      "options": [
+        "Delete every component",
+        "Add a candidate-key relation",
+        "Assert a new FD"
+      ],
+      "answer": 1,
+      "explanation": "The key relation completes the lossless construction."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can a decomposition preserve FDs yet be lossy?",
+      "options": [
+        "No",
+        "Only if F is empty",
+        "Yes"
+      ],
+      "answer": 2,
+      "explanation": "Preservation alone does not preserve associations between independent groups."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which fact makes a B-based split lossless under B → CD?",
+      "options": [
+        "B determines the BCD side",
+        "A determines all sides",
+        "Every tuple has the same A"
+      ],
+      "answer": 0,
+      "explanation": "The common B attributes determine one complete component."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is a matching row count on one dataset insufficient proof?",
+      "options": [
+        "Row counts never matter in SQL",
+        "Losslessness must hold for every legal relation",
+        "Relations cannot be finite"
+      ],
+      "answer": 1,
+      "explanation": "A sample cannot establish the universal property."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Lossless decomposition reconstructs every legal original relation exactly.",
+      "bn": "Lossless decomposition করলে জয়েন করে মূল টেবিলের প্রতিটি বৈধ অবস্থা ঠিকভাবে ফিরে পাওয়া যায়।"
+    },
+    {
+      "en": "For a binary split, the common attributes must determine at least one component.",
+      "bn": "দুই ভাগের lossless split-এ সাধারণ অ্যাট্রিবিউট দিয়ে অন্তত এক ভাগ নির্ধারণ করতে হয়।"
+    },
+    {
+      "en": "Dependency preservation is tested with projected FDs, including implied rules.",
+      "bn": "প্রতিটি ভাগে কোন FD যাচাই করা যায় তা বের করো, তারপর দেখো সেগুলো দিয়ে মূল নিয়মগুলো প্রমাণ করা যায় কি না।"
+    },
+    {
+      "en": "A chase can establish losslessness for several components.",
+      "bn": "টেবিলকে একাধিক ভাগে ভাঙলে chase চালিয়ে দেখো, জয়েনের পর মূল তথ্য ঠিক থাকে কি না।"
+    },
+    {
+      "en": "3NF synthesis can preserve dependencies and ensure losslessness by retaining a key relation.",
+      "bn": "3NF synthesis-এ কি-এর টেবিল যোগ করলে তথ্য হারায় না, আর প্রতিটি FD নিজের টেবিলে যাচাই করা যায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "For ABCD and A → B, B → C, C → D, test AB and BCD.",
+      "marks": 6,
+      "answerHtml": "<p>Intersection B has closure BCD, so it determines the second component and the split is lossless. The AB projection has A → B; BCD has B → C and C → D. Their union includes all original FDs, so it preserves dependencies.</p>"
+    },
+    {
+      "type": "long",
+      "question": "For ABC and A → B only, show why AB,BC can be lossy.",
+      "marks": 6,
+      "answerHtml": "<p>Use r = {(a1,b,c1),(a2,b,c2)}, which satisfies A → B. AB and BC join to four rows, adding (a1,b,c2) and (a2,b,c1). B+ = B determines neither component, agreeing with the binary test.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Synthesis for ABCDE and A → B, B → C, C → A, D → E gives AB,BC,CA,DE. What must be added?",
+      "marks": 6,
+      "answerHtml": "<p>The original keys include AD, BD and CD. None is contained in the four components. Add AD, for example. Original dependencies already have local homes, but the added key relation is required for the synthesis lossless guarantee.</p>"
+    },
+    {
+      "type": "long",
+      "question": "For F = {A → B,B → C}, does the projection onto AC contain A → C?",
+      "marks": 6,
+      "answerHtml": "<p>Yes. A+ under F contains C, and both A and C lie in AC. Dependency projection includes all implied rules on the component, not only arrows explicitly written in the input.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
