@@ -1,0 +1,56 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">লুপের কাজ গোনা অনেকটা row-তে আসন গোনার মতো। সমান row-তে গুণ, ভিন্ন দৈর্ঘ্যে যোগ লাগে। শুধু loop header গুনলে triangle-কে square বা halving-কে দীর্ঘ scan ভাবতে পারো।</p>
+<p>আগে কোন operation গুনবে বাছো। এখানে visit মানে innermost body একবার চালানো। Assignment,comparison,update-এর আলাদা count আছে। প্রশ্নে primitive operation চাইলে পরে মেলাবে। একটি universal convention-এর চেয়ে consistent থাকা জরুরি।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">select the counted body operation
+write the exact visits for outer row i
+sum those visits over all outer rows
+solve the stopping condition for multiplicative updates
+simplify the sum only after obtaining the count</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>সরাসরি scan ও independent loop</h3>
+<p>i = 0 থেকে n - 1-এ body n বার। শেষ ব্যর্থ check-সহ condition n + 1 বার; update n বার। Empty input-এ body নেই, কিন্তু check একবার। ওই failed check-এ data access যোগ করবে না।</p>
+<p>তিন করে এগোলে i &lt; n-এ 0,3,6,…। Positive n-এ count ceil(n/3), fixed step বলে Θ(n)। n করে এগোলে positive n-এ constant repetition। Update rule পুরো বিশ্লেষণ বদলাতে পারে।</p>
+<p>পরপর দুই scan n+n = 2n; independent nested scan n×n = n²। Indentation দেখো। Inner loop m হলে দুই parameter রেখে Θ(nm)। কারণ ছাড়া m-কে n করলে rectangular input-এর তথ্য হারায়।</p>
+<h3>Dependent limit-এ sum করো</h3>
+<p>Triangular loop-এ i = 1..n row-তে i visit। মোট 1+2+…+n = n(n+1)/2। প্রথম-শেষ জোড়ায় n+1। অর্ধেক factor exact answer বদলায়, leading quadratic term Θ(n²) দেয়।</p>
+<p>Inner j = i থেকে n - 1 হলে row length n,n-1,…,1; একই sum উল্টো। j = i+1-এ self-pair নেই, তাই n(n-1)/2। ভিন্ন student-এর comparison গুনতে পার্থক্য দরকার।</p>
+<p>সব dependent loop quadratic নয়। Outer i = 1..n, inner j = i,2i,3i,…≤n হলে sum floor(n/i)। Harmonic series-এ Θ(n log n)। Actual row sum চাই; maximum inner count × n শুধু loose upper bound।</p>
+<h3>গুণ করে বদলালে logarithm আসে</h3>
+<p>Positive index 1 থেকে দ্বিগুণে 1,2,4,…। k update-এর পরে 2^k। Stop 2^k ≥ n থেকে n ≥ 1-এ k = ceil(log2 n)। Zero থেকে শুরু হলে এগোবে না, কারণ 2×0 এখনও zero।</p>
+<p>Positive integer n-এ remaining &gt; 1 halving loop floor(log2 n) visit। n = 17-এ 17,8,4,2 দেখা যায়। Integer truncation-এর জন্য power ও পাশের nonpower exact count আলাদা দেখো। Doubling ও halving logarithmic, rounding আলাদা।</p>
+<p>Doubling-এর প্রতি level-এ n visit হলে Θ(n log n)। কিন্তু i দ্বিগুণের সময় inner length i হলে 1+2+4+… below n; geometric sum Θ(n)। Logarithmic row count মানেই logarithmic total নয়।</p>
+<h3>Branch, early return ও data dependence</h3>
+<p>Equality-তে return করা search এক value,prefix বা পুরো list দেখে। Best-worst আলাদা বলো। Average-এ probability model চাই। সফল target n position-এ equally likely হলে expected comparison (n+1)/2। Model ছাড়া “গড়ে অর্ধেক” আন্দাজ।</p>
+<p>লুপের if-else-তে প্রতি repetition এক branch চলে। Branch-এর আগের কাজ ও নেওয়া branch ধরো। Worst upper bound-এ expensive branch নেওয়া যায়। Matching lower bound-এ সত্যিই প্রায়ই ওই branch নেওয়া input family চাই।</p>
+<p>লুপ function ডাকলে তার cost ধরো। এক visible loop-এ n বার linear scan হলে quadratic। Invariant calculation বাইরে নিলে repeated কাজ বাঁচতে পারে। Class বলার আগে call chain পড়ো।</p>
+<h3>পঁচিশটি সমাধানসহ complexity প্রশ্ন</h3><table class="ref"><caption>Assume n ≥ 1 unless an empty case is explicitly discussed; arithmetic is mathematical pseudocode.</caption><thead><tr><th scope="col">লুপ বা কোডের ধরন</th><th scope="col">ঠিক body count</th><th scope="col">বৃদ্ধির হার</th><th scope="col">কারণ</th></tr></thead><tbody><tr><td>i = 0; i &lt; n; i++</td><td>n</td><td>Θ(n)</td><td>প্রতি index-এ একটি visit।</td></tr><tr><td>i = 1; i &lt;= n; i++</td><td>n</td><td>Θ(n)</td><td>দুই প্রান্তই ধরা হয়।</td></tr><tr><td>i = 0; i &lt;= n; i++</td><td>n + 1</td><td>Θ(n)</td><td>Zero-তে বাড়তি একটি visit।</td></tr><tr><td>i = 0; i &lt; n; i += 2</td><td>ceil(n/2)</td><td>Θ(n)</td><td>Fixed stride অর্ধেক index এড়ায়।</td></tr><tr><td>i = n; i &gt; 0; i--</td><td>n</td><td>Θ(n)</td><td>উল্টো গুনলেও n visit।</td></tr><tr><td>আগে n scan, পরে n scan</td><td>2n</td><td>Θ(n)</td><td>পরপর phase-এর count যোগ হয়।</td></tr><tr><td>আগে n scan, পরে m scan</td><td>n + m</td><td>Θ(n + m)</td><td>দুটি input size স্বাধীন থাকে।</td></tr><tr><td>n row, প্রতিটির দৈর্ঘ্য n</td><td>n²</td><td>Θ(n²)</td><td>প্রতিটি ordered pair দেখা হয়।</td></tr><tr><td>n row, প্রতিটির দৈর্ঘ্য m</td><td>nm</td><td>Θ(nm)</td><td>Rectangular grid-এ দুই dimension থাকে।</td></tr><tr><td>i = 1..n, j = 1..i</td><td>n(n + 1)/2</td><td>Θ(n²)</td><td>এই triangle-এ self-pair আছে।</td></tr><tr><td>i = 0..n-1, j = i+1..n-1</td><td>n(n - 1)/2</td><td>Θ(n²)</td><td>প্রতিটি আলাদা unordered pair একবার।</td></tr><tr><td>i = 0..n-1, j = i..n-1</td><td>n(n + 1)/2</td><td>Θ(n²)</td><td>কমতে থাকা row-তেও একই triangle।</td></tr><tr><td>দৈর্ঘ্য n-এর তিন independent loop</td><td>n³</td><td>Θ(n³)</td><td>প্রতি outer pair-এর n visit।</td></tr><tr><td>i = 1; i &lt; n; i *= 2</td><td>ceil(log2 n), n &gt;= 1</td><td>Θ(log n)</td><td>2^k &gt;= n সমাধান করো।</td></tr><tr><td>i = n; i &gt; 1; i /= 2</td><td>floor(log2 n), n &gt;= 1</td><td>Θ(log n)</td><td>Integer halving শেষে one পায়।</td></tr><tr><td>i = 1; i &lt; n; i *= 3</td><td>ceil(log3 n), n &gt;= 1</td><td>Θ(log n)</td><td>Base বদলে constant factor বদলায়।</td></tr><tr><td>Halving loop n বার নতুন করে চালানো</td><td>n floor(log2 n)</td><td>Θ(n log n)</td><td>প্রতিবার logarithmic কাজ reset হয়।</td></tr><tr><td>n-এর নিচে i দ্বিগুণ, inner length i</td><td>2^ceil(log2 n) - 1, n &gt;= 1</td><td>Θ(n)</td><td>Geometric sum শেষ term-এর order-এ থাকে।</td></tr><tr><td>n থেকে i অর্ধেক, inner length i</td><td>n + floor(n/2) + ... + 1</td><td>Θ(n)</td><td>পরের row length geometric হারে কমে।</td></tr><tr><td>i = 1..n; ভেতরে i-এর গুণিতক দেখা</td><td>sum floor(n/i)</td><td>Θ(n log n)</td><td>Harmonic count-এ maximum নয়, sum চাই।</td></tr><tr><td>i = 0; i*i &lt; n; i++</td><td>ceil(sqrt(n)), n &gt;= 1</td><td>Θ(sqrt(n))</td><td>এটি গাণিতিক pseudocode; C multiplication overflow এড়াও।</td></tr><tr><td>n row, প্রতিটিতে সঙ্গে সঙ্গে inner break</td><td>n</td><td>Θ(n)</td><td>প্রতি row-তে এক body, তারপর exit।</td></tr><tr><td>Linear search-এ প্রথমেই match</td><td>n &gt;= 1-এ 1</td><td>Θ(1)</td><td>প্রথম equality-তেই scan শেষ।</td></tr><tr><td>Linear search-এ target নেই</td><td>n</td><td>Θ(n)</td><td>প্রতি candidate বাদ দিতে হয়।</td></tr><tr><td>i = 1..n; nested j,k = 1..i</td><td>n(n+1)(2n+1)/6</td><td>Θ(n³)</td><td>প্রতি outer row i² visit দেয়।</td></tr></tbody></table>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>সোজা scan-এর visit গোনো</h3>
+<p>Zero থেকে seven প্রতি index-এ counter এক বাড়ে। এটি body count; final failed condition বাদ।</p>
+<div data-example="ex-1"></div>
+<h3>Triangular pair loop গোনো</h3>
+<p>দৈর্ঘ্য এক থেকে আটের row মোট 36 visit। Dependent limit square grid নয় বোঝা যায়।</p>
+<div data-example="ex-2"></div>
+<h3>বারবার অর্ধেক করা গোনো</h3>
+<p>16,8,4,2-এ division body চলে। One-এ stop, তাই চার visit; পঞ্চম body নেই।</p>
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>row 1</td><td>1 visit</td><td>j শুধু 0 নেয়।</td></tr><tr><td>row 2</td><td>2 visits</td><td>j 0 ও 1 নেয়।</td></tr><tr><td>row 3</td><td>3 visits</td><td>চলতি মোট 6 হয়।</td></tr><tr><td>row 8</td><td>8 visits</td><td>পুরো triangular total 36।</td></tr></tbody></table>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Innermost body-র শুরুতে counter দিলে প্রতি সম্পন্ন visit-এ এক বাড়ে। এটিই invariant: zero থেকে শুধু নির্বাচিত কাজের জায়গায় বাড়ে। শেষে exact body count। তিন প্রোগ্রাম ছোট লুপের timing নয়, এভাবে গোনে।</p>
+<p>Symbolic sum-এর প্রথম দুই ও শেষ row মিলিয়ে দেখো। অনুমোদিত হলে n = 0 বা 1 নাও। Endpoint ভুল ধরা পড়ে। তবু প্রতিটি row-এর দৈর্ঘ্য formula মেনে চলে প্রমাণ চাই।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>নিচের তালিকায় domain বলা আছে। Independent dimension আলাদা parameter। Logarithmic count positive n ও integer division ধরে। আলাদা না বললে body visit-ই গোনা। Fixed example pattern, Θ পুরো variable-n family বলে।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>Dependent maximum গুণ করা</h3>
+<p>Row length i হলে n×n upper bound, exact নয়। আগে i যোগ করে triangular factor রাখো।</p>
+<h3>Reset ভুলে যাওয়া</h3>
+<p>Inner counter outer-এর আগে initialize হলে মোট একবারই কাজ করতে পারে। ভেতরে reset করলে প্রতিবার সব কাজ repeat হয়।</p>
+<h3>Helper function-এর cost বাদ দেওয়া</h3>
+<p>Constant মনে হওয়া function call-এর ভেতরে full scan থাকতে পারে। Outer loop সরল করার আগে তার cost ধরো।</p>
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>C17 integer division zero-র দিকে truncate করে। Positive halving-এ তাই floor। Runnable counter-গুলো ছোট নির্দিষ্ট সীমায় থাকে।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Actual row length ও stopping condition দিয়ে single,nested,dependent,logarithmic loop গোনো।</p>
+<p>এরপর <a href="topic:algo-recurrences">recurrence</a> দিয়ে recursive কাজের হিসাব করো।</p>
