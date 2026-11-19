@@ -1,0 +1,67 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">Tournament-এ বারবার strongest remaining player ওপরে ওঠে। <dfn>Max-heap</dfn>-এ parent দুই child-এর অন্তত সমান বড়,তাই root-এ একটি maximum। Heap sort root শেষে নিয়ে বাকি heap সারায়।</p>
+<p>Heap হলো array-তে রাখা logical tree;value-প্রতি node object allocate নয়। Iterative repair-এ worst O(n log n) time ও constant auxiliary workspace একসঙ্গে পাওয়া যায়।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">for root = floor(n / 2) - 1 down to 0: sift(n, root)
+sift(size, root): while root has a child
+    child = index of larger child
+    if a[root] &gt;= a[child]: stop sifting
+    swap a[root], a[child]; root = child
+for end = n - 1 down to 1
+    swap a[0], a[end]
+    sift(end, 0)</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>Array-র ভেতরের tree পড়ো</h3>
+<p>Zero-based root-এর left2*root+1,right2*root+2। Index active length size-এর নিচে হলেই child আছে। Nonroot i-এর parent floor((i-1)/2)। এটি left-to-right ভরা complete binary tree।</p>
+<p>Heap rule parent-child তুলনা করে;left child right-এর ছোট বা এক subtree-র সবাই অন্যের আগে চাই না। তাই পুরো sorted array নয়;শুধু root maximum নিশ্চিত।</p>
+<p>[7,3,5,3,1]-এ root7 child3,5-এর বড়। Index1-এর3 child3,1-এর বড় বা সমান। Ascending না হলেও ইতিমধ্যে max-heap। Animation-এ heap order ও sorted order আলাদা বোঝায়।</p>
+<h3>ভুল parent sift-down করো</h3>
+<p>sift(size,root)-এ child subtree আগেই heap ধরে। বড় existing child বাছো। Parent তার অন্তত সমান হলে অন্য child-এরও,repair শেষ। নইলে swap করে ওই child position থেকে আবার নাও।</p>
+<p>Swap-এর পরে শুধু একটি downward path broken থাকতে পারে। ওপরে ওঠা মান নতুন জায়গায় দুই child root-এর বড়। ছোট displaced মান নিচে rule ভাঙতে পারে বলে root নামে। ছোট child নিলে বড় sibling-এর সঙ্গে ভুল থেকেই যায়।</p>
+<p>Right child আছে দেখে তবেই পড়ো;complete tree-র শেষ parent-এর শুধু left থাকতে পারে। Leaf repair চায় না। Iterative loop ordered parent বা leaf-এ থামে,তাই frame নয়,fixed index লাগে।</p>
+<h3>নিচ থেকে heap বানাও</h3>
+<p>প্রতি leaf নিজেই one-node heap। Last possible parent floor(n/2)-1 থেকে zero-এর দিকে sift করো। Parent-এ পৌঁছালে দুই child subtree আগেই repair করা। শেষে পুরো active array max-heap।</p>
+<p>এক sift O(log n) হলেও build Θ(n)। বেশিরভাগ node নিচে,অল্প নামতে পারে। প্রায় n/2 leaf,n/4 height1,n/8 height2,…। Weighted n(1/4+2/8+3/16+…) constant×n-এ bounded।</p>
+<p>Coarse n log n upper bound বৈধ,tight নয়। Bottom-up ও empty heap-এ প্রতিটি value insert আলাদা। Repeated insertion worst Θ(n log n)। কোন construction দেখছ বলো।</p>
+<h3>Maximum suffix-এ নাও</h3>
+<p>Heap হলে a[0],a[end] swap;end শুরু n-1। Old root final sorted value। Active length end করে ওই cell বাদ;leaf থেকে আসা নতুন root sift লাগতে পারে।</p>
+<p>এক active value পর্যন্ত exchange-repair। Suffix ডান থেকে বাঁয়ে বাড়ে;largest একদম ডানে,next তার আগে। Active heap-এ শুধু unplaced মান।</p>
+<p>Repair size-এ completed suffix ঢোকাবে না। বেশি size final maximum ফের টেনে আনতে পারে। sift(a,end,0)-এ end length,active0..end-1;swapped cell end বাদ।</p>
+<h3>Guarantee ও সীমা বোঝো</h3>
+<p>Linear build-এর পরে সর্বোচ্চ n-1 extraction,প্রতি O(log n)। Ascending,reverse,adversarial-এও worst O(n log n)। Simple final-pivot quick sort থেকে আলাদা। Practical speed access ও movement-এও নির্ভর করে।</p>
+<p>Ordinary heap sort unstable। [2A,2B,1] max-heap। Root-end swap-এ2A শেষে,repair-এ2B ওপরে;final [1,2B,2A]। Strict child comparison দূরের movement আটকায় না।</p>
+<p>Input cell-ই heap। Iterative sift-এ root,child,size,temp swap,তাই O(1) auxiliary। Recursive sift O(log n) stack নিত;strict in-place দাবিতে detail জরুরি।</p>
+<p>Priority queue-তেও পুরো sort ছাড়া বারবার largest/smallest চাওয়া যায়। Heap sort পুরো heap খরচ করে ordered array দেয়। Repair একই ধারণা,output contract আলাদা।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>Input আগেই max-heap। বারবার root extraction-এ1 3 3 5 7।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা sort করো</h3>
+<p>Negative-positive-এ বড় child rule একই। Maximum তুলতে তুলতে দুই -2 সামনে থাকে।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>Equal score contiguous হয়;শেষ scan তিন distinct score দেখে।</p>
+<div data-example="ex-3"></div>
+<h3>শুধু max-heap বানাও</h3>
+<p>Bottom-up repair-এ5 4 3 1 2। Heap order,ascending নয়;শুধু root maximum এখন নিশ্চিত।</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>Heap তৈরি</td><td>[7,3,5,3,1]</td><td>Input আগেই max-heap rule মানে।</td></tr><tr><td>end = 4</td><td>[5,3,1,3,7]</td><td>7 suffix-এ নিয়ে root repair।</td></tr><tr><td>end = 3</td><td>[3,3,1,5,7]</td><td>5 final position-এ নাও।</td></tr><tr><td>end = 2</td><td>[3,1,3,5,7]</td><td>একটি 3 completed suffix-এ যায়।</td></tr><tr><td>end = 1</td><td>[1,3,3,5,7]</td><td>শুধু minimum active থাকে।</td></tr></tbody></table>
+<div data-lab="heap-sort"></div>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Sift-এর অনুমান দুই subtree heap। বড় child উঠলে নতুন parent rule মানে;শুধু displaced value-এর path ভুল থাকতে পারে। Path leaf-এর দিকে কঠোরভাবে এগোয়,তাই valid heap-এ থামে।</p>
+<p>Extraction invariant:prefix max-heap,suffix sorted,কোনো prefix value suffix-এর কোনোটির বেশি নয়। Root suffix-এ নিলে largest ঠিক বসে। Suffix না ছুঁয়ে repair। Heap one-এ নামলে sorted permutation।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Complete tree height Θ(log n)। Build-এ সব node-এর full height নয়,নিজস্ব height যোগে Θ(n)। Extraction O(n log n),worst total Θ(n log n)। Iterative repair O(1) extra। Insertion-এর মতো adaptive নয়;আগে sorted হলেও এক linear verification-এ থামে না।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>শুধু left child দেখা</h3>
+<p>বড় existing child ওঠাও। নইলে বড় right child-এর সঙ্গে rule ভাঙা থাকতে পারে।</p>
+<h3>Original n দিয়ে repair</h3>
+<p>Sorted suffix আর heap data নয়। প্রতি extraction-এর পরে reduced length পাঠাও।</p>
+<h3>Build-কে tight n log n বলা</h3>
+<p>Leaf পারে না এমন কাজ charge করে n log n tight বলবে না। Height-ভিত্তিক sum-এ linear build দেখো।</p>
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>এখানে max64-তে C17 signed child index। Unrestricted size-এ 2*root-এর আগে উপযুক্ত type ও overflow guard নাও।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>নিচ থেকে max-heap বানাও,maximum তুলো,ছোট heap iterative sift-down-এ সারাও।</p>
+<p>Bounded key-র অন্য সুযোগ দেখতে <a href="topic:algo-counting-sort">counting sort</a> পড়ো।</p>
