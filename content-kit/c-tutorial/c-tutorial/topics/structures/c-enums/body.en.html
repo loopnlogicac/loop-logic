@@ -1,0 +1,53 @@
+<h2 id="introduction">Replace unexplained status numbers with names</h2>
+<p class="lead">A lab submission may be new, running, done, or failed. Storing only the numbers two, three, eight, and nine makes the code difficult to remember. An <dfn>enumeration</dfn> gives names to a related set of integer constants. STATUS_DONE tells a reader what the value means without a nearby decoding comment.</p>
+<p>Think of an enum as a small vocabulary for choices. It does not store several values at once like a record. An enum variable holds one value used to describe a current state. A switch can then branch using readable constant names rather than repeated numeric literals.</p>
+<p>Names help people maintain the code, but C17 enums do not validate every input automatically. A number read from a file or typed by a user may not match any named choice. Validate that external number before treating it as an accepted state. Keep an unknown-value branch where the interface permits arbitrary codes.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>The enum keyword starts a list of enumerators. You may assign a value explicitly or let C choose the next integer. Without an explicit first value, counting starts at zero. After an explicit value, the next unassigned enumerator is one larger. Different gaps are allowed when external codes require them.</p>
+<p>The tag Status names the enum type. Like a struct tag, it normally appears with its keyword in C: enum Status status. Enumerator names themselves are ordinary identifiers in their scope. A prefix such as STATUS_ avoids collisions with names from other enum definitions.</p><pre><code class="language-c">enum Status { STATUS_NEW = 2, STATUS_RUNNING, STATUS_DONE = 8, STATUS_FAILED };
+
+enum Status status = STATUS_NEW;
+</code></pre><table class="ref"><thead><tr><th scope="col">Name</th><th scope="col">Value</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>STATUS_NEW</td><td>2</td><td>Explicit initializer</td></tr><tr><td>STATUS_RUNNING</td><td>3</td><td>Previous plus one</td></tr><tr><td>STATUS_DONE</td><td>8</td><td>Explicit replacement</td></tr><tr><td>STATUS_FAILED</td><td>9</td><td>Previous plus one</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow named values into a switch</h2>
+<p>The first example prints the enumerator values as integers. STATUS_NEW starts at two, STATUS_RUNNING follows at three, STATUS_DONE restarts at eight, and STATUS_FAILED follows at nine. These are compile-time constant choices. There is no loop assigning them during program execution.</p>
+<p>The second example stores STATUS_DONE in status. The switch selects the matching case and prints done. A break prevents control from continuing into the following case. Enum names improve the labels, but ordinary switch control-flow rules remain unchanged.</p>
+<p>The third example uses a zero-based Stage sequence. DRAFT is zero, REVIEW is one, and PUBLISHED is two. Assigning STAGE_REVIEW changes the current state. Comparing that state with STAGE_REVIEW produces true, represented by integer one. The published constant remains two regardless of the variable's current state.</p>
+<p>An enum variable's underlying compatible integer type is implementation-defined in C17. Do not assume sizeof(enum Status) equals sizeof(int). Enumerator constants in C17 have type int and must have int-representable values. Cast an enum variable to int for these known small values when passing it to an integer printf conversion.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>Use the numeric-value program to verify the vocabulary, then read the switch without translating every case back to digits. The Stage example shows a variable changing while the constants stay fixed. The exercises add boundary validation so an enum cast is never mistaken for an input check.</p>
+
+<h3>Trace sparse enumerator values</h3>
+<p>An unassigned enumerator follows the previous value by one. The explicit value eight on STATUS_DONE changes where the next increment starts. The program prints 2 3 8 9 using the enumerator constants directly. These constants are known during translation; no status object needs to be created to use their names.</p>
+<div data-example="ex-1"></div>
+
+<h3>Use a status enum in a switch</h3>
+<p>The variable holds one current state. Each case uses a named integer constant from the same vocabulary. The matching branch prints done once and stops because of break. The default branch gives a readable fallback if an unknown code later reaches the switch. Enum syntax does not change ordinary switch behavior.</p>
+<div data-example="ex-2"></div>
+
+<h3>Compare a changing stage with fixed constants</h3>
+<p>The Stage sequence begins at zero. Assigning REVIEW changes the variable from zero to one, while the enum constants remain unchanged. The comparison is true, so its integer result is one. The following value two belongs to the published constant. The output separates a variable's current value from the named vocabulary.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Enum names and macro constants</h2>
+<p>A #define can give a number a name too, but it does token replacement before C parsing. An enum groups related integer constants in the language and often gives debuggers better symbolic information. A macro can represent more kinds of replacement text, including strings or expressions. Choose based on purpose rather than using one mechanism for every name.</p>
+<p>Enum constants are not preprocessor macros. An #ifdef STATUS_DONE tests whether a macro with that name exists, not whether an enum constant was declared. A preprocessor #if cannot inspect ordinary C enum declarations. Keep compile-time source selection separate from runtime state choices.</p>
+<p>An enum can also be used as a union tag, as shown in <a href="topic:c-unions">Unions</a>. The names identify which payload member is meaningful. The enum alone does not enforce the agreement. Construction and reading code must consistently use the same named alternatives.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Assuming a cast validates input</h3>
+<p>Casting a number to enum Stage does not check whether it equals DRAFT, REVIEW, or PUBLISHED. Check the accepted numeric codes first. If the values are sparse, use explicit cases rather than only a minimum and maximum. Values between the extremes may still be unnamed.</p>
+<h3>Writing duplicate case values</h3>
+<p>C allows different enumerator names to share the same value, but a switch cannot contain two case labels with the same value. Treat aliases as one branch or choose a different state representation. Names do not make numerically duplicate cases distinct.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Use prefixed enumerator names that explain the state in a wider source file. Assign explicit values when an external protocol requires stable codes. Otherwise a simple zero-based sequence is easier to extend and inspect. Avoid assuming that declaration order defines every future transition rule.</p>
+<p>Separate state transitions from raw numeric arithmetic when the state graph becomes more complex. Adding one works for the small consecutive Stage exercise, but sparse Status values need explicit transitions. Write tests for the final state, no-change actions, and unknown codes. Enum readability helps reveal those rules; it does not implement them.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Enums are part of C89 and later. All examples target C17 and use small int-representable enumerators. C23 extends enum facilities, including fixed underlying types, but those forms are not used here. Do not apply C23 assumptions about enumerator types or declarations to these C17 programs.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Enums name related integer choices and make switches readable. Trace explicit assignments and automatic increments, validate external codes, and keep enum constants separate from macros. Next, store small flag values inside structure fields in <a href="topic:c-bit-fields">Bit Fields</a>.</p>
