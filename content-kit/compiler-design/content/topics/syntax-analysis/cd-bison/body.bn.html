@@ -1,0 +1,97 @@
+<h2 id="introduction">পরিচিতি</h2>
+<p class="lead">ভাষা বড় হলে হাতে প্রতিটি পার্সার স্টেট লেখা কঠিন হয়। Parser generator গ্রামারের নিয়ম নিয়ে তোমার জন্য স্টেটের ব্যবস্থা বানায়। ভাষা, গ্রুপিংয়ের নিয়ম, semantic value ও ভুলের আচরণ তোমাকেই ঠিক করতে হয়।</p>
+<p><dfn>Bison</dfn> হলো Yacc পরিবারের parser generator। এর C পার্সার সাধারণত পরের টোকেন চাইতে yylex কল করে, তারপর LR টেবিল দিয়ে শিফট ও রিডিউস করে। সাধারণ C সেটআপে Bison-এর ডিফল্ট LALR; IELR ও canonical LR মোডও আছে। মোড বদলালেই দ্ব্যর্থক ভাষার সংজ্ঞা ঠিক হয় না।</p>
+<p>নিচের calculator-এ সাইন ছাড়া পূর্ণসংখ্যা, +, -, * ও বন্ধনী চলে। প্রতিটি এক্সপ্রেশন ; দিয়ে শেষ। মান double হিসেবে থাকে, সফল প্রতি স্টেটমেন্টে একটি ফল প্রিন্ট হয়। Unary minus, ভাগ ও assignment নেই। মান ছোট ও সসীম রাখো; floating-point rounding এখানেও হয়।</p>
+<h2 id="worked-examples">ধাপে ধাপে উদাহরণ</h2>
+<h3>calc.y-এর ঘোষণা অংশ পড়ো</h3>
+<pre><code class="language-c">%{
+#include &lt;stdio.h&gt;
+int yylex(void);
+void yyerror(const char *message);
+%}
+%define api.value.type {double}
+%token NUM
+%left '+' '-'
+%left '*'
+%%</code></pre>
+<p>%{ ও %}-এর ভেতরের prologue তৈরি C সোর্সে কপি হয়। এতে stdio থাকে, আর পার্সার ব্যবহারের আগে স্ক্যানার ও error ফাংশন ঘোষণা করা হয়। api.value.type দিয়ে সব semantic value-এর টাইপ double নেওয়া হয়। NUM নাম দেওয়া টোকেন; যতিচিহ্নে সরাসরি ক্যারেক্টার কোড ব্যবহার হয়।</p>
+<p>প্রথম %% ঘোষণা শেষ করে প্রোডাকশন শুরু করে। দ্বিতীয় %% প্রোডাকশন শেষ করে সাধারণ C সংজ্ঞা শুরু করে। দেখানো calc.y-এর তিন অংশ ওই ক্রমে বসিয়ে পুরো গ্রামার সোর্স বানাও। input-এর প্রোডাকশন আগে আছে বলে সেটিই শুরুর সিম্বল।</p>
+<h3>আসল semantic action-সহ প্রোডাকশন ব্যবহার করো</h3>
+<pre><code class="language-c">input:
+    %empty
+  | input expr ';'  { printf("%.10g\n", $2); }
+  | input error ';' { yyerrok; }
+  ;
+expr:
+    NUM                  { $$ = $1; }
+  | '(' expr ')'         { $$ = $2; }
+  | expr '+' expr        { $$ = $1 + $3; }
+  | expr '-' expr        { $$ = $1 - $3; }
+  | expr '*' expr        { $$ = $1 * $3; }
+  ;</code></pre>
+<p>খালি input বিকল্পে শূন্য স্টেটমেন্ট চলে। Recursive বিকল্পে আরেকটি এক্সপ্রেশনের পরে ; নিয়ে তার মান প্রিন্ট হয়। অ্যাকশনে $$ হলো বাম পাশের semantic value। $1, $2 ও $3 ডান পাশের অবস্থান বোঝায়; terminal ও nonterminal দুটিই গোনা হয়।</p>
+<p>expr + expr-এ $1 ও $3 অপারেন্ডের মান। $2 যোগের অবস্থান, সংখ্যার হিসাবে লাগে না। ( expr )-এ এক্সপ্রেশন দ্বিতীয় অবস্থানে, তাই $$ = $2 মানটি রাখে। input expr ;-এও এক্সপ্রেশন দ্বিতীয় স্থানে। সেমিকোলন চেনার পরেই স্টেটমেন্টের অ্যাকশন সম্পূর্ণ মান প্রিন্ট করে।</p>
+<h3>C-এর entry point দিয়ে calc.y শেষ করো</h3>
+<pre><code class="language-c">%%
+void yyerror(const char *message)
+{
+    fprintf(stderr, "%s\n", message);
+}
+
+int main(void)
+{
+    return yyparse();
+}</code></pre>
+<p>yyparse স্ট্যাটাস কোড main-এ ফেরায়। yyerror error stream-এ syntax error জানায়। ভুলের পরে recovery হলে yyparse পরে সফলভাবে শেষ করতে পারে। যেকোনো ভুলেই অ্যাপের শেষ স্ট্যাটাস ব্যর্থ চাইলে yyerror-এ আলাদা error counter রাখো। সফল recovery মানেই সব স্টেটমেন্ট বৈধ ছিল, এমন নয়।</p>
+<h3>এক্সপ্রেশনের গ্রুপিং স্পষ্ট করে ঠিক করো</h3>
+<table class="ref"><caption>Calculator গ্রামারে ঠিক করা সিদ্ধান্ত</caption><thead><tr><th scope="col">সম্পূর্ণ নিয়ম</th><th scope="col">Lookahead</th><th scope="col">সিদ্ধান্ত</th><th scope="col">কারণ</th></tr></thead><tbody><tr><td>expr → expr + expr</td><td>+</td><td>রিডিউস</td><td>সমান precedence ও %left।</td></tr><tr><td>expr → expr + expr</td><td>-</td><td>রিডিউস</td><td>+ ও - একই বাঁ দিক থেকে গ্রুপ হওয়া স্তরে।</td></tr><tr><td>expr → expr + expr</td><td>*</td><td>শিফট</td><td>* পরে ঘোষণা করা বেশি precedence-এর স্তরে।</td></tr><tr><td>expr → expr * expr</td><td>+</td><td>রিডিউস</td><td>নিয়মের precedence বেশি।</td></tr><tr><td>expr → expr * expr</td><td>*</td><td>রিডিউস</td><td>সমান স্তর ও %left।</td></tr><tr><td>expr → expr - expr</td><td>-</td><td>রিডিউস</td><td>বাঁ দিক থেকে গ্রুপ করলে (9-2)-1 থাকে।</td></tr><tr><td>expr → expr + expr</td><td>) বা ;</td><td>রিডিউস</td><td>সম্পূর্ণ এক্সপ্রেশন সীমানার আগে শেষ হয়।</td></tr></tbody></table>
+<p>Precedence-এর নিয়ম লাগানোর আগে ছোট expr গ্রামারটি দ্ব্যর্থক। প্রতিটি %left লাইন তার টোকেনগুলোকে একই precedence স্তর ও বাঁ দিকের associativity দেয়। পরের লাইনের precedence বেশি। প্রোডাকশন সাধারণত নিজের শেষ terminal থেকে precedence পায়। তাই শেষে expr লেখা থাকলেও গুণের নিয়ম *-এর precedence পায়।</p>
+<p>Shift/reduce দ্বন্দ্বে দুই দিকেই precedence থাকলে lookahead টোকেন ও রিডাকশনের নিয়মের precedence তুলনা করো। টোকেনেরটি বেশি হলে শিফট, নিয়মেরটি বেশি হলে রিডিউস। সমান হলে associativity লাগে: %left রিডিউস করে, %right শিফট করে, %nonassoc ওই ব্যবহার বর্জন করে। ঘোষণা পার্সারের সিদ্ধান্ত মেটায়; মূল দ্ব্যর্থক গ্রামারকে দ্ব্যর্থকতাহীন বানায় না।</p>
+<table class="ref"><caption>2+3*4;-এর semantic value হাতে ট্রেস করা</caption><thead><tr><th scope="col">স্ট্যাকে চেনা অংশ</th><th scope="col">না পড়া ইনপুট</th><th scope="col">গ্রামারের অ্যাকশন</th><th scope="col">তৈরি মান</th></tr></thead><tbody><tr><td>$</td><td>2 + 3 * 4 ; $</td><td>input → ε রিডিউস</td><td>input</td></tr><tr><td>$ input</td><td>2 + 3 * 4 ; $</td><td>NUM 2 পড়ো</td><td>2</td></tr><tr><td>$ input NUM(2)</td><td>+ 3 * 4 ; $</td><td>expr → NUM রিডিউস</td><td>expr(2)</td></tr><tr><td>$ input expr(2)</td><td>+ 3 * 4 ; $</td><td>+ শিফট</td><td>—</td></tr><tr><td>$ input expr(2) +</td><td>3 * 4 ; $</td><td>NUM 3 পড়ো</td><td>3</td></tr><tr><td>$ input expr(2) + NUM(3)</td><td>* 4 ; $</td><td>expr → NUM রিডিউস</td><td>expr(3)</td></tr><tr><td>$ input expr(2) + expr(3)</td><td>* 4 ; $</td><td>বেশি precedence বলে * শিফট</td><td>—</td></tr><tr><td>$ input expr(2) + expr(3) *</td><td>4 ; $</td><td>NUM 4 পড়ো</td><td>4</td></tr><tr><td>$ input expr(2) + expr(3) * NUM(4)</td><td>; $</td><td>expr → NUM রিডিউস</td><td>expr(4)</td></tr><tr><td>$ input expr(2) + expr(3) * expr(4)</td><td>; $</td><td>expr → expr * expr রিডিউস</td><td>expr(12)</td></tr><tr><td>$ input expr(2) + expr(12)</td><td>; $</td><td>expr → expr + expr রিডিউস</td><td>expr(14)</td></tr><tr><td>$ input expr(14)</td><td>; $</td><td>; শিফট</td><td>—</td></tr><tr><td>$ input expr(14) ;</td><td>$</td><td>input → input expr ; রিডিউস</td><td>14 প্রিন্ট করো</td></tr><tr><td>$ input</td><td>$</td><td>শুরুর input সম্পূর্ণ করো</td><td>গ্রহণ করো</td></tr></tbody></table>
+<h3>calc.tab.h দিয়ে স্ক্যানার জোড়ো</h3>
+<pre><code class="language-c">%option noyywrap nounput noinput never-interactive
+%{
+#include &lt;stdlib.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;math.h&gt;
+#include "calc.tab.h"
+%}
+%%</code></pre>
+<pre><code class="language-c">[0-9]+ {
+    errno = 0;
+    yylval = strtod(yytext, NULL);
+    if (errno == ERANGE || !isfinite(yylval)) {
+        return YYUNDEF;
+    }
+    return NUM;
+}
+[ \t\r\n]+  ;
+.             { return (unsigned char) yytext[0]; }
+%%</code></pre>
+<p>স্ক্যানারে তৈরি header রাখা হয়, যাতে NUM ও semantic value-এর টাইপ পার্সারের সঙ্গে মেলে। ডিজিটের অংশ পেলে strtod বানানকে সংখ্যায় বদলে yylval-এ রাখে, তারপর NUM ফেরায়। Range error হলে YYUNDEF ফেরায়, যাতে অবৈধ সংখ্যায় আগের মান ব্যবহার না হয়। একক যতিচিহ্ন unsigned character code হিসেবে ফেরে।</p>
+<table class="ref"><caption>2+3;-এ স্ক্যানার থেকে পার্সারে তথ্য পাঠানো</caption><thead><tr><th scope="col">মেলা টেক্সট</th><th scope="col">স্ক্যানার যা ফেরায়</th><th scope="col">Semantic value</th><th scope="col">পার্সারে অর্থ</th></tr></thead><tbody><tr><td>2</td><td>NUM</td><td>yylval = 2</td><td>একটি অপারেন্ড।</td></tr><tr><td>+</td><td>+-এর ক্যারেক্টার কোড</td><td>ব্যবহার হয় না</td><td>যোগের অপারেটর।</td></tr><tr><td>3</td><td>NUM</td><td>yylval = 3</td><td>আরেকটি অপারেন্ড।</td></tr><tr><td>;</td><td>;-এর ক্যারেক্টার কোড</td><td>ব্যবহার হয় না</td><td>স্টেটমেন্ট শেষ।</td></tr><tr><td>ইনপুট শেষ</td><td>0</td><td>ব্যবহার হয় না</td><td>পার্সারের ইনপুট শেষের টোকেন।</td></tr></tbody></table>
+<p>স্ক্যানারের খালি অ্যাকশনে whitespace বাদ যায়। শেষ dot নিয়ম অন্য সব ক্যারেক্টার পার্সারে ফেরায়; সমর্থন না থাকা ক্যারেক্টারে syntax error হয়। Flex ইনপুটের শেষে শূন্য ফেরায়; অবৈধ ক্যারেক্টারের জন্য শূন্য ফেরাবে না। তাতে নষ্ট suffix স্বাভাবিক ইনপুট শেষ বলে চাপা পড়ে যাবে।</p>
+<h2 id="how-it-works">কেন কাজ করে ও কীভাবে যাচাই করবে</h2>
+<h3>তৈরির ক্রম ও ইন্টারফেস বোঝো</h3>
+<pre><code class="language-bash">bison -Wall -d -o calc.tab.c calc.y
+flex -o lex.yy.c calc.l
+cc -std=c17 -Wall -Wextra calc.tab.c lex.yy.c -o calc
+./calc</code></pre>
+<p>Bison-এর -d অপশনে calc.tab.c-এর সঙ্গে calc.tab.h তৈরি হয়। স্ক্যানার কম্পাইলের আগে header বানাও। Flex থেকে lex.yy.c হয়, C কম্পাইলার তৈরি দুই সোর্স লিংক করে। noyywrap অপশন থাকলে বাইরের yywrap ফাংশন লাগে না। পুরোনো Yacc-এ সাধারণত y.tab.c ও y.tab.h হয়; নেওয়া আউটপুট নামের সঙ্গে include-এর নাম মেলাও।</p>
+<p>দেখানোটি সাধারণ non-reentrant C ইন্টারফেস: yylex(void), global yylval, yyparse(void) ও yyerror(const char *)। Pure বা reentrant পার্সারে ফাংশনের signature ও মান পাঠানোর ধরন বদলায়। Reentrant স্ক্যানারেরও মিলিয়ে সেটআপ লাগে। দুই দিক না বদলে ভিন্ন ইন্টারফেসের ঘোষণা একত্র কোরো না।</p>
+<h3>সেমিকোলনে গিয়ে আবার শুরু করো</h3>
+<table class="ref"><caption>8+; 6*7;-এ error প্রোডাকশনের আচরণ</caption><thead><tr><th scope="col">ইনপুটের অংশ</th><th scope="col">পার্সারের ফল</th><th scope="col">পরের কাজ</th></tr></thead><tbody><tr><td>8+;</td><td>ডান অপারেন্ড নেই; yyerror কল করো</td><td>নষ্ট এক্সপ্রেশন বাদ দিয়ে error প্রোডাকশনে যাও।</td></tr><tr><td>; সীমানা</td><td>input error ; মিলিয়ে yyerrok চালাও</td><td>স্বাভাবিক error reporting আবার শুরু করো।</td></tr><tr><td>6*7;</td><td>গুণ ও স্টেটমেন্ট সম্পূর্ণ করো</td><td>42 প্রিন্ট করো।</td></tr></tbody></table>
+<p>বিশেষ error সিম্বল Bison-এর recovery ব্যবস্থা তৈরি করে; Flex সাধারণ শব্দ হিসেবে ফেরায় না। error শিফট করা যায় এমন স্টেট না পাওয়া পর্যন্ত পার্সার স্টেট পপ করে। তারপর ; দিয়ে recovery নিয়ম সম্পূর্ণ করা পর্যন্ত অনুপযুক্ত টোকেন বাদ দেয়। yyerrok recovery অবস্থা শেষ করে, যাতে পরের ভুল স্বাভাবিকভাবে জানানো যায়। EOF-এর আগে সীমানার সেমিকোলন না এলে recovery ব্যর্থ হতে পারে, yyparse ব্যর্থ স্ট্যাটাস ফেরায়।</p>
+<p>কাজের precedence না থাকলে Bison সাধারণত shift/reduce দ্বন্দ্বে শিফট করে; reduce/reduce দ্বন্দ্বে আগের নিয়ম বেছে নেয়। এই ডিফল্ট ভাষার ভালো সংজ্ঞা নয়। Diagnostic, রিপোর্ট বা বিপরীত উদাহরণ দেখে অপ্রত্যাশিত দ্বন্দ্ব ঠিক করো। সম্পর্কহীন দ্বন্দ্ব চুপ করাতে precedence ঘোষণা দিলে গ্রামারের ভুল লুকাতে পারে। প্রতিটি ঘোষণা লিখে রাখা এক্সপ্রেশনের গ্রুপিং নিয়মের সঙ্গে মেলাও।</p>
+<p>বড় calculator-এ unary minus-এর জন্য প্রায়ই আলাদা precedence নাম ঘোষণা করে unary প্রোডাকশনে %prec লাগে। %prec ডান পাশে বাড়তি lexer টোকেন না বসিয়েই নিয়মের precedence বদলায়। এই calculator ভাষায় ইচ্ছা করেই সেটি নেই। যোগ করতে precedence ঘোষণার সঙ্গে আসল unary গ্রামার নিয়মও লাগবে।</p>
+<h2 id="common-mistakes">সাধারণ ভুল</h2>
+<h3>yylval না বসিয়ে NUM ফেরানো</h3>
+<p>পার্সার টোকেনের ধরন পাবে, কিন্তু নির্ভরযোগ্য অপারেন্ডের মান পাবে না। মেলা বানান সংখ্যায় বদলে semantic value বসাও, তারপর NUM ফেরাও।</p>
+<h3>Flex-এ আলাদা বানানো NUM নম্বর দেওয়া</h3>
+<p>টোকেন নম্বর তৈরি ইন্টারফেসের অংশ। স্ক্যানার ও পার্সারের সংজ্ঞা এক রাখতে calc.tab.h include করো।</p>
+<h3>যোগের আগে গুণ ঘোষণা করা</h3>
+<p>পরে লেখা precedence লাইনের অগ্রাধিকার বেশি। ঘোষণা উল্টে দিলে দ্বন্দ্ব মেটানোর সময় যোগ গুণের আগে হবে।</p>
+<h3>Recovery হলে আগের স্টেটমেন্ট সফল ভাবা</h3>
+<p>error বিকল্প কোনো এক্সপ্রেশনের মান প্রিন্ট করে না। Diagnostic রাখো, বানানো ফল না দিয়ে পরের স্টেটমেন্টে যাও।</p>
+<h2 id="summary">সারকথা</h2>
+<p>Bison গ্রামারের নিয়ম, semantic action ও ঘোষিত precedence মিলিয়ে LR পার্সার বানায়। Flex একই header দিয়ে টোকেনের ধরন ও মান পাঠায়। Syntax analysis-এর পরে <a href="topic:cd-type-checking">টাইপ চেকিং</a> দেখে অপারেশনের অপারেন্ডগুলোর টাইপ মেলে কি না।</p>

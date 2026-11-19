@@ -1,0 +1,56 @@
+<h2 id="introduction">Finding a certificate can be harder than checking it</h2>
+<p class="lead">A proposed exam timetable is easy to check: inspect every conflicting course pair and ensure their slots differ. Finding such a timetable with only three slots may require many choices. Complexity classes describe this difference using families of problems, not the speed of one particular program.</p>
+<p>A decision problem asks a yes-or-no question. Instead of asking for the best route, ask whether a route of cost at most K exists. Instead of asking for the fewest colours, ask whether at most m colours suffice. These threshold versions let us define classes consistently.</p>
+<p>P contains decision problems solvable in polynomial time. NP contains decision problems whose yes answers have polynomial-length certificates verifiable in polynomial time. The polynomial refers to encoded input length, usually measured in bits.</p>
+<p>NP does not mean not polynomial. Every problem in P is also in NP. Whether these classes are equal remains open. The goal of this lesson is to understand the definitions and what a reduction proves, without pretending that a hard-looking implementation settles that question.</p>
+
+<h2 id="how-it-works">Define the verifier before claiming NP</h2>
+<p>A certificate is extra information supporting a yes answer. For m-colouring, it lists one colour per vertex. A verifier checks every colour is in the allowed range, then checks that endpoints of every edge differ. The certificate length and checking time are polynomial in the graph encoding.</p>
+<p>The verifier does not have to find the certificate. It only decides whether a proposed one establishes a yes instance. For a no instance, no certificate should be accepted. A verifier accepting an invalid colouring would fail the definition even if it worked on many sample graphs.</p>
+<p>P is contained in NP because a verifier can run the polynomial solver and ignore the certificate. This proves an inclusion, not equality. It also shows that fast verification does not imply a problem lies outside P.</p>
+<p>Polynomial means a bound O(L^k) for some fixed exponent k in input length L. An exponent depending on the input is not a fixed polynomial. A huge fixed exponent may be impractical, while a small exponential may be usable on tiny inputs. The classes formalise growth, not every engineering judgement.</p>
+
+<h2 id="worked-examples">Certificates, reductions and numeric encodings</h2>
+<p>Consider subset sum: given binary-encoded integers and target T, does an indexed subset total T? A certificate lists selected indices or one bit per input item. Adding those bounded-length integers and comparing with T takes polynomial bit work, so the decision problem belongs to NP.</p>
+<p>For Hamiltonian cycle, a certificate lists vertices in cycle order. Check each appears exactly once, every consecutive edge exists and the last connects to the first. Merely presenting a long walk is not enough because repeated vertices violate the certificate condition.</p>
+<p>For 3-SAT, a certificate assigns truth values to variables. Check each clause has a true literal. The verifier scans the formula and its assignment. It does not enumerate every assignment.</p>
+<p>A polynomial reduction A&lt;=p B transforms each instance x of A into an instance f(x) of B in polynomial time, preserving the equivalence: x is yes exactly when f(x) is yes. If B has a polynomial solver, this transformation gives a polynomial solver for A.</p>
+<p>To prove B NP-hard, start from a known NP-complete A and reduce A to B. The direction matters: solving B must be powerful enough to solve A. Reducing B to an easy problem would instead help show B is easy.</p>
+<p>As a concrete reduction idea, transform independent set into vertex cover on the same graph. Ask whether there is an independent set of size at least k. Set the cover threshold to V-k. A set S is independent exactly when its complement covers every edge. If an edge had neither endpoint in the complement, both would lie in S and violate independence.</p>
+<p>This transformation only copies the graph and changes the threshold, so it is polynomial. A vertex-cover solver would therefore answer the independent-set question. The equivalence works in both yes and no cases; an argument about only one direction is incomplete.</p>
+<p>Now inspect the O(nT) subset-sum table. Binary T needs about log2(T) bits. If T=2^b, the table has about 2^b columns, exponential in the target's representation length b. The algorithm is pseudo-polynomial and does not establish that binary subset sum belongs to P.</p>
+<p>The C verifier accepts a three-colour assignment to a triangle. It checks colour ranges and every conflict edge. It demonstrates checking a witness, not a polynomial search for arbitrary three-colourings.</p>
+<div data-example="ex-1"></div>
+
+<h2 id="classes">Hardness and membership are separate claims</h2>
+<p>A problem B is NP-hard if every problem in NP polynomially reduces to B. In practice, a reduction from one known NP-complete problem is enough because reductions compose. NP-hardness alone does not require B to belong to NP or even to be a decision problem.</p>
+<p>A decision problem is NP-complete when it is both in NP and NP-hard. Membership supplies a polynomial verifier. Hardness says an efficient general solver would efficiently solve every NP decision problem.</p>
+<p>Classic NP-complete decision problems include SAT, 3-SAT, independent set, vertex cover, Hamiltonian cycle, travelling-salesperson tour with a length threshold, subset sum and k-colouring for fixed k&gt;=3. Their precise input and threshold formulations matter. Two-colouring is in P through a bipartite check, so changing a parameter can change the classification.</p>
+<p>Optimisation versions, such as finding the shortest travelling-salesperson tour, are normally described as NP-hard. Calling an optimisation output task itself NP-complete without naming a decision version blurs the definition. A threshold decision solver can often support optimisation through additional searches, but that relationship should be argued.</p>
+<table class="ref"><caption>Classes describe problem families</caption><thead><tr><th scope="col">Class</th><th scope="col">Required claim</th><th scope="col">Example</th></tr></thead><tbody><tr><td>P</td><td>Polynomial-time decision algorithm</td><td>Is there an s-to-t path?</td></tr><tr><td>NP</td><td>Polynomial certificate verifier</td><td>Does this graph have a Hamiltonian cycle?</td></tr><tr><td>NP-hard</td><td>All NP problems reduce to it</td><td>Minimum travelling-salesperson tour optimisation</td></tr><tr><td>NP-complete</td><td>Both NP membership and hardness</td><td>3-SAT decision</td></tr></tbody></table>
+
+<h2 id="consequences">What one fast solver would imply</h2>
+<p>Suppose one NP-complete problem had a polynomial-time algorithm. Every NP problem reduces to it in polynomial time. Composing the transformation and solver would put all NP problems in P. Since P is already contained in NP, this would prove P=NP.</p>
+<p>Conversely, P!=NP would imply no NP-complete problem has a polynomial-time algorithm. That conditional statement does not prove P!=NP. Nor does writing a 2^n search show that a better method is impossible.</p>
+<p>An exponential worst-case bound also does not say every instance is hard. Constraint propagation, branch ordering, small parameters and special graph structure can make many practical instances manageable. Such success does not provide a polynomial worst-case algorithm for all instances.</p>
+<p>If a task is NP-hard, useful responses include exact search on small n, dynamic programming for small numeric bounds, approximation where a guarantee exists, or heuristics with measured behaviour. State which guarantee changes. A heuristic feasible timetable is different from a proof that no timetable exists.</p>
+
+<h2 id="proof-checklist">Check every quantifier and direction</h2>
+<p>An NP-completeness proof needs a general transformation, not a few mapped examples. Show how to construct f(x) for every valid source instance, bound construction time and output size, and prove both directions of the yes-if-and-only-if claim.</p>
+<p>Then prove the target verifier accepts exactly valid yes-certificates within polynomial time. A certificate whose size is exponential does not establish NP membership. A verifier that solves an NP-hard subproblem internally also needs a polynomial bound, rather than a vague claim that checking is easy.</p>
+<p>When composing reductions, track the intermediate instance sizes. A polynomial-time transformation cannot write an exponentially long output under the ordinary computation model. This output-size fact is one reason polynomial reductions compose cleanly.</p>
+
+<p>Restrictions can make a hard family easy without solving its general form. Two-colouring uses a linear traversal, while three-colouring is NP-complete on unrestricted graphs. A tree can be coloured with two colours because it has no cycle. Such special cases explain why identifying structure is valuable before launching an exhaustive solver.</p>
+<p>Certificate verification also depends on the encoding. A graph given as an adjacency matrix already uses quadratic space in its vertex count, while a sparse edge list may be much smaller. Either representation supports polynomial colour checking, but the actual input length must remain the reference point. Do not count only vertices while allowing enormous integer weights to be free.</p>
+
+<h2 id="common-mistakes">Do not turn an open question into a slogan</h2>
+<p>Calling NP problems impossible to solve is wrong. They have finite instances, and exhaustive search solves many familiar ones. The issue is a polynomial-time general method, not logical solvability.</p>
+<p>Claiming NP means non-polynomial incorrectly excludes P from NP. Memorise the verifier definition instead. It remains meaningful whether P=NP or P!=NP eventually holds.</p>
+<p>Reversing a reduction is another common exam mistake. To prove target B hard, transform a known hard source A into B. An easy source reducing to B supplies little evidence, because easy questions can reduce to many problems.</p>
+<p>Treating a pseudo-polynomial table as polynomial in binary input length ignores encoding. Write the bit length beside numeric parameters before classifying a runtime. Finally, proving NP-hardness without proving membership earns only the first half of an NP-completeness claim.</p>
+
+<h2 id="summary">Checkable does not yet mean efficiently findable</h2>
+<p>P has polynomial solvers, NP has polynomial verifiers for yes-certificates, and NP-complete combines verifier membership with universal NP hardness. Reductions transfer an efficient target solver back to the source. Their direction and the encoded input length are essential parts of the argument.</p>
+
+<p>Revisit the connected idea:</p>
+<p><a href="topic:algo-subset-sum">Subset Sum</a></p>

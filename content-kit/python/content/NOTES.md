@@ -1,3 +1,25 @@
+# Python — Bangla edition, part 2 (R6-D)
+
+Package **0.4.1** completes Bangla bodies for **45/45 topics**. This round adds the remaining **26 lessons**: functions (7), objects/files/errors (6), advanced Python (6), data science (3), and practice/exam (4). The manifest now declares `en` and `bn`.
+
+Dependency: based on `main` plus open round-5 PR **#34**, `codex/python-bangla-part-1`. That prerequisite must land first. Notes below describe historical deliveries.
+
+The Bangla lessons retain every English paragraph's coverage, section IDs, topic links, example placeholders and embedded code blocks. The three Matplotlib figures retain their assets and dimensions with translated captions and alt text. Topic titles, summaries and key points already have complete Bangla fields. English lessons, executable examples/practice/quiz code, assets and `.out` files are unchanged relative to the prerequisite integration.
+
+Coverage includes argument binding and mutable defaults; scope/closures; recursion and caching; protocols and shallow frozen records; exception propagation and file formats; iterator consumption; decorator forwarding; entry-failure versus block-failure cleanup; static analysis versus runtime checks; Unicode-aware regex; independent tests; NumPy axes/views/broadcasting; pandas labels/missing values; plot interpretation; all 20 problem contracts; and exact-money/persistence rules for the expense tracker. The exam/interview bodies translate the reading and reasoning guidance; existing question-bank data is retained.
+
+Validation:
+
+- From `content-kit/`: `MPLCONFIGDIR=/tmp/loop-logic-mpl node tools/check.mjs python/content --require-packages --report python/content/CHECK_REPORT.txt` — **0 errors, 0 warnings**, all 45 topics. Numerical-package execution was required, not skipped.
+- `node --test "tests/*.test.ts"` — **130 passed, 0 failed**.
+- Structural comparison of all 45 English/Bangla bodies confirms identical paragraph counts, section anchors, topic links, example/lab slots, image sources and embedded code blocks.
+- Bilingual topic title/summary/key-point completeness checked across all 45 topics. `git diff --check` passes.
+- The first checker pass caught overly English prose in two bodies. The common-term review and a fuller rewrite of the expense tracker corrected it; the final cumulative report is clean.
+
+Toolchain: **Python 3.12.14, Node.js v24.22.1, NumPy 2.3.5, pandas 2.2.3, Matplotlib 3.10.8**. No app dependencies, migrations or non-track files change. Supplemental authoring/audit scripts stay outside the repository. Review rendered Bangla, figure captions and preserved inline code before publication.
+
+---
+
 # Python – Batch 4 review notes
 
 Package version: **0.4.0**. Schema: **1.1**. Track: **python**.

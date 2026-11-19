@@ -1,0 +1,62 @@
+<h2 id="introduction">কোনটি আগে আসবে ঠিক করো</h2>
+<p class="lead">ফলাফলে বেশি নম্বর আগে, রোল রেজিস্টারে ছোট রোল আগে চাই। শিক্ষার্থী একই, সাজানোর নিয়ম আলাদা। <dfn>Comparable</dfn> টাইপের একটি natural ordering দেয়। <dfn>Comparator</dfn> নির্দিষ্ট কাজের আলাদা ordering দেয়।</p>
+<p>সাজানোর অ্যালগরিদম নম্বর বা রোলের মানে জানে না। তুলনার অপারেশনকে জিজ্ঞেস করে কোন অবজেক্ট আগে। প্রতিটি গ্রহণযোগ্য জোড়ায় একই নিয়ম মানতে হবে। কখনও নিজের সঙ্গে বিরোধ করলে sorting বা sorted collection-এর কাজ ভাঙতে পারে।</p>
+<p>কোডের আগে বলো নম্বর ছোট থেকে বড়, না উল্টো; সমান হলে কী হবে; অনুপস্থিত ডেটা চলবে কি না। এগুলো না বললে দুটি আপাত সঠিক রিপোর্টের ক্রম আলাদা হতে পারে।</p>
+<h2 id="syntax">দুটি চুক্তি চেনো</h2>
+<pre><code class="language-java">class Student implements Comparable&lt;Student&gt; {
+    private final int roll;
+    Student(int roll) { this.roll = roll; }
+    @Override
+    public int compareTo(Student other) {
+        return Integer.compare(roll, other.roll);
+    }
+}
+Comparator&lt;Student&gt; byRoll = (left, right) -&gt; left.compareTo(right);</code></pre>
+<p>Comparable নিজের অবজেক্টের সঙ্গে একটি মান তুলনা করে। Comparator দুটি দেওয়া মান তুলনা করে। ফল ঋণাত্মক মানে বামটি আগে, শূন্য মানে এই ordering-এ সমান, ধনাত্মক মানে বামটি পরে। ঠিক -1 বা 1 ফেরানো বাধ্যতামূলক নয়।</p>
+<p>Comparator.compare দুটি আর্গুমেন্ট নেয় বলে lambda-তে দুই প্যারামিটার। arrow-এর পরে বডি। Result::mark-এর মতো method reference মেলা কাঠামোর আগে থাকা মেথড বোঝায়। <a href="topic:oop-lambdas-streams">lambda পাঠে</a> আরও দেখবে।</p>
+<h2 id="how-it-works">একবারে একটি key তুলনা করো</h2>
+<p>বেশি নম্বর আগে চাইলে বড় নম্বর আগে বসাও। নম্বর আলাদা হলেই থামো। সমান হলে ছোট রোল আগে। একে <dfn>lexicographic ordering</dfn> বলে: প্রথম আলাদা key সিদ্ধান্ত দেয়, শব্দে অক্ষর মেলানোর মতো।</p>
+<table class="ref"><thead><tr><th scope="col">জোড়া</th><th scope="col">নম্বরের সিদ্ধান্ত</th><th scope="col">রোলের সিদ্ধান্ত</th><th scope="col">আগে</th></tr></thead><tbody>
+<tr><td>(4,80), (1,90)</td><td>80-এর আগে 90</td><td>লাগে না</td><td>রোল 1</td></tr>
+<tr><td>(4,80), (2,80)</td><td>সমান</td><td>4-এর আগে 2</td><td>রোল 2</td></tr>
+<tr><td>(2,80), (2,80)</td><td>সমান</td><td>সমান</td><td>একই অবস্থান</td></tr>
+</tbody></table>
+<p>Comparator.comparingInt int key পড়ে অপ্রয়োজনীয় boxing ছাড়া তুলনা করে। reversed দিক উল্টায়। thenComparingInt শুধু সমান হলে পরের key নেয়। reversed কোথায় দাও তা জরুরি।</p>
+<p>নম্বরের comparator আগে reverse করে পরে রোল দিলে নম্বর বড় থেকে ছোট, রোল ছোট থেকে বড়। পুরো চেইন reverse করলে দুটোই উল্টায়। বাম থেকে ডানে পড়ো, সমান নম্বরের জোড়ায় পরীক্ষা করো।</p>
+<p>সবার কাজে মানায় এমন default, যেমন রোলের ছোট থেকে বড় ক্রম, natural ordering হতে পারে। সব রিপোর্টে তা চাপিয়ো না। একই অবজেক্ট আজ নম্বরে, কাল নামের বর্ণানুক্রমে সাজাতে Comparator নাও।</p>
+<h2 id="examples">default, বিকল্প আর সীমার মান দেখো</h2>
+<h3>রোল দিয়ে natural order</h3>
+<p>Student record ছোট data holder; roll accessor নিজে থেকে পায়। <a href="topic:oop-enums-records">enum আর record</a> পাঠে বিস্তারিত আছে। compareTo ছোট রোল আগে রাখে। List.sort-এ comparator null দিলে natural ordering চলে; 7-এর আগে 2 আসে।</p>
+<div data-example="ex-1"></div>
+<h3>সমান হলে আলাদা key-তে ranking</h3>
+<p>90 আগে আসে। দুইজনের 80 হলে রোল 2, রোল 4-এর আগে। Comparator, Result-এর বাইরে থাকে। record-কে সব কাজেই এই ranking মানতে হয় না।</p>
+<div data-example="ex-2"></div>
+<h3>বিয়োগের overflow এড়াও</h3>
+<p>Integer.MIN_VALUE একের চেয়ে ছোট। সেখান থেকে এক বিয়োগে overflow হয়ে ধনাত্মক ফল আসতে পারে। Integer.compare নিরাপদে সম্পর্ক দেখে। সমান মানে শূন্যও ফেরে।</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison-contract">ordering-এর নিয়ম এক রাখো</h2>
+<p>Sign antisymmetry-তে compare(a,b) আর compare(b,a)-এর sign উল্টো, অথবা দুটোই শূন্য। Transitivity-তে a আগে b, b আগে c হলে a আগে c। ছোট ছোট তুলনা দিয়ে বড় তালিকা সাজাতে এই নিয়ম লাগে।</p>
+<p>a আর b শূন্য হিসেবে মিললে তৃতীয় মানের সঙ্গে তুলনায় দুটোর sign এক হতে হবে। নইলে এক দলে রাখা মান নিজের অবস্থান নিয়ে একমত নয়। বদলানো counter, বর্তমান সময় বা random ফল দিয়ে তুলনা কোরো না।</p>
+<p>equals-এর সঙ্গে consistent হলে compare(a,b)==0 ঠিক তখনই হয় যখন a.equals(b)। Comparable তা জোরালোভাবে পরামর্শ দেয়, যদিও কিছু লাইব্রেরি টাইপ আলাদা নিয়ম নথিবদ্ধ করে। আলাদা হলে sorted set আর map-এ প্রভাব বলো। সেখানে অনন্যতা comparison দিয়ে ঠিক হয়।</p>
+<p>List sorting stable: তুলনায় শূন্য হলে আগের আপেক্ষিক ক্রম থাকে। tie-breaker আলাদা নির্দিষ্ট ক্রম দেয়। stable হলেই নিজে থেকে ছোট রোল আগে আসে না; ইনপুটে সেই ক্রম থাকতে হবে।</p>
+<h2 id="edge-cases">না থাকা আর সমান key-এর নিয়ম দাও</h2>
+<p>Comparator null নাও নিতে পারে। দরকার হলে nullsFirst বা nullsLast দিয়ে মোড়াও। এটি পুরো null এলিমেন্টের নিয়ম। পড়া ফিল্ড null হতে পারলে তার comparator-এও আলাদা নিয়ম লাগতে পারে।</p>
+<p>String-এর natural order UTF-16 ধরে lexicographic তুলনা। মানুষের ভাষার অভিধানের ক্রম নিজে থেকে নয়। ASCII অনুশীলনে নিয়ম স্পষ্ট। বহুভাষার অ্যাপে Collator আর নথিবদ্ধ locale লাগতে পারে।</p>
+<p>TreeSet বা TreeMap-এ থাকা অবস্থায় তুলনার key বদলিয়ো না। পুরোনো তুলনা দিয়ে tree সাজানো। নম্বর বা রোল বদলালে খোঁজার ধারণা ভাঙে। immutable entry বা সরিয়ে বদলে আবার রাখার নীতি নাও।</p>
+<h2 id="ranking-walkthrough">সীমা আর সমান key দিয়ে চেইন দেখো</h2>
+<p>রোল 7, 2, 1, 4-এর নম্বর যথাক্রমে 60, 80, 80, 100। নম্বর বড় থেকে ছোটে রোল 4 প্রথম, 7 শেষ। 80-এর দুজনকে ছোট রোলে সাজালে পুরো ক্রম 4, 1, 2, 7।</p>
+<p>পুরো চেইন reverse করলে 7 প্রথম, 4 শেষ; সমান নম্বরেও 2 আগে 1। এই বদল দেখলে বোঝো আগের চাহিদায় reversed বেশি পরে বসেছে।</p>
+<p>শব্দের অনুশীলনে দৈর্ঘ্য ছোট থেকে বড়, তারপর natural String order। List বলে একই শব্দ বারবার থাকলেও থাকে। sort-এ তুলনা শূন্য মানে বাদ নয়। অনন্যতা কালেকশনের নিয়ম।</p>
+<h2 id="common-mistakes">সমান key-এর সিদ্ধান্ত বুঝে নাও</h2>
+<h3>সমান অবজেক্টেও এক ফেরানো</h3>
+<p>বাম ছোট না হলেই এক দিলে শূন্য কখনও আসে না; compare(a,a)-ও ধনাত্মক হয়। চুক্তি ভাঙে। helper দিয়ে সমতাও স্বাভাবিকভাবে সামলাও।</p>
+<h3>অনন্য শিক্ষার্থীর tree-তে শুধু নম্বর দেখা</h3>
+<p>নম্বরের comparator-এ TreeSet সমান নম্বরকে একই এলিমেন্ট ধরে। দুজন রাখতে অনন্য roll tie-breaker দাও। সমান key-সহ ranking-এ List প্রায়ই পরিষ্কার।</p>
+<h3>উল্টো তুলনায় বিয়োগ করা</h3>
+<p>right-left-এও overflow হয়। reversed বা নিরাপদ helper-এর আর্গুমেন্ট উল্টাও। দশমিকে Double.compare বা comparingDouble নাও; NaN সম্ভব হলে তার নীতি বলো।</p>
+<h2 id="best-practices">বেছে নেওয়া জোড়ায় তুলনা যাচাই করো</h2>
+<ul><li>মূল key আলাদা আর সমান, দুটো জোড়া দেখো।</li><li>ডোমেইনে চললে সমান মান আর int-এর চরম মান নাও।</li><li>reversed কোথায় লাগছে দেখো।</li><li>comparison-এর সমতা আর equals মেলে কি না বলো।</li></ul>
+<h2 id="version-notes">Java 17-এ ordering helper</h2>
+<div class="callout version"><p>Comparator factory আর chaining Java 8 থেকে। ছোট record-গুলো Java 16 বা পরে চলে। Java 17-এ preview লাগে না। accessor-সহ সাধারণ ক্লাস নিলেও ordering একই থাকবে।</p></div>
+<h2 id="summary">ordering-ও একটি চুক্তি</h2>
+<p>Comparable natural order দেয়, Comparator কাজমতো বিকল্প দেয়। তুলনার চুক্তি মানো, সমান key-এর সিদ্ধান্ত স্পষ্ট করো। এবার <a href="topic:oop-inner-classes">nested ক্লাসে</a> scope আর স্টেটের দরকার অনুযায়ী helper সাজাও।</p>

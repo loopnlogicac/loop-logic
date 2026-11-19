@@ -1,0 +1,64 @@
+<h2 id="introduction">helper-এর নির্ভরতা বোঝা যায় এমন জায়গায় রাখো</h2>
+<p class="lead">শেলফের লেবেলের কোড শেলফের কাছেই মানায়। আবার counter view-তে নির্দিষ্ট counter-এর মান লাগে। দুটো helper-ই অন্য ক্লাসের ভেতরে থাকতে পারে, সম্পর্ক আলাদা। <dfn>Nested class</dfn> অন্য ক্লাস বা ইন্টারফেসের ভেতরে ঘোষিত ক্লাস। ধরন অনুযায়ী বাইরের অবজেক্ট লাগে কি না ঠিক হয়।</p>
+<p>static nested ক্লাস বাইরের টাইপের নামে helper সাজায়। non-static member inner ক্লাস নির্দিষ্ট বাইরের ইনস্ট্যান্সের সঙ্গে যুক্ত থাকে। local ক্লাসের নাম block-এর মধ্যে। anonymous ক্লাস একটি expression-এ নাম ছাড়াই ইমপ্লিমেন্টেশন বানায়।</p>
+<p>বোঝার সুবিধা রেখে যত ছোট scope হয় নাও। শুধু ফাইল কমাতে nesting কোরো না; মালিকানা বা ভেতরের কাজ বোঝাতে করো। সম্পর্কহীন মডিউলে ব্যবহৃত helper top-level হতে পারে। একবারের ছোট callback কাজ রেজিস্টার করার পাশেই মানায়।</p>
+<p>এখানে static মানে বাইরের ইনস্ট্যান্সের সঙ্গে সম্পর্ক নেই। static nested ক্লাসের নিজের সাধারণ ইনস্ট্যান্স ফিল্ড আর কনস্ট্রাক্টর থাকতে পারে। সব মেম্বার static হয়ে যায় না।</p>
+<h2 id="syntax">বাইরের অবজেক্ট কখন লাগে চেনো</h2>
+<pre><code class="language-java">Outer.Helper helper = new Outer.Helper();
+Outer outer = new Outer();
+Outer.Inner inner = outer.new Inner();</code></pre>
+<p>প্রথম লাইনে Outer ছাড়াই static nested Helper হয়। শেষ লাইনে কোন Outer-এর ভেতরের সম্পর্ক নিয়ে Inner হবে তা বাছা হয়। দুই Outer-এ আলাদা স্টেট থাকলে এটি জরুরি। শুধু টাইপের নাম নির্দিষ্ট অবজেক্ট দেয় না।</p>
+<table class="ref"><thead><tr><th scope="col">ধরন</th><th scope="col">নাম আর scope</th><th scope="col">সাধারণ নির্ভরতা</th></tr></thead><tbody>
+<tr><td>Static nested</td><td>EnclosingType.Helper</td><td>নিজে দেওয়া অবজেক্ট</td></tr>
+<tr><td>Member inner</td><td>EnclosingType.Inner</td><td>নির্দিষ্ট বাইরের ইনস্ট্যান্স</td></tr>
+<tr><td>Local</td><td>নিজের block-এর মধ্যে নাম</td><td>দরকারি final বা effectively final লোকাল</td></tr>
+<tr><td>Anonymous</td><td>ঘোষিত ক্লাসের নাম নেই</td><td>বাইরের প্রসঙ্গ আর capture করা লোকাল</td></tr>
+</tbody></table>
+<p>member nested টাইপে private-সহ access modifier চলে। local ক্লাস block scope মানে; local ঘোষণায় public বা private চলে না। কম্পাইলারের তৈরি class file-এর বিশেষ নামের ওপর অ্যাপের কাজ নির্ভর করিয়ো না।</p>
+<h2 id="how-it-works">ধরন বাছার আগে রেফারেন্স আঁকো</h2>
+<pre class="diagram">first Counter(count=3) &lt;-- enclosing link -- View A
+second Counter(count=8) &lt;-- enclosing link -- View B
+
+Shelf.Label(number=4) -- no implicit Shelf instance</pre>
+<p>member inner মেথড বাইরের ক্লাসের private মেম্বার পড়তে পারে। নাম গুলিয়ে গেলে Outer.this দিয়ে বাইরের ইনস্ট্যান্স বোঝাও। শুধু this বর্তমান inner অবজেক্ট। এতে helper আর মালিকের স্টেট আলাদা হয়।</p>
+<p>static nested helper-এর নিজে থেকে বাইরের receiver নেই। নামের স্বাভাবিক নিয়ম মেনে বাইরের static মেম্বার পড়তে পারে। ইনস্ট্যান্স ফিল্ড লাগলে রেফারেন্স বা মান পাঠাও। এতে অকারণ নির্ভরতা কমে, আলাদাভাবে চালানো সহজ হয়।</p>
+<p>local বা anonymous ক্লাস শুধু final বা effectively final লোকাল capture করতে পারে। মানটি সেই কাজের প্রসঙ্গ থেকে আসে। পরে লোকাল অ্যাসাইন করলে কোন মান বোঝাবে তা অস্পষ্ট হতো, তাই কম্পাইলার আটকায়।</p>
+<p>effectively final হলেও লক্ষ্য অবজেক্ট স্থির হয় না। capture করা mutable list বদলাতে পারে। এটি মালিকানা বা থ্রেডের প্রশ্ন, capture বৈধ কি না তার প্রশ্ন নয়। callback যাচাইয়ে আলাদা রাখো।</p>
+<h2 id="examples">তিন প্রোগ্রামে চার ধরন দেখো</h2>
+<h3>static nested লেবেল</h3>
+<p>Shelf.Label নিজের number আর লেখা বানায়। Shelf বানানো হয় না। বাইরের নাম উদ্দেশ্য অনুযায়ী সাজায়, কনস্ট্রাক্টর দরকারি সব স্টেট জানায়। বাইরের ইনস্ট্যান্স না লাগলে এটি ভালো শুরুর পছন্দ।</p>
+<div data-example="ex-1"></div>
+<h3>একটি counter-এর view</h3>
+<p>দুই counter-এ 3 আর 8। first.new View প্রথমটি পড়ে, second.new View দ্বিতীয়টি। এটি সব Counter-এর global view নয়; কোন স্টেট পড়বে সম্পর্কটি তা ঠিক করে।</p>
+<div data-example="ex-2"></div>
+<h3>নামসহ local rule আর নামছাড়া rule</h3>
+<p>LocalRule bonus capture করে 10 থেকে 15 দেয়। anonymous ইমপ্লিমেন্টেশন দ্বিগুণ করে 20 দেয়। দুটোই Rule, তাই একই apply কল চলে। scope-এর ভেতরে local নাম দিয়ে আবার বানানো যায়; anonymous expression ওই জায়গায় ইমপ্লিমেন্টেশন দেয়।</p>
+<div data-example="ex-3"></div>
+<h2 id="local-and-anonymous">ক্লাসের কাঠামো লাগলে ক্লাস বডি নাও</h2>
+<p>local ক্লাসে ফিল্ড, কনস্ট্রাক্টর আর helper মেথড চলে। নাম block-এর মধ্যে থাকে। এক expression-এর চেয়ে বেশি সমন্বয় লাগলে উপকারী। বাইরের মেথড পড়া যায় এমন ছোট রাখো।</p>
+<p>anonymous expression একটি superclass বা একটি ইন্টারফেস বেছে নেয়। superclass-এর পরে আর্গুমেন্ট তার কনস্ট্রাক্টরে যায়। ইন্টারফেস হলে খালি বন্ধনী। নিজের ঘোষিত নাম নেই বলে নিজের নামের কনস্ট্রাক্টর লেখা যায় না।</p>
+<p>ফিল্ড বা instance initializer দিয়ে anonymous স্টেট বসানো যায়। লম্বা প্রক্রিয়া লুকিয়ো না। অনেক যাচাই বা অর্থপূর্ণ প্যারামিটার হলে নামসহ helper কনস্ট্রাক্টর পড়া সহজ।</p>
+<p>এক functional interface অপারেশনে lambda-ও চলে। এতে নতুন this আসে না। anonymous মেথডের this সেই নামছাড়া অবজেক্ট; lambda-র this বাইরের প্রসঙ্গের। callback signature একই হলেও একটির বদলে অন্যটি দিলে মেম্বার অ্যাক্সেস বদলাতে পারে।</p>
+<p>anonymous ক্লাসে helper থাকলেও ইন্টারফেস টাইপের ভেরিয়েবলে শুধু ইন্টারফেসের কাজ পাও। কলারের কয়েকটি নতুন মেথড লাগলে নামসহ টাইপ সম্পর্কটি ভালো বোঝায়।</p>
+<h2 id="lifetime">বাইরের সম্পর্ক অবজেক্ট বেঁচে থাকাতেও প্রভাব ফেলে</h2>
+<p>দীর্ঘদিন থাকা event publisher inner listener ধরে রাখলে listener-এর বাইরের ইনস্ট্যান্সের সম্পর্ক পুরো controller-কে reachable রাখতে পারে। উইন্ডো বন্ধ হলেই publisher-এর রেফারেন্স সরে না। garbage collection স্ক্রিন দেখে না, রেফারেন্স ধরে পৌঁছানো যায় কি না দেখে।</p>
+<p>publisher থেকে listener, controller, তারপর বড় ডেটার চেইন আঁকো। আর event না লাগলে unregister করো। শুধু ছোট immutable মান লাগলে constructor-এ মান নেওয়া static nested helper পুরো controller ধরে রাখা এড়াতে পারে।</p>
+<p>সব inner ক্লাস memory leak নয়। অনাকাঙ্ক্ষিত lifetime হলেই সমস্যা। controller-এর সঙ্গে view বেঁচে থাকা সঠিকও হতে পারে। কে registration-এর মালিক, কখন তা শেষ হয় ঠিক করো।</p>
+<p>বড় collection capture করা local ক্লাসের ইনস্ট্যান্স রাখলেও collection reachable থাকে। মেথডের ভেতরে ঘোষণা মানে অল্প সময় বাঁচবে নয়। lexical scope নামের দৃশ্যমানতা ঠিক করে; রেফারেন্স অবজেক্টের lifetime ঠিক করে।</p>
+<h2 id="choice-walkthrough">ছোট কয়েকটি প্রশ্নে বাছো</h2>
+<p>helper-এর কি নির্দিষ্ট বাইরের ইনস্ট্যান্স লাগে? না লাগলে আর এক টাইপের সঙ্গে মানালে static nested দিয়ে শুরু করো। শুধু এক মান পড়তে বড় মালিক ধরে না রেখে কনস্ট্রাক্টরে ডেটা দাও।</p>
+<p>এক মালিকের বদলানো স্টেট সরাসরি লাগলে member inner মানাতে পারে। নাম কত দূর লাগবে ভাবো। পুনর্ব্যবহার হলে member বা top-level নাম, এক কাজের helper হলে local নাম রাখো।</p>
+<p>ছোট এক abstract কাজ lambda-তে মানায়। কয়েকটি সমন্বিত মেথডে local বা anonymous ক্লাস লাগতে পারে। anonymous বডি বড় হলে নাম দাও; ফরম্যাট গুটিয়ে ফেলো না। বর্তমান কলের বাইরেও রাখলে capture আর lifetime আবার দেখো।</p>
+<h2 id="common-mistakes">নাম, ইনস্ট্যান্স আর capture গুলিয়ো না</h2>
+<h3>inner ক্লাসকে static-এর মতো বানানো</h3>
+<p>non-static member ক্লাসে সাধারণভাবে new Outer.Inner() চলে না। Outer দিয়ে outer.new Inner() করো। বাইরের স্টেট না লাগলে static nested হওয়া উচিত কি না ভাবো।</p>
+<h3>capture করা লোকাল আবার অ্যাসাইন করা</h3>
+<p>local ক্লাসে bonus পড়ে পরে increment করলে effectively final ভাঙে। প্রতি অনুরোধে নতুন লোকাল নাও বা বদলানো স্টেট স্পষ্টভাবে মডেল করো। বাধা এড়াতে এক এলিমেন্টের অ্যারে নিলে ডিজাইনের সিদ্ধান্ত লুকায়।</p>
+<h3>পুনর্ব্যবহারযোগ্য বড় anonymous ক্লাস</h3>
+<p>লম্বা নামছাড়া কোড খুঁজে দেখা আর ব্যবহার কঠিন। কয়েক দায়িত্ব হলে কাজের নাম আর কনস্ট্রাক্টর দাও। সহজে বোঝা গেলেই ছোট করে লেখা উপকারী।</p>
+<h2 id="best-practices">স্টেটের নির্ভরতা বুঝে রাখো</h2>
+<ul><li>বাইরের ইনস্ট্যান্স না লাগলে static nested দিয়ে শুরু করো।</li><li>এক মালিকের সম্পর্ক অর্থপূর্ণ হলে inner helper নাও।</li><li>এক অপারেশনের কাঠামোবদ্ধ কাজে local নাম নাও।</li><li>capture করা মান আর registration-এর lifetime একসঙ্গে দেখো।</li><li>GUI listener ছাড়াও business logic কল করার সুযোগ রাখো।</li></ul>
+<h2 id="version-notes">Java 17-এর আগে inner ক্লাসের নিয়ম বদলেছে</h2>
+<div class="callout version"><p>পুরোনো বইয়ে inner ক্লাসে constant ছাড়া static মেম্বার নিষেধ দেখতে পারো। Java 16 সেই বাধা শিথিল করেছে। Java 17-এ static ঘোষণা চলে; বাইরের ইনস্ট্যান্সের সম্পর্ক তাতে যায় না। উদাহরণে সহজ ধরন আছে, তৈরি class file-এর নামের ওপর নির্ভরতা নেই।</p></div>
+<h2 id="summary">nesting scope আর সম্পর্ক বোঝায়</h2>
+<p>static nested helper-এ নিজে থেকে বাইরের মালিক লাগে না। inner অবজেক্ট নির্দিষ্ট বাইরের ইনস্ট্যান্স ব্যবহার করে। local আর anonymous ক্লাস capture-এর নিয়ম মেনে কাজের কাছে থাকে। এবার <a href="topic:oop-lambdas-streams">lambda আর stream</a> দিয়ে ছোট functional অপারেশন লেখো।</p>

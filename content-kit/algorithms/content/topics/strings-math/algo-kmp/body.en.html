@@ -1,0 +1,79 @@
+<h2 id="introduction">Keep useful information after a mismatch</h2>
+<p class="lead">Searching repeated text can feel wasteful. After matching ababa, a mismatch should not make you forget that its final aba is also its beginning. KMP, named for Knuth, Morris and Pratt, stores this reusable pattern structure before searching.</p>
+<p>A border is a prefix that is also a suffix. A proper border is shorter than the whole string. For ababa, the longest proper border is aba, of length three. The shorter border a also exists. Borders describe equal strings, not physical overlap restrictions.</p>
+<p>The prefix function pi[i] gives the length of the longest proper border of pattern[0..i]. For ababaca, it is [0,0,1,2,3,0,1]. This table tells the matcher which already-known equality can survive a failure.</p>
+<p>KMP never moves its text index backwards. It may compare the current text character with several pattern positions, but each fallback uses previously gained matched length. The complete process takes linear time in text plus pattern length.</p>
+
+<h2 id="syntax">Define matched length before indexing</h2>
+<p>During prefix construction, i is the new pattern position and j begins at pi[i-1]. That j is a candidate border length for the prefix ending just before i. Compare pattern[i] with pattern[j] to see whether the border extends by one.</p>
+<p>On mismatch with j&gt;0, set j=pi[j-1] and compare the same pattern[i] again. This follows the borders of the previous candidate. Once j reaches zero, there is no shorter nonempty candidate; compare with pattern[0] before assigning pi[i].</p>
+<p>The matching phase uses the same fallback idea but reads text[i]. Here j is the number of pattern characters currently matched by a suffix of the consumed text. If j becomes m, report start i-m+1, then retain pi[m-1] for overlaps.</p>
+<p>The code assumes a nonempty pattern, which guarantees pi[0] and pattern[0] exist. Its input bounds and token convention make that precondition explicit rather than relying on an accidental nonzero length.</p>
+<pre><code class="language-text">pi[0] = 0
+for i = 1 to m - 1:
+    j = pi[i - 1]
+    while j &gt; 0 and pattern[i] != pattern[j]:
+        j = pi[j - 1]
+    if pattern[i] == pattern[j]: j++
+    pi[i] = j</code></pre>
+
+<h2 id="how-it-works">Follow a chain of shorter borders</h2>
+<p>For ababaca, the prefix ababa ends with border aba, so j is three before processing c. Compare c with pattern[3], which is b: failure. The next candidate is pi[2]=1, the border a. Compare c with pattern[1], another b: failure. Then j becomes pi[0]=0, and c differs from pattern[0]=a. Thus pi[5]=0.</p>
+<p>At the final a, j begins at zero. It matches pattern[0], so pi[6]=1. The prefix table does not record how many times each character appears. It records the lengths of nested equal prefixes and suffixes.</p>
+<p>The lab builds this table in an array display. Character comparisons colour the corresponding pattern positions, while the numeric array stores completed pi entries. Its fallback notes explain why a shorter candidate remains possible. It implements prefix construction, not the whole text search.</p>
+<p>For searching ababa with pattern aba, a full match ends at text index two. Retaining pi[2]=1 keeps that ending a as the beginning of another occurrence. The next b and a complete the second match at start two without rereading the earlier text.</p>
+<p>An empty lab pattern produces an empty prefix table. The C token input requires a nonempty pattern. The numeric array displays pi lengths, while the side list gives the actual letters at those positions.</p>
+<div data-lab="kmp-prefix"></div>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Build the prefix table</h3>
+<p>Input ababaca produces 0 0 1 2 3 0 1. This is the algorithm animated by the prefix lab. Try aaaa to see every new character extend the border.</p>
+<div data-example="ex-1"></div>
+<h3>Search using matched length</h3>
+<p>The full matcher reports positions zero and two for ababa and aba. After every complete match it falls back to pi[m-1], so overlapping occurrences survive. A pattern longer than the text simply never reaches matched length m.</p>
+<div data-example="ex-2"></div>
+<h3>List every border length</h3>
+<p>For ababab, following pi links gives lengths four and two. The program prints them longest first. It excludes the whole word because borders here are proper and excludes zero because the display lists nonempty borders.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Build pi for ababaca</h2>
+<p>Each row below shows the accepted border length after processing one position. The fallback column describes only rejected positive candidates. A mismatch at j=0 ends with pi[i]=0 rather than indexing pi[-1].</p>
+<p>The final length one means the whole pattern ends with its first letter. It does not mean the pattern has only one occurrence in some text. Prefix construction depends only on the pattern.</p>
+<table class="ref"><caption>Prefix lengths, not character counts</caption><thead><tr><th scope="col">i</th><th scope="col">Character</th><th scope="col">Candidate chain</th><th scope="col">pi[i]</th></tr></thead><tbody><tr><td>0</td><td>a</td><td>base case</td><td>0</td></tr><tr><td>1</td><td>b</td><td>0 fails</td><td>0</td></tr><tr><td>2</td><td>a</td><td>0 extends</td><td>1</td></tr><tr><td>3</td><td>b</td><td>1 extends</td><td>2</td></tr><tr><td>4</td><td>a</td><td>2 extends</td><td>3</td></tr><tr><td>5</td><td>c</td><td>3 -&gt; 1 -&gt; 0; all fail</td><td>0</td></tr><tr><td>6</td><td>a</td><td>0 extends</td><td>1</td></tr></tbody></table>
+
+<h2 id="correctness">Why the fallback skips no candidate</h2>
+<p>Suppose the current candidate prefix of length j already matches a suffix of the processed prefix. If the new character fails to extend it, any shorter successful candidate must itself be a border of that length-j string. Otherwise its earlier characters would not agree with the suffix already known to match.</p>
+<p>The longest such candidate has length pi[j-1]. Following that link therefore skips only lengths that cannot be valid borders. Repeating the argument visits all remaining possible border lengths from longest to shortest. The first extension found is the longest; if none exists, zero is correct.</p>
+<p>During text matching, the invariant says that pattern[0..j) equals the suffix of the consumed text of length j, and no longer candidate survives. A successful character comparison extends it. A failure follows the same exhaustive border chain, preserving possible alignments without decreasing i.</p>
+<p>When j reaches m, the last m text bytes equal the pattern, so the reported position is a real match. Any future overlapping match must begin with a proper border of this completed pattern. Retaining its longest border and following further fallbacks preserves all such possibilities. Every occurrence is consequently reported.</p>
+
+<h2 id="complexity">Account for increases and decreases</h2>
+<p>The prefix-building outer loop advances i at most m-1 times. A successful extension increases j by one, so there are at most m-1 such increases. Every fallback strictly decreases j. Across the entire loop, these decreases cannot exceed the amount previously accumulated through increases.</p>
+<p>This amortised argument bounds total fallback iterations by O(m), even though a single position may follow several links. Construction therefore takes O(m) time and O(m) space for pi. It is incorrect to multiply every outer step by m merely because a while loop is nested inside it.</p>
+<p>The same reasoning applies to matching: consuming a text character advances i, while positive matched length can only be decreased after it was increased. Total matching work is O(n). Reporting z occurrences adds O(z), already at most O(n) for a nonempty pattern. Combined time is O(n+m), with O(m) auxiliary table space.</p>
+<p>The bounded examples reserve twenty-four table entries regardless of shorter input. General asymptotic space describes a table sized to m, not the small fixed capacity selected for an educational program. Neither program stores a copy of every matched substring.</p>
+
+<h2 id="edge-cases">Repeated letters and missing text</h2>
+<p>For one pattern character, pi[0]=0 and each equal text character forms an occurrence. For aaaa, pi=[0,1,2,3], a long border chain. A pattern with no repeated border can have an all-zero prefix table and still match normally.</p>
+<p>A missing pattern gives zero reports. A longer pattern also gives none. The examples accept nonempty text tokens, although the matching loop itself would handle n=0 once input parsing allowed it.</p>
+<p>An empty pattern requires a separate policy because pi[0] and pattern[j] would be invalid under the current algorithm's assumptions. Reject it or handle boundary matches before entering prefix construction. Do not hide it inside a generic loop bound.</p>
+<p>Some books use a failure array beginning with minus one or define a table indexed by matched length rather than character position. Those variants can be correct, but their update formulas differ. Keep this lesson's pi definition and indexing together.</p>
+
+<h2 id="common-mistakes">Lengths are not indices of the same kind</h2>
+<p>Using j=pi[j] instead of pi[j-1] follows the wrong prefix. The current matched prefix has length j and ends at index j-1. Its longest proper border lives in that entry.</p>
+<p>Resetting j to zero after every full match loses overlapping information. Decrementing the text index to compensate loses KMP's monotone text scan and can cause repeated work or missed positions.</p>
+<p>A fallback should be repeated in a while loop, not performed once with if. The ababaca example needs more than one fallback at c. A single reduction may still leave a mismatching candidate.</p>
+<p>Do not advance j after a mismatch at zero. Only equality extends the border. Reading beyond pattern[m-1] is also possible if a complete match is reported without resetting j before the next text iteration.</p>
+
+<h2 id="best-practices">Explain pi with actual strings</h2>
+<p>When tracing, write the prefix and suffix corresponding to each positive pi value. Seeing aba at both ends is more informative than memorising the number three. Compare the final match positions with naive matching on short repeated strings.</p>
+<p>Keep construction and search in separate functions so their shared fallback idea is visible without confusing their different outer inputs. For streaming text, carry j between input chunks and keep the pattern table; the text itself need not be retained in full.</p>
+
+<h2 id="version-notes">Byte comparisons under C17</h2>
+<p>The examples validate lowercase Latin bytes and use twenty-five-byte string buffers. Prefix lengths fit int under this bound. KMP's mathematical logic applies to other token sequences, but a C char scan compares encoded bytes rather than Unicode grapheme clusters. Choose the sequence representation before interpreting reported positions.</p>
+
+<h2 id="summary">A mismatch still leaves structure</h2>
+<p>KMP stores the pattern's border chain, then reuses it whenever a candidate fails or completes. The text index moves forward, while matched length absorbs the backtracking. Counting total increases and decreases proves the linear bound.</p>
+
+<p>Revisit the connected idea:</p>
+<p><a href="topic:algo-naive-string-matching">Naive String Matching</a></p>
