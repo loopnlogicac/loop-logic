@@ -1,0 +1,66 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Two piles of answer scripts are already ordered by roll number. You can combine them by repeatedly taking the smaller front roll. You never need to search the middle of either pile. <dfn>Merge sort</dfn> creates this situation by first dividing the input into smaller pieces and sorting them recursively.</p>
+<p>The method trades extra array storage for predictable growth. Balanced splitting gives logarithmic depth, while each level moves all values through merges. The same plan handles reverse order and already sorted input without a quadratic chain of bad pivot choices.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">merge_sort(a, temp, low, high): if high - low &lt; 2: return
+mid = low + floor((high - low) / 2)
+merge_sort(a, temp, low, mid)
+merge_sort(a, temp, mid, high); i = low; j = mid; k = low
+merge fronts into temp; choose left on equality
+copy any remaining tail into temp
+copy temp[low..high) back into a</code></pre>
+<h2 id="how-it-works">Merge Sort step by step</h2>
+<h3>Divide using half-open intervals</h3>
+<p>The function merge_sort(a,temp,low,high) sorts [low,high). If high - low is less than two, the interval is empty or a singleton and already sorted. Otherwise mid splits it into [low,mid) and [mid,high). The halves do not overlap and together contain every original position in the interval.</p>
+<p>Recursively sort the left half, then the right half. These calls must finish before the parent merge begins. The parent can rely on the sorted order within each half, but cannot assume that every left value is smaller than every right value. Their ranges of keys may overlap or contain ties.</p>
+<p>For five values, the first split gives lengths two and three. The size-three half splits into lengths one and two. Exact equality of sizes is unnecessary; their difference of at most one keeps the recursion balanced. The midpoint formula low + (high - low)/2 also avoids directly adding the two boundaries.</p>
+<h3>Merge two sorted fronts</h3>
+<p>Use i = low for the left front, j = mid for the right front, and k = low for the next temporary output position. While both halves have remaining values, compare a[i] and a[j]. Copy the smaller to temp[k], advance the chosen front, and advance k. A value behind either front cannot be smaller than that front within its sorted half.</p>
+<p>When one half runs out, copy the entire remaining tail from the other half. No further cross-half comparison is needed because that tail already has internal order. The temporary range now contains exactly high - low values. Copy it back into a only after all original half values have been consumed.</p>
+<p>Writing directly into the original interval while still reading both halves can overwrite an unread value. A separate temporary buffer avoids that hazard. The implementation allocates one 64-cell buffer for the bounded demonstrations and passes it through all recursive calls. In a general version, allocate capacity proportional to n once, not a new full-size array for every individual comparison.</p>
+<h3>Follow the five-value merge trace</h3>
+<p>The first left merge combines [7] and [3] into [3,7]. On the right, [3] and [1] merge into [1,3]. The singleton [5] then merges with [1,3] into [1,3,5]. At the final parent, the two sorted halves are [3,7] and [1,3,5].</p>
+<p>Compare front 3 with front 1 and take 1 from the right. Now compare left 3 with right 3 and take the left one. Next take the right 3, then right 5, then the remaining left 7. The final sequence is [1,3,3,5,7]. This order matches the default animation input.</p>
+<p>Keep boundary positions separate from element values in your notes. The middle index identifies the original split between the halves. After merging, the values may cross that boundary, but the interval being sorted still has the same endpoints. The algorithm preserves the number of records even though their locations change.</p>
+<h3>Stability comes from the equality rule</h3>
+<p>When front keys are equal, choose the left front first using less-than-or-equal. The left half came earlier in the original sequence than the right half. Each recursive half is already stable by induction, so this equality choice preserves the global order among equal records.</p>
+<p>If you choose the right front first on equality, the output remains numerically sorted but the merge can reverse equal records across the split. For [3A] and [3B], choosing right first immediately produces [3B,3A]. Plain integer output hides the difference, so use labels when proving this property.</p>
+<p>The standard buffered implementation is stable but not in-place under the constant-workspace definition. More complicated in-place merge methods exist, but they require different movement and cost arguments. Do not transfer their properties to the straightforward buffer-based routine shown here.</p>
+<h3>Derive time and memory rather than memorising them</h3>
+<p>At a merge of m values, each iteration emits one value, and each value is copied back once. This is Θ(m) local work. Balanced recursion gives T(n) = T(floor(n/2)) + T(ceil(n/2)) + Θ(n), with constant base work. For powers of two this has the familiar form 2T(n/2) + Θ(n).</p>
+<p>At each full recursion level, subarray lengths sum to n. There are Θ(log n) levels, so total time is Θ(n log n). The implementation still divides and merges already sorted input, so its best case has the same growth. An additional already-ordered boundary check can improve some inputs, but that is a separate optimisation.</p>
+<p>The shared buffer uses Θ(n) auxiliary cells in a scalable implementation. Recursive calls add Θ(log n) frames when each frame has only indices and references to shared storage. The buffer dominates, making total auxiliary space Θ(n). Input storage is another Θ(n), so total storage is also linear under this representation.</p>
+<p>Merge sort is especially natural when sequential merging is cheap. In external sorting, sorted runs can be streamed from storage. For linked structures, merging can relink existing nodes rather than copy an array buffer. Those representations change the storage details, while the divide-and-merge correctness argument remains similar.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>Balanced calls produce sorted halves [3,7] and [1,3,5]. Their final merge yields 1 3 3 5 7.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>The merge buffer carries negative values normally. Left-on-equality preserves the repeated -2 records.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>After recursive merging, the five marks form groups for 1, 3 and 5. Their group count is three.</p>
+<div data-example="ex-3"></div>
+<h3>Merge labelled halves stably</h3>
+<p>Left-on-equality produces 1A before 1C and 3B before 3D. Tail copying retains each half record without overwriting unread input.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Merge [0,2)</td><td>[3,7,5,3,1]</td><td>The left pair is ordered.</td></tr><tr><td>Merge [3,5)</td><td>[3,7,5,1,3]</td><td>The right pair is ordered.</td></tr><tr><td>Merge [2,5)</td><td>[3,7,1,3,5]</td><td>The right three-value half is ordered.</td></tr><tr><td>Merge [0,5)</td><td>[1,3,3,5,7]</td><td>Choose the smaller front until both halves finish.</td></tr></tbody></table>
+<div data-lab="merge-sort"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>For the merge loop, temp[low..k) is sorted and contains exactly the consumed prefixes of the two halves. Its last value is no larger than either next available front. Choosing the smaller front extends this invariant, and copying a remaining tail preserves it after one half becomes empty.</p>
+<p>For the recursive algorithm, induct on interval length. Lengths below two are already sorted. Both shorter halves are sorted by the induction hypothesis. The merge lemma then gives a sorted permutation of their union. Because each recursive interval is shorter, recursion reaches the base and terminates.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>A single merge performs at most m - 1 cross-half comparisons for m positive total elements when both halves are nonempty. Some arrangements exhaust a half earlier, but every value is still emitted and copied. This explains the Θ(m) local cost even when comparison counts vary. Across the tree, balanced height gives Θ(n log n) time and the one shared output buffer gives Θ(n) auxiliary space.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Copying back before the merge is finished</h3>
+<p>The original halves still contain unread fronts. Finish filling the temporary range before replacing those source cells.</p>
+<h3>Forgetting the remaining tail</h3>
+<p>The main loop stops when either half ends, not when both end. Append whichever half still has values.</p>
+<h3>Choosing right on equal keys</h3>
+<p>That can reverse equal records across the midpoint. Choose the left record first for stable merging.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>The merge buffer is an ordinary fixed-capacity C17 array in these bounded programs. Passing it through recursion shares storage; it does not create a new array copy at each call.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Sort balanced halves and merge their fronts stably using a shared linear buffer.</p>
+<p>Continue with <a href="topic:algo-quick-sort">quick sort</a>.</p>

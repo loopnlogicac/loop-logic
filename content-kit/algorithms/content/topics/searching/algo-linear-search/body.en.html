@@ -1,0 +1,54 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">You have an unsorted row of roll numbers and want to find one student. There is no reliable way to jump to the correct position. Start at the left and check each roll until you find a match. This method is called <dfn>linear search</dfn>.</p>
+<p>Linear search is useful even after you learn faster-looking methods. It accepts unsorted input, needs no preparation, and stops as soon as the requested first match appears. For a short attendance list, those advantages can matter more than a better asymptotic bound that requires sorting first.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">for i = 0 to n - 1
+    if a[i] == target: return i
+return -1</code></pre>
+<h2 id="how-it-works">Linear Search step by step</h2>
+<h3>Decide what a match means</h3>
+<p>The search contract here returns the first zero-based position whose value equals target. If no such value exists, it returns -1. Returning a position is more useful than returning only yes or no, because the caller can inspect or update that record. Index zero is a valid success, so it cannot also mean failure.</p>
+<p>For a = [7,3,5,3,1] and target = 5, the routine checks 7, then 3, then 5. It returns 2 and never examines the final two positions. For target = 3, the first match is at index 1, even though another 3 appears at index 3. For target = 9, all five comparisons fail and the answer is -1.</p>
+<p>The input array remains unchanged. The index increases by one after each failed equality. Test equality before moving forward; otherwise the first value could be skipped. The length condition i &lt; n protects each read. An empty array returns -1 without trying to inspect a[0].</p>
+<h3>Use a sentinel only with owned storage</h3>
+<p>A <dfn>sentinel</dfn> is an extra stopping value placed where a search is guaranteed to meet it. In the sentinel example, the caller reserves one writable cell beyond the n data values. The routine sets a[n] = target and scans until equality. The inner loop no longer needs a length check on each iteration.</p>
+<p>Finding target is now guaranteed, but finding it inside the data is not. After the loop, return i only when i &lt; n. If i equals n, the match is the sentinel and the real target is absent. For an empty list, a[0] must still be a reserved writable sentinel cell. A pointer with no storage cannot be used for this variant.</p>
+<p>Another textbook version temporarily replaces the last real element. That version must save and restore the old final value, then distinguish a genuine final match from the temporary sentinel. The reserved-extra-slot version avoids that restoration problem. Both versions require ownership or permission to write the chosen cell; neither permits writing past a normal n-element array.</p>
+<h3>First match, last match and all matches</h3>
+<p>Changing the result contract changes the stopping rule. A first-match routine returns on the first equality. A last-match routine remembers each matching index and continues to the end. A counting routine increments a counter for every equality and also scans the entire list. You cannot reuse an early return when the question asks for all occurrences.</p>
+<p>When searching records, compare the requested field. A roll-number search compares roll numbers; a marks search compares marks. Equal marks can belong to different students, so marks do not identify a unique record. If a task needs every student with a given mark, return or print every matching position rather than assuming uniqueness.</p>
+<p>Linear search is also appropriate when input arrives one item at a time. You do not need random access to later values. For a linked structure, moving to the next node fits the same scanning idea. The underlying storage changes how you advance, while the invariant about previously rejected candidates remains useful.</p>
+<h3>When scanning is the sensible choice</h3>
+<p>A single query on an unsorted list needs at most n comparisons using linear search. Sorting first typically costs more than this one scan. For many queries on a mostly unchanged collection, preparing an ordered representation may pay off. Include that preparation in the comparison rather than quoting only the later search cost.</p>
+<p>Search order can improve practical behaviour when some items are requested more often. Frequently used entries near the front are found sooner. This changes expected work under that usage pattern, but it does not improve the worst case. An absent target still forces every candidate to be rejected.</p>
+<p>Try the missing-target and singleton cases in the animation. Watch the scan discard positions only after their values fail equality. A coloured rejected position is evidence about that target, not a permanent fact about the value. Changing target requires starting the reasoning again.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Find a mark in five values</h3>
+<p>A scan meets 7 and 3 before finding 5 at position 2.</p>
+<div data-example="ex-1"></div>
+<h3>Use a reserved sentinel slot</h3>
+<p>The added 8 stops the scan at index 5. That index lies outside the five data values, so the answer is -1.</p>
+<div data-example="ex-2"></div>
+<h3>Count all equal marks</h3>
+<p>The scan continues after the first 3 because the task asks for all matches. Indices 1 and 3 contribute two.</p>
+<div data-example="ex-3"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>i = 0</td><td>7 != 5</td><td>Position 0 cannot be the answer.</td></tr><tr><td>i = 1</td><td>3 != 5</td><td>The rejected prefix now has length two.</td></tr><tr><td>i = 2</td><td>5 == 5</td><td>Return 2 without scanning the suffix.</td></tr></tbody></table>
+<div data-lab="linear-search"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>Before testing position i, no position below i contains target. This is initially true because the rejected prefix is empty. If a[i] differs, advancing i extends that rejected prefix by one. If a[i] equals target, all earlier values have already failed, so i is the first matching index. If i reaches n, every value has failed and -1 is correct.</p>
+<p>Each unsuccessful iteration increases i while n remains fixed. At most n data comparisons occur. The sentinel loop has a different stopping guarantee: the reserved cell itself equals target, so equality must occur by position n. Its final index check restores the distinction between real data and the extra stopping cell.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>Best-case search time is Θ(1) for an immediate first match on a nonempty input. Worst-case time is Θ(n) for absence or a last-position match. If a successful target position is uniformly distributed, expected comparisons are (n + 1)/2, also Θ(n). That average requires an explicit probability assumption. Both ordinary and extra-slot sentinel scans use Θ(1) working variables; the sentinel additionally needs one writable array cell.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Using zero as the missing result</h3>
+<p>Position zero is a valid match. Keep -1 as the absent marker and compare the returned index explicitly.</p>
+<h3>Returning before counting all matches</h3>
+<p>A count must include later equal values. Remove the early return and finish the scan.</p>
+<h3>Writing an unreserved sentinel</h3>
+<p>An array of n elements has no a[n] data cell. Reserve n + 1 cells or use the ordinary bounds-checked scan.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>The C17 search uses a const-qualified input pointer because ordinary scanning does not modify data. The sentinel variant instead accepts writable storage and explicitly requires one extra cell.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Scan for a first match, analyse failed searches, and use a sentinel only with valid writable storage.</p>
+<p>Continue with <a href="topic:algo-binary-search">binary search</a>.</p>

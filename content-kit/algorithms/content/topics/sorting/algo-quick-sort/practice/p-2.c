@@ -1,0 +1,58 @@
+#include <stdio.h>
+
+static void swap(int *x, int *y)
+{
+    int saved = *x;
+    *x = *y;
+    *y = saved;
+}
+static int partition(int a[], int low, int high)
+{
+    int pivot = a[high];
+    int i = low;
+    for (int j = low; j < high; j++) {
+        if (a[j] <= pivot) {
+            swap(&a[i], &a[j]);
+            i++;
+        }
+    }
+    swap(&a[i], &a[high]);
+    return i;
+}
+static void quick_sort(int a[], int low, int high)
+{
+    if (low < high) {
+        int p = partition(a, low, high);
+        quick_sort(a, low, p - 1);
+        quick_sort(a, p + 1, high);
+    }
+}
+static void sort(int a[], int n)
+{
+    quick_sort(a, 0, n - 1);
+}
+static void show(const int a[], int n)
+{
+    for (int i = 0; i < n; i++) {
+        printf("%s%d", i ? " " : "", a[i]);
+    }
+    puts("");
+}
+
+int main(void)
+{
+    puts("Enter n, then n values:");
+    int n;
+    int a[64];
+    if (scanf("%d", &n) != 1 || n < 0 || n > 64) {
+        return 1;
+    }
+    for (int i = 0; i < n; i++) {
+        if (scanf("%d", &a[i]) != 1 || a[i] < -99 || a[i] > 99) {
+            return 1;
+        }
+    }
+    sort(a, n);
+    show(a + n / 2, n - n / 2);
+    return 0;
+}

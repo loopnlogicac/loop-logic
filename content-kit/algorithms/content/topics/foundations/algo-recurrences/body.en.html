@@ -1,0 +1,61 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A recursive algorithm gives part of its work to smaller copies of the same problem. Imagine dividing a stack of answer scripts into two smaller stacks. Each helper repeats the same rule until only one script remains. A <dfn>recurrence</dfn> describes the total cost in terms of these smaller costs.</p>
+<p>The hard part is often writing the recurrence correctly. Two recursive calls do not automatically mean exponential work. Their sizes matter, as does the work before and after them. Keep the base case beside the recursive rule, because it determines when the expansion ends.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">if n &lt;= 1: return one leaf
+left = floor(n / 2)
+right = n - left
+return leaves(left) + leaves(right)</code></pre>
+<h2 id="how-it-works">Recurrence Relations step by step</h2>
+<h3>Write the cost from the code</h3>
+<p>For a function that scans n values and then calls itself on two halves, write T(n) = T(floor(n/2)) + T(ceil(n/2)) + Θ(n). For powers of two, this becomes 2T(n/2) + Θ(n). The scan is charged once at the parent. Each recursive call contributes its own full cost, not only the overhead of making a call.</p>
+<p>A function that follows only one half and performs constant local work has T(n) = T(n/2) + Θ(1). A function that follows size n - 1 has T(n) = T(n - 1) + Θ(1). These lead to logarithmic and linear growth respectively. Both have one recursive call, showing why counting call sites alone is insufficient.</p>
+<p>Specify T(1) = Θ(1) for size-one work, or T(0) = Θ(1) if zero is the stopping size. Ignoring floors and ceilings is usually safe for standard balanced splits with regular costs, but the executable function still needs them. For n = 7, children of sizes 3 and 4 preserve all seven elements.</p>
+<h3>Substitution: guess, then prove</h3>
+<p>The <dfn>substitution method</dfn> proves a guessed bound by induction. For T(n) = T(n - 1) + 1 with T(0) = 1, guess T(n) = n + 1. The base gives 1 = 0 + 1. Assuming T(n - 1) = n, the rule gives T(n) = n + 1. This establishes an exact expression.</p>
+<p>For T(n) = 2T(n/2) + n on powers of two with T(1) = 1, a useful exact guess is n log2 n + n. Substitute the guess for both children: 2[(n/2)log2(n/2) + n/2] + n. Since log2(n/2) = log2 n - 1, the expression simplifies to n log2 n + n. The base also matches.</p>
+<p>For inequality proofs, keep the induction hypothesis strong enough to survive substitution. An attempt to prove T(n) ≤ cn for that second recurrence produces cn + n, which exceeds cn. That failure tells you the linear guess is too small. Try cn log n or a strengthened expression with a lower-order term, and verify a valid starting range.</p>
+<h3>Recursion trees account for whole levels</h3>
+<p>A <dfn>recursion tree</dfn> draws one node per recursive task. In 2T(n/2) + n, level zero costs n outside its children. Level one has two tasks costing n/2 each, again n. Level k has 2^k tasks costing n/2^k each. Each full internal level therefore contributes n.</p>
+<p>The tree reaches size one after log2 n divisions. There are n leaves, each with constant work. Adding log2 n internal levels of cost n plus n leaf work gives Θ(n log n). Do not multiply n by the total number of nodes: work decreases with task size. Also do not omit the leaves, because they can dominate other recurrences.</p>
+<p>For T(n) = 2T(n/2) + 1, level costs are 1, 2, 4 and so on. Their geometric sum is Θ(n), and the n leaves are of the same order. In contrast, T(n) = T(n/2) + n has one task per level with costs n, n/2 and smaller terms. Its total is Θ(n) although its depth is logarithmic.</p>
+<h3>Master theorem: compare the local work</h3>
+<p>The standard master theorem applies to T(n) = aT(n/b) + f(n), where a ≥ 1 and b &gt; 1 are fixed constants. Assume positive constant-size base costs and nonnegative regular work. Define p = log_b a. The quantity n^p describes the scale of the leaf count. Compare f(n), the nonrecursive work, against that scale.</p>
+<p>Case 1 needs a polynomial gap below: f(n) = O(n^(p - ε)) for some fixed ε &gt; 0. Then T(n) = Θ(n^p). For 8T(n/2) + n², p = 3 and ε = 1 works. The lower levels dominate, so the result is Θ(n³).</p>
+<p>Case 2 in the basic form requires f(n) = Θ(n^p). Then T(n) = Θ(n^p log n). For 2T(n/2) + n, p = 1, so each level contributes the same order and the answer is Θ(n log n). A common extension allows f(n) = Θ(n^p log^k n) for fixed k ≥ 0. The result then gains another logarithmic factor: Θ(n^p log^(k+1) n).</p>
+<p>Case 3 needs a polynomial gap above: f(n) = Ω(n^(p + ε)) for a fixed ε &gt; 0. It also needs the regularity condition a f(n/b) ≤ c f(n) for some fixed c &lt; 1 beyond a threshold. Then T(n) = Θ(f(n)). For 2T(n/2) + n², the ratio is 1/2, so Θ(n²) follows.</p>
+<p>Check the theorem shape before selecting a case. T(n) = T(n - 1) + n does not divide by a fixed b. Unequal splits such as T(n/3) + T(2n/3) + n also fall outside this version. Even within the shape, f(n) = n/log n against p = 1 has no polynomial gap below and is not basic case 2. A recursion tree gives Θ(n log log n) with a suitable base threshold instead.</p>
+<h3>A complete exam solution</h3>
+<p>For T(n) = 3T(n/3) + n, identify a = 3 and b = 3. Compute p = log3 3 = 1. Compare f(n) = n with n^p = n. They match, so case 2 gives Θ(n log n). State the base cost as constant and mention that rounding child sizes does not change this standard balanced result.</p>
+<p>For T(n) = 4T(n/2) + n, p = 2 and f(n) is smaller by a factor n. Case 1 yields Θ(n²), not Θ(n log n). For T(n) = T(n/2) + n², p = 0. Case 3 applies because f halves to one quarter at each child and the regularity ratio is 1/4. The result is Θ(n²).</p>
+<p>Finally, compare total calls with maximum active depth. A balanced binary split can make Θ(n) calls while keeping only Θ(log n) frames alive at once. A recurrence for time adds both children's work. A recurrence for peak stack space takes the maximum child depth when calls execute one after another. Mixing the two produces a wrong memory bound.</p>
+<h3>Separate the local constant from the leaf scale</h3><p>Compare two recurrences with identical branching: A(n) = 2A(n/2) + 1 and B(n) = 2B(n/2) + n. Both have a = 2, b = 2 and leaf scale n. Their local work is different. The first has geometrically increasing level costs towards the leaves and totals Theta(n). The second pays n across every internal level and totals Theta(n log n). Stating only that each problem splits in two misses the term that changes the answer.</p><p>Now consider C(n) = C(n/2) + n with one child. Its level costs decrease as n, n/2, n/4 and smaller values. Their sum is below 2n, while the root alone costs n. These two bounds prove Theta(n) directly. This example shows why logarithmic recursion depth does not force logarithmic time. Count the amount of local work at each depth before adding the levels.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Count leaves of balanced splitting</h3>
+<p>A size-seven task splits into sizes three and four. Each final size-one task contributes one leaf, giving seven.</p>
+<div data-example="ex-1"></div>
+<h3>Count all calls of a binary split</h3>
+<p>The full binary split has eight leaves and seven internal tasks. Its fifteen calls follow C(n) = 2C(n/2) + 1 on powers of two.</p>
+<div data-example="ex-2"></div>
+<h3>Follow one half without branching</h3>
+<p>There are six sizes including the final size-one call. This counts calls, whereas five counts only the reductions.</p>
+<div data-example="ex-3"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>size 7</td><td>3 and 4</td><td>The two sizes add to 7.</td></tr><tr><td>size 3</td><td>1 and 2</td><td>One leaf appears immediately.</td></tr><tr><td>size 4</td><td>2 and 2</td><td>Both sides split once more.</td></tr><tr><td>all leaves</td><td>seven size-one tasks</td><td>Every original item belongs to one leaf.</td></tr></tbody></table>
+<h2 id="correctness">Why the method is correct</h2>
+<p>Use strong induction on the positive integer size n to prove that leaves(n) returns n. The base n = 1 returns one. For n &gt; 1, both child sizes are positive and strictly smaller than n. By the induction hypothesis their returned counts equal their sizes. Their sum is floor(n/2) + ceil(n/2) = n.</p>
+<p>Each recursive path strictly reduces its positive size until one. Therefore the count function terminates. This proof establishes its answer; a separate recurrence C(n) = C(floor(n/2)) + C(ceil(n/2)) + 1 counts its calls. Because every internal node has two children, n leaves imply n - 1 internal nodes and 2n - 1 total calls.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>The leaf-count program makes Θ(n) calls, with constant local work per call. Its active recursion depth is Θ(log n), because each path repeatedly halves the size. The explicit-stack example counts fifteen tasks for size eight. Its stack holds pending siblings rather than all tree nodes at once. The one-child chain example visits six sizes from 32 down to 1, illustrating logarithmic work directly.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Applying master theorem to n - 1</h3>
+<p>Subtracting one is not division by a fixed factor. Expand the chain or use substitution instead of forcing a and b.</p>
+<h3>Skipping regularity in case 3</h3>
+<p>Polynomial dominance alone is not the entire standard case-three hypothesis. Verify the inequality involving a f(n/b).</p>
+<h3>Counting recursion depth as total time</h3>
+<p>Separate branches execute at different times but both contribute work. Add their time costs even though their frames are not all simultaneously active.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>C17 supports recursive functions but guarantees no particular maximum recursion depth. These examples restrict sizes to keep both arithmetic and active calls small.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Translate recursion into equations and solve them using substitution, recursion trees and the master theorem.</p>
+<p>Continue with <a href="topic:algo-space-complexity">space complexity</a>.</p>

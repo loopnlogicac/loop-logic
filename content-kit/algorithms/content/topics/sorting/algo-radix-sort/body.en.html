@@ -1,0 +1,67 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Suppose student codes have three digits. You could arrange them by the final digit, then by the middle digit, then by the first digit. This works only if each later arrangement keeps the earlier order among records whose new digit ties. <dfn>LSD radix sort</dfn> combines digit passes in precisely this way.</p>
+<p>LSD means least significant digit first. The first pass handles units, then tens, then hundreds. The surprising part is that a later stable pass improves the order without destroying the useful lower-digit order you established earlier.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">for place in 1, 10, 100
+    count[0..9] = 0
+    count digit ((a[i] + 99) / place) mod 10 for all i
+    accumulate count into prefix ends
+    scan i from n - 1 down to 0; place whole a[i] stably
+    copy output back into a</code></pre>
+<h2 id="how-it-works">Radix Sort step by step</h2>
+<h3>Extract one digit at a time</h3>
+<p>For a nonnegative integer key and decimal place, compute digit = (key/place) % 10. With key 472, place 1 gives 2, place 10 gives 7, and place 100 gives 4. Integer division removes lower positions; remainder ten selects the next digit. Leading missing digits are treated as zero.</p>
+<p>The bounded C example accepts original values from -99 through 99. It shifts every key by 99, making an order-preserving encoded range 0 through 198. It extracts digits from that shifted key while moving the original value. Adding the same constant preserves the order of all original integers.</p>
+<p>Three decimal passes are sufficient for encoded keys up to 198. This fixed bound avoids multiplying place until it overflows. A general implementation that derives its maximum must also stop safely before place*base exceeds the integer range. Avoid floating-point powers for exact integer digit positions.</p>
+<h3>Use a stable counting pass for each digit</h3>
+<p>Each decimal digit lies from zero through nine, so one pass needs ten counters. Count the current digit of every record, accumulate the counts into end boundaries, then place records from right to left into an output buffer. Copy the complete records back before moving to the next digit.</p>
+<p>This is the same stable placement rule used in counting sort, applied to one digit rather than the whole key range. The output buffer has n cells and the count array has b cells for base b. Counts must be reset before each pass, because the digit frequencies can change completely from units to tens.</p>
+<p>A pass moves the entire original key or record, not merely the selected digit. If you reconstruct an array of digits, you lose the information needed by later passes. Associated student fields must travel with their key as well, so record identity survives all passes.</p>
+<h3>Why stability makes lower digits survive</h3>
+<p>After the units pass, records are ordered by their last digit. During the tens pass, records with smaller tens digits go first. Within one tens group, a stable pass preserves the previous units order. The result is therefore ordered by the last two digits, as though each pair were one two-digit number.</p>
+<p>For a familiar unshifted example [21,13,12], a stable units pass gives [21,12,13]. The tens pass then gives [12,13,21]. If the tens pass reverses equal tens digits, 12 and 13 may end up in the wrong order. Numerically sorting each digit independently is insufficient unless the earlier tie order is retained.</p>
+<p>Inductively, after processing d places, the array is sorted by its d least significant digits. Once all key digits have been handled, that digit tuple determines the full key. This is the central correctness argument for LSD radix sorting.</p>
+<h3>Trace the encoded five-value example</h3>
+<p>For original values [7,3,5,3,1], the encoded keys are [106,102,104,102,100]. Units digits are [6,2,4,2,0], so the units pass orders original values as [1,3,3,5,7]. The two equal original 3 records retain their order because their digit placement is stable.</p>
+<p>All encoded tens digits in this example are zero. The tens pass must preserve the whole previous order. All hundreds digits are one, so the final pass also leaves it unchanged. A pass that seems to do nothing still tests the stability requirement. Choosing a second example that spans digit boundaries gives a less uniform view.</p>
+<p>For original values [-99,-98,0,99], encoded keys are [0,1,99,198]. Their leading zeros are real parts of the comparison model. The same fixed three passes work without a special negative-key branch. This encoding is suitable only because the original range and offset are explicitly bounded.</p>
+<h3>Derive the parameterised cost</h3>
+<p>Let d be the number of digit passes, b the base, and n the number of records. One stable counting pass takes Θ(n + b) time: initialise b counts, scan n records, accumulate b counts, place n records and copy n records. Repeating d times gives Θ(d(n + b)).</p>
+<p>The output array is reused across passes, so workspace is Θ(n + b), not Θ(dn). The shown C version declares its buffer within the pass scope, but earlier buffers do not remain alive after that pass. Peak simultaneous storage is what matters. The count array is also reused conceptually, after resetting it.</p>
+<p>Radix sort can be linear in n when the key representation has a fixed number of digits and b is fixed. For unbounded integers, d grows with the key magnitude, so calling it always O(n) hides an input parameter. For very large bases, the count-array initialisation and memory cost can dominate despite fewer passes.</p>
+<p>A comparison sorter accepts arbitrary comparable keys. Radix sorting needs an extractable positional representation whose digit order matches the intended full order. Variable-length strings, signed machine integers and locale-aware text each need careful encoding rules. The offset used here solves one small signed interval; it is not a universal recipe for every key type.</p>
+<h3>Choose LSD deliberately</h3>
+<p>A most-significant-digit strategy starts at the other end and recursively sorts groups by later digits. It has a different control structure and can handle some variable-length keys naturally. Do not mix its grouping rule with the iterative LSD proof.</p>
+<p>For short bounded integer keys, LSD passes are easy to implement and trace. For a tiny n, setup can outweigh the benefit over insertion sort or a library routine. Compare actual domain requirements and memory limits before selecting a method. The asymptotic advantage is conditional on useful bounds for d and b.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>Shifted keys 106,102,104,102,100 are ordered with three decimal passes. The original values finish as 1 3 3 5 7.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>Adding 99 gives a nonnegative digit representation even for -2. Stable digit passes retain all original signed values.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>After the digit passes, equal original scores are adjacent. The distinct-group scan therefore reports three.</p>
+<div data-example="ex-3"></div>
+<h3>Watch values cross decimal boundaries</h3>
+<p>The shifted keys span 0, 1, 99, 198 and 100. Units order alone is not final; later stable passes settle tens and hundreds.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Encode</td><td>[106,102,104,102,100]</td><td>Add 99 only for digit extraction.</td></tr><tr><td>Units pass</td><td>[1,3,3,5,7]</td><td>Digits 0,2,2,4,6 determine the record order.</td></tr><tr><td>Tens pass</td><td>[1,3,3,5,7]</td><td>Equal tens digits retain units order.</td></tr><tr><td>Hundreds pass</td><td>[1,3,3,5,7]</td><td>Equal leading digits retain the final ascending order.</td></tr></tbody></table>
+<h2 id="correctness">Why the method is correct</h2>
+<p>Assume the array is sorted by the first r processed low digits. A stable pass on digit r + 1 orders records by that new digit. Within each equal new-digit group, the earlier order by the r lower digits remains unchanged. Hence the array is sorted by the combined r + 1 low digits. The base before any pass is vacuous, and after all digits this order is the full encoded-key order.</p>
+<p>Adding 99 is strictly increasing over the permitted original range, so encoded-key order equals original-key order. Each pass preserves all whole records through a separate output buffer. The fixed three-pass loop terminates without relying on an unbounded power calculation.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>The demonstration has b = 10 and d = 3, so its time is Θ(3(n + 10)) and its peak auxiliary space is Θ(n + 10). The general expression Θ(d(n + b)) must stay visible when key width or base can vary. Stability is inherited from each counting pass, and the shared output buffer means the method is not in-place under a constant-workspace definition.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Using an unstable digit sort</h3>
+<p>A later equal-digit group can lose the order established by lower digits. Use stable record placement for every pass.</p>
+<h3>Applying remainder directly to negative keys</h3>
+<p>Negative remainders cannot be used as count-array indices. Define an order-preserving encoding before extracting digits.</p>
+<h3>Multiplying place without a range guard</h3>
+<p>A general loop can overflow its integer place variable. Bound the pass count or guard the multiplication.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>Digit extraction here uses C17 integer division on nonnegative encoded keys. Fixed places avoid overflowing a repeatedly multiplied place variable.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Order whole records by stable low-to-high digit passes with explicit key encoding and digit bounds.</p>
+<p>Continue with <a href="topic:algo-sorting-comparison">sorting comparison</a>.</p>

@@ -1,0 +1,60 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">When you arrange playing cards in your hand, you usually take the next card and slide it into the right place among the earlier cards. <dfn>Insertion sort</dfn> treats the array the same way. A sorted prefix grows by one key at each outer iteration.</p>
+<p>Insertion sort is useful for small arrays and nearly ordered data. It spends work on values that really need to move, rather than scanning every unfinished pair regardless of order. Its simple movement also makes stability easy to explain.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">for i = 1 to n - 1
+    key = a[i]; j = i - 1
+    while j &gt;= 0 and a[j] &gt; key
+        a[j + 1] = a[j]; j = j - 1
+    a[j + 1] = key
+    a[0..i] is sorted</code></pre>
+<h2 id="how-it-works">Insertion Sort step by step</h2>
+<h3>Save the key before shifting</h3>
+<p>The first value is already a sorted prefix of length one. At index i, save a[i] as key. Begin j at i - 1 and compare earlier values with the saved key. While a[j] is larger, copy it one cell right and decrease j. The key remains safe in its separate variable while its original cell may be overwritten.</p>
+<p>When the scan stops, place key in a[j + 1]. Either j is -1, meaning the key is smaller than every earlier value, or a[j] is at most key. In both cases the cell immediately after j is the correct insertion position. This is a shift-based algorithm, although an adjacent-swap variant also exists.</p>
+<p>For [7,3,5,3,1], saving key 3 at i = 1 allows 7 to move right. The result becomes [3,7,5,3,1]. Next key 5 moves 7 again and settles between 3 and 7. The unsorted suffix is not assumed to have any order until its own keys are inserted.</p>
+<h3>Read the loop guard in a safe order</h3>
+<p>The C guard is j ≥ 0 and a[j] &gt; key, written with the short-circuit operator &amp;&amp;. C evaluates the left operand first and skips the right operand when the left is false. Therefore a negative j never becomes an array access. Reversing these operands can read outside the array before discovering that j is invalid.</p>
+<p>A signed index makes j = -1 a convenient stopping state. With an unsigned index, subtracting one at zero wraps to a large value instead of becoming negative. You would need a different loop design, such as tracking the hole position above zero. Do not copy signed-index conditions into an unsigned version without redesigning them.</p>
+<p>During shifting, the visible array can temporarily contain repeated copies of one value. That does not mean the algorithm has lost the key: it is held separately. A correct trace displays the saved key so you can account for all values. Only after reinsertion should you compare the array's multiset with the original.</p>
+<h3>Nearly sorted input avoids movement</h3>
+<p>Ascending input makes the inner condition fail immediately for every new key. There are n - 1 key checks and no shifts, giving Θ(n) time. Reverse order makes key i move across all i previous values, producing 1 + 2 + ... + n - 1 shifts and Θ(n²) time.</p>
+<p>An <dfn>inversion</dfn> is a pair of positions p &lt; q with a[p] &gt; a[q]. Each insertion shift crosses one such out-of-order pair. The total number of shifts equals the input inversion count. With I inversions, the usual insertion implementation takes Θ(n + I) time. This explains its advantage on data with few inversions more precisely than saying the list looks almost sorted.</p>
+<p>A nearly ascending list with one small value at the very end can still require that value to cross many positions. That costs linear extra work, but may remain far below the quadratic worst case. Describe the actual disorder or inversion count when making a performance claim.</p>
+<h3>Keep equal keys in arrival order</h3>
+<p>The inner test shifts only values strictly larger than key. If an earlier equal record exists, shifting stops before crossing it. A later 3B therefore stays after an earlier 3A when keys are equal. This proves stability for the shift-based implementation.</p>
+<p>Replacing the strict test with greater-than-or-equal moves the new key before equal earlier records. The numerical sequence remains sorted, but record order changes. Stability matters when you first sort records by one field and then stably sort by another field. The earlier order can serve as the tie order for the later sort.</p>
+<p>Insertion sort needs only key and the indices in addition to the input array. It is in-place with constant workspace. Its worst-case quadratic time makes it unsuitable for very large random arrays, but many practical sorting designs use it on short subarrays where its small overhead is useful.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>Successive saved keys extend the prefix until it becomes 1 3 3 5 7. The last key 1 shifts four predecessors.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>Insertion shifts apply to signed values directly. Strict comparison keeps the two -2 entries in their earlier order.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>The insertion result places all equal keys together. Counting group beginnings gives three distinct scores.</p>
+<div data-example="ex-3"></div>
+<h3>Relate shifts to inversions</h3>
+<p>Only pair 3,2 is inverted. One insertion shift removes that inversion, illustrating why almost ordered input is inexpensive.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>i = 1, key = 3</td><td>[3,7,5,3,1]</td><td>Shift 7 right and insert 3.</td></tr><tr><td>i = 2, key = 5</td><td>[3,5,7,3,1]</td><td>Only 7 is larger than the key.</td></tr><tr><td>i = 3, key = 3</td><td>[3,3,5,7,1]</td><td>Stop after the earlier equal 3.</td></tr><tr><td>i = 4, key = 1</td><td>[1,3,3,5,7]</td><td>Shift all four earlier values.</td></tr></tbody></table>
+<div data-lab="insertion-sort"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>Before outer iteration i, a[0..i) is sorted and contains the original first i values. Save the next key. During the inner loop, values shifted to its right are all greater than key and remain in sorted order. When no larger predecessor remains, inserting key at j + 1 creates a sorted prefix of length i + 1.</p>
+<p>The outer index grows to n. The inner index decreases until either an ordered predecessor appears or the left boundary is passed. Both loops therefore terminate. Every shift is paired with eventual reinsertion of the saved key, so each completed outer iteration preserves all input records.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>Best-case time is Θ(n); reverse-order worst-case time is Θ(n²). For uniformly random distinct permutations, the expected inversion count is n(n - 1)/4, giving quadratic average time. General time is Θ(n + I) for I inversions. Auxiliary storage is Θ(1), and strict shifting preserves stability. These conclusions apply to this insertion routine, not to every algorithm that happens to grow a prefix.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Losing key during the first shift</h3>
+<p>Save a[i] before moving predecessors. Otherwise the original key can be overwritten by a larger value.</p>
+<h3>Reading a[j] before checking j</h3>
+<p>Put the boundary test first in the &amp;&amp; expression so short-circuit evaluation protects the array access.</p>
+<h3>Inserting at j rather than j + 1</h3>
+<p>The stopped j points to an acceptable predecessor, or -1. The open cell is the position immediately after it.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>C17 guarantees left-to-right short-circuit evaluation for &amp;&amp;. Testing j &gt;= 0 first prevents the insertion loop from evaluating a[j] after j becomes negative.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Insert saved keys into a sorted prefix with safe shifts, stable ties and work tied to inversions.</p>
+<p>Continue with <a href="topic:algo-merge-sort">merge sort</a>.</p>
