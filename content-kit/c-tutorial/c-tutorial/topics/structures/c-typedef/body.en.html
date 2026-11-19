@@ -1,0 +1,60 @@
+<h2 id="introduction">A shorter name for the same type</h2>
+<p class="lead">You may write struct Mark many times in a record-processing program. A useful short name can make interfaces easier to read. A <dfn>typedef</dfn> declares an alias for an existing type. It does not allocate an object, and it does not create a different incompatible type with new arithmetic rules.</p>
+<p>Think of an alias as a second label on the same drawer. Roll can name unsigned long, while Mark can name struct Mark. The underlying type remains the same. A Roll still follows unsigned long's range, formatting, and conversion rules. Naming it after a domain idea helps readers but does not enforce the domain by itself.</p>
+<p>Aliases are especially helpful for structure names and complicated function pointer types. A ScoreRule alias can describe a pointer to a function inspecting a student record. Without an alias, every declaration must repeat the longer pointer syntax. The shorter name makes room for the function's role to stand out.</p>
+<p>Pointer aliases need caution. They can hide the star that tells readers a value is an address. They also affect how const and multi-variable declarations are read. Learn those rules before using pointer aliases broadly. A short type name is useful only when its meaning stays clear at the point of use.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>Place typedef before a declaration shaped like an ordinary variable declaration. The declared identifier becomes the type alias instead of a variable. Thus typedef unsigned long Roll makes Roll available as a type name. A later Roll roll declares an actual object.</p>
+<p>For a tagged structure, typedef struct Mark Mark can introduce the short name while keeping the tag. The combined form defines the tagged structure and alias together. Tags and ordinary identifiers use separate name spaces in C, so the same spelling is permitted in that common pattern.</p><pre><code class="language-c">typedef unsigned long Roll;
+typedef struct Mark {
+    Roll roll;
+    int score;
+} Mark;
+Mark student = {17UL, 82};
+</code></pre><table class="ref"><thead><tr><th scope="col">Declaration</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>typedef int Count;</td><td>Count is another name for int</td></tr><tr><td>Count used;</td><td>used is an int object</td></tr><tr><td>typedef int *IntPointer;</td><td>IntPointer names the complete pointer type</td></tr><tr><td>IntPointer a, b;</td><td>Both a and b are pointers</td></tr></tbody></table>
+
+<h2 id="how-it-works">The alias names a complete type</h2>
+<p>Start with typedef int *IntPointer. The alias denotes int pointer as a whole. When you later declare IntPointer first, second, both identifiers get that complete pointer type. This differs from int *first, second, where only first is a pointer and second is an int. The star in a direct declaration belongs to a declarator.</p>
+<p>Now add const to an alias. IntPointer const fixed_pointer means a const pointer to int. The complete aliased pointer type receives top-level const. You cannot redirect fixed_pointer, but you can change a mutable int through it. It does not mean pointer to const int.</p>
+<p>For a read-only integer view, write const int *view or create an explicitly named alias for pointer to const. The third example places both ideas beside each other. The fixed pointer writes nine into value, while the read-only view prints it. Distinguishing pointer constness from target constness avoids misleading APIs.</p>
+<p>A typedef alias does not provide strong separation between two domain names. If Roll and Amount both alias unsigned long, C still treats them as compatible underlying types. An accidental mix can compile. When distinctness matters, a wrapper structure with a named member can express a stronger separation, together with conversion functions.</p>
+<p>Format strings follow the underlying type. A Roll alias for unsigned long prints with %lu, not automatically with %d because its name sounds like a number. The same principle applies to sizeof and alignment. An alias changes how you spell a type, not how it is represented.</p>
+<p>A function pointer alias also names a complete type. typedef int (*ScoreRule)(const Mark *) describes a pointer to a function returning int and accepting a const Mark pointer. A ScoreRule variable can store a compatible function address and call it using ordinary function-call syntax.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The first alias names a domain value and a record. The next two focus on the less visible consequences of aliasing a pointer. Keep the original typedef declaration in view while reading each program. When an alias becomes hard to interpret, expand its meaning mentally before adding qualifiers.</p>
+
+<h3>Name a roll type and record type</h3>
+<p>The alias Mark removes repeated struct spelling at the variable declaration. The alias Roll explains the role of the unsigned long member. Neither declaration creates a new runtime object until student is declared. The output 17 82 follows the same storage and member access rules as the original structure spelling. Format selection still depends on unsigned long and int.</p>
+<div data-example="ex-1"></div>
+
+<h3>Declare two pointer objects using an alias</h3>
+<p>IntPointer contains the entire int * type. Both first and second are therefore pointer objects in the declaration. The assignment through second changes their shared target. This differs from a direct int *first, second declaration, where second would be an integer. The alias is a type name, not pasted source text.</p>
+<div data-example="ex-2"></div>
+
+<h3>Qualify the aliased pointer type</h3>
+<p>IntPointer const fixes the pointer object's stored address. It does not make value const, so dereferencing fixed_pointer for assignment is valid. read_only has a different type: pointer to const int. It can inspect the same integer but cannot change it through that view. Both reads print nine after the permitted target update.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Aliases do not replace validation or ownership</h2>
+<p>A typedef does not initialize a later object. Mark student without an initializer has the same initialization requirements as struct Mark student. A pointer alias does not guarantee a non-NULL value or a live target. You still need explicit initialization, bounds information, and an ownership contract when the alias represents an address.</p>
+<p>A structure with no tag can be given an alias, as in typedef struct { int x; int y; } Point. That is useful for a self-contained value type. A self-referential structure needs a way to name its incomplete type while the definition is open. A struct tag provides that route, as later linked-list examples will show.</p>
+<p>Do not use a preprocessor macro as a substitute for a typedef. A macro replaces tokens before C declarations are parsed. If a macro expands to int *, writing two variables in one declaration can again produce one pointer and one integer. A typedef alias instead names a complete type in the compiler's type system.</p>
+<p>Headers may expose aliases as part of an interface. Pick names that remain meaningful outside one function. Avoid aliases that conceal every scalar type without adding domain meaning, because readers then need to chase definitions for ordinary arithmetic. The goal is readable code, not a different spelling for every basic type.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Assuming const changes the pointed-to type</h3>
+<p>const IntPointer p does not create a read-only int target. It makes the pointer object const. If the target should be read-only through p, state pointer-to-const in the alias definition or spell const int * directly. Qualifiers attach to the complete aliased type.</p>
+<h3>Treating an alias as a new checked domain</h3>
+<p>A Roll alias cannot reject roll zero or prevent assigning an Amount alias with the same underlying type. Validate the allowed range at input boundaries. If the language must distinguish two concepts strongly, a pair of wrapper structure types can express different record types.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Use aliases where they clarify interfaces: record types, domain quantities, and compatible callback signatures. Keep pointer ownership explicit in documentation even when the star is hidden. A const pointer alias can be correct, but its name and nearby contract should prevent readers from assuming a const target.</p>
+<p>Maintain one canonical alias for a shared concept. If a Roll changes representation, review format strings, arithmetic limits, and interfaces together. The short name reduces repeated spelling but cannot make a representation change harmless. Compilers check type compatibility; they do not understand the business meaning of a typedef name.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>typedef is part of C89 and later. The examples target C17 and do not rely on C++ using declarations or classes. A typedef name does not replace a struct tag in every context unless you explicitly introduce that alias. The const-on-pointer-alias rule follows C type qualification and is unchanged by choosing C17.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>A typedef adds a name to a complete existing type. It can simplify record and callback declarations without creating new runtime behavior. Keep hidden pointer levels, const placement, format rules, and validation visible. Next, compare separate member storage with shared member storage in <a href="topic:c-unions">Unions</a>.</p>

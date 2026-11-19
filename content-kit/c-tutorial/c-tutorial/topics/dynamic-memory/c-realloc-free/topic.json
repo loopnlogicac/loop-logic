@@ -1,0 +1,388 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-realloc-free",
+  "module": "dynamic-memory",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "realloc and free",
+    "bn": "realloc আর free দিয়ে মেমরি সামলানো"
+  },
+  "summary": {
+    "en": "Resize a live block with a temporary pointer, initialize new elements, and release ownership safely.",
+    "bn": "টেম্পোরারি পয়েন্টার দিয়ে মেমরির সাইজ বদলাও, নতুন এলিমেন্টে মান বসাও আর শেষে মেমরি ছাড়ো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "c-malloc-calloc"
+  ],
+  "related": [
+    "c-dynamic-memory-intro",
+    "c-malloc-calloc",
+    "c-memory-leaks"
+  ],
+  "keywords": [
+    "realloc and free",
+    "C17",
+    "dynamic-memory"
+  ],
+  "standards": {
+    "minimum": "c99",
+    "notes": [
+      "These complete programs target C17; declarations in loops require C99 or later."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give a growing list more room"
+    },
+    {
+      "id": "syntax",
+      "title": "Read the C notation"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace the resize as a transaction"
+    },
+    {
+      "id": "examples",
+      "title": "Worked programs"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Shrinkage, aliases, and zero size"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Mistakes and repairs"
+    },
+    {
+      "id": "best-practices",
+      "title": "Habits to use in your programs"
+    },
+    {
+      "id": "version-notes",
+      "title": "C versions and portability"
+    },
+    {
+      "id": "summary",
+      "title": "What you can now do"
+    }
+  ],
+  "examples": [
+    {
+      "title": "Grow two marks to four",
+      "explanationHtml": "<p>The preserved first value is 10 and the initialized new last value is 40.</p>",
+      "id": "ex-1",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true
+    },
+    {
+      "title": "Keep only the first two values",
+      "explanationHtml": "<p>The retained prefix holds 5 and 10 after the shrink.</p>",
+      "id": "ex-2",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true
+    },
+    {
+      "title": "Release and mark the owner empty",
+      "explanationHtml": "<p>The program prints the saved 25, then reports an empty owner after assigning NULL.</p>",
+      "id": "ex-3",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true
+    }
+  ],
+  "practice": [
+    {
+      "title": "Append one value safely",
+      "statementHtml": "<p>Read count from 1 to 20, count values from -100 to 100, then one extra value in the same range. Print Count, values, extra: then all count+1 values separated by spaces. Grow with realloc.</p>",
+      "hints": [
+        "Preserve the old pointer until the temporary succeeds."
+      ],
+      "difficulty": "easy",
+      "id": "p-1",
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Sum a retained prefix",
+      "statementHtml": "<p>Read count from 1 to 20 and keep from 1 to count, then count integers from -100 to 100. Print Count, keep, values: then the sum after shrinking storage to keep elements.</p>",
+      "hints": [
+        "Removed elements must not be read after resizing."
+      ],
+      "difficulty": "medium",
+      "id": "p-2",
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Clear an owned result",
+      "statementHtml": "<p>Read value from -100 to 100. Print Value:, then Saved: followed by a space and the allocated value. Release it, set the owner to NULL, and print Empty: 1.</p>",
+      "hints": [
+        "Print the value before ending its lifetime."
+      ],
+      "difficulty": "easy",
+      "id": "p-3",
+      "solution": "practice/p-3.c",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Grow capacity while reading",
+      "statementHtml": "<p>Read count from 0 to 30, then count integers from -100 to 100. Print Count and values: then total and final capacity separated by a space. Begin at capacity zero and grow to 1,2,4,8,16,32 as needed.</p>",
+      "hints": [
+        "Update capacity only after realloc succeeds."
+      ],
+      "difficulty": "hard",
+      "id": "p-4",
+      "solution": "practice/p-4.c",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        },
+        {
+          "stdin": "practice/p-4.t3.in",
+          "output": "practice/p-4.t3.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "For positive size, what remains after realloc returns NULL?",
+      "explanation": "A failed positive-size resize preserves the original allocation.",
+      "difficulty": "medium",
+      "id": "q-1",
+      "options": [
+        "The original allocation remains live",
+        "The original block was freed",
+        "A larger zeroed block exists",
+        "Every alias is NULL"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which realloc pattern preserves ownership on failure?",
+      "explanation": "A temporary keeps the old base available until success.",
+      "difficulty": "medium",
+      "id": "q-2",
+      "options": [
+        "Overwrite the only owner directly",
+        "Store the result in a temporary",
+        "Free the old block first",
+        "Set the owner to NULL before calling"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What must happen before reading newly added realloc elements?",
+      "explanation": "Newly added storage is uninitialized, even after resizing calloc storage.",
+      "difficulty": "medium",
+      "id": "q-3",
+      "options": [
+        "Call free on the tail",
+        "Compare the old and new addresses",
+        "Initialize the new elements",
+        "Assume calloc cleared the new tail"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "After successful realloc, how should an interior borrower be obtained?",
+      "explanation": "Success ends the old lifetime and invalidates prior aliases.",
+      "difficulty": "medium",
+      "id": "q-4",
+      "options": [
+        "Continue using its old pointer",
+        "Compare its old address first",
+        "Increment the stale borrower",
+        "Rebuild it from the new base and a saved index"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which explicit operation handles a desired zero-capacity result portably?",
+      "explanation": "Explicit release avoids the special zero-size realloc rules.",
+      "difficulty": "medium",
+      "id": "q-5",
+      "options": [
+        "free(p), then set p to NULL",
+        "realloc(p,0) and assume NULL means failure",
+        "free(p+1)",
+        "Call free twice without reassignment"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does free do to the caller's pointer variable?",
+      "explanation": "Assign NULL yourself if an empty owner state is needed.",
+      "difficulty": "medium",
+      "id": "q-6",
+      "options": [
+        "It sets every alias to NULL",
+        "It does not assign a new value to that variable",
+        "It sets the element count to zero",
+        "It changes the pointer type"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does vector length describe after capacity grows?",
+      "explanation": "Reserved slots and initialized collection entries are different counts.",
+      "difficulty": "medium",
+      "id": "q-7",
+      "options": [
+        "The total allocated byte count",
+        "Always the capacity",
+        "How many elements hold meaningful collection values",
+        "The number of successful malloc calls"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "output",
+      "prompt": "Which prefix and new last element print after growth to four?",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int *items = malloc(2 * sizeof *items);\n    if (items == NULL) {\n        return 1;\n    }\n    items[0] = 10;\n    items[1] = 20;\n    int *next = realloc(items, 4 * sizeof *items);\n    if (next == NULL) {\n        free(items);\n        return 1;\n    }\n    items = next;\n    items[2] = 30;\n    items[3] = 40;\n    printf(\"%d %d\\n\", items[0], items[3]);\n    free(items);\n    return 0;\n}\n",
+      "explanation": "The first value survives and the new last element receives 40.",
+      "difficulty": "medium",
+      "id": "q-8",
+      "options": [
+        "10 20",
+        "0 40",
+        "10 0",
+        "10 40"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "output",
+      "prompt": "Which values remain after shrinking four initialized integers to two?",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int *items = malloc(4 * sizeof *items);\n    if (items == NULL) {\n        return 1;\n    }\n    for (int i = 0; i < 4; i++) {\n        items[i] = (i + 1) * 5;\n    }\n    int *next = realloc(items, 2 * sizeof *items);\n    if (next == NULL) {\n        free(items);\n        return 1;\n    }\n    items = next;\n    printf(\"%d %d\\n\", items[0], items[1]);\n    free(items);\n    return 0;\n}\n",
+      "explanation": "Only the first two initialized integers are retained.",
+      "difficulty": "medium",
+      "id": "q-9",
+      "options": [
+        "5 10",
+        "15 20",
+        "5 20",
+        "0 0"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "output",
+      "prompt": "What does the owner report after explicit release and NULL assignment?",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int *owner = malloc(sizeof *owner);\n    if (owner == NULL) {\n        return 1;\n    }\n    *owner = 25;\n    printf(\"Before: %d\\n\", *owner);\n    free(owner);\n    owner = NULL;\n    free(owner);\n    printf(\"Empty: %d\\n\", owner == NULL);\n    return 0;\n}\n",
+      "explanation": "The value is read while live; the final comparison sees NULL.",
+      "difficulty": "medium",
+      "id": "q-10",
+      "options": [
+        "Before: 25\nEmpty: 0",
+        "Before: 25\nEmpty: 1",
+        "Before: 0\nEmpty: 1",
+        "Before: 25"
+      ],
+      "answer": 1
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Use a temporary pointer for a positive-size realloc request.",
+      "bn": "ধনাত্মক সাইজে realloc করার ফল টেম্পোরারি পয়েন্টারে রাখো।"
+    },
+    {
+      "en": "Failed resizing leaves the old block available.",
+      "bn": "সাইজ বদলানো ব্যর্থ হলে পুরোনো ব্লক ব্যবহারযোগ্য থাকে।"
+    },
+    {
+      "en": "Successful resizing invalidates previous aliases.",
+      "bn": "সাইজ বদলানো সফল হলে পুরোনো অ্যাড্রেসের পয়েন্টার আর ব্যবহার কোরো না।"
+    },
+    {
+      "en": "Newly added slots need initialization.",
+      "bn": "নতুন স্লটগুলোতে আগে মান বসাও।"
+    },
+    {
+      "en": "Use free and NULL assignment for an empty owner state.",
+      "bn": "মেমরি ছেড়ে মালিক পয়েন্টার খালি রাখতে free-এর পর NULL বসাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Why can p=realloc(p,new_bytes) cause a memory leak?",
+      "marks": 4,
+      "answerHtml": "<p>For positive new_bytes, failure returns NULL while keeping the old allocation live. Assigning NULL directly to the only owner loses its base address. Use a temporary, then update p only after success.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Distinguish capacity, length, and pointer validity during a growing array operation.",
+      "marks": 6,
+      "answerHtml": "<p>Capacity counts allocated slots; length counts meaningful entries. On successful growth, existing entries are preserved, new slots need initialization, and old aliases are invalid. Commit pointer and capacity after success, then append and increase length. On failure, preserve the original pointer, length, and capacity.</p>"
+    },
+    {
+      "type": "output",
+      "question": "Trace shrinking the four-value array.\n\n#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int *items = malloc(4 * sizeof *items);\n    if (items == NULL) {\n        return 1;\n    }\n    for (int i = 0; i < 4; i++) {\n        items[i] = (i + 1) * 5;\n    }\n    int *next = realloc(items, 2 * sizeof *items);\n    if (next == NULL) {\n        free(items);\n        return 1;\n    }\n    items = next;\n    printf(\"%d %d\\n\", items[0], items[1]);\n    free(items);\n    return 0;\n}\n",
+      "marks": 4,
+      "answerHtml": "<pre class=\"output\">5 10</pre><p>The first two values, 5 and 10, survive the positive-size shrink.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "realloc and free — C reference",
+      "url": "https://en.cppreference.com/w/c/memory/realloc"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,71 @@
+<h2 id="introduction">Some record fields need only a few bits</h2>
+<p class="lead">A lab account may store whether it is active, whether payment is complete, and how many attempts remain. The first two facts need only zero or one. A three-bit unsigned value can represent attempts from zero through seven. A <dfn>bit field</dfn> asks for a limited-width integer member inside a structure.</p>
+<p>Think of small checkboxes on a form rather than a separate large box for every answer. The implementation can group several fields into a storage unit. That can reduce space for many small flags, though the final structure size still depends on alignment and layout choices. Five declared value bits do not guarantee a one-byte structure.</p>
+<p>Bit fields are useful for compact internal flags when code should read named fields. They are less suitable as a portable description of network packets or device registers. The implementation decides important details about bit order and allocation units. Meaningful field values can be portable while their raw byte positions are not.</p>
+<p>Learn those two layers separately. The field declaration controls an accepted integer range and member access syntax. The storage layout controls where the implementation places those bits. Our examples print field values, so their results do not require guessing which bit appears first in memory.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>Inside a structure, put a colon and an integer constant width after the field name. unsigned int active:1 gives active one unsigned value bit. unsigned int attempts:3 gives attempts three bits. Use an explicitly unsigned base type when nonnegative flags are intended; plain int bit-field signedness is implementation-defined.</p>
+<p>C17 requires support for _Bool, signed int, and unsigned int bit fields. Other base types may be implementation-defined extensions. The width must fit the base type's permitted number of bits. A named field cannot have width zero. A zero-width unnamed field serves a different layout role described below.</p><pre><code class="language-c">struct Flags {
+    unsigned int active : 1;
+    unsigned int paid : 1;
+    unsigned int attempts : 3;
+};
+</code></pre><table class="ref"><thead><tr><th scope="col">Field</th><th scope="col">Width</th><th scope="col">Representable values</th></tr></thead><tbody><tr><td>active</td><td>1</td><td>0 or 1</td></tr><tr><td>paid</td><td>1</td><td>0 or 1</td></tr><tr><td>attempts</td><td>3</td><td>0 through 7</td></tr><tr><td>unnamed :0</td><td>No value member</td><td>Requests a new allocation-unit boundary</td></tr></tbody></table>
+
+<h2 id="how-it-works">Use values without assuming byte positions</h2>
+<p>The first example initializes active to one, paid to zero, and attempts to five. Each assigned value fits its field. Reading the fields returns those values, regardless of the implementation's bit ordering. The printed line is 1 0 5. Explicit unsigned casts make the printf argument types match %u after integer promotions.</p>
+<p>Integer promotions matter because a narrow unsigned int bit field may promote to int when all its values fit. Passing that promoted value directly to a variadic format expecting unsigned int is needlessly confusing. Cast to unsigned int for %u, as these programs do, or choose a format and conversion that match the intended promoted type.</p>
+<p>The second example starts from an aggregate zero initializer, then sets both flags and the attempt count. The conditional increment checks the upper bound first. At seven, it leaves attempts unchanged. A small field does not eliminate your policy choice about overflow: saturate, wrap explicitly, reject input, or widen the representation.</p><pre class="diagram">logical field values
+active  [1 bit : 0..1]
+paid    [1 bit : 0..1]
+attempts[3 bits: 0..7]
+
+actual allocation unit, bit order, and padding: implementation choices
+logical model does not promise this drawing is a byte map</pre><p>Do not take the address of a bit field. A field may occupy less than a byte, and C pointer types address ordinary objects rather than an isolated bit-field location. The expression &amp;flags.active is invalid. You also cannot apply sizeof directly to a bit-field expression. You can measure the containing structure instead.</p>
+<p>For input, read into a normal unsigned int temporary, validate its value, then assign the bit field. scanf needs a pointer to a real addressable object, so &amp;flags.attempts cannot be supplied. The temporary also lets you reject eight or larger before narrowing to a three-bit field.</p>
+<p>An unnamed zero-width field, such as unsigned int :0, prevents a following bit field from sharing the allocation unit that held the previous field. It does not create a named value or promise a universal byte offset. Padding, allocation-unit size, direction within a unit, and whether fields can straddle units still involve implementation choices.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The programs separate named bit-field access from explicit numeric packing. The packed-word program defines bit positions using shifts and masks rather than depending on a structure's raw layout. The last program copies a complete structure to show that its named field values participate in ordinary record assignment.</p>
+
+<h3>Store three small unsigned values</h3>
+<p>Every initializer fits its declared width. The one-bit fields hold Boolean-style values, while the three-bit attempt field holds five. Each value is converted to unsigned int before the matching %u format. The output describes logical field values. It does not claim a particular packing direction or a one-byte structure size.</p>
+<div data-example="ex-1"></div>
+
+<h3>Stop a narrow counter at its maximum</h3>
+<p>The attempt field already holds its largest representable unsigned value. The guard prevents the increment from running, so the field stays seven. This implements saturation deliberately rather than relying on an accidental conversion after overflow. The active and paid fields are initialized independently. Narrow storage does not choose the counter's application behavior for you.</p>
+<div data-example="ex-2"></div>
+
+<h3>Define portable logical positions with masks</h3>
+<p>The three inputs occupy non-overlapping numeric positions. active contributes one, paid contributes two, and five shifted by two contributes twenty. Bitwise OR combines them into twenty-three. Shifting and masking then recover five. This is a defined logical number representation, separate from the compiler's choice for any bit-field structure layout or machine byte order.</p>
+<div data-example="ex-3"></div>
+
+<h3>Copy named bit-field values</h3>
+<p>A complete structure assignment copies the meaningful member values. Updating second.paid changes the separate destination structure. Reading the original still yields zero. The attempt count in the copy remains three. You do not need to copy raw bytes or know the bit-field allocation unit to get ordinary structure value-copy behavior.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Named fields versus an explicitly packed value</h2>
+<p>A bit-field structure is readable: flags.paid names a fact directly. The compiler performs the necessary masking and updating for that implementation. An unsigned integer with explicit masks is more verbose, but your code defines the logical positions. A protocol can then specify a separate byte-serialization order for that integer.</p>
+<p>The packed-word example gives active position zero, paid position one, and attempts positions two through four. With values one, one, and five, the packed number is twenty-three. Shifting right by two and masking with seven recovers the attempt count five. This arithmetic result is portable for the small unsigned values used here.</p>
+<p>Even an explicit integer value is not automatically a portable sequence of bytes in a file or packet. Define byte order and width when serializing it. Bit fields add another layout layer beyond integer byte order, so copying a struct Flags directly to external storage leaves too many implementation choices unstated.</p>
+<p>For memory-mapped hardware, a bit-field write may read and rewrite an entire allocation unit. That can be wrong for device registers with special read or write behavior. volatile alone does not turn the layout or access width into a portable hardware contract. Follow the platform's documented register access requirements instead of treating this internal flag example as hardware guidance.</p>
+<p>For shared data accessed by threads, neighboring bit-field writes may affect the same storage unit. Independent field names do not necessarily provide independent memory locations for race reasoning. Synchronization belongs to a separate concurrency design. Do not assume one-bit assignment is automatically atomic or thread-safe.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Reading directly into a field with scanf</h3>
+<p>A bit field has no address you can pass as an unsigned int pointer. Read into an ordinary temporary, check its range, then assign it. The same rule applies when a helper expects a pointer output argument. A named field is still not an independently addressable scalar object.</p>
+<h3>Assuming the structure is exactly five bits</h3>
+<p>The declared fields total five value bits, but the containing structure can occupy an entire allocation unit plus padding. sizeof reports bytes for the structure, not a sum of field widths. Measure the actual implementation when storage matters and keep a portable semantic model separate from measured layout.</p>
+<h3>Using plain int for a portable positive range</h3>
+<p>The implementation may treat a plain int bit field as signed or unsigned. A one-bit signed field does not provide the ordinary zero-or-one positive range you intended. Use unsigned int for these flags and validate every external value before assigning a narrow field.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Give flag fields domain names and list their accepted ranges. Choose widths from those ranges rather than from one sample value. For a counter that may grow, decide how the maximum should behave before writing an increment. Test zero, the largest valid value, and a rejected value in the parser.</p>
+<p>Use a bit-field structure for internal compact state when implementation layout is acceptable. Use explicit masks and serialization rules when stable external positions matter. Keep signedness explicit, avoid unsupported base-type assumptions, and cast values to a matching print type. A named field should improve clarity without concealing portability limits.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>C17 supports _Bool, signed int, and unsigned int bit fields; _Bool support dates from C99. The examples choose unsigned int and target C17. C23 adds bit-precise integer features that are not used here. Exact allocation units, bit order, and padding remain implementation-specific matters, so no raw-layout result is claimed as universal.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Bit fields store small named integer values inside structures. Specify unsigned ranges, validate through ordinary temporaries, and remember that fields cannot be addressed individually. Value behavior can be portable even when layout is not. Next, inspect structure storage at byte boundaries in <a href="topic:c-structure-padding">Structure Padding and Alignment</a>.</p>

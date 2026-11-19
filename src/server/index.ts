@@ -10,8 +10,10 @@ import { LearnerService } from '../app/learner.ts';
 import { WatchService } from '../app/watch.ts';
 import { VideoExtrasService } from '../app/video-extras.ts';
 import { LabService } from '../app/labs.ts';
+import { NoteService } from '../app/notes.ts';
 import { TutorialService } from '../app/tutorials.ts';
 import { ReadingService } from '../reading/service.ts';
+import { MasteryService } from '../app/mastery.ts';
 import { MemoryStore, type Store } from '../store/store.ts';
 import { SupabaseStore } from '../store/supabase.ts';
 import { gatewayFromEnv } from '../ai/gateway.ts';
@@ -80,10 +82,12 @@ const server = createApp({
   reading,
   instructor,
   learner,
+  notes: new NoteService(store, tutorials),
   labs,
   watch,
   extras,
   tutorials,
+  mastery: new MasteryService(store, tutorials),
   admin,
   classes,
   orders,
