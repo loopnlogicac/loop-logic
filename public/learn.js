@@ -1,3 +1,4 @@
+import { adaptiveStrings, adaptiveQuiz } from './adaptive-quiz.js';
 // Tutorials: track list → topic list → topic page (lesson, runnable examples, labs,
 // quiz graded on the server, practice with solutions, exam questions).
 import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
@@ -8,6 +9,7 @@ let RUN = { enabled: false, languages: [] };
 
 const T = {
   en: {
+    ...adaptiveStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · every example in these tutorials was compiled and run before publishing',
     title: 'Tutorials', sub: (t, l) => `Step-by-step written lessons with runnable code, interactive labs, quizzes and practice. ${t} topics and ${l} labs so far, with more added every week.`,
     topics: 'topics', labs: 'labs', of: 'of', soon: 'Coming soon', start: 'Start', open: 'Open', inProgress: 'Being written',
@@ -23,6 +25,7 @@ const T = {
     bnAvail: 'This lesson is also available in Bangla. Switch with the EN · বাংলা button.', course: 'Video course', notReady: 'not yet written',
   },
   bn: {
+    ...adaptiveStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · এই টিউটোরিয়ালের প্রতিটি উদাহরণ প্রকাশের আগে কম্পাইল করে চালানো হয়েছে',
     title: 'টিউটোরিয়াল', sub: (t, l) => `ধাপে ধাপে লেখা পাঠ, চালানো যায় এমন কোড, ইন্টারঅ্যাকটিভ ল্যাব, কুইজ আর অনুশীলন। এখন পর্যন্ত ${t}টি টপিক আর ${l}টি ল্যাব; প্রতি সপ্তাহে আরও যোগ হচ্ছে।`,
     topics: 'টপিক', labs: 'ল্যাব', of: '/', soon: 'শিগগিরই আসছে', start: 'শুরু করো', open: 'খোলো', inProgress: 'লেখা চলছে',
@@ -265,7 +268,8 @@ function quizBlock(d) {
     } catch (e) { result.textContent = e.message; }
     btn.disabled = false;
   };
-  return el('section', { class: 'tut-extra', id: 'quiz' }, el('h2', { text: L.quiz }), ...items, el('div', { class: 'quiz-actions' }, btn, result));
+  const adaptive = adaptiveQuiz(d, L, (on) => { for (const item of items) item.hidden = on; btn.disabled = on; result.hidden = on; });
+  return el('section', { class: 'tut-extra', id: 'quiz' }, el('h2', { text: L.quiz }), ...items, el('div', { class: 'quiz-actions' }, btn, adaptive.button, result), adaptive.panel);
 }
 
 function practiceBlock(d) {
