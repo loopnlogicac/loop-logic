@@ -133,3 +133,12 @@ test('Supabase persists check docs and pre/post reading events without migration
   assert.deepEqual(events.map((e) => e.type), ['pre_check', 'post_check']);
   assert.equal((await mastery.overall()).averageGain, 100);
 });
+
+test('Supabase mastery evidence includes checks beyond the first page of reading history', async () => {
+  const history = Array.from({ length: 1000 }, (_, i) => ({ id: `view-${i}`, learner_id: 'a', lesson_id: 'tutorial:data-structures:mastery-fixture', block_id: null, type: 'view', payload: {}, at: '2026-11-19T00:00:00Z' }));
+  history.push({ ...history[0]!, id: 'pre', type: 'pre_check', payload: { score: 1, total: 3 }, at: '2026-11-20T00:00:00Z' }, { ...history[0]!, id: 'post', type: 'post_check', payload: { score: 4, total: 5 }, at: '2026-11-20T00:01:00Z' });
+  const fakeFetch = async (url: string) => { const u = new URL(url); const offset = Number(u.searchParams.get('offset') ?? 0); return Response.json(history.slice(offset, offset + 1000)); };
+  const { mastery } = setup(new SupabaseStore('https://test.invalid', 'test', fakeFetch as any));
+  assert.equal((await mastery.overall()).students, 1);
+  assert.equal((await mastery.overall()).averageGain, 46.67);
+});

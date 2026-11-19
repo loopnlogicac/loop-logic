@@ -242,7 +242,7 @@ function settingsPage() {
   newCode.onclick = busy(newCode, async () => { if (!confirm('The old code will stop working. Continue?')) return; const r = await api('POST', `/api/instructor/classes/${c.id}/code`); toast(`New code: ${r.code}`); await loadClasses(); await refresh(); });
   return [newClassPage(c), card('Class code', row(el('span', { class: 'ins-code', text: c.code }), newCode)),
     card('Archive the class', el('p', { class: 'adm-hint', text: 'Students can no longer see it, and it leaves your list. Their own progress is kept.' }),
-      button('Archive this class', async () => { if (!confirm(`Archive "${c.name}"?`)) return; await api('DELETE', `/api/instructor/classes/${c.id}`); store.del('ll_class'); toast('Archived.'); await loadClasses(); go('overview'); }, 'danger'))];
+      button('Archive this class', async () => { if (!confirm(`Archive "${c.name}"?`)) return; await api('DELETE', `/api/instructor/classes/${c.id}?lang=${getLang()}`); store.del('ll_class'); toast('Archived.'); await loadClasses(); go('overview'); }, 'danger'))];
 }
 
 // ── loading and routing ──
@@ -264,7 +264,7 @@ async function route() {
   content.replaceChildren(el('div', { class: 'skeleton' }));
   try {
     if (!dash || dash.class.id !== c.id) {
-      dash = await api('GET', `/api/instructor/classes/${c.id}`);
+      dash = await api('GET', `/api/instructor/classes/${c.id}?lang=${getLang()}`);
       Object.assign(c, { students: dash.kpis.students, pending: dash.kpis.pending });
     }
     if (name === 'packs' || name === 'studio') { /* these load their own data */ }
