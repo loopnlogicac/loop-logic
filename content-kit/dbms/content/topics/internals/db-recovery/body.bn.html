@@ -1,0 +1,45 @@
+<h2 id="introduction">শেষ বৈধ history ফেরাও</h2>
+<p class="lead">Debit-credit-এর মাঝেই সার্ভার থামতে পারে। কিছু changed page disk-এ,কিছু committed page মেমরি-তে। <dfn>Recovery</dfn> শেষ মেমরি বিশ্বাস না করে persistent তথ্য থেকে valid state বানায়।</p>
+<p>কনস্ট্রেইন্ট failure স্টেটমেন্ট/ট্রানজ্যাকশন-এর,process crash volatile মেমরি হারায় কিন্তু স্টোরেজ থাকতে পারে,media failure ফাইল-device হারায়। Committed ভুল DELETE logical এরর,engine intended না হওয়া কাজও ঠিক রেখেছে। এক mechanism চারটি সারায় না।</p>
+<p>Engine log আর app audit আলাদা। Mark কে বদলাল log বলতে পারে,redo-undo-র বদলি নয়। Commit-ও configured persistence-স্টোরেজ guarantee-র মধ্যেই অর্থপূর্ণ।</p>
+
+<h2 id="how-it-works">Buffer,undo,redo বোঝো</h2>
+<p>Buffer pool frequent page রাখে। Changed page ডেটা ফাইল-এ লেখা না হওয়া পর্যন্ত <dfn>dirty</dfn>। Commit-এ সব final page write লাগে না,random write বাঁচে;তাই committed reconstruction-এর durable উপায় চাই।</p>
+<p><dfn>Redo log</dfn> page change আবার করার তথ্য,<dfn>undo log</dfn> uncommitted ফেরানো আর older ভার্সন। InnoDB দুটোই। Undo MVCC-তেও লাগে,স্টেটমেন্ট শেষে শুধু ফেলে দেওয়া temporary নয়।</p>
+<p><dfn>WAL</dfn>-এ dependent ডেটা page flush-এর আগে দরকারি log durable। Durable commit acknowledgment-এর আগে required redo-ও configuration অনুযায়ী persist। নইলে page-এ change থাকবে,recovery তথ্য crash-এ যাবে।</p>
+<p>Steal-এ uncommitted dirty disk-এ যেতে পারে,তাইundo। No-force-এ commit সবpage flush নয়,তাইredo। এগুলো conceptual;engine page latch,LSN,detailed protocol-এ করে।</p>
+<table class="ref"><thead><tr><th scope="col">Failure-এর পরে</th><th scope="col">দরকার</th><th scope="col">কারণ</th></tr></thead><tbody><tr><td>Uncommitted ডেটা page-এ</td><td>Undo</td><td>Partial commit নয়</td></tr><tr><td>Committed page-এ নেই</td><td>Redo</td><td>Acknowledged কাজ টিকবে</td></tr><tr><td>Device হারানো</td><td>আলাদা material থেকে restore-rollforward</td><td>একই device-এর log-ও নেই</td></tr><tr><td>ভুল DELETE committed</td><td>আগের point বা verified compensation</td><td>Crash recovery commit রাখে</td></tr></tbody></table>
+
+<h2 id="worked-examples">Winner,loser,restart trace</h2>
+<h3>Conceptual undo-redo log</h3>
+<p>A1000,B500। নিচে logical old-new teaching log,InnoDB physical byte format নয়। T1 transfer100 commit,T2 A1 করে pending-এ crash।</p>
+<table class="ref"><thead><tr><th scope="col">LSN</th><th scope="col">রেকর্ড</th><th scope="col">অর্থ</th></tr></thead><tbody><tr><td>10</td><td>T1 begin</td><td>শুরু</td></tr><tr><td>20</td><td>T1: A 1000 → 900</td><td>Debit</td></tr><tr><td>30</td><td>T1: B 500 → 600</td><td>Credit</td></tr><tr><td>40</td><td>T1 commit</td><td>Winner</td></tr><tr><td>50</td><td>T2 begin</td><td>Active</td></tr><tr><td>60</td><td>T2: A 900 → 1</td><td>Uncommitted</td></tr><tr><td>—</td><td>Crash</td><td>T2 loser</td></tr></tbody></table>
+<p>শেষA900,B600 চাই। Missing logged page redo,প্রয়োজনেT2 A1→900 undo। T1 থাকে। Metadata দিয়ে ভুলভাবে আবার apply হওয়া engine ঠেকায়।</p>
+<p>সব algorithm “শুধু winner redo” নয়। Repeat-history-তে loser change-ও redo পরে undo হতে পারে। InnoDB redo page-LSN,rollback logical pending effect। Teaching log outcome বোঝায়,প্রতি internal operation নকল নয়।</p>
+<h3>আসল process-crash ফল</h3>
+<p>আলাদা MySQL8.4.7 instance-এ controlled experiment,InnoDB flush1,sync_binlog1। Acknowledged transfer-এর পরে uncommitted edit,process terminate করে same ডেটা-য় restart,new কানেকশন read।</p>
+<table class="ref"><thead><tr><th scope="col">Observation</th><th scope="col">101</th><th scope="col">102</th></tr></thead><tbody><tr><td>Seed</td><td>1000</td><td>500</td></tr><tr><td>Acknowledged transfer</td><td>900</td><td>600</td></tr><tr><td>পরে pending edit</td><td>1</td><td>600</td></tr><tr><td>Crash-restart-reconnect</td><td>900</td><td>600</td></tr></tbody></table>
+<p>Transfer টিকেছে,pending যায়নি দেখা যায়। ঠিক কোনpage redo বা physical power-loss proof নয়। Process kill-এ OS থাকে,device cache আলাদা। Tested failure-র সীমায় conclusion রাখো।</p>
+<h3>Checkpoint progress marker</h3>
+<p><dfn>Checkpoint</dfn> safe recovery position। Dirty flush-এ তার আগের redo আর crash reconstruct-এ লাগে না। Fuzzy-তে normal ট্রানজ্যাকশন চলতে পারে,সব active একসঙ্গে শেষ নয়।</p>
+<p>Oldest needed page change LSN200 হলে latest500 মানেই200..499 বাদ নয়। Page-log শর্ত-এ advancement। Checkpoint-এর আগের ট্রানজ্যাকশন পরেও active,rollback need শুধু timeline নয়।</p>
+<p>Restart work কমায়,redo capacity reuse দেয়। Backup নয়,commit নয়,আগের checkpoint বেছে deleted টেবিল restore নয়। Lost ডেটা-র সঙ্গে lost marker আলাদা recovery material নয়। Undo-binlog retention-ও অন্য।</p>
+<h3>Media loss-এর পরে restore</h3>
+<p>Device গেলে ছোট circular redo-তে missing base ফেরে না। Valid backup replacement-এ,configured retained binlog-এ point-in-time। Encryption কী-metadata-ও রক্ষা,চাবি ছাড়া encrypted backup অকেজো হতে পারে।</p>
+<p>InnoDB logical backup snapshot নিতে পারে,tool rule আর concurrent DDL restriction-সহ। Physical tool-এর preparation আলাদা। Live ফাইল সাধারণ copy automatic consistent নয়। Supported পদ্ধতি আর আলাদা environment-এ পুরো restore practice।</p>
+<p><dfn>RPO</dfn> গ্রহণযোগ্য recent ডেটা loss,<dfn>RTO</dfn> ফেরার সময়। Nightly backup-এ retained change না থাকলে প্রায় একদিন loss। Log retention gap কমায়,restore time-complexity তবু মাপো।</p>
+<h3>Committed human mistake</h3>
+<p>WHERE ছাড়া results DELETE commit করলে restart তা রাখবে। Isolated backup restore,verified ডিলিট-এর আগের log boundary পর্যন্ত replay,lost রো extract,later valid change reconcile এক উপায়। Format-position-requirement-এ exact process নির্ভর।</p>
+<p>Timestamp আন্দাজ করে current overwrite নয়। Affected ট্রানজ্যাকশন চেনো,current material রাখো,recovered রো যাচাই। Facts-কনস্ট্রেইন্ট জানা থাকলে compensating INSERT explicit repair,পুরোনো commit-এর automatic rollback নয়।</p>
+<p>Redo engine crash,binlog backup-সহ replication/PITR। Replica ভুল ডিলিট-ও ঠিকমতো repeat করে,তাই historical backup নয়। Retention-separation design,শুধু দ্বিতীয় সার্ভার নাম দিলেই হয় না।</p>
+
+<h2 id="common-mistakes">তিন shortcut এড়াও</h2>
+<h3>Sample log-এর শেষ COMMIT-এ থামা</h3>
+<p>Engine durable position-metadata নেয়। ক্লায়েন্ট printed কমান্ড durable acknowledgment proof নয়। Teaching trace আর persistence protocol আলাদা।</p>
+<h3>Flush কমিয়ে promise একই</h3>
+<p>কম flush throughput বাড়ালেও কিছু failure-এ acknowledged work হারায়। Trade-off আর স্টোরেজ guarantee বলো। ডিফল্ট-looking সেটিং power test নয়।</p>
+<h3>একমাত্র backup ডেটা-র পাশে</h3>
+<p>এক device failure/credential compromise দুটো নষ্ট করে। আলাদা protected copy,অ্যাকাউন্ট-routine-trigger-কী-সহ restore test। Job success recovery evidence-এর শুরু।</p>
+
+<h2 id="summary">Failure-মেলা recovery tool</h2>
+<p>Undo pending ফেরায়,redo restart,checkpoint repeated কাজ কমায়। Backup-retained log বড় loss আর committed ভুলে। পরের <a href="topic:db-storage-indexing">page,ফাইল,ইনডেক্স</a>-এ persistence মেলাও।</p>
