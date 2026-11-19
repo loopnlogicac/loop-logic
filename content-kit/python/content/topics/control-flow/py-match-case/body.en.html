@@ -1,0 +1,77 @@
+<h2 id="introduction">Match a value and its shape</h2>
+<p class="lead">A librarian might receive a request containing an action and a count: borrow, three books. Deciding how to respond involves both the action word and the structure of the request. Python's match statement can describe that shape directly.</p>
+<p><dfn>Structural pattern matching</dfn> selects code by matching a subject against patterns. A pattern can name a literal value, accept alternatives or unpack a structure. You can add a condition after a successful match. The subject is the value written after match.</p>
+<p>Begin with fixed command words, then move to a two-part request. You do not need to learn every possible pattern at once. The most important early distinction is between a quoted literal and a bare capture name.</p>
+<p>Unlike a simple equality chain, match can extract values while checking their arrangement. This becomes useful for structured messages. It is also easy to misuse when all you need is an ordinary interval comparison.</p>
+<h2 id="syntax">Subject, cases and fallback</h2>
+<pre><code class="language-python">match command:
+    case "help":
+        action_for_help
+    case "quit":
+        action_for_quit
+    case _:
+        fallback_action</code></pre>
+<p>The action names in this general form stand for your own statements. The match header ends with a colon. Each case is indented beneath match, and each case body is indented again. Quoted strings are literal patterns, meaning they match those exact text values.</p>
+<p>The underscore is a <dfn>wildcard pattern</dfn>. It matches any subject without storing it in a name. Place an unguarded wildcard last, since it would accept every remaining subject. Python rejects later cases that are made unreachable by an earlier irrefutable pattern.</p>
+<p>A <dfn>capture pattern</dfn> is a bare name such as received. It accepts the subject and binds that name to it. Even if the name already has a value, a bare name in this position does not compare against that value. This differs sharply from how a beginner may read case command_name.</p>
+<table class="ref"><caption>Three patterns that look similar but act differently</caption><thead><tr><th scope="col">Pattern</th><th scope="col">Meaning</th></tr></thead><tbody>
+<tr><td>case "help":</td><td>Match the exact string help</td></tr>
+<tr><td>case received:</td><td>Capture any subject in received</td></tr>
+<tr><td>case _:</td><td>Accept anything without capture</td></tr>
+</tbody></table>
+<h2 id="how-it-works">Pattern first, guard second</h2>
+<p>Python evaluates the subject once. It then tries cases from top to bottom. If a pattern succeeds, its bindings become available to the case's guard. A <dfn>guard</dfn> is a Boolean condition introduced by if after the pattern.</p>
+<p>A case is selected only when its pattern matches and its guard, if present, is truthy. When a guard fails, Python continues to later cases. Once a case is selected, its body runs and the whole match finishes. There is no automatic fall-through into the next body.</p>
+<pre class="diagram">Evaluate subject once
+        |
+        v
+Try next pattern --- no match ---&gt; next case
+        |
+       match
+        |
+        v
+Check guard -------- false ------&gt; next case
+        |
+       true
+        |
+        v
+Run one body, then leave match</pre>
+<p>A tuple is a fixed group of values, often written with commas inside parentheses. Full tuple operations appear in <a href="topic:py-tuples">Tuples</a>. Here the pair <code>("borrow", 3)</code> is enough to represent an action and a quantity.</p>
+<p>The pattern <code>("borrow", count)</code> checks a two-item sequence, requires the first item to equal borrow and captures the second item. A guard such as <code>if count &gt; 0</code> then decides whether that count is acceptable. The pattern and the guard do different jobs.</p>
+<p>Sequence patterns can match suitable sequence shapes such as tuples and lists. They are not ordinary constructor calls. Strings are not treated as sequences to unpack by a sequence pattern. Matching a word therefore needs an appropriate literal or another explicit text condition.</p>
+<h2 id="examples">Move from fixed values to structured requests</h2>
+<h3>Handle a small command menu</h3>
+<p>The first program matches literal command strings. The entered help command selects the guide message. Uppercase HELP would reach the wildcard because string matching is case-sensitive. Decide whether case sensitivity belongs in your interface before normalising input.</p>
+<div data-example="ex-1"></div>
+<h3>Give alternatives one shared action</h3>
+<p>An <dfn>OR pattern</dfn> uses a vertical bar between alternatives. The day example gives Fri and Sat one message. The bar belongs to pattern syntax here; it is not the ordinary short-circuit or operator used in Boolean expressions.</p>
+<div data-example="ex-2"></div>
+<h3>Capture a count and filter it</h3>
+<p>The borrow request matches its action word and two-item shape. The positive count passes the guard, so the first body runs. For zero, the same pattern would match but the guard would fail, allowing the next borrow case to explain the problem.</p>
+<div data-example="ex-3"></div>
+<h3>See a capture without a literal comparison</h3>
+<p>The capture example intentionally uses only one case. Its bare name accepts help and prints the captured value. Adding a fallback below that unguarded capture would be unreachable. Quote a command when you mean a fixed word.</p>
+<div data-example="ex-4"></div>
+<h3>Keep a numeric interval readable</h3>
+<p>The final example uses if for a mark in the seventies. A chain of comparisons already expresses the question. Writing a capture and guard around it would add structure without improving the explanation. Choose the statement that best fits the rule.</p>
+<div data-example="ex-5"></div>
+<h2 id="guards-and-design">Design patterns that readers can trust</h2>
+<p>Keep guards focused on validation, such as a quantity limit. A guard may execute ordinary Python expressions, so it can raise an error if captured values have unexpected types. Real interfaces often need stronger validation than these small examples. A structural match is not an automatic guarantee that every later operation is safe.</p>
+<p>Alternative patterns that bind names must bind the same set of names on each side. Otherwise the selected body could not rely on a consistent set of values. Literal-only alternatives avoid that complication while you learn.</p>
+<p>Do not treat capture names as private to a case. Names bound by successful patterns can remain available after the match. At the same time, avoid relying on partial bindings from a failed match attempt. Structure your code so the selected body uses the information it explicitly received.</p>
+<p>Use a wildcard fallback when unknown input needs a response. A match with no successful case performs no body and continues after the statement. Silence can be acceptable internally, but a command menu usually benefits from an unknown-command message.</p>
+<p>Compare the number of cases with the shape of the problem. A few literal commands are a natural use. Several unrelated numeric comparisons are usually clearer as <a href="topic:py-if-statements">if and elif</a>. Rich patterns become valuable when extracting structure is part of the work.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python match is not a direct copy of C switch. It can capture pieces of structured values, and cases do not fall through. A break is neither needed nor permitted merely to leave a match outside a loop.</p></div>
+<h2 id="common-mistakes">Read pattern syntax rather than guessing</h2>
+<h3>Using an unquoted word as a constant</h3>
+<p>A bare word captures. For command menus, use quoted strings. More advanced constant patterns use qualified names, but do not invent that form before understanding why a bare name behaves differently.</p>
+<h3>Putting a catch-all first</h3>
+<p>An unguarded capture or wildcard always succeeds. Put it after more specific cases. The unreachable-case error is helping you find a decision whose later alternatives could never run.</p>
+<h3>Assuming a failed guard ends the match</h3>
+<p>A false guard rejects only that candidate case. Later cases are still considered. This allows a specific successful shape to fall through to an explanatory invalid-data case without running two bodies.</p>
+<h3>Using break as though match were a loop</h3>
+<p>A match statement finishes its selected case automatically. If it sits inside a loop, break exits that surrounding loop. That is a larger action than merely ending the case, so use it only when leaving the loop is intended.</p>
+<h2 id="version-notes">Python 3.10 introduced matching</h2>
+<div class="callout version"><p>match-case was added in Python 3.10. Python 3.9 cannot parse this syntax, even when the selected path would never reach it. Run these programs with Python 3.12 or another compatible version from 3.10 onward.</p></div>
+<h2 id="summary">Separate a pattern from a condition</h2>
+<p>You can now distinguish literal matches, captures, alternatives, guards and a wildcard fallback. Use shape matching when it clarifies the data, and retain if for straightforward conditions. Next, repeat work with a stopping rule in <a href="topic:py-while-loop">while Loop</a>.</p>

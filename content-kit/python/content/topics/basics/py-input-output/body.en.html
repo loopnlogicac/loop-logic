@@ -1,0 +1,60 @@
+<h2 id="introduction">Turn a fixed calculation into a conversation</h2>
+<p class="lead">A bill calculator becomes useful when someone can enter a price and quantity. Input brings values into the program. Output sends results back to the person or another program. You need a clear agreement about both directions.</p>
+<p><dfn>Input</dfn> is data received by a program. <dfn>Output</dfn> is data it produces. In these examples, the terminal supplies input lines and displays printed results. A clear prompt helps a person know what to enter, while a precise result format helps them interpret the answer.</p>
+<p>The first decision is whether a value is text or a number. A roll label containing 0017 may need its zeros. A price used in multiplication needs numeric conversion. The characters alone do not tell Python which meaning you intend.</p>
+<h2 id="syntax">Read a line and convert deliberately</h2>
+<pre><code class="language-python">label = input("Label: ")
+count = int(input("Count: "))
+measurement = float(input("Measurement: "))</code></pre>
+<p>The function input optionally displays a prompt, waits for a line and returns a str. It removes the trailing newline. It does not automatically strip every surrounding space or convert digits to numbers. A blank entered line becomes an empty string, not None.</p>
+<p>The expression int(input()) first reads a line and then asks int to parse integer text. float can parse a decimal measurement. This nested form is short, but you can use separate names while learning: read the text, inspect it, then convert it.</p>
+<table class="ref"><caption>Keep or convert the text</caption><thead><tr><th scope="col">Input meaning</th><th scope="col">Suitable choice</th><th scope="col">Reason</th></tr></thead><tbody>
+<tr><td>Roll label 0017</td><td>Keep str</td><td>The leading zeros may matter</td></tr>
+<tr><td>Number of books</td><td>Convert to int</td><td>A whole-number count supports arithmetic</td></tr>
+<tr><td>Temperature reading</td><td>Convert to float</td><td>A fractional measurement is expected</td></tr>
+</tbody></table>
+<p>Invalid conversion raises ValueError. For example, int cannot parse the text 3.5 as an integer. Converting through float and then int would truncate a numeric value; it is not a general repair for an invalid integer entry. Later, <a href="topic:py-exceptions">Exceptions</a> teaches how to ask for a replacement entry safely.</p>
+<h2 id="how-it-works">Follow the data through a small bill</h2>
+<p>For a book bill, the person enters 60 and then 3 on separate lines. Each input call receives text. The conversions create integers, multiplication produces 180 and print displays the result. If the text were never converted, the intended numeric calculation would not follow.</p>
+<pre class="diagram">Typed line "60" --&gt; int conversion --&gt; price 60
+Typed line "3"  --&gt; int conversion --&gt; quantity 3
+                                          |
+                                          v
+                                    product 180
+                                          |
+                                          v
+                                   displayed bill</pre>
+<p>Two strings added with + are concatenated. Thus the text 4 plus the text 2 gives 42, while their integer values add to 6. Python chooses operations from the operand types. A correct-looking line of digits can hide a missing conversion.</p>
+<p>These exercises specify one value per line unless they say otherwise. Do not assume that input reads one whitespace-separated word. It reads the entire line. Reading several tokens from one line requires splitting that line, which is covered later.</p>
+<h2 id="examples">Read and present useful values</h2>
+<h3>Preserve a label exactly</h3>
+<p>The roll example shows both the stored label and its type name. Its zeros remain because no numeric conversion occurs. A label can look numeric while still being correctly represented as text.</p>
+<div data-example="ex-1"></div>
+<h3>Calculate a whole-taka bill</h3>
+<p>The book example converts both entries to integers. Whole taka keep this small money calculation exact. Read the prompts before typing so that price and quantity do not accidentally swap roles.</p>
+<div data-example="ex-2"></div>
+<h3>Choose separators and endings</h3>
+<p>The sep argument supplies text between print arguments. The end argument supplies text after the entire call. Their defaults are a space and a newline. Changing end allows another print call to continue the same displayed line.</p>
+<div data-example="ex-3"></div>
+<h3>Align and format a row</h3>
+<p>The marks example uses a field width and two decimal places. The number 7.5 appears as 7.50 with padding before it. The percent field shows how a stored fraction can be displayed in a familiar form without changing the stored value.</p>
+<div data-example="ex-4"></div>
+<h2 id="formatting">Use f-strings as readable templates</h2>
+<p>An <dfn>f-string</dfn> is a string prefixed with f that inserts values inside braces. Python evaluates each expression in braces when the string is created. Literal words outside the braces remain as written. This keeps a label close to the value it describes.</p>
+<p>A colon inside a field introduces a format specification. The .2f form requests fixed-point text with two decimal places. A width such as 6 requests at least six characters, including signs and the decimal point. It does not cut off a longer number.</p>
+<p>For text, &lt; requests left alignment and &gt; requests right alignment. In a receipt, a label might use width ten while an amount uses width six. Count the separator characters separately. Exact spaces matter when another program reads a fixed layout.</p>
+<p>Formatting rounds the displayed value, not the underlying number into exact decimal storage. Recall <a href="topic:py-numbers-math">Numbers and Arithmetic</a> when choosing numeric types. Presentation and numeric correctness are related decisions, but one cannot replace the other.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>input does not behave like scanf with a numeric format. It first returns text, and int or float performs conversion separately. F-strings place values inside braces rather than requiring printf-style format arguments and addresses.</p></div>
+<h2 id="common-mistakes">Keep the conversation contract clear</h2>
+<h3>Expecting typed input to be printed again automatically</h3>
+<p>An interactive terminal may echo what you type. That echo is not a print call in your program. If a result must include the entered label, print the stored value explicitly.</p>
+<h3>Adding prompts to a numeric-only result</h3>
+<p>A problem may require only a sum. In that case, use input without a prompt and print only the sum. Interactive examples have prompts because a person benefits from guidance; exercise statements define their own required output.</p>
+<h3>Using input's argument as a default value</h3>
+<p>The text passed to input is a prompt, not a stored answer. The person must still supply a line. If a task needs a default, read the entry and choose that default deliberately.</p>
+<h3>Confusing blank input with end of input</h3>
+<p>Pressing Enter on a blank line returns empty text. Reaching the end of the input source raises EOFError instead. A program expecting more lines needs a defined policy for missing input, rather than assuming another blank line will appear.</p>
+<h2 id="version-notes">Portable f-string syntax</h2>
+<div class="callout version"><p>These f-strings use syntax available before Python 3.10 and work on Python 3.12. Python 3.12 expands some f-string expression syntax, but none of those newer forms are needed here.</p></div>
+<h2 id="summary">Read meaning and display it clearly</h2>
+<p>Read lines as text, convert only where the meaning calls for numbers and format the result for its reader. Make separators and labels intentional. Next, combine values into conditions in <a href="topic:py-operators">Operators</a>.</p>

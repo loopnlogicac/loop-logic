@@ -1,0 +1,61 @@
+<h2 id="introduction">Choose an action from a condition</h2>
+<p class="lead">At a lab entrance, a notice may say that students can enter only during certain hours. The action depends on the situation. An if statement gives your program that ability to choose a path.</p>
+<p>A <dfn>condition</dfn> is an expression whose truth value decides whether a block runs. A <dfn>branch</dfn> is one possible path through the decision. You can provide one branch, add alternatives or include a fallback for every remaining case.</p>
+<p>The expressions in <a href="topic:py-operators">Operators</a> provide the questions. The if statement attaches actions to their answers. Keep those roles separate: calculating whether a mark passes does not itself print a result or store a category.</p>
+<h2 id="syntax">Write aligned branches</h2>
+<pre><code class="language-python">if condition:
+    first_action
+elif another_condition:
+    second_action
+else:
+    fallback_action</code></pre>
+<p>The names ending in action describe places for statements, rather than built-in Python commands. Each header ends with a colon. The statements underneath are indented one level. The if, elif and else headers align with one another because they belong to the same decision.</p>
+<p>The word elif means “otherwise, if”. You may have several elif branches or none. The else branch has no condition and is optional. If every test fails and there is no else, execution continues after the decision without running a branch.</p>
+<p>Use four spaces for each block level, including nested decisions. An <dfn>indented suite</dfn> is the group of statements under a header. The group may contain more than one statement, so a branch can update a value and print a message together.</p>
+<table class="ref"><caption>The roles in a decision chain</caption><thead><tr><th scope="col">Header</th><th scope="col">When its body runs</th></tr></thead><tbody>
+<tr><td>if</td><td>When its condition is truthy</td></tr>
+<tr><td>elif</td><td>When previous tests failed and its own condition is truthy</td></tr>
+<tr><td>else</td><td>When no earlier branch was selected</td></tr>
+</tbody></table>
+<h2 id="how-it-works">The first matching branch wins</h2>
+<p>For a marks category, begin by rejecting values outside the allowed range. Then test the highest category before lower thresholds. A mark of 85 satisfies both “at least 80” and “at least 40”. The order decides which label it receives.</p>
+<p>Python stops checking a chain when a branch succeeds. Later elif conditions are not evaluated, and their bodies do not run. This is useful when categories should be mutually exclusive. If two actions may both be needed, use two independent if statements instead.</p>
+<table class="ref"><caption>Trace a mark of 80</caption><thead><tr><th scope="col">Test</th><th scope="col">Result</th><th scope="col">Action</th></tr></thead><tbody>
+<tr><td>Outside 0 through 100?</td><td>False</td><td>Continue checking</td></tr>
+<tr><td>At least 80?</td><td>True</td><td>Print Excellent</td></tr>
+<tr><td>At least 40?</td><td>Not evaluated</td><td>Skip this branch</td></tr>
+<tr><td>Fallback</td><td>Not reached</td><td>Skip this branch</td></tr>
+</tbody></table>
+<p>Boundary values reveal mistakes quickly. For a pass threshold of 40, try 39, 40 and 41. Also try invalid values such as -1 and 101. A check that accepts 120 as excellent has classified a threshold without validating the domain.</p>
+<p><dfn>Truthiness</dfn> lets a condition use values besides bool. Empty text, numeric zero and None are falsey. Nonempty text is truthy, including "0" and "False". If you read a yes/no word from input, compare its text deliberately instead of assuming its spelling controls its truth value.</p>
+<h2 id="examples">Choose categories and messages</h2>
+<h3>Validate a mark before classifying it</h3>
+<p>The first program places the invalid-range test before valid categories. The entered 80 receives Excellent because the upper category comes first. The labels are teaching examples, not a claim about an institution's official grade scale.</p>
+<div data-example="ex-1"></div>
+<h3>Provide a display-name fallback</h3>
+<p>The name program strips surrounding spaces before testing truthiness. An entry containing only spaces becomes empty. The else branch then greets a guest. Without stripping, that same entry would be nonempty and truthy.</p>
+<div data-example="ex-2"></div>
+<h3>Read a decision inside another</h3>
+<p>A <dfn>nested condition</dfn> is a decision inside a branch. The card example first asks whether a card exists. Only its yes branch asks about balance. The inner else aligns with the balance if, so it prints Top up first for a zero balance.</p>
+<div data-example="ex-3"></div>
+<h3>Choose one value with an expression</h3>
+<p>A <dfn>conditional expression</dfn> selects one value using the form <code>yes_value if condition else no_value</code>. It is useful for a short label. Only the chosen result expression is evaluated. Longer actions usually read better in ordinary indented branches.</p>
+<div data-example="ex-4"></div>
+<h2 id="designing-branches">Reduce unnecessary nesting</h2>
+<p>Nesting can mirror a problem naturally, as with card ownership followed by balance. Too many levels make paths difficult to follow. Sometimes combining conditions with and expresses the same rule more clearly. Keep separate branches when they need different explanations or messages.</p>
+<p>Before writing code, list the categories in everyday words. Check whether they overlap and whether they cover every allowed input. Then choose an order. This prevents a common failure where the code looks tidy but silently omits a case.</p>
+<p>Choose variable names that reveal the condition. A flag such as has_card reads as a yes/no question. A name such as x makes the reader reconstruct its meaning from earlier lines. Clear names can shorten a condition without hiding its rule.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python uses elif rather than else if, and indentation replaces braces. A conditional expression uses “a if condition else b”, not the C question-mark form. Put the intended yes value first when reading it aloud.</p></div>
+<h2 id="common-mistakes">Find the branch that actually owns a line</h2>
+<h3>Misaligning an else</h3>
+<p>A nested else belongs to the if at the same indentation level. Moving it by one level changes the decision tree. Draw the branch groups before editing spaces if the intended ownership is unclear.</p>
+<h3>Checking a broad threshold too early</h3>
+<p>If a mark of at least 40 is checked before a mark of at least 80, the higher category is never selected. Order thresholds from the most specific or highest case when the comparisons overlap.</p>
+<h3>Repeating if when only one category should win</h3>
+<p>Separate if statements can print several labels for one mark. Use elif when the choices are exclusive. Multiple if statements are correct when separate actions, such as logging and showing a warning, can both apply.</p>
+<h3>Writing an empty branch</h3>
+<p>A colon must be followed by a body. During development, pass can stand for an intentionally empty body. It does nothing and should not replace the actual action once your design is ready.</p>
+<h2 id="version-notes">Decision syntax in Python 3</h2>
+<div class="callout version"><p>The if, elif and else forms and conditional expressions here work across Python 3.10 and later. The next lesson's match statement needs Python 3.10, but ordinary if remains suitable for many conditions.</p></div>
+<h2 id="summary">Make every boundary deliberate</h2>
+<p>You can now align branches, trace the first match and choose short values with a conditional expression. Validate the input domain and test each boundary. Continue with <a href="topic:py-match-case">match-case</a> for decisions based on values and shapes.</p>
