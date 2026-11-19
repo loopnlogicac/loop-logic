@@ -1,0 +1,100 @@
+<h2 id="introduction">গল্প থেকে নির্দিষ্ট হিসাব</h2>
+<p class="lead">Contest-এ ticket, mark, booking-এর গল্প আসে। আগে ডেটা, allowed operation আর required answer চেনো। এই বিশটি মৌলিক সমস্যা arithmetic থেকে reusable scan-এ যায়, নির্দিষ্ট judge-এ নির্ভর নয়।</p>
+<p>প্রথম আট runnable example, নয়-ষোলো solution পড়ার আগে চেষ্টা। সতেরো-বিশ exam answer-এ পুরো program। প্রতিটিতে explicit input contract, valid input ধরে solution কাজটিতে মন দেয়।</p>
+<h2 id="syntax">Whitespace token নাকি পুরো line</h2>
+<p>sys.stdin.buffer.read().split() সব byte পড়ে whitespace token করে। int numeric byte সরাসরি নেয়। Arbitrary line-এ input হলে সুবিধা, তবে input-token memory-তে, size ভাবো।</p>
+<pre><code class="language-python">tokens = iter(map(int, sys.stdin.buffer.read().split()))
+count = next(tokens)
+values = [next(tokens) for _ in range(count)]</code></pre>
+<p>Line-shaped input-এ readline grouping রাখে। Blank line আর EOF আলাদা, যদিও strip line ending সরায়। Field-এর space অর্থপূর্ণ হলে split নয়। Text-byte বুঝে নাও, মিশিয়ে compare নয়।</p>
+<p>Print বা answer line join করে stdout.write। Output format correctness-এর অংশ। এখানে শুধু requested answer; extra prompt contract বদলায়। Expense project পরে আলাদা interactive interface।</p>
+<h2 id="how-it-works">Pattern বেছে state-এর কারণ</h2>
+<p>ছোট হাতে হিসাব দিয়ে শুরু। ধাপ-পেরিয়ে কী থাকবে? Total accumulator, earlier value set, unmatched opening stack। State নাম দিলে ছোট solution বোঝা যায়।</p>
+<p><dfn>Invariant</dfn> loop-এ সত্য থাকা কথা। Repeated scan-এ seen ঠিক আগের মান, attendance-এ current এই character-এ শেষ run। Syntax নয়, update কেন বৈধ বোঝায়।</p>
+<p>Bound-এ খরচ দেখো। 100000-এ quadratic সাধারণত নয়। Sort O(n log n), পরের two-pointer O(n)। Python int fixed overflow এড়ালেও বিরাট সংখ্যা representation-মাফিক সময়-মেমরি নেয়।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>বড় int আর ready collection থাকলেও algorithm cost জরুরি। Comprehension quadratic-কে linear করে না। Buffered input parsing overhead কমায়, pair comparison count নয়।</p></div>
+<h2 id="examples">সমস্যা 1–8: arithmetic, scan, boundary</h2>
+<h3>1. Signed adjustment যোগ</h3>
+<p>n (0–100000), তারপর ঠিক n integer -1000000..1000000। Sum প্রিন্ট। Whitespace কয়েক line হতে পারে।</p>
+<p>যোগের identity zero। Empty sum চলে, negative-এ extra branch নয়। O(n) সময়, O(n) মেমরি।</p>
+<div data-example="ex-1"></div>
+<h3>2. Shuttle fare ভাগ</h3>
+<p>Passenger n (0–1000000000), positive capacity k (1–1000000000)। Minimum shuttle count দাও।</p>
+<p>Integer ceiling division-এ ভাগের আগে capacity minus one যোগ। Partial group-এও shuttle, zero people-এ none। O(1) arithmetic operation।</p>
+<div data-example="ex-2"></div>
+<h3>3. Duration ভাগ</h3>
+<p>Nonnegative second s সর্বোচ্চ 1000000000। Hour, remaining minute-second তিন space-separated integer।</p>
+<p>divmod quotient-remainder দেয়। প্রতিবার original নয়, remainder convert। O(1) arithmetic।</p>
+<div data-example="ex-3"></div>
+<h3>4. তিন stick যাচাই</h3>
+<p>-1000000..1000000 তিন integer। Nondegenerate triangle side হলে VALID, নইলে INVALID।</p>
+<p>Positive side sort করে ছোট দুটির sum বড়টির চেয়ে বড় চাই। Equal মানে flat। O(1) সময়-মেমরি।</p>
+<div data-example="ex-4"></div>
+<h3>5. লম্বা receipt code-এর digit sum</h3>
+<p>Nonempty decimal digit string, length সর্বোচ্চ 100000। Digit sum, leading zero চলে।</p>
+<p>Identifier text-এ length-zero থাকে। Huge integer না করে character loop। O(d) সময়, O(d) মেমরি।</p>
+<div data-example="ex-5"></div>
+<h3>6. সবচেয়ে বড় equal packet</h3>
+<p>Nonnegative a,b সর্বোচ্চ 1000000000। GCD, 0 আর 0-তে 0 সংজ্ঞা।</p>
+<p>a,b-কে b,remainder করলে common divisor থাকে। দ্বিতীয়টি zero পর্যন্ত কমে। O(log(max(a,b)+1)) division step।</p>
+<div data-example="ex-6"></div>
+<h3>7. Prime roll candidate</h3>
+<p>n 0–1000000000। Prime হলে PRIME, নইলে NOT PRIME।</p>
+<p>Composite-এর factor square root-এর বেশি না এমন একটি থাকে। Inclusive bound 49 ধরে। O(sqrt(n)) সময়, extra O(1)।</p>
+<div data-example="ex-7"></div>
+<h3>8. Mirror token</h3>
+<p>Nonempty lowercase ASCII token সর্বোচ্চ 100000। উল্টো পড়ে এক হলে YES, নইলে NO।</p>
+<p>Reverse slice সহজ। Memory জরুরি হলে ভেতরে আসা দুই index reverse string বাঁচায়। দেখানো O(n) সময়, extra O(n)।</p>
+<div data-example="ex-8"></div>
+
+<h2 id="practice-patterns">সমস্যা 9–16: collection আর efficient search</h2>
+<h3>9. সবচেয়ে frequent score</h3>
+<p>n (1–100000), তারপর n integer 0–100। Most frequent score আর count। Tie-তে ছোট score।</p>
+<p>Counter frequency রাখে। Tuple আগে বড় count, পরে ছোট value, insertion order নয়। O(n) সময়, O(n) input memory। পুরো solution p-1।</p>
+<h3>10. Distinct badge number</h3>
+<p>n (0–100000), n integer 0–1000000000। Increasing distinct মান space-এ, n zero হলে EMPTY।</p>
+<p>Set duplicate বাদ, sort display promise দেয়। Set iteration একা increasing নয়। u distinct-এ O(n + u log u) সময়, O(n) মেমরি। Solution p-2।</p>
+<h3>11. প্রথম repeated scanner মান</h3>
+<p>n (0–100000), n integer 0–1000000000। বাম থেকে scan-এ যার দ্বিতীয় appearance আগে, সেটি; না হলে NONE।</p>
+<p>প্রতি iteration-এর আগে seen ঠিক আগের মান। Membership repetition বলে। Expected O(n) সময়, O(n) মেমরি। Solution p-3।</p>
+<h3>12. Attendance streak</h3>
+<p>এক line-এ binary string length 0–100000। Longest contiguous 1-run, empty line-এ 0।</p>
+<p>current এখানে শেষ run, best সব prefix-এর সেরা। Zero current reset, আগের best নয়। O(n) সময়-input memory। Solution p-4।</p>
+<h3>13. Repeated inclusive range total</h3>
+<p>n,q দুটো 1–100000, n integer absolute সর্বোচ্চ 1000000, q pair l r যেখানে 1 ≤ l ≤ r ≤ n। প্রতি line inclusive sum।</p>
+<p>prefix[k] প্রথম k যোগ। r পর্যন্ত থেকে l-এর আগের prefix বাদ। Rescan বাঁচে। O(n+q) সময়-মেমরি। Solution p-5।</p>
+<h3>14. Target মোটের দুই আলাদা ticket</h3>
+<p>n (0–100000), target -2000000000..2000000000, n integer -1000000000..1000000000। দুই distinct position sum target হলে YES, নইলে NO।</p>
+<p>Sort। Smallest+largest ছোট হলে smallest আর কারও সঙ্গে হবে না, এগোও; বেশি হলে উল্টো যুক্তি। O(n log n) সময়, O(n) মেমরি। Solution p-6।</p>
+<h3>15. ছোঁয়া booking interval merge</h3>
+<p>n (0–100000), n closed l r, 0 ≤ l ≤ r ≤ 1000000000। Overlap বা touching merge। Count, তারপর increasing merged l r প্রতি line।</p>
+<p>Sort-এ start বাড়ে, শুধু last merged পরেরটির সঙ্গে overlap করতে পারে। Touching মানে equal endpoint, adjacent integer নয়। O(n log n) সময়, O(n) মেমরি। Solution p-7।</p>
+<h3>16. Round-square bracket nesting</h3>
+<p>শুধু ()[]-এর এক line, length 0–100000। ঠিক nested হলে YES, নইলে NO। Empty valid।</p>
+<p>Stack unmatched opening রাখে। Closing সর্বশেষটির সঙ্গে মিলবে। শুধু count crossed nesting ধরবে না। O(n) সময়-মেমরি। Solution p-8।</p>
+
+<h2 id="exam-challenges">সমস্যা 17–20: count, optimize, locate</h2>
+<h3>17. Factorial-এর trailing zero</h3>
+<p>n 0–1000000000। n factorial-এর শেষে decimal zero count। Zero factorial one। পুরো solution exam question 1।</p>
+<p>প্রতি zero-তে factor ten। Two যথেষ্ট, তাই five গুনো, 25,125 ও পরের power-এর extra-সহ। Input &#x27;25&#x27; দেয় &#x27;6&#x27;, &#x27;0&#x27; দেয় &#x27;0&#x27;, &#x27;5&#x27; দেয় &#x27;1&#x27;।</p>
+<h3>18. সেরা nonempty earning segment</h3>
+<p>n (1–100000), n signed integer absolute সর্বোচ্চ 1000000। Nonempty contiguous segment-এর greatest sum। Solution exam question 2।</p>
+<p>ending এখানে শেষ best nonempty segment। আগেরটি extend বা এখান থেকে restart। All-negative রাখতে আসল entry দিয়ে শুরু। &#x27;5\n-2 4 -1 3 -5&#x27; দেয় &#x27;6&#x27;, &#x27;3\n-8 -2 -5&#x27; দেয় &#x27;-2&#x27;।</p>
+<h3>19. প্রথম eligible sorted value</h3>
+<p>n (0–100000), target, n nondecreasing signed integer; সব absolute সর্বোচ্চ 1000000000। অন্তত target এমন প্রথম zero-based position, নেই হলে n। Solution exam question 3।</p>
+<p>bisect_left ছোট আর eligible-এর boundary। Length-সমানও হতে পারে, index-এর আগে check। &#x27;5 4\n1 4 4 8 9&#x27; দেয় &#x27;1&#x27;, &#x27;0 7&#x27; দেয় &#x27;0&#x27;, &#x27;2 9\n1 2&#x27; দেয় &#x27;2&#x27;।</p>
+<h3>20. ছোট grid-এ route count</h3>
+<p>Row-column 1–30। Top-left থেকে শুধু right/down, bottom-right-এর route count। এক cell-এ এক route। Solution exam question 4।</p>
+<p>Inner cell ওপর-বাম থেকে route পায়। Column update-এর আগে মান previous row-এর, বাম neighbor current row-এর। &#x27;3 3&#x27; দেয় &#x27;6&#x27;, &#x27;1 1&#x27; আর &#x27;1 4&#x27; দেয় &#x27;1&#x27;।</p>
+
+<h2 id="common-mistakes">তোমার শর্তকে আঘাত করে এমন case</h2>
+<h3>Empty answer-কে zero</h3>
+<p>Zero valid sum-score। Missing repeat-এ specified NONE। বিশেষ করে allowed range-এ zero থাকলে absence আলাদা।</p>
+<h3>এক index দুইবার</h3>
+<p>Two-ticket-এ দুই position। এক three target six করে না, আলাদা দুই three পারে। Value-এর সঙ্গে index ভাবো।</p>
+<h3>Task পড়ার আগেই order হারানো</h3>
+<p>Set distinct গোনে, streak বা first repeat-এর sequence হারায়। Sort position বদলায়। তথ্য হারানো অনুমতি থাকলেই নাও।</p>
+<h2 id="version-notes">পরিচিত syntax, clear limit</h2>
+<p>বিশ solution Python 3.10-compatible, standard library, numerical package নেই। Expected hash scan ordinary dict-set ধরে। ছোট number-theory arithmetic-step cost stated bounded integer-কে practical machine-size ধরে।</p>
+<h2 id="summary">Shortcut-এর পাশে কারণ</h2>
+<p>ভালো idiom ব্যাখ্যা করা যায় এমন হিসাব বলে। Code-এর সঙ্গে invariant, boundary, resource practice। পরের <a href="topic:py-exam-questions">Python exam question</a>-এ লিখিত উত্তরে বোঝাও।</p>
