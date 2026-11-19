@@ -1,3 +1,64 @@
+# Batch 4 — Getting Data Ready
+
+Current package: `machine-learning-tutorial`, **0.4.0**, format 1.1. This delivery adds all eight `data-preparation` topics in curriculum order:
+
+1. `ml-features-deep-dive`: useful, useless and harmful features; prediction-time leakage; derived BMI features; domain knowledge and feature count.
+2. `ml-data-types`: continuous/discrete quantities, nominal/ordinal categories, text/image representations, dates and pandas dtype checks.
+3. `ml-missing-and-dirty-data`: missingness, dropping versus mean/median/mode filling, duplicates, impossible values, outlier investigation and `SimpleImputer`.
+4. `ml-encoding`: ordinal assumptions, full one-hot indicators, `OneHotEncoder`, `get_dummies`, unknown names and large vocabularies.
+5. `ml-feature-scaling`: min-max and population standardisation, model sensitivity, constant columns and training-only fitting.
+6. `ml-train-validation-test`: fitting/selection/evaluation roles, seeded and stratified splits, leakage, repeated identities and chronological evaluation.
+7. `ml-eda`: a question-led checklist, histograms, box plots, scatter plots, Pearson correlation and its limits.
+8. `ml-data-practice-sheet`: four printable picture warm-ups, six paper numericals, five code-reading programs, two coding problems, written discussion and marking guidance.
+
+All seven lessons contain an original story, a picture/table before formulas, hand calculations, an unplugged activity, runnable code, common mistakes and optional university-level material. Their English bodies meet the beginner word target. Required Bangla titles, summaries, key points, lab titles, figure captions and key trace notes use the spellings and classroom style in `BANGLA_STYLE.md`. Full Bangla bodies from Module 1 are preserved.
+
+## Five labs and their conventions
+
+Each lab has editable controls, three named presets, three explicit checks, bilingual explanatory notes and a link to its matching `ex-1`. All preset traces have 20–400 meaningful steps.
+
+- `fill-missing` (`tables`): fit a mean or median separately for each column, then copy observed cells and fill only blanks. Students edit the measured cells; three fixed missing locations are documented. Default medians are x=5, y=3, three gaps, completed total 50. An outlier preset exposes the mean/median difference. Both Python and `SimpleImputer` give the default result.
+- `one-hot` (`tables`): a pre-fitted Badda/Mirpur/Uttara vocabulary transforms editable B/M/U/? strings row by row. Default six known names give six ones. Unknown-ignore produces zeros; unknown-error visibly marks rejected rows as ERROR so students can inspect the rest. This is an explicit teaching presentation: the real encoder raises an exception under the error policy. The lesson states that distinction. Both Python and `OneHotEncoder` agree on the default numeric transformation.
+- `feature-scaling` (`plot`): actual raw and transformed distances, query transformation, record-matching arrows and nearest links. Default raw nearest is row 2 and min-max nearest is row 4, with a clear distance gap. Both Python and `MinMaxScaler` agree. Standardisation uses population variance; constant columns use divisor 1. The single plot contains two views; one uniform multiplier per view preserves that view's Euclidean neighbour ranking. Display coordinates are disclosed, and numeric transformed values remain visible in notes/variables. Matching arrows are not claimed to be KNN distances.
+- `stratified-split` (`plot`, `chart`): seeded Fisher–Yates random and stratified 70/30 allocations, plus bars of class-1 share in source/training/test for both methods. The selected plot colour means partition; point labels preserve original classes. Largest-remainder quotas use class-0-first ties. The default gives train=7, test=3, one minority test row under each method. This exact teaching shuffle is implemented in Python and checked with NumPy labels; it does not claim scikit-learn's internal random stream. The course-data example separately demonstrates `train_test_split(..., random_state=0, stratify=y)` with 60/20/20 partitions and validation-selected tree depth. Absent classes and infeasible exact proportions are explained.
+- `correlation-explorer` (`plot`): a slider from -1 to 1 constructs six centred points from unit-spread x and orthogonal unit-spread noise. Pearson r and the least-squares line are computed from the resulting points, with visible vertical residuals. Default r=0.6, slope=0.6, intercept=0; NumPy and `LinearRegression` agree. This constrained cloud demonstrates specified correlations; it does not pretend arbitrary clouds have the slider's r. Zero-spread undefined correlation and nonlinear zero-correlation patterns are taught separately.
+
+There is no approximate estimator solver hidden in these labs. The constrained correlation construction, fixed imputation holes, pre-fitted category vocabulary, error-row presentation and teaching shuffle are disclosed in the lessons and above.
+
+## Examples, shared data and questions
+
+New totals: **21 executed examples, 32 practice items (16 coding), 85 quiz questions (26 executed output questions and 18 picture questions), and 31 worked exam answers**. Answer positions rotate. All example and practice `.out` files came from actual isolated Python runs; outputs are rounded and deterministic. Dataset-reading examples declare their shared workdir files and imported packages.
+
+The existing `rent.csv` and `study.csv` remain unchanged. Both have six missing cells. Examples investigate the impossible 30-hour daily study value and the 500,000 BDT rent without automatically treating every unusual observation as false. Prediction examples exclude final `marks` when predicting `passed`. Learned medians, vocabularies and scalers fit training rows only. The rent EDA picture is a real headless Matplotlib output saved as a 28 KB lesson asset.
+
+`shared/make_preparation_figures.py` computes 14 reusable panel figures using real arrays, fitted encoders/scalers, quotas and correlation calculations. The 18 question placements include the practice sheet's four matching SVGs. All four printable SVGs were rasterised and visually inspected; the EDA PNG was also inspected. Labels and numbers are readable without clipping.
+
+## Verification
+
+Run from `content-kit/`:
+
+```sh
+python3 -m pip install "numpy>=2.0" "pandas>=2.2" "scikit-learn>=1.5" "matplotlib>=3.8"
+python3 -I -X utf8 machine-learning/content/shared/make_preparation_figures.py
+python3 -I -X utf8 machine-learning/content/shared/verify_preparation_module.py
+python3 -I -X utf8 machine-learning/content/shared/verify_content.py
+python3 -I -X utf8 machine-learning/content/shared/verify_python_module.py
+python3 -I -X utf8 machine-learning/content/shared/verify_math_module.py
+node tools/check.mjs machine-learning/content --require-packages --report machine-learning/content/CHECK_REPORT.txt
+```
+
+Installation completed with all requested minimum versions satisfied. Actual versions are Python 3.12.14, NumPy 2.3.5, pandas 2.2.3, scikit-learn 1.8.0 and Matplotlib 3.10.8, recorded in the manifest. New Python files parse under Python 3.10 syntax; runtime verification used the recorded toolchain. Writable temporary `MPLCONFIGDIR` and `XDG_CACHE_HOME` directories were supplied for plotting in this environment.
+
+The new independent audit verifies **205 traces**, including all presets/checks and 35 additional seeded cases per lab. NumPy/scikit-learn independently check imputed tables, one-hot cells, scaler arithmetic, transformed plot positions, nearest links, Pearson coefficients and least-squares residuals. Integer quotas and a separate Python shuffle verify allocation counts, partition colours and class-share bars. Audits also check deterministic replay, unchanged inputs, prescribed preset lengths, figure provenance, worksheet/quiz agreement and all five default example pairs.
+
+All earlier audits pass: the Module 1 content/lab references, 110 broadcasting traces and 369 maths traces. Both older version assertions are updated to the current package version. All six CSVs rebuild byte-identically twice, and no dataset changes are included. `git diff --check` passes.
+
+Required checker result: **0 error(s), 0 warning(s); RESULT: READY FOR IMPORT**. The cumulative package contains **35 topics and 18 labs**. Only files under `content-kit/machine-learning/content/` change.
+
+No curriculum changes are proposed, no requested points are omitted and no implementation questions remain open. Review status remains `draft` for human editorial review. The invented datasets teach preparation mechanics and do not support real housing prices, student decisions or causal claims.
+
+---
+
 # Batch 3 — Maths You Can See
 
 Package `machine-learning-tutorial` is now **0.3.0**, format 1.1. This delivery adds all ten `math-intuition` topics in curriculum order:
@@ -70,7 +131,7 @@ No curriculum points are omitted, no curriculum changes are proposed and there a
 
 # Machine Learning delivery notes
 
-Current package: `machine-learning-tutorial`, version `0.2.0`, format `1.1`.
+Historical package at Batch 2: `machine-learning-tutorial`, version `0.2.0`, format `1.1`.
 
 ## Batch 2: Python Tools for Machine Learning
 

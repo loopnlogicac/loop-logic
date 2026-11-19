@@ -1,0 +1,37 @@
+<h2 id="introduction">A room number is not a room count</h2>
+<div class="callout story"><p>Nana brings Mina a notebook of homes for rent. One page says three rooms. Another says room 302. Tuktuk adds the numbers and announces 305 rooms. Mina draws a box around 302. That number names a room; it does not count rooms.</p></div>
+<p>Computers store symbols and numbers, but storage does not explain meaning. The same integer can be a count, a category code or part of an identifier.</p>
+<p>You will classify measurements, names, ranks, text, images and dates. You will also inspect pandas storage types without mistaking them for a full description of the data.</p>
+<h2 id="intuition">Ask what comparisons are meaningful</h2>
+<p><dfn>Numerical data</dfn> describes quantities for which arithmetic has meaning. <dfn>Categorical data</dfn> describes membership in a named group. A <dfn>dtype</dfn> tells you how a column's values are stored and which operations its software supports.</p>
+<table><caption>Six homes, two fields, different questions</caption><thead><tr><th>Home</th><th>Area in square feet</th><th>District code</th></tr></thead><tbody><tr><td>A</td><td>600.5</td><td>1</td></tr><tr><td>B</td><td>800</td><td>2</td></tr><tr><td>C</td><td>900.5</td><td>1</td></tr><tr><td>D</td><td>700</td><td>3</td></tr><tr><td>E</td><td>850</td><td>2</td></tr><tr><td>F</td><td>1000</td><td>3</td></tr></tbody></table>
+<p>The area gap between A and B is meaningful. The code gap between districts 1 and 3 has no distance meaning unless someone explicitly defined such a measurement. Relabelling districts must not change their geography.</p>
+<p>Numerical quantities can be discrete or continuous. Rooms are discrete counts: two and three rooms, not 2.4 actual rooms. Area is continuous in meaning, even if a form rounds every measurement to a whole square foot.</p>
+<h2 id="how-it-works">Describe meaning before conversion</h2>
+<p>For the six homes, add the areas: 4851 square feet. Divide by six for an average of 808.5. Do not average district codes and call the result a typical location. Instead count two occurrences of each district code.</p>
+<pre class="diagram">read the field description and its units
+ask whether addition or subtraction describes a quantity
+if categories: ask whether a real order exists
+inspect dtype and several observed values
+convert with explicit rules; inspect conversion failures</pre>
+<p>Nominal categories have names but no built-in order: Mirpur, Badda and Uttara. Ordinal categories have a meaningful order: low, medium and high service levels. An order does not promise equal gaps. Moving from low to medium need not equal moving from medium to high.</p>
+<p>Dates need calendar-aware operations. From January 1 to January 3 is two elapsed days. Sorting text dates such as 02/11/2026 can be misleading when the day/month convention is unclear. Prefer an explicit year-month-day format and record the timezone when clock times matter.</p>
+<p>Text starts as characters, not a ready-made measure of similarity. A later text model may count words or encode tokens. An image is a grid of pixel values, often with three colour channels. Turning pixels into numbers still leaves questions about resolution, brightness and what the scene means.</p>
+<p>Codes printed on a mobile receipt deserve the same care. Leading zeros may be part of an identifier. Converting that field to an integer can lose information even if pandas accepts the operation.</p>
+<h2 id="try-it-yourself">Invent a field dictionary</h2>
+<div class="callout unplugged"><p>Give a friend six cards: bus route number, passengers, temperature, service level, departure date and a written complaint. For each card, agree on its meaning, unit, valid examples and whether averaging makes sense.</p></div>
+<p>Now replace temperature values with rounded integers. The measurement remains continuous in meaning. Change the route names from letters to integers. They remain nominal categories. Your explanation should survive both changes in notation.</p>
+<p>For a small spreadsheet, write a field dictionary beside it. Include missing-value codes such as blank or unknown. Do not assume a typed zero means missing; a ground-floor code of zero can be a valid observation.</p>
+<h2 id="examples">Inspect, convert and question</h2>
+<p>The first program gives pandas an ordered category explicitly. It also parses two dates into a date-aware dtype. Notice which meanings came from your instructions rather than from automatic guessing.</p><div data-example="ex-1"></div>
+<p>The conversion example treats unknown as missing using errors="coerce". Inspect the failed token before accepting that decision. Coercion is a visible policy, not proof that a source entry was meaningless.</p><div data-example="ex-2"></div>
+<p>The rent audit uses the existing shared CSV. Missing area cells make the area column floating-point. The room count remains integer here because it has no missing cells. Neither observation replaces the column description.</p><div data-example="ex-3"></div>
+<p>Use head to inspect representative rows, dtypes for storage, and value counts for categories. Pandas info combines column counts with non-missing counts. A numeric dtype containing only 0 and 1 may represent a class label, a switch or a measured proportion; ask which one.</p>
+<h2 id="common-mistakes">Conversion can change a question</h2>
+<ul><li>Averaging numeric district codes invents geography. Keep their category meanings and encode them later.</li><li>Sorting low, medium and high alphabetically loses their intended order. Supply the category order explicitly.</li><li>Converting a price containing a currency word without inspecting failures hides a parsing problem. Separate units from numbers first.</li><li>Subtracting local clock strings across timezones gives misleading durations. Parse dates and document timezone rules.</li></ul>
+<h2 id="going-deeper">Optional: storage, measurement and information</h2>
+<div class="callout deeper"><p>Measurement type constrains valid transformations. Relabelling nominal categories should preserve category membership. An ordinal transformation must preserve order, but can change spacing. Quantitative units allow meaningful differences or ratios according to the measurement definition.</p><p>Pandas may store an integer-like column with missing values as float64 because ordinary NumPy integer storage has no NaN. Nullable Int64 can retain integer semantics with missing entries. That capital I identifies a pandas extension dtype. Software storage is a representation choice, not a discovery about the world.</p></div>
+<p>For a university answer, give both layers: rooms are discrete quantitative data and may be stored as int64. District is nominal categorical data and may be stored as strings. State the missing-value convention and explain which arithmetic would be invalid.</p>
+<h2 id="summary">Meaning comes before dtype</h2>
+<ul><li>Counts and continuous measurements are different numerical meanings.</li><li>Nominal names do not acquire order from integer codes.</li><li>Ordinal levels have order without guaranteed equal spacing.</li><li>Dates and times require explicit parsing conventions.</li><li>Text and image representations need documented transformations.</li><li>Inspect values and field descriptions alongside pandas dtypes.</li></ul>
+<p>Next, <a href="topic:ml-missing-and-dirty-data">investigate missing and dirty entries</a> before a model learns from them.</p>

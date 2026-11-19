@@ -35,8 +35,8 @@ def main():
         version = importlib.metadata.version(package)
         assert tuple(map(int, version.split(".")[:2])) >= minimum
         assert f"{package} {version}" in manifest["toolchain"]
-    assert manifest["packageVersion"] == "0.3.0"
-    print("Required packages match the recorded toolchain; packageVersion is 0.3.0.")
+    assert manifest["packageVersion"] == "0.4.0"
+    print("Required packages match the recorded toolchain; packageVersion is 0.4.0.")
 
     datasets = ROOT / "shared/datasets"
     csv_paths = sorted(datasets.glob("*.csv"))
