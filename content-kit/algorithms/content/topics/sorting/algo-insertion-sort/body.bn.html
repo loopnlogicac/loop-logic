@@ -1,0 +1,60 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">হাতে তাস সাজাতে পরের card আগেরগুলোর ঠিক জায়গায় ঢোকাও। <dfn>Insertion sort</dfn>-ও এভাবে কাজ করে। প্রতি outer iteration-এ sorted prefix এক key বাড়ে।</p>
+<p>ছোট array ও nearly ordered data-তে উপকারী। Order যাই হোক সব pair scan না করে সত্যিই নড়তে হবে এমন value-এ কাজ করে। সহজ movement-এ stability বোঝানোও সহজ।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">for i = 1 to n - 1
+    key = a[i]; j = i - 1
+    while j &gt;= 0 and a[j] &gt; key
+        a[j + 1] = a[j]; j = j - 1
+    a[j + 1] = key
+    a[0..i] is sorted</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>Shift-এর আগে key বাঁচাও</h3>
+<p>প্রথম value length-one sorted prefix। Index i-তে a[i] key হিসেবে save। j=i-1 থেকে আগের value তুলনা। a[j] বড় থাকলে এক cell ডানে copy,j কমাও। Original cell overwrite হলেও key আলাদা variable-এ নিরাপদ।</p>
+<p>থামলে key a[j+1]-এ বসাও। হয় j=-1,মানে সব আগেরটির চেয়ে ছোট;নয়তো a[j]≤key। দুই ক্ষেত্রেই j-এর পর ঠিক জায়গা। এখানে shift-based;adjacent-swap variant-ও আছে।</p>
+<p>[7,3,5,3,1]-এ i1-এর key3 save করে7 ডানে,ফল [3,7,5,3,1]। পরের key5 আবার7 সরিয়ে3 ও7-এর মাঝে। নিজের key insert-এর আগে suffix sorted ধরা হয় না।</p>
+<h3>Guard নিরাপদ ক্রমে পড়ো</h3>
+<p>C guard j≥0 ও a[j]&gt;key,short-circuit &amp;&amp;-এ লেখা। Left আগে;false হলে right বাদ। তাই negative j-তে access নেই। Operand উল্টালে invalid বোঝার আগেই array-র বাইরে পড়তে পারে।</p>
+<p>Signed j=-1 সুবিধার stopping state। Unsigned zero থেকে এক কমলে বড় মানে wrap,negative নয়। তখন hole position zero-র ওপরে রেখে অন্য design চাই। Redesign ছাড়া signed condition copy করবে না।</p>
+<p>Shift-এর মাঝে array-তে একই value repeat দেখা যেতে পারে। Key হারায়নি,আলাদা আছে। Trace-এ saved key দেখলে সব value হিসাব মেলে। Reinsertion-এর পরই original multiset তুলনা করো।</p>
+<h3>Nearly sorted-এ movement কম</h3>
+<p>Ascending-এ নতুন key-র condition সঙ্গে সঙ্গে false:n-1 check,zero shift,Θ(n)। Reverse-এ key i আগের i value পেরোয়;1+2+…+n-1 shift,Θ(n²)।</p>
+<p><dfn>Inversion</dfn> হলো p&lt;q অথচ a[p]&gt;a[q]। প্রতি shift একটি এমন pair পার করে। Total shift input inversion count। I inversion-এ সাধারণ implementation Θ(n+I)। “প্রায় sorted” বলার চেয়ে অল্প inversion-এর লাভ নির্দিষ্ট করে।</p>
+<p>প্রায় ascending list-এর শেষে একটি ছোট value-ও অনেক position পার হয়। Linear extra কাজ,তবু quadratic থেকে কম হতে পারে। Performance দাবিতে আসল disorder বা inversion count বলো।</p>
+<h3>Equal key arrival order রাখো</h3>
+<p>Strictly বড় predecessor-ই shift। আগের equal record পেলে থামে,তাই পরের3B আগের3A-এর পরে থাকে। এই shift implementation stable।</p>
+<p>Greater-than-or-equal দিলে নতুন key আগের equal-এর আগে। সংখ্যা sorted,record order বদলায়। এক field-এ sort করে আরেক field-এ stable sort-এ আগের order tie rule হিসেবে কাজে লাগে।</p>
+<p>Key ও index ছাড়া extra নেই,তাই in-place constant workspace। বড় random array-তে quadratic worst খারাপ। Practical sort-এ ছোট subarray-তে অল্প overhead-এর জন্য ব্যবহৃত হয়।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>প্রতিটি saved key prefix বাড়িয়ে শেষে1 3 3 5 7। শেষ key1 চার predecessor সরায়।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা sort করো</h3>
+<p>Signed মানেও সরাসরি shift। Strict comparison দুই -2-এর আগের order রাখে।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>Sort equal key একত্র করে। Group শুরুর count তিন distinct score।</p>
+<div data-example="ex-3"></div>
+<h3>Shift ও inversion মেলাও</h3>
+<p>শুধু3,2 pair inverted। একটি shift সেটি সরায়;near-order-এ কম কাজ বোঝা যায়।</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>i = 1, key = 3</td><td>[3,7,5,3,1]</td><td>7 ডানে সরিয়ে 3 বসাও।</td></tr><tr><td>i = 2, key = 5</td><td>[3,5,7,3,1]</td><td>শুধু 7 key-এর চেয়ে বড়।</td></tr><tr><td>i = 3, key = 3</td><td>[3,3,5,7,1]</td><td>আগের সমান 3-এর পরে থামো।</td></tr><tr><td>i = 4, key = 1</td><td>[1,3,3,5,7]</td><td>আগের চার value-ই সরাও।</td></tr></tbody></table>
+<div data-lab="insertion-sort"></div>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Outer i-এর আগে a[0..i) sorted,মূল প্রথম i value আছে। Next key save। ডানে shift হওয়া সবাই key-এর চেয়ে বড় ও sorted। বড় predecessor শেষ হলে j+1-এ key দিয়ে length i+1 sorted prefix।</p>
+<p>Outer n পর্যন্ত বাড়ে। Inner ordered predecessor বা left boundary না-পাওয়া পর্যন্ত কমে। তাই দুটোই থামে। প্রতিটি shift শেষে key ফেরে,তাই completed iteration সব record রাখে।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Best Θ(n),reverse worst Θ(n²)। Uniform random distinct permutation-এ expected inversion n(n-1)/4,তাই average quadratic। সাধারণ Θ(n+I),auxiliary Θ(1),strict shift stable। এই routine-এর জন্য,শুধু prefix বাড়ানো যেকোনো algorithm-এর নয়।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>প্রথম shift-এ key হারানো</h3>
+<p>Predecessor সরানোর আগে a[i] save করো। নইলে বড় value প্রথম key overwrite করতে পারে।</p>
+<h3>j যাচাইয়ের আগে a[j] পড়া</h3>
+<p>&amp;&amp;-এ আগে boundary test রাখো;short-circuit array access বাঁচাবে।</p>
+<h3>j+1-এর বদলে j-তে বসানো</h3>
+<p>থামা j acceptable predecessor বা -1। খালি cell তার ঠিক পরে।</p>
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>C17 &amp;&amp;-এ left-to-right short-circuit নিশ্চিত। আগে j&gt;=0 দিলে negative-এ a[j] evaluate হয় না।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Saved key নিরাপদ shift-এ prefix-এ বসাও;tie stable রাখো,কাজ inversion দিয়ে বোঝো।</p>
+<p>এরপর <a href="topic:algo-merge-sort">merge sort</a>-এ দুটি sorted অংশ মেলাও।</p>
