@@ -1,0 +1,400 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-dangling-wild-pointers",
+  "module": "pointers",
+  "order": 9,
+  "kind": "lesson",
+  "title": {
+    "en": "Dangling and Wild Pointers",
+    "bn": "মেয়াদ শেষ ও অপ্রস্তুত পয়েন্টার"
+  },
+  "summary": {
+    "en": "Prevent uninitialized pointer use, track target lifetime, and release owned memory without leaving usable aliases.",
+    "bn": "মান না দেওয়া পয়েন্টার পড়া এড়াও, টার্গেটের মেয়াদ দেখো আর মেমরি ছাড়ার পর পুরোনো অ্যাড্রেস ব্যবহার কোরো না।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "c-void-null-pointers"
+  ],
+  "related": [
+    "c-const-pointers"
+  ],
+  "keywords": [
+    "dangling and wild pointers",
+    "C programming",
+    "pointers"
+  ],
+  "standards": {
+    "minimum": "c99",
+    "notes": [
+      "Uninitialized reads and expired-object access remain invalid across the C standards in this course. The examples target C17. Sanitizers are compiler tools rather than language guarantees, so their usefulness complements lifetime reasoning instead of replacing it."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Dangling and Wild Pointers"
+    },
+    {
+      "id": "syntax",
+      "title": "Declarations and call rules"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow the storage and operations"
+    },
+    {
+      "id": "examples",
+      "title": "Programs to inspect and trace"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Choose the right behavior"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Mistakes and repairs"
+    },
+    {
+      "id": "best-practices",
+      "title": "Working habits"
+    },
+    {
+      "id": "version-notes",
+      "title": "Standard and portability notes"
+    },
+    {
+      "id": "summary",
+      "title": "What to carry forward"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Initialize before selecting a target",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The pointer is initialized immediately and only dereferenced after a live target is assigned.</p>",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Copy a value before a block ends",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The int value is copied while local is alive. No expired pointer is read after leaving the block.</p>",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Release allocated storage once",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "tryNow": true,
+      "explanationHtml": "<p>Allocation failure is checked. The value is read before free, then the owner is cleared and not reused.</p>",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "An uninitialized pointer is not a destination",
+      "level": "intermediate",
+      "file": "examples/ex-4.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The result is undefined: p was never assigned a valid target address. Initialize a real int and point to it.</p>",
+      "demonstrates": "undefined-behavior"
+    },
+    {
+      "id": "ex-5",
+      "title": "An alias still expires after free",
+      "level": "intermediate",
+      "file": "examples/ex-5.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The result is undefined: alias still refers to the object whose lifetime ended. Clearing owner does not revive or clear alias.</p>",
+      "demonstrates": "undefined-behavior"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "easy",
+      "title": "Copy before scope exit",
+      "statementHtml": "<p>Read an int -100 to 100. Print Local value: then copy it through a pointer inside a nested block and print the saved scalar outside.</p>",
+      "hints": [
+        "Save the value, not the expired address."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "easy",
+      "title": "Use a caller-owned result slot",
+      "statementHtml": "<p>Read two ints -100 to 100. Print Two integers (-100 to 100): then their sum written into a main-owned int through a helper.</p>",
+      "hints": [
+        "The result slot remains alive after the helper returns."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "difficulty": "medium",
+      "title": "Own one allocated score",
+      "statementHtml": "<p>Read an int -100 to 100. Print Owned score: then allocate one int, store twice the input, print it and release it.</p>",
+      "hints": [
+        "Only the malloc result is passed to free."
+      ],
+      "solution": "practice/p-3.c",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-4",
+      "difficulty": "hard",
+      "title": "Use temporary aliases before release",
+      "statementHtml": "<p>Read two ints -100 to 100. Print Two owned values: then allocate two ints, sum them through temporary aliases, print the sum, and free the original allocation once.</p>",
+      "hints": [
+        "Limit borrowed aliases to a block ending before free."
+      ],
+      "solution": "practice/p-4.c",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the initial value of an uninitialized automatic int *p?",
+      "options": [
+        "Always NULL",
+        "Indeterminate",
+        "A newly allocated int",
+        "The address of main"
+      ],
+      "answer": 1,
+      "explanation": "Automatic pointer objects are not implicitly initialized."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does checking an uninitialized p against NULL initialize it?",
+      "options": [
+        "No",
+        "Yes",
+        "Only with if",
+        "Only if the branch is skipped"
+      ],
+      "answer": 0,
+      "explanation": "The comparison reads the indeterminate pointer instead of assigning a known value."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When does an automatic local int cease to exist?",
+      "options": [
+        "Only at program exit",
+        "Only after free",
+        "When its value is zero",
+        "When its block lifetime ends"
+      ],
+      "answer": 3,
+      "explanation": "Keeping its address cannot extend that lifetime."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does owner=NULL after free(owner) clear another pointer alias?",
+      "options": [
+        "Yes",
+        "Only with optimization",
+        "No",
+        "Only for allocated ints"
+      ],
+      "answer": 2,
+      "explanation": "Pointer copies occupy separate objects."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should be passed to free for a two-element malloc allocation?",
+      "options": [
+        "A pointer to its second element",
+        "Its original allocated-block pointer",
+        "The address of the owner variable",
+        "Each int value"
+      ],
+      "answer": 1,
+      "explanation": "Interior addresses are not valid allocation owners for free."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can a non-null pointer safely prove its former target is still alive?",
+      "options": [
+        "No",
+        "Yes",
+        "Only when printed with %p",
+        "Only after sizeof"
+      ],
+      "answer": 0,
+      "explanation": "Lifetime must be tracked independently."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the result of freeing the same allocation twice?",
+      "options": [
+        "A harmless no-op always",
+        "A new allocation",
+        "A guaranteed compiler error",
+        "Undefined behavior"
+      ],
+      "answer": 3,
+      "explanation": "free(NULL) is harmless, but reusing a freed block pointer is not."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What value appears after initializing and assigning the pointer?",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int *p = NULL;\n    int score = 20;\n    p = &score;\n    if (p != NULL) {\n        printf(\"%d\\n\", *p);\n    }\n    return 0;\n}\n",
+      "options": [
+        "21",
+        "02",
+        "No output",
+        "20"
+      ],
+      "answer": 3,
+      "explanation": "A live score is selected before the dereference."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which value survives after the nested local disappears?",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int saved;\n    {\n        int local = 30;\n        int *view = &local;\n        saved = *view;\n    }\n    printf(\"%d\\n\", saved);\n    return 0;\n}\n",
+      "options": [
+        "31",
+        "03",
+        "30",
+        "No output"
+      ],
+      "answer": 2,
+      "explanation": "A scalar copy survives independently."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "hard",
+      "prompt": "What output is produced before and after releasing the owned int?",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int *owner = malloc(sizeof *owner);\n    if (owner == NULL) {\n        return 1;\n    }\n    *owner = 45;\n    printf(\"%d\\n\", *owner);\n    free(owner);\n    owner = NULL;\n    puts(owner == NULL ? \"Released\" : \"Owned\");\n    return 0;\n}\n",
+      "options": [
+        "46\nReleased",
+        "45\nReleased",
+        "45",
+        "Released\n45"
+      ],
+      "answer": 1,
+      "explanation": "Only the initialized null owner is inspected after free."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An uninitialized automatic pointer has an indeterminate value.",
+      "bn": "মান না দেওয়া অটোমেটিক পয়েন্টারের মান অনির্দিষ্ট থাকে।"
+    },
+    {
+      "en": "A pointer can outlive the object it once selected.",
+      "bn": "যে ভেরিয়েবলের দিকে পয়েন্টার তাক করেছিল, সেটির মেয়াদ আগেই শেষ হতে পারে।"
+    },
+    {
+      "en": "free ends an allocated object lifetime.",
+      "bn": "free করলে অ্যালোকেট করা মেমরির মেয়াদ শেষ হয়।"
+    },
+    {
+      "en": "Nulling one owner does not repair its aliases.",
+      "bn": "একটি পয়েন্টার NULL করলেই তার কপিগুলো নিরাপদ হয় না।"
+    },
+    {
+      "en": "Use owned storage only while its lifetime and range are valid.",
+      "bn": "মেমরি জীবিত ও সীমার মধ্যে থাকলেই অ্যাড্রেস দিয়ে কাজ করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Distinguish a wild pointer from a dangling pointer and give a prevention technique for each.",
+      "marks": 5,
+      "answerHtml": "<p>A wild pointer usually means an uninitialized pointer whose indeterminate value is not a usable address. Initialize it to NULL or a live object address before any read. A dangling pointer once selected storage whose lifetime ended, through free or scope exit. Keep borrowing inside the owner lifetime, never return automatic local addresses, and discard aliases before release.</p>"
+    },
+    {
+      "type": "output",
+      "question": "What output is produced before and after releasing the owned int?\n\n#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int *owner = malloc(sizeof *owner);\n    if (owner == NULL) {\n        return 1;\n    }\n    *owner = 45;\n    printf(\"%d\\n\", *owner);\n    free(owner);\n    owner = NULL;\n    puts(owner == NULL ? \"Released\" : \"Owned\");\n    return 0;\n}\n",
+      "marks": 3,
+      "answerHtml": "<pre class=\"output\">45\nReleased</pre><p>Only the initialized null owner is inspected after free.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Read two ints -100 to 100. Print Two owned values: then allocate two ints, sum them through temporary aliases, print the sum, and free the original allocation once.",
+      "marks": 8,
+      "answerHtml": "<pre><code class=\"language-c\">#include &lt;stdio.h&gt;\n#include &lt;stdlib.h&gt;\n\nint main(void)\n{\n    int a, b;\n    puts(&quot;Two owned values:&quot;);\n    if (scanf(&quot;%d %d&quot;, &amp;a, &amp;b) != 2 || a &lt; -100 || a &gt; 100 || b &lt; -100 || b &gt; 100) {\n        return 1;\n    }\n    int *owner = malloc(2 * sizeof *owner);\n    if (owner == NULL) {\n        return 1;\n    }\n    owner[0] = a;\n    owner[1] = b;\n    {\n        const int *left = owner;\n        const int *right = owner + 1;\n        printf(&quot;%d\\n&quot;, *left + *right);\n    }\n    free(owner);\n    owner = NULL;\n    return 0;\n}\n</code></pre><p>Limit borrowed aliases to a block ending before free.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Dangling and Wild Pointers — C reference",
+      "url": "https://en.cppreference.com/w/c/memory/free"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

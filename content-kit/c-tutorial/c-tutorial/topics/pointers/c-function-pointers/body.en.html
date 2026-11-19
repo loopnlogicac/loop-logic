@@ -1,0 +1,82 @@
+<h2 id="introduction">Function Pointers</h2>
+<p class="lead">A calculator chooses an operation after reading a menu option. One design repeats a long decision chain every time an operation is needed. Another stores the addresses of compatible functions in a table and selects one entry. A <dfn>function pointer</dfn> makes that second design possible.</p>
+<p>A function pointer identifies callable code rather than an int or character object. Its type describes the result and argument types required for a valid call. That signature is part of the safety contract, just as the pointed-to type matters for ordinary object pointers.</p>
+<p>You will first select an addition function, then build a small calculator table. Finally, you will pass a comparison function to qsort. That comparison function is a <dfn>callback</dfn>: another routine receives it and calls it when it needs your decision.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>Read <code>int (*operation)(int,int)</code> from the name outward. operation is a pointer, and the selected function takes two ints and returns int. The parentheses are essential. <code>int *operation(int,int)</code> instead declares a function that returns int *.</p>
+<p>Initialize with a compatible function designator, such as <code>operation = add_values</code>. C converts the function designator to its function pointer for this use. Writing <code>&amp;add_values</code> is also permitted, but the shorter spelling is common.</p>
+<p>Call the selected function with <code>operation(a,b)</code> or <code>(*operation)(a,b)</code>. Both forms use the same function type. The pointer must identify a compatible function before the call; a null function pointer is not callable.</p>
+<p>An array declaration such as <code>int (*operations[])(int,int)</code> groups several compatible function pointers. Each entry must agree on parameter types and result type. Validate a menu index before indexing this table, then call the selected entry with suitable arguments.</p>
+<p>A typedef can make repeated signatures easier to read: <code>typedef int (*BinaryOp)(int,int);</code>. Then BinaryOp names that pointer type, and <code>BinaryOp operations[3]</code> declares a three-entry table. The typedef does not relax call compatibility.</p>
+
+<pre><code class="language-c">int (*operation)(int, int) = add_values;
+int result = operation(4, 5);
+int (*operations[])(int, int) = {add_values, subtract_values};</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>(*operation)</code></td><td>Pointer grouping, rather than a pointer-returning function</td></tr><tr><td><code>(int, int)</code></td><td>Two int argument types</td></tr><tr><td><code>operations</code></td><td>Array of compatible callable targets</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>The first example initializes operation with the addition function. A call with four and five returns nine. Explicitly dereferencing operation before a second call produces five from two and three. The two spellings differ visually without changing which function is selected.</p>
+<p>The calculator table contains addition, subtraction and multiplication in that order. With inputs six and two, entries zero through two produce eight, four and twelve. The table changes control flow by selecting code; it does not store the results in advance.</p>
+<p>Every binary calculator function has the same signature, even though their bodies differ. A function that takes one int cannot be inserted safely by casting it to that binary type. The cast can silence a diagnostic while leaving an incompatible call with undefined behavior.</p>
+<p>A function pointer can be passed as a parameter. The apply helper receives an int array, a count and a transformation function. It calls transform on each element and stores the returned value. Passing twice separates the array traversal from the choice of transformation.</p>
+<p>The unary transformation must also obey its numeric bounds. A correctly typed callback can still overflow if it squares an arbitrary large int. The practice task bounds inputs to minus one hundred through one hundred so both doubling and squaring remain representable.</p>
+<p>Function pointers do not support object-pointer arithmetic. There is no portable expression that advances from one function&#x27;s address to the next function. A dispatch table is an ordinary array of pointer entries; arithmetic may traverse that table, not the selected function code.</p>
+<p>The memory diagram draws function targets as code labels rather than writable value boxes. Standard C does not let you dereference a function pointer and assign new instructions as though you were changing an int. The useful operation is a compatible call.</p>
+<pre class="diagram">operations: array of function pointers
+entry 0 [address of add_values] -------&gt; code: int add_values(int,int)
+entry 1 [address of subtract_values] --&gt; code: int subtract_values(int,int)
+entry 2 [address of multiply_values] --&gt; code: int multiply_values(int,int)
+
+qsort element callbacks:
+left  [address] ---&gt; int element A
+right [address] ---&gt; int element B
+compare_ints reads A and B, then returns their ordering sign</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Declare and invoke a function pointer</h3>
+<p>Both call forms invoke the selected add function with the listed arguments.</p>
+<div data-example="ex-1"></div>
+<h3>A typed calculator table</h3>
+<p>The table selects addition, subtraction and multiplication, producing eight, four and twelve.</p>
+<div data-example="ex-2"></div>
+<h3>A callback transforms each value</h3>
+<p>apply calls the supplied transformation for each element and stores the result back in caller storage.</p>
+<div data-example="ex-3"></div>
+<h3>Sort with a comparison callback</h3>
+<p>qsort passes addresses of elements. The comparator converts those addresses and returns an overflow-safe ordering sign.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>qsort sorts an array without knowing the meaning of its element values. You provide the array beginning, element count, element size and a comparator. The comparator has the required type <code>int compare(const void *,const void *)</code>.</p>
+<p>For an int array, the two callback arguments point at int elements. Convert them to const int * before reading. They are addresses, not integers already converted to pointer form. The void-pointer parameters provide a generic object-address interface, explained further in the next topic.</p>
+<p>The comparator returns negative when the first element belongs before the second, zero when they compare equal, and positive when the first belongs after the second. qsort needs a consistent ordering. Returning true for greater-than alone loses the distinction between less-than and equality.</p>
+<p>Avoid <code>return *a - *b</code> for unrestricted ints. The mathematical difference might exceed int range, causing signed overflow and undefined behavior. The expression <code>(*a &gt; *b) - (*a &lt; *b)</code> uses comparison results zero or one, so its result is always minus one, zero or one.</p>
+<p>Do not change the compared objects inside the comparator. Repeated comparisons must agree for the values being sorted. A comparator that depends on a changing counter or random choice cannot define a stable ordering relation for qsort to follow.</p>
+<p>The qsort example sorts 90, 40, 70 and 40 into 40, 40, 70 and 90. Equal keys remain in the result, but their relative identity is not guaranteed. The C standard does not promise a stable sorting algorithm or require one particular algorithm for qsort.</p>
+<p>The caller supplies <code>sizeof values[0]</code> as the element size. Passing sizeof a pointer would give the wrong stride when pointer and element sizes differ. The compiler cannot discover the intended element type from the void * array argument alone.</p>
+<p>Function pointers and object pointers occupy different semantic categories. The portable void * round-trip guarantee applies to object pointers, not every function pointer. Do not store callbacks in a void * table and assume ordinary object conversions preserve their calls.</p>
+<p>A callback can be selected at runtime without losing type checking. Keep its declaration visible before use, match the signature, and avoid casts that hide disagreements. If different operations genuinely need different argument lists, design an explicit common wrapper or separate interfaces rather than pretending their signatures match.</p>
+<p>A comparison routine should define a total ordering for the input values it receives. For integer keys, ordinary numeric order satisfies that need. With records, compare a primary key first and use a secondary key only when the first compares equal. Avoid contradictory answers for the same pair.</p>
+<p>A callback can also carry policy without global variables. Standard qsort&#x27;s comparator has no extra context parameter, so a design requiring caller-specific context needs another documented interface or a different sorting routine. Do not silently depend on mutable global state when teaching a reusable comparator.</p>
+<p>The dispatch table itself is data storage and can be local, static or const-qualified according to the desired lifetime and mutability. The selected functions continue to exist as callable program code. A local table ending its lifetime does not end the functions; it only ends that collection of saved function addresses.</p>
+<p>A menu wrapper should also specify division-by-zero and overflow behavior if division or unrestricted arithmetic is added. Selecting a valid function pointer proves call compatibility, while arithmetic preconditions remain the selected function&#x27;s separate responsibility.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>A missing pair of parentheses changes a function-pointer declaration into a pointer-returning function declaration. Start reading at the identifier and check what the next binding operation means. A typedef is useful after you understand that underlying declaration.</p>
+<p>An out-of-range menu index reads beyond the dispatch table. Validate it before selecting an entry. A valid index may still select a null entry in a partially filled table, so either initialize every entry or check the chosen pointer before calling.</p>
+<p>A qsort comparator must not subtract arbitrary ints. Tests with small marks can conceal the overflow problem. Use a comparison-sign expression that also handles minimum and maximum int values safely.</p>
+<p>Do not infer qsort&#x27;s stability from one observed output. With plain equal ints you cannot see which original equal entry came first. Records with equal keys require a documented stability policy or an explicit secondary ordering key.</p>
+<p>Calling through an incompatible converted function pointer has undefined behavior. Correct return and argument types are not optional metadata. The intentional mistake example shows why a cast is not an argument adapter.</p>
+<h3>Call through an incompatible function type</h3>
+<p>The result is undefined: the call uses a type incompatible with the actual two-argument function. A cast cannot repair a signature mismatch.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Keep dispatch tables small and signatures visible. Bound operands independently of pointer validity. Use callback parameters to separate traversal from policy, and write comparators around signs and consistent ordering rather than arithmetic shortcuts.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Function pointers and qsort are available in C89 and later. The examples target C17 with C99-style loops. C23 does not make incompatible callback casts safe or require qsort to use a stable algorithm.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Function pointers select compatible callable code, enabling tables and callbacks without duplicating traversal logic. Their signatures and target validity must remain correct. Next, examine generic object addresses and missing targets in <a href="topic:c-void-null-pointers">void and NULL Pointers</a>.</p>

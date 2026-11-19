@@ -1,0 +1,59 @@
+<h2 id="introduction">Character Functions (ctype.h)</h2>
+<p class="lead">A registration code mixes letters, digits and separators. Instead of writing a long chain of character comparisons, ask ctype.h what kind of character you have. Its small functions classify bytes and convert letter case.</p>
+<p>Think of a sorting desk with separate trays for letters, digits and whitespace. <code>isalpha</code>, <code>isdigit</code> and <code>isspace</code> answer which tray fits. <code>isupper</code> asks a narrower question about letter case. The answers are true or false, represented by nonzero or zero integer results.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>Include <code>ctype.h</code> before calling these functions. The expression <code>isdigit(ch)</code> tests whether ch is a decimal digit. <code>toupper(ch)</code> returns an uppercase equivalent when one exists, while <code>tolower(ch)</code> returns a lowercase equivalent.</p>
+<p>A classification result is not necessarily exactly one. When adding successful tests to a count, use <code>isdigit(ch) != 0</code>. The comparison converts any successful result to one. In an if condition, the raw nonzero result is already suitable.</p>
+<p>For bytes stored in a plain char array, use <code>(unsigned char)text[i]</code> as the argument. The valid domain is EOF or a value representable as unsigned char. A negative plain char value outside that domain causes undefined behavior.</p>
+
+<pre><code class="language-c">unsigned char ch = (unsigned char)text[i];
+int digit = isdigit(ch) != 0;
+int upper = toupper(ch);</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>ch</code></td><td>Permitted unsigned-character value</td></tr><tr><td><code>digit</code></td><td>Normalized Boolean count contribution</td></tr><tr><td><code>upper</code></td><td>Converted int result or unchanged byte value</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>The token CSE212! has three letters, three digits and one punctuation byte. The loop tests each byte before the string terminator. The exclamation mark increases neither selected count, so the two printed counts are three and three.</p>
+<p><code>isspace</code> handles more than the ordinary blank character. In the initial C locale, it recognizes space, form feed, newline, carriage return, horizontal tab and vertical tab. This helps word counters treat a tab and several spaces as separators under the same rule.</p>
+<p><code>isupper(&#x27;A&#x27;)</code> succeeds in the C locale, while <code>isdigit(&#x27;A&#x27;)</code> fails. The demonstration prints normalized results so they remain portable. A particular library might return a large positive bit mask for a successful raw predicate; that magnitude has no teaching meaning.</p>
+<p>Case conversion does not remove digits or punctuation. Converting Lab-204 produces LAB-204 with toupper and lab-204 with tolower. Nonmatching characters are returned unchanged. The functions return int, so storing their byte result in a char array uses an explicit char conversion.</p>
+<p>The unsigned-char conversion preserves the byte&#x27;s value when plain char is signed. Do not cast a pointer to unsigned char instead of converting the selected character. The function expects a character value, not an address.</p>
+<pre class="diagram">text: [&#x27;C&#x27;][&#x27;S&#x27;][&#x27;E&#x27;][&#x27;2&#x27;][&#x27;1&#x27;][&#x27;2&#x27;][&#x27;!&#x27;][&#x27;\0&#x27;]
+         letter bytes  digit bytes   other   stop
+isalpha -&gt;  1  1  1      0  0  0       0
+isdigit -&gt;  0  0  0      1  1  1       0
+shown results are normalized with != 0</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Classify a mixed token</h3>
+<p>Three letters and three digits are counted. The exclamation mark belongs to neither category.</p>
+<div data-example="ex-1"></div>
+<h3>Recognize whitespace and uppercase</h3>
+<p>The normalized predicates print 1, 1 and 0; raw predicate magnitudes are not portable.</p>
+<div data-example="ex-2"></div>
+<h3>Convert both cases</h3>
+<p>The two lines show LAB-204 and lab-204. Punctuation and digits retain their values.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>A <code>locale</code> is a set of language and regional rules used by parts of the library. A C program starts in the C locale until it explicitly changes that setting. These examples do not call setlocale, which keeps their ASCII classification rules predictable.</p>
+<p>Some character properties can differ after a locale change. Do not infer that every byte above the ASCII range is a letter in every environment. These byte functions also do not decode a UTF-8 character spanning several bytes. Bangla text needs an encoding-aware approach for character-level processing.</p>
+<p>For direct input with getchar, keep the result in an int until EOF has been checked. A char might not preserve EOF distinctly from every possible input byte. Once a real byte is known, classification can use its valid unsigned-char value.</p>
+<p>Whitespace normalization needs more than calling isspace once. Remember whether a separator is pending, and write one ordinary space only when a later nonspace byte arrives. That policy removes leading and trailing whitespace while collapsing internal runs. The hard practice task applies this state-based design.</p>
+<p>A character-category report should state whether categories overlap. isalpha and isupper can both succeed for A. If you want disjoint totals, choose an if/else-if chain that assigns each byte to exactly one category. If you want independent properties, separate tests may correctly count the same byte more than once.</p>
+<p>Whitespace normalization has its own output bound. Replacing a nonempty separator run with one space never increases its length, and discarding leading or trailing separators shortens it. Therefore an output array with the original line&#x27;s maximum visible length plus one can hold the normalized result, including termination.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Do not compare <code>isalpha(ch) == 1</code>. Success is nonzero, and its exact value is unspecified by the interface. Test truth or normalize it with a comparison to zero.</p>
+<p>Calling toupper on a possibly negative stored char is not a portable shortcut. Add the unsigned-char conversion at the call boundary so every byte read from the array is in range.</p>
+<p>A null terminator is a byte value too, but it marks the end of these text loops. Stop before classifying it. Counting past it would include storage outside the logical string and could eventually exceed the array.</p>
+
+
+<h2 id="best-practices">Working habits</h2>
+<p>Choose categories that match the task. State whether whitespace counts include tabs. Normalize predicate results before arithmetic, preserve EOF during input, and use case conversion rather than guessing ASCII numeric differences.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>The listed ctype.h operations are available in C89 and later. Their argument-domain restrictions still apply in C17 and C23. A newer compiler does not convert these byte routines into a general Unicode text library.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Character helpers make byte classification readable when their input domain and locale are understood. Next, study the addresses behind character and integer access in <a href="topic:c-pointers-intro">Introduction to Pointers</a>.</p>

@@ -1,0 +1,75 @@
+<h2 id="introduction">Pointers and Functions</h2>
+<p class="lead">A function often needs to update something that belongs to its caller. Swapping two exam marks or producing both a minimum and maximum are familiar examples. Pointer parameters give the function addresses of caller-owned result slots.</p>
+<p>C still passes every argument by value. For a pointer argument, the copied value is an address. The function can follow that copied address to shared storage, but changing the local pointer parameter itself does not change the caller&#x27;s pointer variable.</p>
+<p>Think of handing someone a copied room location. They can reach the room and change its contents. Writing a different location on their copy does not alter the note you kept. This distinction explains both successful target updates and failed attempts to redirect caller pointers.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>A function declared <code>void swap(int *left, int *right)</code> receives two int pointer values. Call it with <code>swap(&amp;a, &amp;b)</code>. The caller takes the addresses of its live ints, and the helper dereferences those addresses to exchange their values.</p>
+<p>For several results, use output parameters such as <code>int *low</code> and <code>int *high</code>. The caller declares the result variables and passes their addresses. The helper fills those slots before returning. Its contract must say whether targets may be null or alias each other.</p>
+<p>A function can also return a pointer, written <code>int *find(...)</code>. That returned address must select storage that remains alive after return. A position inside the caller&#x27;s array can satisfy this rule. An address of the helper&#x27;s automatic local int cannot.</p>
+<p>Use a scalar return when the result is one ordinary value and no shared access is needed. Returning an address is appropriate when the result is a location in existing storage or an explicitly owned object, rather than a more complicated spelling for a simple number.</p>
+
+<pre><code class="language-c">void swap(int *left, int *right);
+int low, high;
+/* values must be nonempty; outputs must be distinct. */
+minmax(values, count, &amp;low, &amp;high);</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>left / right</code></td><td>Copied addresses of writable int targets</td></tr><tr><td><code>values / count</code></td><td>Readable nonempty input range</td></tr><tr><td><code>&amp;low / &amp;high</code></td><td>Caller-owned result addresses</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>Trace swap using caller ints a=40 and b=90. left points at a and right points at b. The temporary first saves forty. The write through left stores ninety into a; the write through right stores the saved forty into b.</p>
+<p>The pointer parameters occupy their own objects inside the call. Their target addresses are copied from the arguments. On return, those parameter objects disappear, but the caller ints remain alive and retain their new values. No address of the parameter object is needed.</p>
+<p>A temporary-value swap also handles <code>swap(&amp;a,&amp;a)</code>. Both paths select the same int, and every assignment preserves its original value. Arithmetic swaps are harder to reason about and can overflow or fail under aliasing.</p>
+<p>The minmax helper starts from values[0], so its contract requires n&gt;0 and a readable n-element range. It scans into local smallest and largest values, then writes outputs once. This prevents output writes from disrupting the scan if an interface permits some input overlap.</p>
+<p>To retain two different results, low and high must select distinct writable ints. If both select one int, the final write replaces the first result. That call is not automatically undefined, but it cannot satisfy a promise to preserve both extrema simultaneously.</p>
+<p>The search helper returns a+i when a match appears, or NULL when absent. Its returned position remains valid while the caller array stays alive and unchanged in ways that invalidate the requested position. Check NULL before editing the found element.</p>
+<pre class="diagram">caller main:                 function swap:
+a [40] &lt;------------------- left  [address of a]
+b [90] &lt;------------------- right [address of b]
+                              temp [40]
+after target writes:
+a [90]                      left still selects a
+b [40]                      right still selects b
+
+returning &amp;local is different:
+local [7] -- lifetime ends on return --&gt; no usable target</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Swap caller-owned scores</h3>
+<p>The copied addresses still select a and b in main, so their stored values exchange.</p>
+<div data-example="ex-1"></div>
+<h3>Return two extrema through output pointers</h3>
+<p>The helper scans a nonempty range and writes the final extrema into two distinct caller variables.</p>
+<div data-example="ex-2"></div>
+<h3>Return a position inside caller storage</h3>
+<p>The returned pointer remains valid because main still owns the live array. The selected element becomes ten.</p>
+<div data-example="ex-3"></div>
+<h3>A safe static result is shared</h3>
+<p>Static duration keeps the target alive, but repeated calls share the same object. The saved value is one; the later target value is two.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>Returning <code>&amp;local</code> from a helper is a lifetime error. The local automatic object stops existing when the call finishes. The caller receives no live int target, regardless of whether the same stack bytes appear unchanged in a debugger. Reading through that expired address is undefined.</p>
+<p>One safe alternative is to return the computed int value. Another is to let the caller supply an output address. A documented static result can also survive return, but it is shared across calls rather than freshly created for each call.</p>
+<p>The static counter example saves one result value, calls the function again, then reads through the original pointer. The saved scalar remains one; the shared target becomes two. Lifetime safety does not guarantee that later calls leave a static result unchanged.</p>
+<p>Allocated results provide another lifetime model: the callee can create storage whose lifetime continues until the responsible owner frees it. That model needs allocation-failure handling and an ownership contract. The dynamic-memory module develops it; prefer caller-owned output for these small exercises.</p>
+<p>If a helper must redirect a caller pointer, an ordinary int * parameter is insufficient. Assignment to that parameter replaces only its local copied address. Pass an int ** selecting the caller pointer object instead, as the next topic explains.</p>
+<p>A nullable output parameter needs deliberate behavior. You may reject NULL, skip an optional result, or return a status indicating failure. Do not add a null check that silently leaves required caller outputs uninitialized. State the success condition and which outputs were written.</p>
+<p>For empty input, minmax has no minimum or maximum under this interface. A reusable version could return failure without touching outputs. The fixed nonempty examples keep that choice explicit rather than inventing a sentinel that might also be a legitimate mark.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Using <code>swap(a,b)</code> for an address-taking swap is a type mismatch. The function needs locations, not copies of the two numbers. Write the ampersands at the call site when passing ordinary int variables.</p>
+<p>Returning a local array address has the same lifetime problem as returning a local int address. The array-to-pointer conversion does not preserve the array after the call. Copy into a caller-owned buffer or choose another documented lifetime.</p>
+<p>Do not free a returned search pointer into a caller array. The helper returned a borrowed position, not an allocated-block owner. The right cleanup depends on where the target storage came from.</p>
+<p>Output aliases deserve review even when each pointer is non-null. Two individually valid addresses can still refer to the same object, causing one logical result to overwrite another. Contracts describe relationships between arguments as well as each argument separately.</p>
+<h3>Return an expired automatic object</h3>
+<p>The result is undefined when used: local stops existing on return. Return a value or use caller-owned result storage.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Name input and output roles in helper declarations. State nonempty-range and aliasing requirements. Prefer caller-owned result slots for small multi-result tasks, and follow every returned pointer back to storage with a known lifetime.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>C89 through C23 pass pointer arguments by value. These C17 examples use C99 loop declarations. No standard automatically extends automatic local lifetimes when a pointer is returned, and no pointer spelling creates language-level pass-by-reference.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Pointer parameters can modify shared targets because copied addresses still select caller storage. Safe pointer returns also require a target that survives the call. Next, change pointer variables themselves in <a href="topic:c-pointer-to-pointer">Pointer to Pointer</a>.</p>

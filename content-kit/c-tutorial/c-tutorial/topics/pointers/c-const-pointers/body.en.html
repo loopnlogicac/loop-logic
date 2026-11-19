@@ -1,0 +1,82 @@
+<h2 id="introduction">const with Pointers</h2>
+<p class="lead">A function that reads exam marks should not accidentally change them. A pointer that must always select one result slot should not accidentally move elsewhere. Both intentions involve const, but they restrict different levels of a pointer declaration.</p>
+<p>Think of a fixed bookmark and a read-only page. Fixing the bookmark prevents changing the selected page. Making access to the page read-only prevents edits through that route. You may apply either restriction or both, and the declaration must show which one you mean.</p>
+<p>The goal is to communicate permitted actions in types. const helps the compiler catch unintended writes and helps a reader understand a function&#x27;s role. It does not replace lifetime or bounds checks, and it does not automatically freeze every alias of a mutable object.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>Start reading at the identifier, moving outward according to parentheses and declaration binding. In <code>const int *p</code>, p is a pointer to const int. The pointer can receive another address, but an assignment to *p is prohibited through that access path.</p>
+<p>The spelling <code>int const *p</code> means the same thing. const next to int qualifies the pointed-to int type. Read it as a read-only view of an int, without assuming that the underlying object was necessarily defined as const.</p>
+<p>In <code>int *const p = &amp;score</code>, p itself is a const pointer object. Its address value must be initialized and cannot be reassigned. The selected int is mutable, so <code>*p=50</code> is permitted when score is a live writable int.</p>
+<p>In <code>const int *const p = &amp;score</code>, the pointer is fixed and writes through its target access are prohibited. Reading is permitted. The two const positions describe two distinct levels and answer different mutation questions.</p>
+<p>For more complicated declarations, parentheses can change what binds first. <code>int (*row)[3]</code> is a pointer to a row array, while <code>int *rows[3]</code> is an array of pointers. The next topic develops that difference; the same outward-reading habit helps with both.</p>
+
+<pre><code class="language-c">const int *input = &amp;score;
+int *const fixed = &amp;score;
+const int *const view = &amp;score;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>input</code></td><td>Movable pointer; no target write through this path</td></tr><tr><td><code>fixed</code></td><td>Fixed address; mutable target access</td></tr><tr><td><code>view</code></td><td>Fixed address and read-only target access</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>The movable read-only example starts p at a, then redirects it to b. That address assignment is allowed because p itself is not const. A later write through the variable name b changes the selected value to ten, which p can read.</p>
+<p>This does not violate const. The underlying b was declared as an ordinary mutable int. const on the pointer&#x27;s target type restricts writes through p, not every possible access route to b. A mutable alias can still update b under the usual validity rules.</p>
+<p>The fixed-pointer example starts p at score and assigns fifty through *p. The pointer value stays unchanged. Attempting <code>p=&amp;other</code> would instead assign the const pointer object and receive a diagnostic.</p>
+<p>The fixed read-only view combines both restrictions. Neither <code>view=&amp;other</code> nor <code>*view=...</code> is allowed. Yet changing the original mutable score by name remains valid and visible through view. Read-only access is not a snapshot or an independent copy.</p>
+<p>For a function that sums input marks, <code>const int *scores</code> expresses that the helper does not write through its input pointer. Both mutable arrays and truly const arrays can provide input with appropriate type compatibility. The helper still needs an explicit count.</p>
+<p>A const pointer parameter has a different role. Writing <code>int *const values</code> fixes only the local parameter object during that call. The caller&#x27;s pointer was passed by value, so the caller&#x27;s pointer variable is not made const. The pointed-to ints also remain writable through values.</p>
+<p>Top-level const on a by-value parameter does not distinguish the external function type for compatibility. It can be useful inside the definition to prevent local reassignment, but it is not a promise that target elements will remain unchanged. Place const on the pointed-to type for that input-access promise.</p>
+<pre class="diagram">mutable object score [40]
+                       ^
+p: const int * --------+   p may move; *p cannot be assigned
+fixed: int *const -----+   fixed cannot move; *fixed may change
+view: const int *const-+   neither assignment allowed through view
+
+score = 60 remains allowed because score itself is mutable
+all views then read 60; const views are not snapshots</pre>
+<table class="ref"><thead><tr><th scope="col">Declaration</th><th scope="col">Redirect pointer?</th><th scope="col">Write target through it?</th></tr></thead><tbody><tr><td>const int *p</td><td>Yes</td><td>No</td></tr><tr><td>int *const p</td><td>No</td><td>Yes, for a writable target</td></tr><tr><td>const int *const p</td><td>No</td><td>No</td></tr></tbody></table>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Redirect a pointer to const</h3>
+<p>The address can change, and b can change through its own name. Writes through p are forbidden.</p>
+<div data-example="ex-1"></div>
+<h3>Write through a fixed pointer</h3>
+<p>const applies to the pointer object p. The target int remains writable.</p>
+<div data-example="ex-2"></div>
+<h3>Read through a fixed read-only view</h3>
+<p>The view cannot be redirected or used to write. A permitted write through score is still observed.</p>
+<div data-example="ex-3"></div>
+<h3>A const-correct sum interface</h3>
+<p>The helper promises not to write through its input pointer. A mutable array can be passed safely.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>Adding a read-only view at one pointer level is safe: int * can convert to const int *. The conversion removes a write capability from that access path. The original mutable object remains available through other permitted routes.</p>
+<p>Removing const is different. A cast can produce a mutable-looking pointer expression, but writing is valid only if the actual object was originally mutable and all other access rules hold. Writing an object defined as const has undefined behavior. Prefer an interface that preserves const rather than requiring casts.</p>
+<p>Nested pointers introduce a less obvious restriction. C does not generally permit converting int ** to const int **. That conversion would not merely restrict access to one int; it would allow new pointer values to be stored into an intermediate pointer object with the wrong promise.</p>
+<p>To see the hazard, imagine an ordinary int *p and a pointer pp selecting p. If pp could become const int **, code could store the address of a truly const int into p through that converted route. The original p would still have type int *, apparently permitting a later write into const storage.</p>
+<p>The language rejects that implicit nested conversion. Use separately designed interfaces instead of forcing it with a cast. A table of read-only character pointers should be declared with its actual intended element type from the start.</p>
+<p>A function that reads a string list without changing entries can use an appropriate pointer-table interface such as <code>const char *const *names</code>. Starting at names, the first dereference accesses a const pointer entry, and the next reaches const characters. The parameter variable names itself is still a by-value local pointer.</p>
+<p>Const-correctness is about the allowed path, while ownership is about who controls storage lifetime. A const int * may borrow allocated storage that later gets freed by its owner. const does not keep it alive. Likewise, a fixed pointer can still become dangling when its target lifetime ends.</p>
+<p>Concurrency also requires separate rules. A const view does not synchronize changes from another thread or promise the value cannot change between reads. The examples stay within single-threaded, valid mutable access so that the qualification lesson remains focused.</p>
+<p>For an output buffer, const on the source and mutable qualification on the destination communicate opposite roles. The reverse-copy exercise follows this pattern. Its source and destination are distinct arrays, and the helper knows their usable count. const alone would not make overlapping reverse-copy correct.</p>
+<p>The declaration table lets you test each permitted action directly. Ask whether assigning the pointer name is permitted, then ask whether assigning the dereferenced expression is permitted. This two-question method is more dependable than memorizing the phrase const pointer without identifying its level.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Placing const after the star restricts the pointer object. Placing it next to int restricts the int access path. If the compiler rejects the operation you intended, first check the level rather than deleting every qualifier.</p>
+<p>Do not assume that a pointer-to-const makes its mutable target globally immutable. A valid writable alias can still change that object. If you need a saved result, copy the value or define genuinely immutable owned storage.</p>
+<p>Do not use a cast to force int ** into const int **. The mismatch protects the intermediate pointer object from receiving a pointer with an incompatible write promise. Redesign the input representation when a read-only table is required.</p>
+<p>A fixed pointer needs a valid initializer and a target lifetime long enough for its uses. Preventing reassignment does not prove that the original target survives. Keep permission, location and lifetime as separate checks.</p>
+<p>Casting away const from a string literal does not make its characters writable. The literal rule holds independently of which pointer expression you use. Create a writable character-array copy for edits.</p>
+<h3>Writing through a pointer to const</h3>
+<p>This write violates the pointed-to const qualification. Use a mutable pointer only when the interface permits updates.</p>
+<div data-example="ex-5"></div>
+<h3>Redirecting a const pointer</h3>
+<p>The pointer object is const and cannot receive a second address. A pointer to const would restrict the other level.</p>
+<div data-example="ex-6"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Read declarations from the identifier and label every star level. Put const on read-only input targets, keep outputs writable and preserve qualifiers through helper calls. Use separate objects when you need independent snapshots or different lifetimes.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>const became part of standard C in C89, and these pointer-qualification rules apply to the C17 examples. C23 has additional qualification details for arrays, so the examples avoid relying on nested array conversions that differ across standards. Ordinary pointer constness remains a separate question from ownership.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>const can restrict a pointer object, its target access, or both. Correct placement makes intent visible while preserving valid aliases and lifetimes. Next, compare pointer tables and row pointers in <a href="topic:c-array-of-pointers">Array of Pointers</a>.</p>

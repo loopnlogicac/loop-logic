@@ -1,0 +1,64 @@
+<h2 id="introduction">String Input and Output</h2>
+<p class="lead">A course code is one word, but a room description can contain spaces. Before reading text, decide which kind you need. C offers token-based input through <code>scanf</code> and line-based input through <code>fgets</code>. Their stopping rules differ.</p>
+<p>Imagine giving someone a small box for a written note. You must also tell them how much fits. A destination array alone does not stop an input function from writing too much. Use a field width or buffer-size argument, then check whether the input operation succeeded.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>For <code>char code[8]</code>, the conversion <code>scanf(&quot;%7s&quot;, code)</code> accepts at most seven non-whitespace characters and appends a zero. The width excludes the terminator, so it is one smaller than capacity. <code>code</code> already supplies the first-element address; do not add an ampersand for this call.</p>
+<p>The expression <code>fgets(line, sizeof line, stdin)</code> reads at most one less than capacity into an actual local array. It appends a null on success. <code>stdin</code> means the standard input stream, usually what you type in the terminal.</p>
+<p>Use <code>puts(text)</code> for a string followed by newline. Use <code>printf(&quot;%s&quot;, text)</code> when you want explicit formatting. User text belongs in the argument position, with a constant format describing how to print it.</p>
+
+<pre><code class="language-c">char code[8];
+/* Check that scanf returns 1 before reading code. */
+int assigned = scanf(&quot;%7s&quot;, code);
+/* For a line, check the returned pointer before reading line. */
+char line[82];
+char *result = fgets(line, sizeof line, stdin);</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>%7s</code></td><td>At most seven token bytes plus zero</td></tr><tr><td><code>sizeof line</code></td><td>Full destination capacity</td></tr><tr><td><code>assigned / result</code></td><td>Success must be checked before using text</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>A <code>%s</code> conversion skips leading whitespace, then reads a token until whitespace or its field width. A successful single conversion returns one. If the input begins with only whitespace and ends, no token was assigned; do not examine an uninitialized array afterward.</p>
+<p>A width prevents a buffer overflow, but it does not necessarily consume the whole token. Reading a long code with width seven leaves the remaining characters unread. A later conversion can then read that suffix as another token. Decide whether truncation is acceptable or whether the whole line should be rejected.</p>
+<p><code>fgets</code> keeps spaces and includes a newline if one is encountered before the buffer fills. Its return value is the destination pointer on success, or NULL when no usable string was read. Check that result before searching the buffer.</p>
+<p>After success, <code>line[strcspn(line, &quot;\n&quot;)] = &#x27;\0&#x27;;</code> removes a stored newline. <code>strcspn</code> reports the number of initial characters before a newline. When none exists, it reports the current string length, so the assignment rewrites the existing terminator safely.</p>
+<p>A missing newline can mean the line was too long, or the final line ended at EOF without a newline. It is not automatically an error. The bounded example allows at most six characters and reads enough to detect a seventh. That extra character proves overflow of the chosen input policy.</p>
+<pre class="diagram">char line[8], fgets size = 8
+input: A B C \n
+buffer: [&#x27;A&#x27;][&#x27; &#x27;][&#x27;B&#x27;][&#x27; &#x27;][&#x27;C&#x27;][&#x27;\n&#x27;][&#x27;\0&#x27;][spare]
+                                  |
+after newline removal:            &#x27;\0&#x27;
+remaining capacity does not imply more input was read</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Read a bounded word</h3>
+<p>The conversion stores CSE212 and its zero terminator. Width seven is one less than the eight-element buffer.</p>
+<div data-example="ex-1"></div>
+<h3>Preserve spaces in a line</h3>
+<p>fgets keeps both words. strcspn finds the first newline, which is replaced by a zero.</p>
+<div data-example="ex-2"></div>
+<h3>Compare puts and printf</h3>
+<p>puts appends a newline. The percent sign in the data is harmless because printf receives a fixed format.</p>
+<div data-example="ex-3"></div>
+<h3>Reject and drain a long line</h3>
+<p>The seventh stored character proves the six-character limit was exceeded. The remaining input is discarded through newline or EOF.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>If you reject a long line, consume its unread suffix before asking for another line. The draining loop reads into an <code>int</code>, stopping at newline or EOF. Storing <code>getchar</code> in int preserves the distinct EOF value. The output says Too long instead of silently accepting a shortened label.</p>
+<p>Numeric <code>scanf</code> usually leaves the next delimiter unread. If you read an integer and immediately call <code>fgets</code>, the newline after the integer may be the entire next line read. Consume the rest of that numeric line deliberately, or use line-based input consistently. A trailing space in the scanf format can instead make the program keep waiting for more input.</p>
+<p><code>puts</code> adds one newline even when text already ends with one. Printing an untrimmed fgets buffer with puts can therefore produce a blank line. Either keep the input newline and use a suitable printf call, or remove it and let puts add the output newline.</p>
+<p>The percent character in a room description is ordinary data. <code>printf(text)</code> is dangerous because it treats percent sequences as conversions. <code>printf(&quot;%s&quot;, text)</code> keeps the description in the data role, with no accidental format interpretation.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>An unbounded <code>%s</code> has no knowledge of the destination capacity. A larger array reduces the chance of trouble without fixing the cause. Always set the correct width for that particular buffer.</p>
+<p>The old <code>gets</code> function accepted no destination size. No caller could enforce its write limit through the interface. It was deprecated in C99&#x27;s later amendment and removed from C11. It has no place in new programs; replace the design with bounded fgets input.</p>
+<p>Do not remove the last character blindly with <code>line[strlen(line)-1]=&#x27;\0&#x27;</code>. The line might be empty in a reusable helper or might have no newline. Search for the newline rather than assuming its position.</p>
+
+
+<h2 id="best-practices">Working habits</h2>
+<p>Pick a token or line policy before writing the call. Check the return result, define how oversized input is handled, and preserve text spaces unless your task explicitly removes them.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>fgets is standard from C89 onward. C11 removed gets; C17 and C23 do not restore it. The shown programs target C17 and keep fixed capacities so their line policies are visible.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>Bounded input protects storage, while a clear line policy protects the meaning of later reads. Next, learn the operations used for measuring and finding text in <a href="topic:c-string-functions">string.h Functions</a>.</p>

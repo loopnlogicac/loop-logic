@@ -1,0 +1,82 @@
+<h2 id="introduction">Pointer to Pointer</h2>
+<p class="lead">A pointer can select another pointer object, just as an int pointer selects an int object. This extra address level is useful when a helper must change which object its caller pointer selects. It also appears in tables of separately stored rows.</p>
+<p>Imagine a desk index that identifies another index card. The second card identifies a room. Replacing the room number on that second card changes the final destination while the first card still selects the same card. A double pointer gives your program that two-level route.</p>
+<p>Draw every level before writing code. The number of stars describes how many pointer objects you follow, not how many dimensions an arbitrary matrix must have. A fixed two-dimensional array and a table of row pointers have different layouts.</p>
+
+<h2 id="syntax">Declarations and call rules</h2>
+<p>Start with <code>int score=45; int *p=&amp;score; int **pp=&amp;p;</code>. The object pp stores the address of p. <code>*pp</code> accesses p and therefore has type int *. <code>**pp</code> follows p&#x27;s stored address and accesses score, an int.</p>
+<p>The assignment <code>*pp = &amp;other</code> redirects p. The assignment <code>**pp = 60</code> changes the currently selected int. The assignment <code>pp = &amp;another_pointer</code> changes which pointer object pp selects. Keep these three write levels separate.</p>
+<p>A helper declared <code>void select_value(int **out, int *target)</code> can assign <code>*out=target</code>. Calling <code>select_value(&amp;p,&amp;b)</code> gives it the address of p itself. Its contract requires a valid writable int * object at out; target may represent a live selected int or an agreed null state.</p>
+<p>The table declaration <code>int *rows[] = {a,b}</code> stores one int pointer per row. In many expressions, rows converts to int ** because its first element has type int *. This is an actual intermediate pointer table, unlike a fixed int matrix.</p>
+
+<pre><code class="language-c">int score = 45;
+int *p = &amp;score;
+int **pp = &amp;p;
+**pp = 60;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>pp</code></td><td>Pointer to the live pointer object p</td></tr><tr><td><code>*pp</code></td><td>The int pointer stored in p</td></tr><tr><td><code>**pp</code></td><td>The int selected by p</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the storage and operations</h2>
+<p>Follow pp to p in the first diagram, then follow p to score. Writing **pp changes score from forty-five to sixty. Neither pointer address needs to move. A later write to *pp could select a different int while pp remains aimed at p.</p>
+<p>The redirection helper changes p in main because out points at that exact pointer object. It does not need to return the new address as a function result. The caller may inspect or dereference p afterward if the newly selected target is live and valid.</p>
+<p>Passing p instead of &amp;p loses the level needed for redirection. An int * value selects an int, not the int * object p. The compiler&#x27;s incompatible-pointer diagnostic is evidence of a mismatched object level, rather than an obstacle to bypass with a cast.</p>
+<p>The fixed pointer-table example uses a two-int row a and a three-int row b. rows[0] and rows[1] store separate addresses. A view named grid points at the first pointer entry. <code>grid[1][2]</code> first selects the second pointer, then advances two ints within its target row.</p>
+<p>Each selected row needs a separate usable length. int ** contains no column count. If all rows happen to have three elements, that is an interface agreement, not information automatically retained by the pointer type.</p>
+<p>The outer table and inner rows also have separate lifetimes. Local rows can be selected by a local table while all remain alive. Returning that local table or selecting an expired local row would break the route. Trace the lifetime of each box in the diagram independently.</p>
+<pre class="diagram">two-level value access:
+pp [address of p] ---&gt; p [address of score] ---&gt; score [45]
+**pp = 60:            same p address             score [60]
+*pp = &amp;other:         p now selects other ---&gt;   other [90]
+
+allocated rows, independent blocks:
+grid ---&gt; [row0 pointer] ---&gt; [0][1][2]
+          [row1 pointer] ---&gt; [10][11][12]
+cleanup: free row0; free row1; free the pointer table
+fixed int[2][3] instead stores rows directly, with no pointer entries</pre>
+
+<h2 id="examples">Programs to inspect and trace</h2>
+<h3>Two dereferences reach one int</h3>
+<p>pp selects the pointer p. Dereferencing p then selects score, which becomes sixty.</p>
+<div data-example="ex-1"></div>
+<h3>Redirect a pointer belonging to main</h3>
+<p>The helper receives the address of p and writes a new target address into that caller-owned pointer.</p>
+<div data-example="ex-2"></div>
+<h3>Two rows allocated independently</h3>
+<p>The outer allocation stores row pointers. Each inner allocation stores three ints. Both success and partial-failure paths release owned memory.</p>
+<div data-example="ex-3"></div>
+<h3>A fixed pointer table needs no allocation</h3>
+<p>The two rows have different lengths. rows owns the pointer entries; a and b own the actual elements.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Choose the right behavior</h2>
+<p>A dynamic row table obtains those boxes during execution. <code>malloc</code> requests a number of bytes and returns a pointer to allocated storage, or NULL on failure. <code>free</code> releases a successful allocation. Both are declared by stdlib.h; the next module teaches their full contracts.</p>
+<p>The small dynamic example first allocates an outer table large enough for two int * entries. It then allocates three ints for each row. <code>sizeof *grid</code> describes one pointer entry, while <code>sizeof *grid[r]</code> describes one int element. These expressions keep the allocation sizes matched to their target levels.</p>
+<p>The fixed dimensions are deliberately tiny, so their size products are representable. A general matrix allocator must additionally check multiplication overflow before requesting rows times pointer-size or columns times element-size bytes. Bounds on logical dimensions are part of an allocation design.</p>
+<p>Every allocation result is checked before use. If a row fails, only the earlier completed row allocations belong to the program. The cleanup loop frees those earlier rows, then frees the outer table. It does not access uninitialized later pointer entries.</p>
+<p>The example uses calloc for the outer table but never relies on its zero bytes representing null pointers. It assigns each entry before use and tracks completed rows by the loop index. This distinction keeps the cleanup reasoning portable.</p>
+<p>After all rows succeed, assignments fill the ints with values based on their coordinates. The printed positions demonstrate that grid[0][2] and grid[1][2] belong to different row targets. Their numeric values do not depend on whether the allocator placed the rows near each other.</p>
+<p>Successful cleanup frees each row while the outer table still contains the addresses needed to locate them. It then frees the table once. Freeing the outer table first would lose the only stored routes to the rows, causing leaks or invalid later accesses.</p>
+<p>Independent row allocation permits different row lengths and convenient row-pointer swaps. It also creates several allocations and cleanup paths. A single contiguous block can improve locality and simplify ownership, but needs a different indexing or row-pointer setup. The dynamic-array topic compares these alternatives in detail.</p>
+<p>A fixed <code>int matrix[2][3]</code> stores six ints in row order. It has no int * objects between the rows. Casting matrix to int ** does not insert those missing pointer objects. Dereferencing the cast would interpret int data as though it were pointer storage, producing undefined behavior.</p>
+<p>Use <code>int (*row)[3]</code> for a pointer to a fixed three-int row. Use int ** only when the selected objects really are int pointers. Similar indexing syntax is not proof of equivalent representation.</p>
+<p>Row swaps illustrate the benefit of the intermediate table. Exchanging grid[0] and grid[1] swaps two pointer values, so later indexing visits the rows in a different order. The allocated row blocks remain at their original locations. Each allocation must still be freed exactly once after the reordering.</p>
+<p>If rows can repeat the same address, a loop that frees every entry would release the same allocation twice. The independent-row allocator avoids that ownership ambiguity by creating a different successful allocation for each row. A borrowed table that intentionally repeats rows needs a different cleanup contract.</p>
+<p>For changing a caller pointer, a return-value design can sometimes be clearer than an output parameter: <code>p = choose_target(...)</code>. The double-pointer form is especially useful when a function returns a status separately or must update several locations. Choose based on the interface, while preserving the same target-lifetime obligations.</p>
+<p>After partial failure, do not publish a half-built grid as a usable result unless the interface explicitly describes partial construction. A common contract leaves the caller output null until construction succeeds completely, then transfers the completed table.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<p>Do not count stars by the number of bracket pairs in an expression. <code>matrix[r][c]</code> can work through a pointer-to-array or through a real pointer table, with different intermediate types. Read the actual declaration at each level.</p>
+<p>A null pp must not be dereferenced, even if the intended final target exists elsewhere. Likewise, a valid pp may select a null p, so **pp still requires another validity check. Each arrow must lead to a suitable live object.</p>
+<p>When an allocation fails halfway through construction, freeing all requested rows is unsafe because some were never created. Track successful rows and unwind that prefix only. Do not read uninitialized table entries to guess whether allocation occurred.</p>
+<p>Clearing grid after cleanup changes only that owner variable. Other aliases do not become valid or null automatically. End all borrowed row and element uses before releasing their storage.</p>
+<h3>A double-pointer cast does not create a row table</h3>
+<p>The result is undefined. The matrix holds ints, not int pointer objects; a cast cannot create those objects.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Annotate pp as pointer to pointer, *pp as pointer, and **pp as value while tracing. Keep row counts and lengths outside the pointer type. Separate construction from cleanup, and make every allocation-failure exit release exactly the storage already owned.</p>
+
+<h2 id="version-notes">Standard and portability notes</h2>
+<div class="callout version"><p>Double pointers and pointer tables are standard C features across C89 through C23. These programs target C17 and use C99 declarations. Allocation is explained as a small forward preview and linked to <a href="topic:c-malloc-calloc">malloc and calloc</a> for a fuller treatment.</p></div>
+
+<h2 id="summary">What to carry forward</h2>
+<p>A double pointer gives access to a pointer object, enabling caller-pointer redirection and real tables of row addresses. Every level needs correct type, bounds and lifetime. Next, select callable functions in <a href="topic:c-function-pointers">Function Pointers</a>.</p>
