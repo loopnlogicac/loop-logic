@@ -1,0 +1,83 @@
+<h2 id="introduction">Describe a record without repeating routine methods</h2>
+
+<p class="lead">A course record may need a code, credits and a readable display. An ordinary class can store these fields, but its initializer and representation repeat a familiar pattern. A <dfn>data class</dfn> uses declared fields to generate that routine work. You keep the record definition short while retaining ordinary Python methods.</p>
+<p>The dataclasses module is part of the standard library. You do not install another package to use it. Apply @dataclass above a class definition. This is a decorator, a function that processes a class here; <a href="topic:py-decorators">decorators</a> later explain the wrapping notation in detail.</p>
+<p>Data classes fit records whose meaning mostly comes from named values. They do not replace all classes or supply a database. A class managing a network connection may need carefully controlled behavior instead of field-based equality. Choose the tool from what an object represents.</p>
+
+<h2 id="syntax">Declare fields and optional defaults</h2>
+
+<p>An annotated assignment such as credits: int = 3 declares a field with a default. A field without a default becomes a required initializer argument. Put required fields before fields with defaults in the ordinary initializer. This keeps a call such as Course("CSE212") unambiguous.</p>
+<pre><code class="language-python">from dataclasses import dataclass, field
+
+@dataclass
+class Course:
+    code: str
+    credits: int = 3
+    rolls: list[int] = field(default_factory=list)</code></pre>
+<p>The generated __init__ accepts code, credits and rolls. Omitting credits uses 3. Omitting rolls calls list to create a new empty list. Passing an explicit rolls list stores that supplied reference; it does not automatically copy the list. The ownership policy still matters.</p>
+<p>Field annotations name intended types. They do not convert strings to integers and do not reject wrong types during ordinary construction. Static tools can check annotated usage, as explained in <a href="topic:py-type-hints">type hints</a>. Runtime validation requires explicit code when the domain needs it.</p>
+
+<h2 id="how-it-works">Know what gets generated</h2>
+
+<p>By default, dataclass generates an initializer, a readable representation and equality behavior. The repr includes the class name and field names. The equality method compares participating fields in declaration order, and requires matching concrete classes. Two independently constructed matching records can compare equal without being the same object.</p>
+<p>Ordering is off by default. Set order=True to request generated ordering methods. The comparisons use field order as a tuple-like key. Putting roll before marks therefore gives a different sort from putting marks before roll. When you only need one report order, sorted(records, key=...) may express the requirement more clearly.</p>
+<p>You can define regular methods inside a data class, such as total() or passed(). You can also provide a custom __str__. Generated behavior handles repetitive parts; your methods handle domain behavior. Reading a data class should still reveal the operations available to callers.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A data class can resemble a struct with generated initialization and comparison helpers. Python fields remain references to Python objects. An annotation does not allocate a fixed C integer slot or perform C-style type conversion.</p></div>
+<p>A field can be excluded from repr with repr=False, but this only hides it in that generated display. It does not provide access control. compare=False excludes a field from generated comparisons. Use these options when a helper cache should not define the record's logical identity.</p>
+
+<h2 id="examples">Inspect records and independent defaults</h2>
+
+<p>Start with the generated initializer and display, then compare separate records. The roster example shows why default_factory receives a callable. The frozen example demonstrates both a rejected assignment and a permitted mutation of a contained list.</p>
+
+<h3>Generate an initializer and representation</h3>
+<p>Course receives a generated initializer and repr. The omitted credits argument uses its default of three.</p>
+<div data-example="ex-1"></div>
+
+<h3>Give each roster a separate list</h3>
+<p>The factory runs separately for a and b. Appending to a leaves b empty, and identity comparison confirms the lists differ.</p>
+<div data-example="ex-2"></div>
+
+<h3>Compare and order data records</h3>
+<p>Field order makes marks the first comparison key and roll the tie-breaker. Matching field values compare equal.</p>
+<div data-example="ex-3"></div>
+
+<h3>See the shallow limit of frozen</h3>
+<p>The generated frozen rule rejects assigning label. Appending to the existing list remains possible because it changes the contained list rather than the field binding.</p>
+<div data-example="ex-4"></div>
+
+<h3>Validate a field after initialization</h3>
+<p>The generated initializer sets marks, then __post_init__ checks the domain. Zero remains valid, while 101 raises the explicitly chosen ValueError.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="defaults-and-validation">Create each mutable default at the right time</h2>
+
+<p>A mutable list default would normally be shared when it is created during class definition. Dataclasses reject common unhashable defaults, including lists, rather than silently encouraging that mistake. Use field(default_factory=list) for a new list per instance. Pass list itself, not list(), because the factory must be callable.</p>
+<p>Factories can construct dictionaries, sets or custom helper values too. A zero-argument function can provide a more specific starting value. A factory is called only when construction needs that field's default. If the caller supplies a value, that value is used instead.</p>
+<p>__post_init__ runs after a generated initializer has assigned the fields. It can validate a mark or calculate a derived field. Raising ValueError for marks outside 0 through 100 makes a domain rule visible. Do not claim that an int annotation performs this check for you.</p>
+<p>Keep validation predictable. If a class stores an input list directly, a caller can later change that list and bypass the original check. Copying a supplied list inside initialization can reduce that aliasing, but copying only the outer list is not deep copying. Explain which objects the record owns.</p>
+
+<h2 id="frozen-records">Understand the boundary of frozen</h2>
+
+<p>Set frozen=True to reject normal assignment to fields after initialization. Trying point.x = 9 raises FrozenInstanceError, an AttributeError subclass. This is useful for value-like records whose ordinary attributes should stay fixed. It is an API rule rather than an absolute security barrier.</p>
+<p>Frozen is shallow. If a field refers to a list, list.append changes the list without assigning a new field value. The frozen example intentionally uses this distinction. If you need a deeply stable record, choose immutable contained values such as tuples of immutable elements.</p>
+<p>A frozen data class with equality enabled normally receives a generated hash. That does not make every field hashable. Calling hash on a frozen record containing a list still fails because the generated hash must hash participating fields. Avoid unsafe_hash merely to make a dictionary error disappear.</p>
+<p>For updates to a frozen value, dataclasses.replace(record, field=new_value) creates a new record. It retains unchanged field references, so it is not a deep copy. This pattern suits a course plan revised into a new version while the old value stays available.</p>
+
+<h2 id="common-mistakes">Separate convenience from guarantees</h2>
+
+<h3>Writing default_factory=list()</h3>
+<p>This passes an already created list instead of a function to call. Use list without parentheses. A factory supplies a fresh object at construction time.</p>
+<h3>Expecting field annotations to reject text</h3>
+<p>Course("CSE212", "three") can still be constructed without explicit validation. Add __post_init__ or check values at an input boundary when runtime correctness depends on their type and range.</p>
+<h3>Assuming frozen means every nested value is fixed</h3>
+<p>A frozen wrapper can contain mutable objects. Choose immutable fields if logical stability matters. Test nested mutation separately from field reassignment.</p>
+<h3>Sorting by an accidental field order</h3>
+<p>Generated ordering follows declaration order. Read that order before using order=True, or pass an explicit key to sorted. Exclude non-identity helper fields from comparison when appropriate.</p>
+
+<h2 id="version-notes">Use supported field options deliberately</h2>
+
+<p>Dataclasses were introduced in Python 3.7. These examples target Python 3.10–3.12 and use no later-only field options. The details of mutable-default rejection expanded in Python 3.11, but field(default_factory=list) is the portable intended pattern throughout this range. Generated repr should not be used as a persistent interchange format.</p>
+
+<h2 id="summary">Keep the record definition honest</h2>
+
+<p>Data classes reduce routine methods while preserving ordinary class behavior. Use factories for independent mutable defaults and treat frozen as a shallow assignment rule. Next, <a href="topic:py-exceptions">exceptions</a> show how to reject invalid operations and recover at a suitable boundary.</p>

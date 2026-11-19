@@ -1,0 +1,84 @@
+<h2 id="introduction">Give failures a route back to the caller</h2>
+
+<p class="lead">A student types seventy where your program expects an integer. int cannot convert that text. Instead of returning an unrelated number, it raises ValueError. An <dfn>exception</dfn> is an object describing a failure that interrupts the current path of execution. A suitable handler can recover or explain the problem.</p>
+<p>Exceptions separate successful results from failures. A mark of zero can be valid, so returning zero for invalid input would lose information. Raising an exception preserves that distinction. The caller can decide whether to ask again, skip a record or stop the operation.</p>
+<p>You do not need to catch every possible exception everywhere. Handle a failure where the program has enough information to respond usefully. A calculation function can reject an invalid argument while the user-interface function explains it. Unexpected programming mistakes should remain visible during development.</p>
+
+<h2 id="syntax">Match specific exception types</h2>
+
+<p>Place a risky operation in try and follow it with an except clause naming the failure you expect. The name after as receives the exception object. Printing its message can help a user, but avoid depending on exact interpreter-generated wording for your program's logic.</p>
+<pre><code class="language-python">try:
+    marks = int(text)
+except ValueError:
+    print("Enter a whole number")
+else:
+    print(f"Read {marks}")
+finally:
+    print("Input attempt finished")</code></pre>
+<p>The else block runs when try completes normally, without an exception, return, break or continue. Put successful follow-up work there when you do not want its errors caught by the same except. The finally block runs when control leaves the statement through normal Python mechanisms, including a handled or unhandled exception.</p>
+<p>Multiple except clauses are considered in order. Put a more specific subclass before a broader parent. A tuple such as except (ValueError, TypeError) handles several named categories with one response. Do not write except ValueError or TypeError, because that expression does not form the intended tuple.</p>
+
+<h2 id="how-it-works">Follow the stack until a handler matches</h2>
+
+<p>When an operation raises, Python stops executing the remaining statements in that try path. It checks nearby handlers and, if none matches, propagates the failure to the caller. The search can continue through several function calls. Without a matching handler, the program ends with an error report and traceback.</p>
+<p>A <dfn>traceback</dfn> lists the active calls leading to the error. Start by reading the final exception type and message, then inspect the relevant lines above it. The deepest line often shows where the operation failed, while earlier frames explain how that value arrived.</p>
+<p>An except clause catches instances of the named class and its subclasses. ZeroDivisionError, ValueError, TypeError and KeyError describe different problems. Broadly catching Exception can hide a wrong variable or missing attribute alongside the input failure you meant to handle.</p>
+<table class="ref"><thead><tr><th scope="col">Type</th><th scope="col">Typical cause</th><th scope="col">Useful response</th></tr></thead><tbody><tr><td>ValueError</td><td>int("seventy")</td><td>Reject the text</td></tr><tr><td>TypeError</td><td>Adding a string and integer</td><td>Check the interface</td></tr><tr><td>KeyError</td><td>Missing dictionary key</td><td>Choose a missing-key policy</td></tr><tr><td>IndexError</td><td>Sequence index outside its range</td><td>Check length or index</td></tr><tr><td>FileNotFoundError</td><td>Opening a missing file for reading</td><td>Choose another path or explain</td></tr></tbody></table>
+<div class="callout note"><p class="callout-title">If you know C</p><p>C libraries often signal failure through return codes and errno. Python exceptions can cross call boundaries until a handler matches. Do not ignore the failure path because the successful function result looks convenient; decide where recovery belongs.</p></div>
+
+<h2 id="examples">Trace success, recovery and propagation</h2>
+
+<p>The conversion example compares successful and failed attempts without relying on interpreter-specific messages. Later programs raise a domain error, chain a higher-level explanation and preserve cleanup. Read the order of the printed lines to see which branches ran.</p>
+
+<h3>Compare successful and failed conversions</h3>
+<p>75 reaches else, while seventy reaches except. Both paths then print the finally message.</p>
+<div data-example="ex-1"></div>
+
+<h3>Raise and catch a withdrawal error</h3>
+<p>The rejected withdrawal never returns a balance. Its handler prints a controlled message, and the valid withdrawal returns 60.</p>
+<div data-example="ex-2"></div>
+
+<h3>Preserve the cause of invalid input</h3>
+<p>The outer ValueError explains the domain, and __cause__ still holds the original ValueError. The program prints types rather than a variable traceback.</p>
+<div data-example="ex-3"></div>
+
+<h3>Run cleanup before a pending return</h3>
+<p>The return value is prepared, then finally prints cleanup. After cleanup finishes, the caller receives and prints 42.</p>
+<div data-example="ex-4"></div>
+
+<h3>Classify common built-in errors</h3>
+<p>Each lambda delays one failing operation until the loop calls it. The named tuple handler reports the three distinct error categories.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="raising-and-custom-errors">Name domain failures clearly</h2>
+
+<p>Use raise ValueError("marks must be from 0 to 100") when the argument has a supported type but an invalid value. TypeError is appropriate when the type itself is unsupported. Choose the category so callers can distinguish failures without searching the message text.</p>
+<p>A custom exception class gives a domain-specific category. For example, InsufficientFunds(Exception) identifies a rejected withdrawal. An empty class body with pass is enough to create the type. Add attributes only when callers need structured details such as the requested and available amounts.</p>
+<p>Raise the custom error at the point where the rule fails. Catch it where the program can choose another action. Do not print an error and then return a normal-looking success value. A caller could accidentally continue as if the operation succeeded.</p>
+<p>Inside a handler, bare raise re-raises the current exception and preserves its traceback context. Use this when a layer logs or cleans up but cannot recover. To translate a low-level failure into a domain explanation, raise NewError(...) from original. The explicit cause preserves the diagnostic relationship.</p>
+<p>Avoid inheriting ordinary domain errors directly from BaseException. Exception is the usual parent. KeyboardInterrupt and SystemExit belong to a broader control category, and a routine recovery handler should not swallow them by accident. A bare except catches even those exits.</p>
+
+<h2 id="cleanup">Keep cleanup separate from the result</h2>
+
+<p>Use finally for actions that must happen when leaving an operation, such as releasing a resource acquired earlier. A return from inside try still passes through finally. This makes cleanup reliable under ordinary Python control flow, but does not promise execution after abrupt process termination or a power failure.</p>
+<p>Do not return from finally. That can replace a pending return value or suppress an active exception, making a real failure disappear. Cleanup should finish its work and let the original result or error continue. A cleanup action can itself fail, so keep it simple and understand the resource's API.</p>
+<p>For files, the with statement usually expresses cleanup more clearly than writing manual close calls. The <a href="topic:py-file-handling">file lesson</a> uses that form, and <a href="topic:py-context-managers">context managers</a> later explain the protocol behind it. Try/finally remains useful when no suitable context manager exists.</p>
+
+<h2 id="common-mistakes">Catch enough to recover without hiding defects</h2>
+
+<h3>Catching every error around a long function</h3>
+<p>A broad try can confuse bad input with a bug in later arithmetic or display code. Limit the try to the conversion or operation you intend to recover from. Use else for the successful next stage.</p>
+<h3>Continuing with a missing variable</h3>
+<p>If conversion fails before marks is assigned, code after the handler cannot assume marks exists. Return from the handler, retry deliberately, or put dependent work in else.</p>
+<h3>Silencing errors with pass</h3>
+<p>An empty handler can leave partially updated state with no explanation. Ignore only an explicitly harmless case. Otherwise report the failure or let it propagate.</p>
+<h3>Using assert to reject user input</h3>
+<p>Assertions can be removed under optimized execution. Use a normal condition and raise for required validation. The <a href="topic:py-testing">testing lesson</a> explains where assertions are useful.</p>
+
+<h2 id="version-notes">Use ordinary exception handling first</h2>
+
+<p>The exception classes and try/except/else/finally patterns shown work on Python 3.10–3.12. Exception groups and except* arrived in Python 3.11 and are outside this lesson. User-facing programs should provide their own stable explanations rather than assume error wording is identical on every Python release.</p>
+
+<h2 id="summary">Recover at a meaningful boundary</h2>
+
+<p>Catch a named expected failure, raise a clear error when a rule fails, and preserve cleanup without replacing results. Next, <a href="topic:py-file-handling">file handling</a> combines structured input with resource cleanup and explicit formats.</p>

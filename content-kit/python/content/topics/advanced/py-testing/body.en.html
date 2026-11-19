@@ -1,0 +1,92 @@
+<h2 id="introduction">Turn a claim into a repeatable check</h2>
+
+<p class="lead">A function may work for a mark of 75 and fail for zero. Trying one input by hand gives only one observation. A <dfn>test</dfn> supplies a controlled input and compares the observed behavior with a stated expectation. Repeating that check helps you notice a later change that breaks an earlier promise.</p>
+<p>Good tests begin with the contract. If passed(mark) accepts marks from zero through 100 and returns whether the mark reaches 40, the boundary cases are especially useful. Marks 39 and 40 distinguish a strict comparison from an inclusive one. Invalid values test a different promise: rejection.</p>
+<p>Tests do not prove every possible execution is correct. They give evidence about selected behavior. Choose cases from the specification, not by copying the current implementation into the expected result. A test that repeats the same wrong formula can agree with a bug.</p>
+
+<h2 id="syntax">Use assertions to express expected results</h2>
+
+<p>A plain assert checks a condition and raises AssertionError when it is false. You can include a message describing the intended rule. Use clear comparisons such as assert passed(40) is True when the result must be a boolean, or assert total([2, 3]) == 5 for a numeric result.</p>
+<pre><code class="language-python">def passed(mark):
+    if not 0 &lt;= mark &lt;= 100:
+        raise ValueError("mark outside range")
+    return mark &gt;= 40
+
+assert passed(39) is False
+assert passed(40) is True</code></pre>
+<p>Python can remove plain assert statements under optimized execution, such as python -O. Do not put required validation or essential side effects inside assert. A test assertion and a production check have different roles. Use an explicit if and raise when invalid input must always be rejected.</p>
+<p>unittest supplies assertion methods on TestCase, such as assertEqual, assertTrue and assertRaises. These are ordinary method calls rather than removable assert statements. They also provide useful failure descriptions through the test runner.</p>
+
+<h2 id="how-it-works">Arrange data, act once and check the contract</h2>
+
+<p>A useful test often has three parts: arrange known data, act by calling the operation, then assert the expected result or effect. Keep each part small enough that a failure points to one behavior. A test named test_cutoff_includes_40 explains more than test_1.</p>
+<p>Use a fresh object for a stateful test. If one test modifies a shared account and the next assumes its initial balance, the outcome depends on order. unittest's setUp can create a new fixture before every test method. A fixture is the known data or resource prepared for a test.</p>
+<p>Failure and error are related but different reports. A failed assertion means the expected behavior did not match. An unexpected exception means the test could not complete its intended check. Both need investigation, but the diagnostic points to a different immediate cause.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>C's assert macro can also be disabled in configured builds. Python's plain assert is likewise unsuitable for required input validation. Test frameworks organize execution and reporting, while your application must still enforce its own contract.</p></div>
+
+<h2 id="examples">Check results, failures and independent state</h2>
+
+<p>The assertion example checks the cutoff directly. The unittest examples run small suites and print stable counts rather than variable timing. A final module contains ordinary test_ functions that can run directly or be collected by pytest when you supply its filename.</p>
+
+<h3>Check the exact pass boundary</h3>
+<p>Zero, 39, 40 and 100 cover both edges and the transition. An incorrect strict comparison at 40 would fail this set.</p>
+<div data-example="ex-1"></div>
+
+<h3>Run a deterministic unittest summary</h3>
+<p>The suite runs two tests with zero failures and zero errors. The runner output is captured so its variable execution time is not displayed.</p>
+<div data-example="ex-2"></div>
+
+<h3>Check a promised error category</h3>
+<p>One test verifies rejection, while the other protects the valid zero boundary. Both tests complete successfully.</p>
+<div data-example="ex-3"></div>
+
+<h3>Create fresh state for each test</h3>
+<p>setUp constructs a new dictionary before each test. A change in test_change does not alter the initial value seen by test_initial.</p>
+<div data-example="ex-4"></div>
+
+<h3>Write functions that pytest can collect</h3>
+<p>Direct execution calls the three test functions under main. With pytest installed, passing this file explicitly to python -m pytest collects the same functions without running main.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="unittest-suites">Organize test methods and expected failures</h2>
+
+<p>Import unittest and create a class derived from unittest.TestCase. Methods whose names begin with test are collected as tests. Keep the reusable function outside the test class. The class groups checks; it is not the application interface.</p>
+<p>assertEqual compares a result with an expected value and gives a focused difference on failure. assertTrue checks truthiness, which may be too broad if the contract requires exactly True. assertIsNone is useful for an explicitly missing result. Choose the assertion matching the promise you want to check.</p>
+<p>Use with self.assertRaises(ValueError) around one operation expected to reject input. If no exception occurs, the check fails. If an unrelated exception occurs, it is not treated as the expected result. Keep the block narrow so a setup failure cannot accidentally satisfy the test.</p>
+<p>A test runner loads cases, runs them and records outcomes. python -m unittest discovers test modules using naming conventions, or accepts a specific module or test path. The runnable examples construct a suite explicitly so their displayed results contain fixed counts rather than machine-dependent timing.</p>
+<p>setUp runs before each test method, and tearDown follows for cleanup under the framework's rules. Prefer a temporary directory manager for disposable files, and register cleanup when setup can fail after acquiring resources. Never make a test overwrite personal files or depend on whatever happens to exist in the working folder.</p>
+
+<h2 id="pytest-introduction">Start with ordinary test functions</h2>
+
+<p>pytest is a third-party test framework. Install it in a project environment using python -m pip install pytest. Keep its version in project dependency instructions when the team needs reproducible tooling. The <a href="topic:py-modules-packages">environment lesson</a> explains interpreter-specific installation.</p>
+<p>A file named test_marks.py can contain functions such as test_cutoff(). Each function uses assert to express expectations. Run python -m pytest -q test_marks.py to collect and execute the tests. pytest rewrites assertions in collected test modules to improve failure reports; still run tests without optimization and keep application validation explicit.</p>
+<p>By default, pytest discovers files following test_*.py or *_test.py and test_ functions. Supplying an explicit file path lets it collect functions from that module even when the filename is different. The final example follows the function convention and can be supplied directly to pytest.</p>
+<p>For several examples of the same rule, pytest.mark.parametrize supplies input and expected-output pairs to one test function. This avoids copying the same test body for many boundaries. Start with a few well-chosen cases, such as 0, 39, 40 and 100 for the pass rule.</p>
+<p>pytest.raises checks expected exceptions in a context manager, much like unittest's assertRaises. Fixtures can supply fresh data to tests. These features are useful next steps; you do not need them to begin with ordinary pure functions and explicit assertions.</p>
+<p>A direct script run and pytest collection are different entry paths. Put manual demonstration calls behind the main guard. pytest imports the module to collect tests, so import should define functions without reading interactive input or printing a demonstration.</p>
+
+<h2 id="choosing-cases">Cover boundaries and effects instead of implementation details</h2>
+
+<p>For a list total, include empty input, one element, several elements and negative values when allowed. For a cutoff, use values immediately below and at the threshold. For a parser, include valid syntax, malformed syntax and valid syntax with invalid domain values. Each case should answer a specific question.</p>
+<p>For mutable operations, check both the returned result and promised state changes. A rejected withdrawal should leave the balance unchanged. A successful withdrawal should reduce it by the exact amount. These checks target the public contract without inspecting a private temporary variable.</p>
+<p>A regression test captures a previously found failure so it cannot quietly return. Add the smallest example demonstrating that bug, fix the code, and keep the test. Avoid changing the expected result merely to match the implementation unless the specification itself changed.</p>
+<p>Keep tests deterministic. Fixed dates, controlled inputs and temporary files make failures reproducible. Do not assert an exact measured execution time for a small beginner function. Hardware load changes timing even when behavior is correct.</p>
+
+<h2 id="common-mistakes">Make a passing result mean something</h2>
+
+<h3>Testing only a typical input</h3>
+<p>A mark of 75 does not distinguish &gt; from &gt;= at 40. Include boundary pairs that can expose the likely mistake.</p>
+<h3>Sharing modified state across tests</h3>
+<p>A later test should not rely on an earlier test's side effects. Create fresh fixtures or restore state reliably. Run tests independently when investigating order-sensitive failures.</p>
+<h3>Catching every exception in a test</h3>
+<p>A broad handler may turn an unrelated programming defect into a pass. Use the exact expected exception category and keep the checked operation narrow.</p>
+<h3>Executing interactive startup during collection</h3>
+<p>pytest and unittest import modules. Guard direct execution so imports provide definitions without asking for input. Test pure calculation functions separately from the command-line interface.</p>
+
+<h2 id="version-notes">Separate standard-library and optional tools</h2>
+
+<p>assert and unittest are available in Python 3.10–3.12. pytest is installed separately; its supported Python range depends on the selected release. The examples themselves use only the standard library and plain test functions. Timing and framework diagnostic wording are intentionally absent from their stable printed results.</p>
+
+<h2 id="summary">Test promises with focused examples</h2>
+
+<p>Assertions express expectations, unittest organizes independent cases, and pytest offers a concise function-based workflow. Include normal, boundary and failure behavior. Next, <a href="topic:py-numpy-basics">NumPy basics</a> applies Python to numerical arrays after these language foundations.</p>

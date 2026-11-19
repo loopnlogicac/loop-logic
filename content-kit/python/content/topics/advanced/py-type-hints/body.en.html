@@ -1,0 +1,80 @@
+<h2 id="introduction">Write down what callers may pass and receive</h2>
+
+<p class="lead">A function called total can accept prices, marks or strings depending on its implementation. A reader should not have to infer every intended type from the body. A <dfn>type hint</dfn> records that intention in the source. Tools can compare calls with these declarations before the program runs.</p>
+<p>Hints are useful as a small project grows. If a function promises an integer result, a caller can plan numeric operations. If it may return None, the caller knows to handle a missing result. The hints make the boundary visible instead of leaving the failure to a later unexpected operation.</p>
+<p>Python remains dynamically typed. A normal interpreter run does not reject a call merely because it disagrees with an annotation. Static checking and runtime validation solve different problems. Use hints to describe the interface and explicit checks when external input must satisfy a rule.</p>
+
+<h2 id="syntax">Annotate parameters, returns and containers</h2>
+
+<p>Write a colon and type after a parameter name, and an arrow with the result type after the parameter list. Use a colon after a variable name when the inferred type needs clarification. A function that performs an action without a useful returned value can use -&gt; None.</p>
+<pre><code class="language-python">def total(prices: list[int]) -&gt; int:
+    return sum(prices)
+
+counts: dict[str, int] = {"lab": 2}</code></pre>
+<p>list[int] states the intended element type, not the list's length. dict[str, int] states separate key and value types. The annotation does not allocate a container or fill it with defaults. You still create the list or dictionary through ordinary expressions.</p>
+<p>For Python 3.10 and later, int | None describes a union. Optional[int] from typing means the same int-or-None possibility. Use one form consistently within a small interface. Neither means that a parameter automatically gets a default of None.</p>
+
+<h2 id="how-it-works">Distinguish static analysis from execution</h2>
+
+<p>A <dfn>static type checker</dfn> examines source without executing the program's normal work. It tracks declared and inferred types through expressions. It can report passing a string where an int is expected or using an optional result as a definite integer.</p>
+<p>The ordinary interpreter still calls the body with the objects supplied. A function annotated as double(number: int) may return "aa" when called with "a" if its body multiplies by two. That runtime behavior does not make the call consistent with the declared interface. It shows why running and checking answer different questions.</p>
+<p>Hints do not convert values. A string "75" stays a string until int converts it. A list[int] annotation does not inspect every element of input data. Parse and validate outside data explicitly, then pass values that satisfy the internal interface.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A C parameter declaration is part of compilation rules and representation choices. Python hints mostly describe intent for tools. An int hint does not limit values to a machine-sized C integer or add automatic input conversion.</p></div>
+<p>Static analysis also cannot prove every business rule. An int hint accepts -5 even when a mark must be nonnegative. Type aliases can improve names, but ordinary aliases do not create runtime range restrictions. Keep numeric bounds and domain meaning in documentation and validation.</p>
+
+<h2 id="examples">Read hints alongside actual values</h2>
+
+<p>The container examples keep their declared types at runtime. The optional example handles a missing lookup before adding. A deliberately mismatched call demonstrates the absence of automatic enforcement; it is labeled as a static type error even though Python can execute it.</p>
+
+<h3>Annotate list and dictionary calculations</h3>
+<p>The functions return an integer and a string-keyed count dictionary. The annotations describe container contents, while the bodies perform the actual work.</p>
+<div data-example="ex-1"></div>
+
+<h3>Handle an optional mark including zero</h3>
+<p>Roll 12 has a real zero mark and prints one after addition. Roll 25 is absent and prints missing without attempting arithmetic.</p>
+<div data-example="ex-2"></div>
+
+<h3>Demonstrate missing runtime enforcement</h3>
+<p>The second call violates the declared interface and should be reported by a static checker. The ordinary interpreter still executes string repetition and prints aa.</p>
+<div data-example="ex-3"></div>
+
+<h3>Use an action with no useful result</h3>
+<p>The action mutates the supplied list and implicitly returns None. Its return annotation tells the caller to use the effect rather than store a numeric result.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="optional-results">Check missing values before using them</h2>
+
+<p>A lookup may return an integer mark or None for an absent roll. Annotate that result as int | None or Optional[int]. The caller should use if result is None to handle absence, then perform arithmetic in the other branch. This check also lets a static tool narrow the remaining type to int.</p>
+<p>Do not write if result when zero is a valid mark. Both zero and None are false in a condition, so that check confuses a present zero with a missing value. The identity check expresses the actual question. The practice cases include zero to make the distinction visible.</p>
+<p>A parameter annotated Optional[int] without a default is still required. def find(limit: int | None) accepts an explicit None but calling find() still lacks an argument. Add = None only when omission is part of the call interface. The type and the default answer separate questions.</p>
+<p>Type narrowing can use isinstance for appropriate unions. After checking isinstance(value, str), a tool can reason about string methods in that branch. Keep the condition close to its use and avoid reassigning a narrowed variable to a different kind of value unexpectedly.</p>
+
+<h2 id="mypy-workflow">Run a checker in the project environment</h2>
+
+<p>mypy is a third-party static checking tool. Install it in the project's virtual environment using that environment's interpreter. For example, create .venv, then use its Python to install mypy. The <a href="topic:py-modules-packages">modules and packages lesson</a> explains environment selection.</p>
+<pre><code class="language-bash">python -m pip install mypy
+python -m mypy lesson.py
+python -m mypy --strict lesson.py</code></pre>
+<p>Begin with a small fully annotated function and one caller. Read the first diagnostic, compare the declared parameter type with the passed value, and fix the mismatch rather than suppressing it immediately. Strict mode also asks for more complete annotations, which can reveal untyped boundaries.</p>
+<p>Unannotated code may receive less checking under default settings. A clean report does not mean every operation in every dependency was proved correct. Any is a type that permits flexible operations and can weaken checking. Use it only when that flexibility is deliberate, rather than as a quick way to silence errors.</p>
+<p>Runtime tests remain necessary after static checking. A total function that subtracts instead of adding can still accept and return integers correctly. The type checker sees compatible types; a test with known input and result detects the wrong arithmetic. Combine tools according to the kinds of mistakes they can find.</p>
+<p>Do not depend on an exact diagnostic sentence in a teaching program. Tool releases can change wording and inference. The durable lesson is the conflicting types and where they cross the interface. Pin a tool version in a real project when repeatable tooling behavior matters.</p>
+
+<h2 id="common-mistakes">Avoid promising checks that never happened</h2>
+
+<h3>Assuming a hint validates input</h3>
+<p>An annotation is not a parser or a range check. Convert text and reject invalid values explicitly. Hints then describe the values your internal code expects.</p>
+<h3>Using Optional for an omitted argument</h3>
+<p>Optional means that None is an allowed value. A default is still required if callers may omit the argument. Explain both in the signature.</p>
+<h3>Ignoring a possible None result</h3>
+<p>Check the result before arithmetic. Test an absent roll and a roll with mark zero, because truthiness cannot distinguish them.</p>
+<h3>Adding Any to hide every diagnostic</h3>
+<p>This removes information static analysis needs. Refine the interface or parse the value into a known type instead. A focused ignore may be justified, but document the actual limitation.</p>
+
+<h2 id="version-notes">Use the Python 3.10 baseline</h2>
+
+<p>Built-in generic notation such as list[int] arrived in Python 3.9. The union form int | None requires Python 3.10. Optional from typing supports older notation too. These lessons use Python 3.10–3.12 features and avoid the type alias statement introduced in Python 3.12. Annotation evaluation details can change in later releases.</p>
+
+<h2 id="summary">Use hints as an interface tool</h2>
+
+<p>Annotations describe intended values, optional types make absence visible, and static analysis finds mismatched uses. Runtime tests and validation remain separate responsibilities. Next, <a href="topic:py-regex">regular expressions</a> describe and search text patterns.</p>

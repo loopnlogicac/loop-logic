@@ -1,0 +1,411 @@
+{
+  "schemaVersion": "1.1",
+  "id": "py-type-hints",
+  "module": "advanced",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Type Hints",
+    "bn": "টাইপ হিন্ট"
+  },
+  "summary": {
+    "en": "Document intended types with annotations, model optional results and introduce static checking with mypy.",
+    "bn": "অ্যানোটেশন দিয়ে কোন টাইপের মান দরকার তা লেখো, অনুপস্থিত ফল বোঝাও এবং mypy দিয়ে কোড যাচাই শেখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "py-context-managers"
+  ],
+  "related": [],
+  "keywords": [
+    "type-hints",
+    "Python",
+    "Type Hints"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Built-in generic notation needs Python 3.9; the union operator needs 3.10. Examples target 3.10–3.12 and avoid the 3.12 type statement."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Write down what callers may pass and receive"
+    },
+    {
+      "id": "syntax",
+      "title": "Annotate parameters, returns and containers"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Distinguish static analysis from execution"
+    },
+    {
+      "id": "examples",
+      "title": "Read hints alongside actual values"
+    },
+    {
+      "id": "optional-results",
+      "title": "Check missing values before using them"
+    },
+    {
+      "id": "mypy-workflow",
+      "title": "Run a checker in the project environment"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid promising checks that never happened"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use the Python 3.10 baseline"
+    },
+    {
+      "id": "summary",
+      "title": "Use hints as an interface tool"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Annotate list and dictionary calculations",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The functions return an integer and a string-keyed count dictionary. The annotations describe container contents, while the bodies perform the actual work.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Handle an optional mark including zero",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Roll 12 has a real zero mark and prints one after addition. Roll 25 is absent and prints missing without attempting arithmetic.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Demonstrate missing runtime enforcement",
+      "level": "intermediate",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The second call violates the declared interface and should be reported by a static checker. The ordinary interpreter still executes string repetition and prints aa.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Use an action with no useful result",
+      "level": "intermediate",
+      "file": "examples/ex-4.py",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The action mutates the supplied list and implicitly returns None. Its return annotation tells the caller to use the effect rather than store a numeric result.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Annotate an integer total",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read one line of integers, possibly empty. Implement total(values: list[int]) -> int and print the sum.</p>",
+      "hints": [
+        "Convert input text before calling the annotated function."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Use an optional maximum",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read one line of integers, possibly empty. Write largest(values: list[int]) -> int | None. Print EMPTY for an empty list, otherwise its maximum.</p>",
+      "hints": [
+        "Do not confuse zero with no result."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Count with a typed mapping",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read lowercase words on one line, possibly empty. Write count(words: list[str]) -> dict[str, int]. Print each word and count on separate lines in sorted word order; print EMPTY if there are no words.</p>",
+      "hints": [
+        "The two generic parameters describe keys and values."
+      ],
+      "solution": "practice/p-3.py",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-4",
+      "title": "Narrow a lookup result",
+      "difficulty": "hard",
+      "statementHtml": "<p>Read a roll and bonus as two integers. The fixed mapping is {12: 0, 25: 70}. Write an annotated find function returning int | None. Print MISSING for an absent roll, otherwise mark plus bonus.</p>",
+      "hints": [
+        "Branch on None before using the optional value."
+      ],
+      "solution": "practice/p-4.py",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        },
+        {
+          "stdin": "practice/p-4.t3.in",
+          "output": "practice/p-4.t3.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "easy",
+      "prompt": "Does an int annotation itself stop string repetition?",
+      "options": [
+        "xx",
+        "TypeError",
+        "3",
+        "None"
+      ],
+      "answer": 0,
+      "explanation": "The interpreter does not enforce the annotation.",
+      "code": "def repeat(value: int) -> int:\n    return value * 2\n\n\ndef main() -> None:\n    print(repeat(\"x\"))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which branch handles a present zero optional result?",
+      "options": [
+        "missing",
+        "2",
+        "None",
+        "False"
+      ],
+      "answer": 1,
+      "explanation": "Identity with None preserves a valid zero.",
+      "code": "\n\n\ndef main() -> None:\n    value: int | None = 0\n    if value is None:\n        print(\"missing\")\n    else:\n        print(value + 2)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What state remains after an action annotated -> None?",
+      "options": [
+        "[]",
+        "None",
+        "[1]",
+        "1"
+      ],
+      "answer": 2,
+      "explanation": "The action appends to the list; its useful effect is the state change.",
+      "code": "def add(values: list[int]) -> None:\n    values.append(1)\n\n\ndef main() -> None:\n    items: list[int] = []\n    add(items)\n    print(items)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does Optional[int] mean?",
+      "options": [
+        "An argument may always be omitted",
+        "Any numeric type",
+        "An int from zero to 100",
+        "int or None"
+      ],
+      "answer": 3,
+      "explanation": "Optional describes allowed values, not whether a default exists."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which annotation describes string keys and integer values?",
+      "options": [
+        "dict[str, int]",
+        "dict[int, str]",
+        "list[str, int]",
+        "dict[str]"
+      ],
+      "answer": 0,
+      "explanation": "Dictionary generics name key type first, then value type."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does mypy primarily inspect?",
+      "options": [
+        "Only program output",
+        "Source types without running normal program work",
+        "Only disk file sizes",
+        "Only the installed Python version"
+      ],
+      "answer": 1,
+      "explanation": "It is a static analysis tool."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Can a type-correct function still calculate the wrong result?",
+      "options": [
+        "No after strict mode",
+        "Only when using None",
+        "Yes",
+        "Only in a virtual environment"
+      ],
+      "answer": 2,
+      "explanation": "Types do not prove every arithmetic or domain rule."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which check narrows an int | None result to int in the other branch?",
+      "options": [
+        "if value alone always suffices",
+        "value == 0",
+        "str(value)",
+        "value is None"
+      ],
+      "answer": 3,
+      "explanation": "The explicit absence check separates None from all integers."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What Python version first supports int | None syntax?",
+      "options": [
+        "3.10",
+        "3.7",
+        "3.8",
+        "3.9"
+      ],
+      "answer": 0,
+      "explanation": "The union operator notation arrived in Python 3.10."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does list[int] specify the list’s exact length?",
+      "options": [
+        "Yes, one item",
+        "No",
+        "Yes, int bytes",
+        "Only in strict mode"
+      ],
+      "answer": 1,
+      "explanation": "It describes intended element types."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can widespread Any weaken checking?",
+      "options": [
+        "It makes every value immutable",
+        "It disables all runtime code",
+        "It allows operations without precise type information",
+        "It converts strings to numbers"
+      ],
+      "answer": 2,
+      "explanation": "Use flexibility deliberately at known boundaries."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Annotations describe intended types without ordinary runtime enforcement.",
+      "bn": "অ্যানোটেশন কোন টাইপ চাই তা জানায়, সাধারণ রান করার সময় তা নিজে থেকে যাচাই হয় না।"
+    },
+    {
+      "en": "list[int] describes a list intended to contain integers.",
+      "bn": "list[int] দিয়ে পূর্ণসংখ্যার লিস্ট বোঝাও।"
+    },
+    {
+      "en": "dict[str, int] describes string keys and integer values.",
+      "bn": "dict[str, int] দিয়ে স্ট্রিং কী আর পূর্ণসংখ্যার মান বোঝাও।"
+    },
+    {
+      "en": "Optional[int] means int or None, not a default argument.",
+      "bn": "Optional[int] মানে int অথবা None, আর্গুমেন্ট বাদ দেওয়ার ডিফল্ট নয়।"
+    },
+    {
+      "en": "Narrow an optional value before numeric use.",
+      "bn": "None হতে পারে এমন মান দিয়ে হিসাবের আগে None কি না দেখো।"
+    },
+    {
+      "en": "mypy checks source statically and does not replace runtime tests.",
+      "bn": "mypy কোড না চালিয়ে টাইপের মিল দেখে, রান করে টেস্ট করার কাজ আলাদা।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Explain annotations versus runtime input validation.",
+      "marks": 4,
+      "answerHtml": "<p>Annotations describe intended types for readers and static tools. The interpreter does not ordinarily enforce them. Parse text with explicit conversions and check domain constraints such as mark ranges at runtime.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain Optional[int] and a safe caller handling a zero mark.",
+      "marks": 5,
+      "answerHtml": "<p>Optional[int] means int or None. It does not supply a default argument. Check result is None for absence, otherwise use the integer. A truthiness check would confuse the valid mark zero with a missing result.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Propose a workflow combining mypy and runtime tests.",
+      "marks": 5,
+      "answerHtml": "<p>Annotate reusable interfaces and run mypy in the project environment, optionally with strict mode. Fix mismatched argument and return types. Then run tests with known results and boundary inputs to detect wrong arithmetic and domain behavior that types do not prove.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Type Hints in the Python documentation",
+      "url": "https://docs.python.org/3/library/typing.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

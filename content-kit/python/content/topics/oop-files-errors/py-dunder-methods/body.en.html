@@ -1,0 +1,88 @@
+<h2 id="introduction">Let ordinary Python operations understand your object</h2>
+
+<p class="lead">A marks collection should fit naturally into Python code. You may want print(record) to show a useful label, len(record) to count marks, or one result to compare with another. <dfn>Special methods</dfn> are named hooks that connect your class to these existing language operations.</p>
+<p>Their names begin and end with two underscores, so people call them dunder methods. Dunder means double underscore. These names have specific contracts. Inventing __average__ does not make Python understand a new average operator. Define an ordinary average method for behavior without a language hook.</p>
+<p>Operator support should make the object easier to reason about. Adding two distances has a clear meaning. Adding two students usually does not. Before implementing an operator, describe what it means, which operand types it accepts, and whether it creates a new value or changes existing state.</p>
+
+<h2 id="syntax">Choose the hook that matches the operation</h2>
+
+<p>Define special methods in the class body, with self first for ordinary instance methods. A binary operation such as addition receives the other operand too. Python invokes the appropriate hook when the related operation is used.</p>
+<table class="ref"><thead><tr><th scope="col">Operation</th><th scope="col">Hook</th><th scope="col">Contract</th></tr></thead><tbody><tr><td>str(x), print(x)</td><td>__str__</td><td>Return str</td></tr><tr><td>repr(x)</td><td>__repr__</td><td>Return str</td></tr><tr><td>len(x)</td><td>__len__</td><td>Return nonnegative int</td></tr><tr><td>x + y</td><td>__add__</td><td>Result or NotImplemented</td></tr><tr><td>x == y</td><td>__eq__</td><td>Comparison result or NotImplemented</td></tr><tr><td>x &lt; y</td><td>__lt__</td><td>Comparison result or NotImplemented</td></tr></tbody></table>
+<p>Use the normal operation in calling code: len(collection), not collection.__len__(). The ordinary operation can enforce extra rules. For example, len rejects a negative result. Calling a special method directly bypasses some language machinery and makes the caller harder to read.</p>
+
+<h2 id="how-it-works">Distinguish display from debugging</h2>
+
+<p>__str__ aims at a reader using the object. A balance might display as 250 BDT. __repr__ aims at a developer inspecting it, perhaps Balance(250). A representation should be unambiguous when practical. It need not always be executable code, especially for resources or complex objects.</p>
+<p>If __str__ is absent, the default string conversion can fall back to __repr__. The reverse is not a general rule: defining only __str__ does not supply a custom repr. Containers such as lists normally show the repr of their elements. This explains why printing an object and printing a one-element list can look different.</p>
+<p>Both hooks must return strings. Printing inside __str__ and returning None is a mistake. The caller requested a text value, not an extra print effect. Return a formatted string and let print decide how to display it.</p>
+<pre class="diagram">print(value)  --&gt; str(value)  --&gt; value type's __str__
+repr(value)   -----------------&gt; value type's __repr__
+print([value]) ----------------&gt; element repr inside list text</pre>
+<p>Special method lookup for implicit operations normally happens on the type. Assigning a new __len__ function to one ordinary instance is not a reliable way to change len(instance). Put protocol implementations on the class. This differs from treating every implicit operation as a plain instance attribute call.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>C operators do not call user-defined functions based on struct types. Python dispatches supported operations through type hooks. These hooks still need precise contracts; convenient syntax does not decide what adding your domain objects should mean.</p></div>
+
+<h2 id="examples">Read the meaning behind each operator</h2>
+
+<p>The examples use small value-like objects so the operator meaning stays visible. Compare direct display with list display, then inspect length, addition and ordering. Each result follows an explicit class rule instead of relying on object addresses.</p>
+
+<h3>Display a balance for readers and developers</h3>
+<p>Direct printing uses __str__, while repr and the list element use __repr__. No object address appears in the text.</p>
+<div data-example="ex-1"></div>
+
+<h3>Measure and test a marks group</h3>
+<p>The length is the count of marks, two. Without __bool__, the empty group uses its zero length and becomes false.</p>
+<div data-example="ex-2"></div>
+
+<h3>Add distances and decline a string</h3>
+<p>Addition makes a new distance of 55 while a stays 20. Both operand protocols decline the string combination, so the caught TypeError prints unsupported.</p>
+<div data-example="ex-3"></div>
+
+<h3>Compare records by a declared key</h3>
+<p>Sorting uses marks first and roll to break ties. Equality uses the same two-field key, so the separately constructed matching results compare equal.</p>
+<div data-example="ex-4"></div>
+
+<h3>Observe an invalid length safely</h3>
+<p>The ordinary len operation validates the negative result and raises ValueError. The handler turns the deliberate mistake into a stable explanatory message.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="operator-contracts">Handle unsupported operands without lying</h2>
+
+<p>__add__ can return a new object containing the combined value. It should normally leave both operands unchanged unless a different policy is clearly documented. The distance example adds two distances and returns another distance. Adding an unrelated string is not a supported operation.</p>
+<p>Return the singleton NotImplemented when the operand type is unsupported. This tells Python to try the other operand's reflected operation where appropriate. If neither side supports addition, the expression raises TypeError. NotImplemented is a value, not the exception NotImplementedError, which serves a different purpose.</p>
+<p>Reflected methods such as __radd__ support an operation initiated from the other side. Their dispatch also considers subtype relationships. You need not implement reflected operations in every class. Keep the accepted combinations small and document them. Supporting Distance + Distance does not automatically support 0 + Distance.</p>
+<p>For equality, returning NotImplemented lets the comparison machinery consult the other operand. If neither side supplies equality, Python falls back to identity-based equality. Unsupported ordering behaves differently: a less-than comparison generally raises TypeError after both relevant sides decline it.</p>
+<p>Define __lt__ if sorting your objects has a natural strict order. sorted uses less-than comparisons. It does not require __le__ merely to sort, and defining __lt__ does not automatically generate every other comparison method. A result object can compare a tuple of fields, such as (marks, roll), when ties need an explicit rule.</p>
+
+<h2 id="length-equality-and-hashing">Make separate protocols agree</h2>
+
+<p>A length should count what the object represents. For a group of marks, len(group) is the number of marks, not their total. Return a nonnegative integer. A negative result raises ValueError through len, while a non-integer result causes TypeError. For very large lengths, the platform's size limit also matters.</p>
+<p>If a class defines neither __bool__ nor an unusual truth rule, Python can use __len__ for truth testing. Length zero is false and a positive length is true. This makes empty custom collections behave like empty lists. State this meaning before relying on if group in a caller.</p>
+<p>Equality needs a coherent rule. Comparing only marks means two records with different rolls may count as equal. Comparing both fields means a different model. Choose from the meaning of the object rather than from which field is easiest to type.</p>
+<p>Objects used as dictionary keys must keep a stable hash while stored. Equal objects must have equal hashes. Python normally makes a class unhashable when it defines __eq__ without a suitable __hash__. This prevents many accidental mistakes. Do not force a hash onto a mutable marks list to silence an error.</p>
+<p>A non-mutating value object is often easier to reason about than a mutable arithmetic object. If addition returns a fresh distance, aliases of the old distance keep their value. If later methods can mutate that distance, equality and hashing decisions need review. The next lesson introduces data classes that can generate several common methods.</p>
+
+<h2 id="tracing-the-contract">Trace dispatch with a minimal public contract</h2>
+
+<p>Consider how a caller will use the class before adding another hook. A marks group may promise only readable text and a length. Supporting addition would raise a new question: should it concatenate marks, add corresponding marks or add totals? If the meaning is unclear, keep a named operation instead of overloading plus.</p>
+<p>For a distance value, addition has a clearer meaning. Test a supported pair, confirm both operands retain their original values, then test an unrelated type and expect TypeError from the complete expression. Returning NotImplemented directly from a hook is only one stage; the expression's final behavior is what the caller observes.</p>
+<p>Ordering tests should include ties. Two records with equal marks can still differ by roll, so a declared tie-breaker determines their final sequence. If two records compare equal under your chosen fields, their position under stable sorting should not be presented as a new ordering guarantee supplied by identity.</p>
+<p>A representation test should inspect meaningful values rather than an arbitrary memory address. For a small value class, repr can include its constructor-like name and fields. When a class handles large or sensitive data, choose a useful summary instead of dumping every contained value.</p>
+
+<h2 id="common-mistakes">Return the right kind of result</h2>
+
+<h3>Returning an integer from __str__</h3>
+<p>Even when the stored value is numeric, the display hook must return str. Use an f-string or str(value). Python will not silently convert the wrong return type for you.</p>
+<h3>Returning False for every unfamiliar type</h3>
+<p>That may block another type from offering a meaningful comparison. Return NotImplemented for an unsupported operand and reserve False for a supported comparison that is unequal.</p>
+<h3>Mutating operands during addition</h3>
+<p>A caller usually expects a + b to leave a unchanged. Construct a new result for this value-like design. If you support mutation through another operation, explain it separately.</p>
+<h3>Assuming one ordering method supplies all comparisons</h3>
+<p>__lt__ supports less-than; it does not automatically define less-than-or-equal. Test each public operation you promise. Avoid implementing more operators than your model needs.</p>
+
+<h2 id="version-notes">Keep protocol contracts explicit</h2>
+
+<p>The hooks shown work on Python 3.10–3.12. NotImplemented must be returned to the operation machinery, not treated as a normal truth value; its boolean use is deprecated in the demonstrated runtime range. Generated representations should not be treated as a stable file format. Use JSON or another explicit format for persistent data.</p>
+
+<h2 id="summary">Support a small, meaningful interface</h2>
+
+<p>Special methods let Python display, measure, combine and compare your objects. Return the required types and decline unsupported operands with NotImplemented. Next, <a href="topic:py-dataclasses">data classes</a> generate routine initialization and comparison methods from declared fields.</p>

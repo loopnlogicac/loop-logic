@@ -1,0 +1,95 @@
+<h2 id="introduction">Ask for the next value when you need it</h2>
+
+<p class="lead">A marks file may contain millions of lines, but a running total only needs one mark at a time. An <dfn>iterator</dfn> provides a next value on request. It keeps enough state to know where it has reached. You can process a large stream without first constructing a list of every value.</p>
+<p>An <dfn>iterable</dfn> is an object from which you can obtain an iterator. Lists, strings and file objects are iterable. An iterator is also iterable, but it usually represents one ongoing pass. Distinguishing the source from the current pass explains many surprising empty results.</p>
+<p>A <dfn>generator</dfn> is a convenient iterator created by a function containing yield or by a generator expression. Python manages its suspended execution state for you. This lets the code describe how to produce values while a consumer decides how many values to request.</p>
+
+<h2 id="syntax">Use iter, next and yield</h2>
+
+<p>iter(source) obtains an iterator. next(iterator) requests a value and raises StopIteration when exhausted. next(iterator, default) returns the default on exhaustion instead. Choose a default that cannot be confused with a valid item when that distinction matters.</p>
+<pre><code class="language-python">def squares(limit):
+    for number in range(limit):
+        yield number * number
+
+values = squares(3)
+first = next(values)
+remaining = list(values)</code></pre>
+<p>The function contains yield, so calling squares(3) returns a generator without running the loop. The first next starts its body. Each yield returns one value to the consumer and pauses the function. A later next resumes immediately after that yield with the local variables preserved.</p>
+<p>A generator expression uses parentheses: (mark * 2 for mark in marks). A list comprehension uses brackets and constructs the full result immediately. Both can transform and filter, but their timing and reuse differ. Parentheses do not make a tuple comprehension; that syntax creates a generator.</p>
+
+<h2 id="how-it-works">Translate a for loop into protocol steps</h2>
+
+<p>A for loop calls iter on its source, repeatedly requests next, and ends normally on StopIteration. It handles exhaustion for you. This is why the same for syntax works with lists, files, ranges and custom iterators. Each type provides the protocol rather than requiring a separate loop form.</p>
+<p>A custom iterator defines __iter__ returning itself and __next__ returning the next value. When no value remains, __next__ raises StopIteration. Keep the current position on the iterator. An iterable that creates a fresh iterator can support independent passes; an iterator returning itself continues the same pass.</p>
+<pre class="diagram">consumer: next(g)  ---&gt; execute until yield  ---&gt; value
+consumer: next(g)  ---&gt; resume after yield   ---&gt; value
+consumer: next(g)  ---&gt; function ends        ---&gt; StopIteration</pre>
+<p>Returning from a generator ends it. Do not explicitly raise StopIteration inside a generator body to signal completion; that escaping error becomes RuntimeError under modern generator rules. A normal return or falling off the end is the correct way to finish.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A C loop often keeps an index and updates it explicitly. An iterator stores its progress behind __next__. A generator also preserves local execution state across yields, so you do not manually build a state structure for each pause.</p></div>
+
+<h2 id="examples">Watch when execution resumes</h2>
+
+<p>The custom countdown exposes __iter__ and __next__ directly. The yielding function then expresses a similar progression with less bookkeeping. Other examples reveal partial consumption, delayed side effects and a bounded view of an unbounded source.</p>
+
+<h3>Implement a countdown iterator</h3>
+<p>The first next consumes 3. The list consumes 2 and 1, after which the supplied default reports exhaustion.</p>
+<div data-example="ex-1"></div>
+
+<h3>Pause a yielding squares function</h3>
+<p>The first request yields zero. The remaining request consumes 1, 4 and 9; the next traversal is empty because the same generator is exhausted.</p>
+<div data-example="ex-2"></div>
+
+<h3>Observe delayed execution</h3>
+<p>Creating the generator prints nothing from its body. The first request prints start, and the second resumes the body and prints resume.</p>
+<div data-example="ex-3"></div>
+
+<h3>Filter and sum without a result list</h3>
+<p>The generator supplies 40, 75 and 90 to sum for a total of 205. sum exhausts it, so the subsequent list is empty.</p>
+<div data-example="ex-4"></div>
+
+<h3>Bound an endless source</h3>
+<p>islice consumes only the first four multiples. The generator then continues at 15 rather than restarting at three.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="lazy-evaluation">Separate creation time from request time</h2>
+
+<p><dfn>Lazy evaluation</dfn> delays a calculation until a consumer requests its result. Building a generator object does not calculate every square. This saves result storage and may avoid work for values the consumer never asks for. It does not promise that each requested calculation is cheap.</p>
+<p>Timing affects side effects and failures. A print inside a generator body runs when that body resumes, not when the generator function is called. A bad conversion can therefore raise during iteration. Put handling around consumption when that is where the risky work happens.</p>
+<p>Generator expressions evaluate their outermost iterable expression when the expression is created, while their iteration and result expressions happen later. Avoid describing them as delaying every possible action. For ordinary list sources, the main practical point is that transformed results are computed on demand.</p>
+<p>A generator sees referenced mutable data as it is consumed. It is not automatically a snapshot. Changing a source list between requests can affect later observations. If you need a stable snapshot, copy the appropriate data first, accepting the extra memory cost.</p>
+<p>Lazy pipelines combine well: filter valid marks, convert them, then sum. Each stage can produce one item for the next. Keep the pipeline readable. A named generator function is clearer than a deeply nested expression when validation or branching needs several steps.</p>
+
+<h2 id="consumption-and-resources">Plan one pass and bound infinite work</h2>
+
+<p>list(iterator), sum(iterator), max(iterator) and many loops consume values. If you call list again on the same exhausted generator, the result is empty. Recreate the generator from its function for another pass, or store results in a list when repeated use is part of the requirement.</p>
+<p>Two variables referencing one generator share its position. Calling next through either name advances the same object. In contrast, iter(a_list) called twice creates independent list iterators. The list remains reusable even though each iterator records its own progress.</p>
+<p>An infinite generator can be useful for counters, but list on it never finishes normally. Use a finite loop, break or itertools.islice to bound the request. State where termination comes from. A filter on an infinite source may still search forever if no later value passes.</p>
+<p>Generators retain local references while suspended. A large object held in a local variable can keep memory alive. Lazy does not mean zero memory. The stored state and source data can dominate memory even if no full result list is built.</p>
+<p>Resource lifetime also needs attention. A generator yielding lines from inside with may hold the file open while suspended. Exhausting or explicitly closing it allows cleanup, but a consumer that stops early should manage ownership deliberately. A context-managed outer operation can make that lifetime easier to reason about.</p>
+<p>Use a list when the problem needs indexing, repeated traversal or a stable finite snapshot. Use a generator for one-pass transformation or potentially large streams. The data access requirements matter more than a general claim that one form is always faster.</p>
+
+<h2 id="tracing-the-contract">Compare two passes with one shared cursor</h2>
+
+<p>Take a list of three marks and call iter on it twice. Advancing the first iterator does not advance the second. Now create one generator and assign it to two names. Both names advance that same generator. The difference is the number of iterator objects, not whether there are two variable names.</p>
+<p>A consumer that stops after one matching value can save later work. For example, next over a generator of passing marks can stop at the first pass. If no mark passes, it must inspect the whole finite input before returning a default. Laziness changes when work happens and whether unused work is avoided, not the correctness of the condition.</p>
+<p>Think about empty input before using max or next. sum of an empty integer stream returns zero, but max without a default raises ValueError. next without a default raises StopIteration. Choose the empty-case rule from the problem and make the consumer express it.</p>
+<p>When debugging, avoid converting the same live generator to a list merely to print it and then expecting the program to consume it again. That diagnostic changes its state. Recreate a separate generator for inspection or intentionally materialize once and pass the stored list onward.</p>
+
+<h2 id="common-mistakes">Track progress instead of guessing</h2>
+
+<h3>Expecting a second full traversal</h3>
+<p>A generator is a one-pass iterator. After sum(g), g is exhausted. Recreate it or materialize once if later operations require the same values.</p>
+<h3>Returning a list instead of yielding</h3>
+<p>A function returning a list builds all results before returning. A function containing yield returns a generator. These interfaces have different timing even when list(generator) eventually gives matching values.</p>
+<h3>Catching exhaustion around an entire loop body</h3>
+<p>Normally let for manage StopIteration. If you manually call next, keep the exhaustion handling specific so an unrelated error does not look like normal completion.</p>
+<h3>Converting an unbounded stream to a list</h3>
+<p>Bound the consumer before materializing. islice(source, 5) asks for at most five items; list(source) has no such limit.</p>
+
+<h2 id="version-notes">Use the modern exhaustion rule</h2>
+
+<p>Iterator and generator behavior shown applies to Python 3.10–3.12. Escaping StopIteration from a generator body becomes RuntimeError; ordinary iterator __next__ methods still raise StopIteration normally. Advanced send, throw and asynchronous iteration are separate protocols and are not needed for these one-way streams.</p>
+
+<h2 id="summary">Treat a generator as a suspended one-pass computation</h2>
+
+<p>The iterator protocol connects a consumer to successive values. yield preserves progress, while lazy pipelines avoid storing every result. Track consumption and bound infinite sources. Next, <a href="topic:py-decorators">decorators</a> use function values to add behavior around calls.</p>

@@ -1,0 +1,78 @@
+<h2 id="introduction">Describe the shape of text instead of one exact word</h2>
+
+<p class="lead">A course code may contain three uppercase letters followed by three digits. Testing one exact code does not check that shape. A <dfn>regular expression</dfn>, often called regex, describes a text pattern. Python's re module can search for it, extract matching parts or replace them.</p>
+<p>A pattern is a small language with its own rules. Brackets, dots and repetition signs can have special meanings. Learn a few constructs and combine them carefully rather than memorizing a long expression you cannot explain. A readable pattern should state the intended input policy.</p>
+<p>Regex is useful for structured text fragments, such as course labels inside a message. It is not the best tool for every text problem. Use str.replace for a fixed replacement, split for simple whitespace words and dedicated parsers for CSV or JSON. Pattern matching does not replace domain validation.</p>
+
+<h2 id="syntax">Build patterns from literal and special characters</h2>
+
+<p>Import re and pass a pattern plus the text to a search function. Prefer a raw string literal such as r"[A-Z]{3}[0-9]{3}". The r prefix reduces Python's interpretation of backslashes, leaving regex escapes for the pattern engine. It does not turn off regex syntax.</p>
+<table class="ref"><thead><tr><th scope="col">Pattern</th><th scope="col">Meaning</th><th scope="col">Example</th></tr></thead><tbody><tr><td>[A-Z]</td><td>One ASCII uppercase letter</td><td>C</td></tr><tr><td>[0-9]</td><td>One ASCII digit</td><td>7</td></tr><tr><td>{3}</td><td>Exactly three repetitions</td><td>212</td></tr><tr><td>+</td><td>One or more repetitions</td><td>[0-9]+</td></tr><tr><td>*</td><td>Zero or more repetitions</td><td>[ ]*</td></tr><tr><td>?</td><td>Optional preceding item</td><td>-?</td></tr><tr><td>.</td><td>Any character except newline by default</td><td>a.c</td></tr><tr><td>(...)</td><td>Capture a group</td><td>(CSE)</td></tr></tbody></table>
+<p>To match a literal dot, escape it in the regex, for example r"a\.b". For arbitrary literal text supplied as a value, re.escape prepares it as a literal pattern. Escaping for regex and escaping a Python string are different layers; raw strings help keep those layers visible.</p>
+
+<h2 id="how-it-works">Choose the matching boundary first</h2>
+
+<p>re.search scans for a match anywhere in the text. re.match attempts a match only at the beginning. Neither automatically requires the whole string to match. re.fullmatch is the clearest choice when validating an entire short label such as one course code.</p>
+<p>A successful search returns a match object; failure returns None. Check that result before calling group. group(0) is the whole matched text, while span returns start and end positions. The end position is exclusive, matching ordinary Python slicing conventions.</p>
+<p>re.findall collects matching results without returning match objects. With no capturing groups it returns full-match strings. With one capturing group it returns that group's strings. With several capturing groups it returns tuples of captured strings. Group design therefore changes the output shape.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python strings are Unicode text and re operates on that text. Do not assume character classes behave like ASCII byte checks in a C loop. Write [0-9] when the accepted domain specifically requires ASCII digits.</p></div>
+<p>The shorthand digit class can match Unicode decimal digits beyond 0 through 9. Word and whitespace classes also follow Unicode behavior for string patterns by default. If your rule is an ASCII identifier, state that policy with explicit ranges or an appropriate flag instead of assuming the shorthand means English-only.</p>
+
+<h2 id="examples">Search, capture and replace with a stated policy</h2>
+
+<p>The boundary example compares search, match and fullmatch on the same text. Extraction examples distinguish the full result from groups. Replacements use a literal replacement function when reordering fields, avoiding an extra layer of replacement backslash rules.</p>
+
+<h3>Compare search, match and fullmatch</h3>
+<p>search finds the code inside the sentence. match fails at the initial T, while fullmatch accepts only the complete standalone code.</p>
+<div data-example="ex-1"></div>
+
+<h3>Extract named department and number groups</h3>
+<p>The named groups separate CSE and 212. The span covers positions zero through six, with six excluded as in a slice.</p>
+<div data-example="ex-2"></div>
+
+<h3>Observe findall result shapes</h3>
+<p>No captures return full matches. One capture returns digit strings, while two captures return letter-and-number tuples.</p>
+<div data-example="ex-3"></div>
+
+<h3>Reorder captured fields during substitution</h3>
+<p>The replacement function uses each match to build number-department text. The original immutable string remains unchanged.</p>
+<div data-example="ex-4"></div>
+
+<h3>Match literal punctuation with re.escape</h3>
+<p>Escaping keeps the dot and plus literal in the first search. The separate numeric pattern extracts two ASCII digit runs.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="groups-and-replacement">Capture only what the caller needs</h2>
+
+<p>Parentheses create capturing groups. Named groups such as (?P&lt;department&gt;[A-Z]{3}) let the caller use group("department") instead of remembering a number. Captures are useful when a pattern has several meaningful parts, such as department and course number.</p>
+<p>Use a noncapturing group, written (?:...), when grouping is needed only for structure. This keeps findall result shapes and numbered groups from changing accidentally. Adding parentheses to improve precedence should not silently change the caller's data model.</p>
+<p>re.sub replaces nonoverlapping matches and returns a new string. The original string remains unchanged. A replacement can be fixed text or a function receiving a match object. A function is often clearer when the replacement depends on captured values or needs numeric conversion.</p>
+<p>A compiled pattern from re.compile can provide named reuse and clearer code. It exposes search, fullmatch, findall and sub methods. Compile when it helps organize a reused pattern; do not claim a large speed improvement without measuring the actual workload.</p>
+<p>When replacement text comes from outside, remember that re.sub's string replacement has its own escape rules. A replacement function returning that text avoids treating it as a backreference template. re.escape is intended for patterns, not as a general replacement-template escape function.</p>
+
+<h2 id="pattern-limits">Control repetition and validation scope</h2>
+
+<p>Repetition is usually greedy: it consumes as much as possible while allowing the overall match to succeed. A non-greedy form such as +? tries a shorter match first. Neither is automatically correct; the surrounding boundary decides which part of the text you actually want.</p>
+<p>Prefer a precise character class to an unrestricted dot when the field has known content. For a bracketed ASCII identifier, describe the allowed interior rather than matching arbitrary text until some later bracket. This makes the rule easier to audit and can avoid surprising long matches.</p>
+<p>Nested ambiguous repetition can require excessive backtracking on certain nonmatching inputs. Keep patterns simple and bound input sizes when handling untrusted large text. This introduction does not ask you to design a full email, URL or programming-language parser with one expression.</p>
+<p>Regex validates text shape, not every meaning. A pattern can accept a date shaped as four digits, a hyphen, two digits and another pair, yet still accept an impossible calendar date. After extracting the parts, use datetime or explicit domain checks when validity matters.</p>
+<p>For course labels, a pattern can verify three letters and three digits, but cannot know which courses are offered this semester. Look up the matched code in a course table afterward. Separate syntax recognition from the business rule.</p>
+
+<h2 id="common-mistakes">Check the match and the language layer</h2>
+
+<h3>Using match for a code hidden in a sentence</h3>
+<p>match starts at position zero. Use search when the code may appear later, or fullmatch when the entire input must be one code.</p>
+<h3>Calling group on None</h3>
+<p>A failed search returns None. Check the match object before reading groups. No match is an expected result, not necessarily an exceptional failure.</p>
+<h3>Forgetting that parentheses change findall</h3>
+<p>Capturing groups alter returned values. Use noncapturing groups for structure and test the result shape after modifying a pattern.</p>
+<h3>Overusing regex for fixed text</h3>
+<p>If you want to replace every literal comma with a semicolon, str.replace is clearer. Keep regex for tasks where its pattern language provides useful information.</p>
+
+<h2 id="version-notes">Stay within the shared regex feature set</h2>
+
+<p>The patterns shown work on Python 3.10–3.12. Features such as atomic groups and possessive quantifiers arrived in Python 3.11 and are not required here. Raw-string syntax avoids invalid Python escape warnings, but a raw string still cannot end in a single unpaired backslash.</p>
+
+<h2 id="summary">Specify boundaries before details</h2>
+
+<p>Choose search, match or fullmatch from the text boundary. Use groups for meaningful extraction and sub for patterned replacements. Validate domain meaning separately. Next, <a href="topic:py-testing">testing basics</a> check behavior with known results and boundary cases.</p>

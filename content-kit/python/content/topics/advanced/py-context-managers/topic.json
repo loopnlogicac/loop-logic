@@ -1,0 +1,424 @@
+{
+  "schemaVersion": "1.1",
+  "id": "py-context-managers",
+  "module": "advanced",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Context Managers",
+    "bn": "কনটেক্সট ম্যানেজার"
+  },
+  "summary": {
+    "en": "Manage block lifetime with with, implement enter and exit hooks, and write generator-based managers with contextlib.",
+    "bn": "with ব্লকের শুরু আর শেষের কাজ ঠিক করো, __enter__ ও __exit__ লেখো এবং contextlib দিয়ে ম্যানেজার বানাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "py-decorators"
+  ],
+  "related": [],
+  "keywords": [
+    "context-managers",
+    "Python",
+    "Context Managers"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "The examples use synchronous context managers on Python 3.10–3.12, with exactly one yield in each generator manager."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Make resource lifetime visible in the code"
+    },
+    {
+      "id": "syntax",
+      "title": "Use a manager and bind the entered value"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow entry, body and exit"
+    },
+    {
+      "id": "examples",
+      "title": "Trace normal exit and exceptional exit"
+    },
+    {
+      "id": "generator-managers",
+      "title": "Use one yield to mark the block boundary"
+    },
+    {
+      "id": "nesting-and-ownership",
+      "title": "Close in the opposite order from opening"
+    },
+    {
+      "id": "failure-boundaries",
+      "title": "Know what cleanup can and cannot guarantee"
+    },
+    {
+      "id": "tracing-the-contract",
+      "title": "Test entry failure separately from block failure"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Make exit behavior explicit"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use the synchronous protocol first"
+    },
+    {
+      "id": "summary",
+      "title": "Pair acquisition with a precise exit policy"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Return a distinct entered value",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>__enter__ returns ready rather than the Session instance. Normal block completion supplies no exception type, so exit prints True.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Clean up and preserve an error",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The manager cleans up but returns False. The ValueError continues to the outer handler, which prints after cleanup.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Suppress only a chosen category",
+      "level": "intermediate",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The manager intentionally suppresses KeyError. Other categories would propagate because its exit condition would be false.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Restore a temporary setting after failure",
+      "level": "intermediate",
+      "file": "examples/ex-4.py",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The yielded dictionary shows exam inside the block. Finally restores the captured normal value before the outer handler reads it.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Observe nested resource order",
+      "level": "advanced",
+      "file": "examples/ex-5.py",
+      "output": "examples/ex-5.out",
+      "tryNow": true,
+      "explanationHtml": "<p>A opens before B. The block runs once, then B closes before A, matching nested resource ownership.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Mark a block lifetime",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read one word. Implement a class manager printing OPEN on entry and CLOSE on exit without suppressing errors. Inside with, print the word.</p>",
+      "hints": [
+        "Return False so the manager only handles lifetime."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Bind the entered value",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read an integer n. Define a contextmanager function yielding n*n. Print that entered value inside with and print DONE afterward.</p>",
+      "hints": [
+        "The yielded value becomes the as target."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Restore a setting on both paths",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read old and new integers, then OK or FAIL on a second line. Use a generator manager to temporarily set a local dictionary value to new. Print it inside. If FAIL, raise and catch ValueError outside. Finally print the restored old value.</p>",
+      "hints": [
+        "The outer handler intentionally handles only the requested failure."
+      ],
+      "solution": "practice/p-3.py",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-4",
+      "title": "Suppress a missing lookup only",
+      "difficulty": "hard",
+      "statementHtml": "<p>Read a word key. Use a context manager that suppresses KeyError only. Inside with print the value from {\"A\": 10, \"B\": 20} for that key. After with print DONE. A missing key produces only DONE.</p>",
+      "hints": [
+        "Only return truthy for the chosen failure family."
+      ],
+      "solution": "practice/p-4.py",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "easy",
+      "prompt": "What does the as target receive from a class manager?",
+      "options": [
+        "7",
+        "Manager",
+        "None",
+        "True"
+      ],
+      "answer": 0,
+      "explanation": "as binds the entry result, not automatically the manager.",
+      "code": "class Manager:\n    def __enter__(self):\n        return 7\n    def __exit__(self, *args):\n        return False\n\n\ndef main():\n    with Manager() as value:\n        print(value)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which message comes first when a block error propagates?",
+      "options": [
+        "caught\nexit",
+        "exit\ncaught",
+        "exit",
+        "caught"
+      ],
+      "answer": 1,
+      "explanation": "Exit runs before the outer handler.",
+      "code": "class Manager:\n    def __enter__(self):\n        return self\n    def __exit__(self, *args):\n        print(\"exit\")\n        return False\n\n\ndef main():\n    try:\n        with Manager():\n            raise ValueError()\n    except ValueError:\n        print(\"caught\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does a truthy exit result let the block error continue?",
+      "options": [
+        "caught",
+        "True",
+        "after",
+        "ValueError"
+      ],
+      "answer": 2,
+      "explanation": "The manager suppresses the block exception.",
+      "code": "class Manager:\n    def __enter__(self):\n        return self\n    def __exit__(self, *args):\n        return True\n\n\ndef main():\n    with Manager():\n        raise ValueError()\n    print(\"after\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How many times must a contextmanager generator yield?",
+      "options": [
+        "Zero times",
+        "Once per item in a list",
+        "At least twice",
+        "Exactly once"
+      ],
+      "answer": 3,
+      "explanation": "The yield separates entry from exit around one block."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What runs if __enter__ raises before returning?",
+      "options": [
+        "The block is skipped and that manager’s __exit__ is not called",
+        "The block always runs",
+        "__exit__ retries entry",
+        "The error is always suppressed"
+      ],
+      "answer": 0,
+      "explanation": "Entry must clean up any partial acquisition itself."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where should generator-manager cleanup go?",
+      "options": [
+        "Only before yield",
+        "In finally around yield",
+        "In a second yield",
+        "In the caller’s print statement"
+      ],
+      "answer": 1,
+      "explanation": "Finally handles resumption with either normal completion or a block error."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the normal exit order for nested A then B?",
+      "options": [
+        "A then B",
+        "Both before the block",
+        "B then A",
+        "Neither exits"
+      ],
+      "answer": 2,
+      "explanation": "Nested lifetimes unwind in reverse entry order."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does with automatically roll back file content?",
+      "options": [
+        "Yes for every mode",
+        "Only in text mode",
+        "Only when as is used",
+        "No"
+      ],
+      "answer": 3,
+      "explanation": "A file manager closes the resource; rollback needs a separate promise."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should cleanup-only __exit__ normally return?",
+      "options": [
+        "False or None",
+        "True always",
+        "The exception type as a truthy value",
+        "A nonempty error message"
+      ],
+      "answer": 0,
+      "explanation": "A false result preserves an active block exception."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Can the entered value differ from the manager object?",
+      "options": [
+        "No",
+        "Yes",
+        "Only for files",
+        "Only when the block raises"
+      ],
+      "answer": 1,
+      "explanation": "The manager controls its __enter__ return value."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What restores a nested temporary setting correctly?",
+      "options": [
+        "A guessed global default",
+        "Always zero",
+        "The value captured on entry",
+        "The most recent printed value"
+      ],
+      "answer": 2,
+      "explanation": "Each level should restore the state it observed."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A context manager defines entry and exit behavior around a block.",
+      "bn": "কনটেক্সট ম্যানেজার ব্লকে ঢোকা আর বের হওয়ার কাজ ঠিক করে।"
+    },
+    {
+      "en": "The as target receives the result of __enter__.",
+      "bn": "as-এর পরের নামে __enter__-এর ফেরত দেওয়া মান বসে।"
+    },
+    {
+      "en": "__exit__ receives exception information from the block.",
+      "bn": "ব্লকে এক্সেপশন হলে __exit__ সেই এররের তথ্য পায়।"
+    },
+    {
+      "en": "A truthy __exit__ return suppresses the block exception.",
+      "bn": "__exit__ সত্য ধরা হয় এমন মান ফেরত দিলে ব্লকের এক্সেপশন আর বাইরে যায় না।"
+    },
+    {
+      "en": "Use finally after yield in a contextmanager function for cleanup.",
+      "bn": "contextmanager ফাংশনে yield-এর পর finally দিয়ে পরিষ্কারের কাজ রাখো।"
+    },
+    {
+      "en": "Acquisition failure needs cleanup before __enter__ can return.",
+      "bn": "__enter__ শেষ হওয়ার আগেই কাজ ব্যর্থ হলে তখনই নেওয়া রিসোর্স ছাড়তে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Explain the arguments and return policy of __exit__.",
+      "marks": 4,
+      "answerHtml": "<p>The method receives exception type, exception value and traceback, or three None values on normal completion. A truthy return suppresses a block exception. False or None lets it continue after cleanup.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain the lifecycle of a contextlib.contextmanager function.",
+      "marks": 6,
+      "answerHtml": "<p>Calling the decorated factory creates a manager. Entry runs the generator up to its one yield and binds that value to as. Exit resumes at yield, delivering a block exception there when needed. A finally around yield performs cleanup on both paths.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design a manager that temporarily changes a dictionary setting.",
+      "marks": 6,
+      "answerHtml": "<p>Capture the old setting before assigning the temporary value. Yield the dictionary inside try. In finally restore the captured old value. Let unexpected block exceptions propagate. Assume the key already exists or specify a separate missing-key restoration policy.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Context Managers in the Python documentation",
+      "url": "https://docs.python.org/3/library/contextlib.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
