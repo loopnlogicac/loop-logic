@@ -8,7 +8,7 @@ English bodies meet the full level targets: the two beginner lessons exceed 900 
 
 ## Curriculum and lab count
 
-`CODEX_TASK_2.md` says this delivery has seven labs, but `data-structures/spec/curriculum.json` actually lists six for these modules. The user explicitly confirmed using the six curriculum-listed labs. All six are implemented with their exact ids and kinds; no curriculum or checker file was changed and no extra lab was invented.
+The initial checkout of `CODEX_TASK_2.md` said this delivery had seven labs, while `data-structures/spec/curriculum.json` listed six for these modules. The user explicitly confirmed using the six curriculum-listed labs. All six are implemented with their exact ids and kinds; no curriculum or checker file was changed and no extra lab was invented. Main subsequently received a separate correction to the batch tables, confirming six labs and that the curriculum is authoritative.
 
 | Topic | Curriculum coverage and review guide |
 | --- | --- |
