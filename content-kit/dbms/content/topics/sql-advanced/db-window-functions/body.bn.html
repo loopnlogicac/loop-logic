@@ -1,0 +1,68 @@
+<h2 id="introduction">প্রতি row রেখেই পাশেরগুলোর হিসাব</h2>
+<p class="lead">Marksheet-এ mark-এর পাশে section position চাই। GROUP BY বহু result এক করে, তাই একা পারে না। Window function related row-তে হিসাব করেও পৃথক mark রাখে।</p>
+<p><dfn>Window function</dfn> বর্তমান row-র মান নির্ধারিত related row দিয়ে করে। সেই দল window। Section ভাগ,mark-এ order,প্রতি result-এ rank; input-পিছু output এক row।</p>
+<p>Leaderboard,running payment,পাশের record তুলনায় ভালো। Related মানে কী ঠিক করাই চ্যালেঞ্জ। Partition,order,moving frame আলাদা কাজ, মেশালে believable ভুল সংখ্যা।</p>
+<p>Seed-এ একই section-এ equal mark নেই, তাই tie example এক mark local বদলায়। Tie ছাড়া তিন ranking এক লাগে। নিয়ম আলাদা হয় এমন data দেখাতেই হবে।</p>
+<h2 id="syntax">OVER তিন অংশে</h2>
+<p>PARTITION BY independent দল, ভেতরের ORDER BY sequence/peer order। Optional frame SUM-AVG-র relevant subset।</p>
+<p>Section position-এ <code>PARTITION BY section_id</code>, প্রত্যেকে restart। Overall-এ partition বাদ। পরে display section-এ সাজালেও calculation population বদলে গেছে।</p>
+<p>Window order calculation, final query order display। Descending rank হিসাব করে ID-তে print চলে, তবে trace কঠিন। Teaching-এ মিলিয়ে দাও।</p>
+<p><code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code> প্রথম থেকে বর্তমান, cumulative aggregate। ROWS ordered position, mark/date numeric distance নয়।</p>
+<p>একই partition-order সত্যিই লাগলে named window repeat কমায়। Marks-এ rank আর marks+ID-তে number-এর peer rule আলাদা। শুধু ছোট করতে share করলে rank অর্থ বদলায়।</p>
+<pre><code class="language-sql">&lt;function&gt;() OVER (
+    PARTITION BY &lt;group_columns&gt;
+    ORDER BY &lt;calculation_order&gt;
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+)</code></pre>
+<h2 id="how-it-works">Tie-এর অর্থ বাছো</h2>
+<p>ROW_NUMBER 1,2,3 দেয়। Equal mark-এ student_id-র মতো unique tie-breaker repeatable। না থাকলে দুই internal order চলে, final display sort আগে ambiguous assigned number সারায় না।</p>
+<p>RANK peer-এ same, পরে gap। 80,80,60-তে 1,1,3; প্রথম স্থান দুই row দখল করে। Current mark-level-এর আগে কত row আছে ভিত্তিতে ভালো।</p>
+<p>DENSE_RANK gap রাখে না: 1,1,2। Distinct mark level গোনে। Best দুই level prize চাইলে dense rank ≤2-এ তিনজনই।</p>
+<p>Equal mark tie রাখতে RANK order-এ ID দিও না। Peer-কে সব ordering expression মেলাতে হয়; unique ID-তে সবাই আলাদা, row position হয়ে যায়। ID final display-তে দাও।</p>
+<p>Payment running total-এ partition আর chronology। order_id-তে আলাদা order balance, বাদে সব এক। Same date-এ date+payment_id deterministic।</p>
+<p>Explicit ROWS এক row করে। 180-এর পরে 1000-এ 1180,380-এ1560,20-এ1580। Original আর cumulative amount পাশে, ধাপ দেখা যায়।</p>
+<p>Ordered aggregate-এ explicit frame না দিলে default RANGE current peer group পর্যন্ত। Same date-এর দুই payment-এ দুটোসহ total হতে পারে। Date পর্যন্ত total-এ সঠিক, payment-পিছু ledger থেকে আলাদা।</p>
+<p><code>ROWS BETWEEN 1 PRECEDING AND CURRENT ROW</code> সর্বোচ্চ দুই row। প্রথমটির আগের নেই, নিজেই। নতুন partition-এ restart, আগের section থেকে নেয় না।</p>
+<table class="ref">
+<caption>বদলানো section 33-এর tie</caption>
+<thead><tr><th scope="col">Student</th><th scope="col">Mark</th><th scope="col">ROW_NUMBER</th><th scope="col">RANK</th><th scope="col">DENSE_RANK</th></tr></thead>
+<tbody>
+<tr><td>101</td><td>80</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>102</td><td>80</td><td>2</td><td>1</td><td>1</td></tr>
+<tr><td>103</td><td>60</td><td>3</td><td>3</td><td>2</td></tr>
+</tbody>
+</table>
+<p>দ্বিতীয় example-এর modified mark। Number order-এ ID বলেই 101 আগে। দুই rank শুধু marks দেখে। Repeatable numbering দিয়েও Ayesha বেশি পেয়েছে ভান করে না।</p>
+<h2 id="examples">Position,rank আর running money তুলনা</h2>
+<p>আগে section-পিছু number, পরে 33-তে tie করে তিন function পাশে। দুই leader competition rank one, শুধু numbering আলাদা position।</p>
+<p>Payment-এ explicit ROWS বনাম default peer RANGE। Modified date ওই isolated example-এর, shared shop data অন্য পাঠে বদলায় না।</p>
+<p>Leader report derived table-এ window করে outer-এ place=1। Same block WHERE window-এর আগে চলে বলে দুই stage চাই। CTE-ও একই readable separation।</p>
+<h3>Section-পিছু result number</h3>
+<p>সব section one-এ শুরু। Student key equal-mark tie মেটায়, membership বদলায় না।</p>
+<div data-example="ex-1"></div>
+<h3>Tie দৃশ্যমান করো</h3>
+<p>101-102 দুজন 80,rank1-1;60 rank3,dense2।</p>
+<div data-example="ex-2"></div>
+<h3>স্থির ক্রমে payment জমাও</h3>
+<p>Total180.00,1180.00,1560.00,1580.00 BDT। Payment ID sequence স্পষ্ট।</p>
+<div data-example="ex-3"></div>
+<h3>Derived table-এ tied leader রাখো</h3>
+<p>Original-এ পাঁচ section-এ result, পাঁচ leader। 36 কোনো row দেয় না।</p>
+<div data-example="ex-4"></div>
+<h3>RANGE আর ROWS</h3>
+<p>February2-এর দুই payment peer_total1560.00 ভাগ করে। row_total আগে1180.00,পরে1560.00।</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">ভুলে tie মুছো না</h2>
+<h3>Ranking-এর আগে prize rule</h3>
+<p>Top three মানে তিন row,তিন competition place বা তিন distinct level। তিন function তিন অর্থ। Report কোনটি চায় বাছো। Arbitrary LIMIT tied boundary policy নয়।</p>
+<p>Window আগে FROM,WHERE,grouping পেরোনো row দেখে। Low mark আগে বাদে filtered population-এ rank। সবাইকে rank করে পরে position filter আলাদা। Broad population চাইলে outer query।</p>
+<h3>মাঝের ledger balance-ও দেখো</h3>
+<p>Window missing category আনে না। 36-এ result নেই, results-only-তে partition নেই। সব section চাইলে সেখান থেকে optional join, তারপর NULL কীভাবে rank হবে বলো।</p>
+<p>Final SUM মিললেও running total ভুল হতে পারে। Equal date order অনির্দিষ্ট হলে intermediate balance আলাদা payment-এ যায়। Sequence আর মাঝের ধাপ যাচাই, শুধু grand total নয়। Money-র ব্যাখ্যায় event identity-ও চাই।</p>
+<h2 id="best-practices">Population,peer,frame বলো</h2>
+<p>কোন row এক calculation,কোন মান peer,কোন frame aggregate-এ আগে লেখো। Leaderboard peer marks,ledger unique event sequence চায়। একই query-তে আলাদা OVER লাগতে পারে।</p>
+<p>Review-এ raw আর calculated পাশে। Section,ID,marks rank ভুল দেখায়; date,ID,amount cumulative trace। প্রতিটি calculation বোঝার পরেই diagnostic column সরাও।</p>
+<h2 id="version-notes">MySQL8.0 window support</h2>
+<p>Ranking-সহ window 8.0/8.4-তে। Shared CHECK8.0.16। Same-block WHERE-এ window নয়; derived table-CTE দিয়ে expose-filter।</p>
+<h2 id="summary">প্রতি হিসাবে সঠিক window</h2>
+<p>Partition population,order position-peer,frame contribution ঠিক করে। Tie বুঝে বাছো,rank নিজের block-এর বাইরে filter। পরের <a href="topic:db-cte">common table expression</a>-এ report stage আর controlled recursion-এর নাম দেবে।</p>
