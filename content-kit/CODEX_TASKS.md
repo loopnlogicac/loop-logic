@@ -117,3 +117,18 @@ Review note for every subject (it is also in the messages): writing in Batch 1 w
 | R2-F | DBMS | 1 | foundations, er-modelling, relational-model, sql-basics + the 3 datasets (task F above) |
 | R2-G | Compiler Design | 2 | syntax-analysis |
 | R2-H | Machine Learning | 2 | python-for-ml (1 lab) |
+
+---
+
+## Round 3 (19 Nov 2026): natural Bangla + next batches
+
+Round 2 is merged (except C Batch 3 and Algorithms Batch 2, still running: their next batch waits for them). **New for every task: `BANGLA_STYLE.md`.** Each message asks Codex to follow it and to fix Bangla warnings in the track's earlier topics.
+
+| Task | Subject | Batch | Modules |
+|---|---|---|---|
+| R3-A | Data Structures | 3 | trees (6 labs) |
+| R3-B | OOP (Java) | 3 | advanced-java, gui, practice-exam (last batch) |
+| R3-C | Python | 3 | oop-files-errors, advanced |
+| R3-D | DBMS | 2 | sql-advanced |
+| R3-E | Compiler Design | 3 | semantic-analysis, intermediate-code, runtime-codegen, practice-exam (last batch) |
+| R3-F | Machine Learning | 3 | math-intuition (9 labs) |

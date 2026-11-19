@@ -107,6 +107,8 @@ An example of the tone (do not copy it):
 
 ### 2.3 Bangla
 
+**`BANGLA_STYLE.md` is the rule book** (from round 3): ML words stay English in Bangla script (মেশিন লার্নিং, মডেল, ডেটা, ফিচার, লেবেল, ট্রেনিং, ক্লাস্টার), never যন্ত্র শিক্ষণ, উপাত্ত or স্তূপ. Even for children, use the words they will hear from teachers, with a simple Bangla explanation the first time.
+
 - `title`, `summary`, `keyPoints[].bn`, lab titles and the key lab notes are in Bangla as everywhere else.
 - **Module 1 topics (`banglaBody: true`) also need a complete `body.bn.html`** with the same sections, examples and labs as the English body. Write natural Bangla for a child, not a word-for-word translation. Keep technical words in English where Bangladeshi teachers do (feature, label, model, data), with a Bangla explanation the first time.
 - Other topics may add `body.bn.html`; it is welcome but not required.

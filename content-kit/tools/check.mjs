@@ -57,6 +57,25 @@ const BANNED = {
 // phrases that describe how the content was produced, not the subject
 const META_PHRASES = ['this batch', 'the checker', 'check-tutorial', 'check.mjs', 'stdout transcript', 'expected stdout', 'automatic grading', 'automatically graded', 'graded automatically', 'practice scaffold', 'codex', 'as an ai', 'manifest.json', 'topic.json'];
 
+// Bangla style (BANGLA_STYLE.md): textbook translations of everyday English tech words.
+const BN_AVOID = [
+  ['যন্ত্র শিক্ষণ', 'মেশিন লার্নিং'], ['যন্ত্রশিক্ষণ', 'মেশিন লার্নিং'], ['যান্ত্রিক শিখন', 'মেশিন লার্নিং'], ['মেঘ কম্পিউটিং', 'ক্লাউড কম্পিউটিং'], ['মেঘ প্রযুক্তি', 'ক্লাউড'],
+  ['সংগণক', 'কম্পিউটার'], ['গণকযন্ত্র', 'কম্পিউটার'], ['ক্রমলেখ', 'প্রোগ্রাম'], ['ক্রমলিখন', 'প্রোগ্রামিং'], ['উপাত্ত', 'ডেটা'], ['তথ্যভাণ্ডার', 'ডেটাবেস'], ['তথ্যভান্ডার', 'ডেটাবেস'],
+  ['চলক', 'ভেরিয়েবল'], ['অপেক্ষক', 'ফাংশন'], ['নির্দেশক', 'পয়েন্টার'], ['পুনরাবৃত্তি কাঠামো', 'লুপ'], ['আবর্তন কাঠামো', 'লুপ'], ['পুনরাবৃত্তি ফাংশন', 'রিকার্শন'],
+  ['বহুরূপতা', 'পলিমরফিজম'], ['আবদ্ধকরণ', 'এনক্যাপসুলেশন'], ['সংকলক', 'কম্পাইলার'], ['দোভাষী প্রোগ্রাম', 'ইন্টারপ্রেটার'], ['লেখচিত্র', 'গ্রাফ'], ['কলনবিধি', 'অ্যালগরিদম'],
+];
+const BN_CAREFUL = [
+  ['যন্ত্র', 'মেশিন'], ['ধ্রুবক', 'কনস্ট্যান্ট'], ['বিন্যাস', 'অ্যারে'], ['শ্রেণি', 'ক্লাস'], ['বস্তু', 'অবজেক্ট'], ['উত্তরাধিকার', 'ইনহেরিট্যান্স'],
+  ['স্তূপ', 'হিপ / ক্লাস্টার'], ['বৃক্ষ', 'ট্রি'], ['গুচ্ছ', 'ক্লাস্টার'], ['নির্দেশনা', 'ইনস্ট্রাকশন'], ['প্রতীক', 'সিম্বল'],
+];
+const SADHU = /(?:^|[\s,।])(?:হইবে|হইয়া|করিয়া|করিবে|তাহা|তাহার|যাহা|যাহার|কহিল|গিয়াছে|হইতেছে)(?=[\s,।]|$)/;
+function checkBangla(text, where) {
+  if (!text) return;
+  for (const [bad, good] of BN_AVOID) if (text.includes(bad)) err(where, `Bangla: write "${good}", not "${bad}" (BANGLA_STYLE.md)`);
+  for (const [w, good] of BN_CAREFUL) if (text.includes(w)) warn(where, `Bangla: "${w}" — if it means the English term, write "${good}" (BANGLA_STYLE.md)`);
+  if (SADHU.test(text)) err(where, 'Bangla: use চলিত Bangla, not সাধু forms such as হইবে / করিয়া / তাহা');
+}
+
 const TAGS = {
   h2: ['id'], h3: ['id'], h4: ['id'], p: ['class'], br: [], hr: [], ul: [], ol: ['start'], li: [],
   strong: [], em: [], code: ['class'], pre: ['class'], kbd: [], dfn: [], abbr: ['title'], sup: [], sub: [],
@@ -545,6 +564,20 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
   const needFig = planned?.visualQuiz ?? 0;
   if (figureQ < needFig) err(tw, `quiz: ${figureQ} questions with a figure, the curriculum asks for at least ${needFig} (read-the-picture questions)`);
   if (qs.length >= 6 && Math.max(...answerAt) > qs.length * 0.5) warn(tw, `quiz answers bunch on one position (${answerAt.slice(0, 4).join('/')}) — vary them`);
+
+  // Bangla style, across every bn field of the topic
+  {
+    const bn = [t.title?.bn, t.summary?.bn, ...(Array.isArray(t.keyPoints) ? t.keyPoints.map((k) => k?.bn) : [])];
+    for (const q of [...(t.quiz ?? []), ...(t.practice ?? []), ...(t.examQuestions ?? [])]) bn.push(q?.figure?.caption?.bn);
+    const bnBody = join(dir, 'body.bn.html');
+    if (existsSync(bnBody)) bn.push(textOf(readFileSync(bnBody, 'utf8')));
+    for (const id of Array.isArray(t.labs) ? t.labs : []) {
+      const ld = join(dir, 'labs', String(id));
+      if (existsSync(join(ld, 'trace.js'))) bn.push([...readFileSync(join(ld, 'trace.js'), 'utf8').matchAll(/bn:\s*(['"`])((?:(?!\1).)*)\1/g)].map((m) => m[2]).join(' '));
+      if (existsSync(join(ld, 'lab.json'))) { try { bn.push(JSON.parse(readFileSync(join(ld, 'lab.json'), 'utf8')).title?.bn); } catch { /* reported elsewhere */ } }
+    }
+    checkBangla(bn.filter((x) => typeof x === 'string').join('\n'), tw);
+  }
 
   // the rest
   if (!Array.isArray(t.keyPoints) || !between(t.keyPoints.length, C.keyPoints) || t.keyPoints.some((k) => !isBi(k))) err(tw, `keyPoints: ${C.keyPoints[0]}–${C.keyPoints[1]} items, each {en, bn}`);

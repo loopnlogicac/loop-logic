@@ -58,6 +58,8 @@ Write Bangla the way a Bangladeshi teacher would explain it in class, not word f
 
 Every `bn` field must actually be in Bangla script; the checker verifies this.
 
+**From round 3, `BANGLA_STYLE.md` is the rule book for Bangla.** Common English tech words stay English, written in Bangla script (মেশিন লার্নিং, ক্লাউড, ডেটা, ফাংশন, লুপ), never textbook translations (যন্ত্র শিক্ষণ, মেঘ, উপাত্ত, অপেক্ষক, চলক). The checker reports these words as errors, and doubtful ones as warnings.
+
 ---
 
 ## 2. The kit
