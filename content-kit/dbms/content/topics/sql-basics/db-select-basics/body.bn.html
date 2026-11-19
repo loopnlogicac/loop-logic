@@ -1,0 +1,57 @@
+<h2 id="introduction">প্রশ্নের উত্তর দেয় এমন তথ্য পড়ো</h2>
+<p class="lead">Student office-এর CSE roll আর নাম দরকার, পুরো ডেটাবেস নয়। SELECT-এ column বেছে, মেলা row রেখে, দরকারি ক্রমে উত্তর দেখাও।</p>
+<p><dfn>Query</dfn> ডেটাবেসকে তথ্যের অনুরোধ। Result set-এ ফেরত row আর column। পড়লে stored value বদলায় না। Alias দেখানো heading বদলায়, table definition নয়।</p>
+<p>নির্দিষ্ট প্রশ্ন দিয়ে শুরু। “Student দেখাও”-এ অনেক পছন্দ বলা নেই। “Department 1-এর ID আর নাম, ID-র ক্রমে” বললে source,column,condition,order জানা যায়। পরিষ্কার প্রশ্নে SQL-ও পরিষ্কার।</p>
+<h2 id="syntax">SELECT-এর অংশ ধরে পড়ো</h2>
+<pre><code class="language-sql">SELECT selected_columns
+FROM source_table
+WHERE row_condition
+ORDER BY first_sort_key, tie_breaker
+LIMIT row_count;</code></pre>
+<table class="ref"><caption>প্রতি অংশ আলাদা প্রশ্নের উত্তর</caption><thead><tr><th>Clause</th><th>প্রশ্ন</th></tr></thead><tbody>
+<tr><td>SELECT</td><td>কোন মান দেখাব?</td></tr>
+<tr><td>FROM</td><td>কোন table row দেবে?</td></tr>
+<tr><td>WHERE</td><td>কোন source row যোগ্য?</td></tr>
+<tr><td>ORDER BY</td><td>উত্তর কোন ক্রমে?</td></tr>
+<tr><td>LIMIT</td><td>সাজানো উত্তরের কতটুকু চাই?</td></tr>
+</tbody></table>
+<p>লেখায় SELECT আগে হলেও logical পড়া FROM-WHERE দিয়ে সুবিধা। Candidate row নিয়ে যোগ্যগুলো রাখো, displayed মান হিসাব, তারপর সাজাও। Server আলাদা physical plan নিলেও অর্থ রাখবে।</p>
+<h2 id="how-it-works">Column, row আর দেখানোর ক্রম</h2>
+<h3>Column আর alias</h3>
+<p>SELECT *-এ নির্ভর না করে দরকারি নাম লেখো। নতুন field এলেও report বোঝা যায়, বাড়তি data-ও আসে না। Reader-এর সুবিধায় student_id-কে roll alias দিতে পারো।</p>
+<p>Alias query result-এর, stored column rename নয়। একই query-র WHERE সাধারণত SELECT alias পায় না, filtering logically আগে। ORDER BY result alias দিয়ে displayed expression সাজাতে পারে।</p>
+<h3>Condition আর তিন-মূল্যের logic</h3>
+<p>WHERE শুধু TRUE রাখে। তুলনায় FALSE বা UNKNOWN-ও হয়। NULL missing/unknown, তাই hometown-কে equals NULL দিলে TRUE হয় না। Marker আছে কি না-তে IS NULL।</p>
+<p>IS NOT NULL known মান পায়। 'NULL' চার অক্ষরের known string, marker নয়; empty string-ও known। Unknown বোঝাতে zero বা বানানো town দিও না, অর্থ গুলিয়ে যায়।</p>
+<p>AND-OR মেলাতে বন্ধনী উদ্দেশ্য দেখায়। AND আগে চলে। “Dhaka বা Cumilla-র CSE student” চাইলে town বিকল্প ঘিরে department rule-এর সঙ্গে মেলাও।</p>
+<h3>Sort আর limit</h3>
+<p>ORDER BY-তে DESC না দিলে ascending। Text collation মানে। Highest mark-এ descending, tie-তে student_id আর section_id দাও। Complete order-এ repeated top-N একই ফল।</p>
+<p>LIMIT অংশ রাখে। ORDER BY ছাড়া “প্রথম তিন” স্থির নয়। শুধু marks order-এ boundary tie থাকলে ভিন্ন student আসতে পারে। Key tie-breaker ঠিক করে কারা ওই জায়গা নেবে।</p>
+<p>MySQL ascending-এ NULL known-এর আগে, descending-এ পরে। বিশেষ placement চাইলে স্পষ্ট লেখো। Sorting membership ঠিক করে না; WHERE-র যোগ্যতা আলাদা।</p>
+<h3>Distinct combination</h3>
+<p>DISTINCT সব selected expression-এর একই combination সরায়। Hometown একা নিলে দুই Dhaka এক; সঙ্গে student_id নিলে pair আলাদা, দুটো থাকে। পুরো output row ভাবো।</p>
+<p>Input-এ repeated NULL থাকলে DISTINCT-এ এক displayed group। IS NOT NULL আগে সেগুলো বাদ দেয়। পরে COUNT(DISTINCT hometown) NULL argument বাদ দেয়, সম্পর্কিত হলেও আলাদা aggregate rule।</p>
+<h2 id="examples">Result-এর গঠন আগে ভাবো</h2>
+<h3>পরিষ্কার heading-এ CSE student</h3>
+<p>Department 1-এ চারজন। শুধু ID-নাম, ID heading roll।</p>
+<div data-example="ex-1"></div>
+<h3>সর্বোচ্চ তিন recorded mark</h3>
+<p>Descending mark ranking দেয়। Student-section ID tie মেটানোর পরে LIMIT প্রথম তিন নেয়।</p>
+<div data-example="ex-2"></div>
+<h3>Repeat ছাড়া known town</h3>
+<p>Unknown আর duplicate Dhaka বাদ। কোন town আছে বলে, প্রতি town-এ কত student নয়।</p>
+<div data-example="ex-3"></div>
+<h3>Hometown জানা নেই যাদের</h3>
+<p>শেষ query সরাসরি IS NULL। Imran-Fahim পায়, blank বা zero town কল্পনা করে না।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">ছোট syntax-এ প্রশ্ন বদলায়</h2>
+<h3>Equals দিয়ে NULL তুলনা</h3>
+<p>hometown নিজে NULL হলেও hometown = NULL UNKNOWN। WHERE কিছু রাখে না। Missing hometown-এর প্রশ্নে IS NULL।</p>
+<h3>অজানা duplicate ঢাকতে DISTINCT</h3>
+<p>Repeat কেন আগে বোঝো। Join সঠিকভাবে result-পিছু row দিলে student কয়েকবার আসে। Membership প্রশ্নে DISTINCT ভালো, unrelated record জোড়া ভুল সারায় না।</p>
+<h3>Storage order-ই report order</h3>
+<p>এক পরীক্ষায় ID order দেখালেও অন্য plan বা maintenance-এ বদলাতে পারে। Predictable report-এ ORDER BY। প্রশ্নের অর্থে সাজিয়ে বাকি tie মেটাও।</p>
+<h2 id="version-notes">স্থির MySQL query ভিত্তি</h2>
+<div class="callout version"><p>SELECT,DISTINCT,alias,ORDER BY,LIMIT MySQL 8.0.16 আর 8.4-তে চলে। অন্য product-এ LIMIT আলাদা হতে পারে। Text তুলনা-sort collation-এও নির্ভর।</p></div>
+<h2 id="summary">দেখানোর আগে membership ঠিক করো</h2>
+<p>SELECT মান, WHERE যোগ্য row, ORDER BY ক্রম বাছে। DISTINCT সমান combination সরায়, LIMIT নির্দিষ্ট অংশ। NULL স্পষ্ট ধরো। পরের <a href="topic:db-operators-functions">operator আর built-in function</a>-এ query বাড়াও।</p>
