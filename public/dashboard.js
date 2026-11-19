@@ -17,6 +17,7 @@ const T = {
     lessons: 'Your lessons', notStarted: 'Not started', start: 'Start', open: 'Open',
     practice: 'Practice and sealed check', noPractice: 'You haven’t practised yet.', noPracticeSub: 'Judge an AI coworker’s pricing advice, then prove it on a fresh task with no help.', practiceCta: 'Start practice',
     phase: { practice: 'Practising', assessment: 'Sealed check open', complete: 'Completed' },
+    customQuiz: 'Custom quiz',
     attempts: (a, c, i) => `${a} attempts · ${c} correct · ${i} without help`, ready: 'Ready for the sealed check', keepGoing: 'Get two right without help to unlock the sealed check.', go: 'Go to practice',
     mistakes: 'Mistakes you make most', focus: 'Worth another look', focusNone: 'Nothing flagged. When a paragraph takes you a long time and you ask about it, it shows up here.', reread: 'Re-read',
     receipts: 'Evidence receipts', shown: 'Shown alone', notYet: 'Not yet shown', withHelp: 'With help', noReceipts: 'Finish a sealed check to get your first receipt.',
@@ -34,6 +35,7 @@ const T = {
     lessons: 'তোমার পাঠ', notStarted: 'শুরু হয়নি', start: 'শুরু করো', open: 'খোলো',
     practice: 'অনুশীলন ও বন্ধ যাচাই', noPractice: 'এখনো অনুশীলন করোনি।', noPracticeSub: 'এআই সহকর্মীর দামের পরামর্শ যাচাই করো, তারপর সাহায্য ছাড়া নতুন প্রশ্নে প্রমাণ দাও।', practiceCta: 'অনুশীলন শুরু করো',
     phase: { practice: 'অনুশীলন চলছে', assessment: 'বন্ধ যাচাই খোলা', complete: 'সম্পন্ন' },
+    customQuiz: 'নিজের তৈরি কুইজ',
     attempts: (a, c, i) => `${a}টি চেষ্টা · ${c}টি ঠিক · ${i}টি সাহায্য ছাড়া`, ready: 'বন্ধ যাচাইয়ের জন্য প্রস্তুত', keepGoing: 'সাহায্য ছাড়া দুটি ঠিক করলে বন্ধ যাচাই খুলবে।', go: 'অনুশীলনে যাও',
     mistakes: 'সবচেয়ে বেশি যে ভুল হয়', focus: 'আরেকবার দেখা ভালো', focusNone: 'কিছু চিহ্নিত হয়নি। কোনো অনুচ্ছেদে অনেক সময় লাগলে আর সেটা নিয়ে প্রশ্ন করলে এখানে দেখাবে।', reread: 'আবার পড়ো',
     receipts: 'প্রমাণপত্র', shown: 'একা দেখিয়েছ', notYet: 'এখনো দেখানো হয়নি', withHelp: 'সাহায্য নিয়ে', noReceipts: 'বন্ধ যাচাই শেষ করলে প্রথম প্রমাণপত্র পাবে।',
@@ -175,7 +177,7 @@ function classesBox() {
       e.preventDefault(); joinBtn.disabled = true;
       try { const r = await api('POST', '/api/classes/join', { code: input.value }); toast(`${r.status === 'pending' ? L.waiting : L.joined}: ${r.name}`); fill(); } catch (err) { toast(err.message); } finally { joinBtn.disabled = false; }
     };
-    const kind = { read: L.read, quiz: L.quiz, lab: L.lab };
+    const kind = { read: L.read, quiz: L.quiz, lab: L.lab, custom_quiz: T[getLang()].customQuiz };
     box.replaceChildren(el('h2', { id: 'mc-h', text: L.h }),
       ...classes.map((c) => el('div', { class: 'mc-class' },
         el('div', { class: 'mc-head' }, el('strong', { text: c.name }), el('span', { class: 'muted small', text: `${L.by}: ${c.instructor}` })),
@@ -186,7 +188,7 @@ function classesBox() {
           return el('details', { open: done < a.items.length || null },
             el('summary', {}, el('span', { text: a.title }), el('span', { class: `tag ${done === a.items.length ? 'live' : ''}`, text: `${num(done)}/${num(a.items.length)} · ${a.due ? `${L.due} ${new Date(a.due).toLocaleDateString(getLang() === 'bn' ? 'bn-BD' : 'en-GB')}` : L.noDue}` })),
             el('ul', {}, ...a.items.map((i) => el('li', {}, el('span', { class: i.done ? 'ok' : 'todo', text: i.done ? '✓' : '○' }), ' ', `${kind[i.kind]}: `,
-              el('a', { href: `/learn.html?track=${encodeURIComponent(i.track)}&topic=${encodeURIComponent(i.topic)}${i.lab ? `#lab-${i.lab}` : ''}`, text: i.title })))));
+              el('a', { href: i.kind === 'custom_quiz' ? `/custom-quiz.html?id=${encodeURIComponent(i.quizId)}` : `/learn.html?track=${encodeURIComponent(i.track)}&topic=${encodeURIComponent(i.topic)}${i.lab ? `#lab-${i.lab}` : ''}`, text: i.title })))));
         })) : el('p', { class: 'muted small', text: L.none })) : null,
         el('button', { type: 'button', class: 'linkish small', text: L.leave, onclick: async () => { if (!confirm(`${L.leave}: ${c.name}?`)) return; await api('POST', `/api/classes/${c.id}/leave`); toast(L.left); fill(); } }))),
       el('details', { class: 'mc-joinbox', open: !classes.length || null }, el('summary', { text: L.join }), el('p', { class: 'muted small', text: L.note }), form));

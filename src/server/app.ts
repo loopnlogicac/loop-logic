@@ -22,6 +22,7 @@ import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
 import type { MasteryService } from '../app/mastery.ts';
 import type { AdminService } from '../app/admin.ts';
+import type { QuestionBankService } from '../app/question-bank.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
 import type { ReportService } from '../app/reports.ts';
@@ -59,6 +60,7 @@ export interface AppDeps {
   mastery?: MasteryService;
   admin?: AdminService;
   classes?: ClassService;
+  questionBank?: QuestionBankService;
   orders?: OrderService;
   reports?: ReportService;
   runner?: RunnerService;
@@ -136,6 +138,7 @@ function sameSecret(a: string, b: string): boolean {
 export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
+  const bank = () => { if (!d.questionBank) throw new AppError('unavailable', 503, 'Question bank is unavailable.'); return d.questionBank; };
   const search = d.search ?? (d.search = new SearchService(tutorials, d.admin));
   const mastery = () => {
     if (!d.mastery) throw new AppError('unavailable', 503, 'Mastery checks are unavailable.');
@@ -385,6 +388,12 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/classes/:id/leave', ({ params, learnerId }) => cls().leave(learnerId, params.id!)),
 
     // instructor dashboard (signed in, instructor or admin)
+    route('GET', '/api/instructor/question-bank', ({ staff }) => bank().list(staff!), 'staff'),
+    route('POST', '/api/instructor/question-bank', ({ staff, body }) => bank().save(staff!, body), 'staff', 64 * 1024),
+    route('PUT', '/api/instructor/question-bank/:id', ({ staff, params, body }) => bank().save(staff!, body, params.id!), 'staff', 64 * 1024),
+    route('DELETE', '/api/instructor/question-bank/:id', ({ staff, params }) => bank().delete(staff!, params.id!), 'staff'),
+    route('GET', '/api/custom-quizzes/:id', ({ learnerId, params, query }) => bank().quiz(learnerId, params.id!, lang(query.get('lang'))), 'learner'),
+    route('POST', '/api/custom-quizzes/:id/grade', ({ learnerId, params, body }) => bank().grade(learnerId, params.id!, body?.answers, lang(body?.lang)), 'learner'),
     route('GET', '/api/instructor/meta', () => ({ tracks: tutorials.adminTracks().filter((t) => t.delivered && !t.hidden).map((t) => ({ id: t.id, title: t.title })), courses: allCourses().map((c) => ({ id: c.id, title: c.title.en })) }), 'staff'),
     route('GET', '/api/instructor/classes', ({ staff }) => cls().myClasses(staff!), 'staff'),
     route('POST', '/api/instructor/classes', ({ body, staff }) => cls().saveClass(staff!, body), 'staff'),

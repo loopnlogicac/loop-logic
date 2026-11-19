@@ -28,7 +28,7 @@ export class StudyPlanService {
       const track = m[1]!, topic = m[2]!, key = keyOf(track, topic);
       last = { track, topic };
       if (e.type === 'view') seen.add(key);
-      if (percentage(e) !== null && !e.payload.review && !(e.payload.adaptive && !e.payload.complete)) scores.set(key, e);
+      if (percentage(e) !== null && !e.payload.review && !e.payload.customQuiz && !(e.payload.adaptive && !e.payload.complete)) scores.set(key, e);
       if (e.type === 'quiz' && e.payload.correct && typeof e.payload.correct === 'object') {
         for (const [id, correct] of Object.entries(e.payload.correct)) {
           const qkey = `${key}:${id}`;

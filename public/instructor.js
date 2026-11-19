@@ -1,3 +1,4 @@
+import { bankStrings, questionBankPage } from './question-bank.js';
 import { downloadFile } from './download.js';
 // Instructor dashboard (design: "admin site and instructor dashboard" canvas, Instructor page).
 // Classes, students, insights, assignments, content studio, exam packs, announcements.
@@ -5,7 +6,7 @@ import { downloadFile } from './download.js';
 // hidden below the privacy minimum, and AI questions are counted, never shown as text.
 import { getLang, api, el, toast, currentUser, showSignIn, num, ago, store } from './common.js';
 
-const T = { en: {}, bn: {} };
+const T = { en: { ...bankStrings.en }, bn: { ...bankStrings.bn } };
 const $ = (id) => document.getElementById(id);
 const content = $('adm-content');
 const NAV = [
@@ -14,6 +15,7 @@ const NAV = [
   ['insights', 'Insights', 'M3 3v18h18M7 15l4-4 3 3 5-6'],
   ['gradebook', 'gradebook', 'M3 3h18v18H3zM3 9h18M9 3v18'],
   ['assignments', 'Assignments', 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
+  ['question-bank', 'question-bank', 'M3 3h18v18H3zM7 7h10M7 12h10M7 17h5'],
   ['studio', 'Content studio', 'M15 10l4.5-2.5v9L15 14M3 6h12v12H3z'],
   ['packs', 'Exam packs', 'M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5L5.5 21l2-7.5L2 9h7z'],
   ['announcements', 'Announcements', 'M3 11l15-6v14L3 13zM7 13v5a2 2 0 0 0 4 0v-3'],
@@ -50,7 +52,7 @@ const go = (h) => { if (location.hash === `#${h}`) route(); else location.hash =
 const currentClass = () => classes.find((c) => c.id === store.get('ll_class')) ?? classes[0] ?? null;
 
 function shell(active) {
-  $('adm-nav').replaceChildren(...NAV.map(([id, label, d]) => el('a', { href: `#${id}`, class: 'adm-nav-item', 'aria-current': id === active ? 'page' : null }, icon(d), el('span', { text: id === 'gradebook' ? T[getLang()].gradebook : label }))));
+  $('adm-nav').replaceChildren(...NAV.map(([id, label, d]) => el('a', { href: `#${id}`, class: 'adm-nav-item', 'aria-current': id === active ? 'page' : null }, icon(d), el('span', { text: id === 'gradebook' ? T[getLang()].gradebook : id === 'question-bank' ? T[getLang()].bank : label }))));
   const sel = $('ins-class');
   sel.replaceChildren(...classes.map((c) => el('option', { value: c.id, text: c.name })), el('option', { value: '__new', text: '+ New class…' }));
   sel.value = currentClass()?.id ?? '__new';
@@ -167,6 +169,8 @@ function gradebookPage() {
 }
 
 async function assignmentsPage() {
+  const L = T[getLang()];
+  const bank = await api('GET', '/api/instructor/question-bank').catch(() => ({ questions: [] }));
   const tr = dash.track;
   const labIdx = tr ? await api('GET', `/api/learn-labs/${tr.id}`).catch(() => null) : null;
   const labsOf = (topic) => labIdx?.topics.find((x) => x.id === topic)?.labs ?? [];
@@ -174,10 +178,12 @@ async function assignmentsPage() {
   const topics = tr ? tr.modules.flatMap((m) => m.topics.map((t) => ({ ...t, module: m.title }))) : [];
   const itemsHost = el('div', { class: 'ins-items' });
   const drawItems = () => itemsHost.replaceChildren(...a.items.map((it, i) => {
+    const approved = bank.questions.filter((q) => q.status === 'approved' && q.track === tr?.id && q.topic === it.topic);
     return el('div', { class: 'ins-item' },
-      select(it.kind, [['read', 'Read'], ['quiz', 'Pass the quiz'], ['lab', 'Run the lab']], (v) => { it.kind = v; drawItems(); }, { 'aria-label': 'What to do' }),
-      select(it.topic, topics.map((x) => [x.id, `${x.module} · ${x.title}`]), (v) => { it.topic = v; it.lab = null; drawItems(); }, { 'aria-label': 'Topic' }),
+      select(it.kind, [['read', 'Read'], ['quiz', 'Pass the quiz'], ['lab', 'Run the lab'], ['custom_quiz', L.customQuiz]], (v) => { it.kind = v; drawItems(); }, { 'aria-label': 'What to do' }),
+      select(it.topic, topics.map((x) => [x.id, `${x.module} · ${x.title}`]), (v) => { it.topic = v; it.lab = null; it.questionIds = []; drawItems(); }, { 'aria-label': 'Topic' }),
       it.kind === 'lab' ? (labsOf(it.topic).length ? select(it.lab ?? (it.lab = labsOf(it.topic)[0].id), labsOf(it.topic).map((l) => [l.id, l.title]), (v) => { it.lab = v; }, { 'aria-label': 'Lab' }) : el('span', { class: 'adm-hint', text: 'This topic has no lab.' })) : null,
+      it.kind === 'custom_quiz' ? el('fieldset', {}, el('legend', { text: L.bankSelect }), ...(approved.length ? approved.map((q) => check(q.prompt[getLang()], (it.questionIds ?? []).includes(q.id), (on) => { const ids = new Set(it.questionIds ?? []); if (on) ids.add(q.id); else ids.delete(q.id); it.questionIds = [...ids]; })) : [el('p', { class: 'adm-hint', text: L.bankNoQuestions })])) : null,
       button('Remove', () => { a.items.splice(i, 1); drawItems(); }, 'small danger'));
   }), tr ? button('+ Add a topic, quiz or lab', () => { a.items.push({ kind: 'read', topic: topics[0]?.id }); drawItems(); }, 'line small') : empty('Link a tutorial track to the class first (Class settings).'));
   drawItems();
@@ -186,7 +192,7 @@ async function assignmentsPage() {
   return [row(
     el('div', { class: 'adm-col wide' }, card('Assignments', dash.assignments.length ? el('div', { class: 'adm-stack' }, ...dash.assignments.map((x) => el('div', { class: 'adm-sub-card' },
       row(el('strong', { text: x.title }), chip(x.due ? `due ${new Date(x.due).toLocaleDateString('en-GB')}` : 'no due date', x.due && Date.parse(x.due) < Date.now() ? '' : 'ok')),
-      el('span', { class: 'adm-hint', text: x.items.map((it) => `${{ read: 'Read', quiz: 'Quiz', lab: 'Lab' }[it.kind]}: ${it.title}`).join(' · ') }),
+      el('span', { class: 'adm-hint', text: x.items.map((it) => `${{ read: 'Read', quiz: 'Quiz', lab: 'Lab', custom_quiz: L.customQuiz }[it.kind]}: ${it.title}`).join(' · ') }),
       el('div', { class: 'adm-inline' }, el('div', { class: 'adm-meter', style: 'flex:1' }, el('i', { style: `width:${dash.kpis.students ? Math.round((100 * x.submitted) / dash.kpis.students) : 0}%` })), el('span', { text: `${num(x.submitted)}/${num(dash.kpis.students)} done` })),
       button('Delete', async () => { if (!confirm(`Delete "${x.title}"?`)) return; await api('DELETE', `/api/instructor/classes/${dash.class.id}/assignments/${x.id}`); toast('Deleted.'); await refresh(); }, 'small danger')))) : empty('No assignments yet.'))),
     el('div', { class: 'adm-col' }, card('New assignment',
@@ -270,6 +276,7 @@ let routeSeq = 0;
 async function route() {
   const name = location.hash.slice(1) || 'overview';
   const my = ++routeSeq;
+  if (name === 'question-bank') { shell('question-bank'); header(T[getLang()].bank); content.replaceChildren(await questionBankPage(meta, T[getLang()])); return; }
   if (name === 'new-class' || !classes.length) {
     shell(''); header(classes.length ? 'New class' : 'Welcome');
     content.replaceChildren(newClassPage());
