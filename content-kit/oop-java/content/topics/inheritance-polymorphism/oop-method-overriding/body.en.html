@@ -1,0 +1,57 @@
+<h2 id="introduction">Keep the request, change the response</h2>
+<p class="lead">A fee desk asks every fee object for amount(). Ordinary fees and lab fees may calculate different answers. The caller still makes the same request. <dfn>Method overriding</dfn> lets a subclass replace an inherited instance operation while keeping its usable contract.</p>
+<p>The name alone does not identify an override. The parameter signature must match an inherited method under Java’s overriding rules. The return type, access and exception promises must also fit. These rules let existing parent callers continue to use the child safely.</p>
+<p>Think of a notice format agreed by a department. A lab may add a specific room message, but it must still provide the requested notice. Replacing behaviour is useful only when the replacement honours the original meaning. A valid signature cannot guarantee sensible behaviour by itself.</p>
+<h2 id="syntax">Make the intended override visible</h2>
+<pre><code class="language-java">class LabFee extends Fee {
+    @Override
+    int amount() {
+        return 750;
+    }
+}</code></pre>
+<p><code>@Override</code> asks the compiler to verify that the declaration overrides or implements a supertype method. It does not enable runtime selection; the override works without the annotation. Using it catches accidental spelling changes and parameter mismatches early.</p>
+<p>Suppose Fee declares amount() but the child writes amount(int count). That new parameter list creates another method. It does not replace amount(). With @Override, the compiler rejects the mistaken intention instead of silently accepting a separate overload.</p>
+<p>A method signature includes its name and parameter types, with additional details for generic methods. Return type alone cannot distinguish overloads. For the ordinary non-generic examples here, compare the name and parameter list first, then verify the remaining override restrictions.</p>
+<h2 id="how-it-works">Separate the callable contract from the receiver</h2>
+<p>For <code>Fee fee = new LabFee()</code>, the variable’s declared type is Fee and the receiver object’s runtime class is LabFee. The compiler checks that Fee offers amount(). At runtime, the overridable instance call uses LabFee’s matching implementation.</p>
+<table class="ref"><tr><th>Question</th><th>Answer for fee.amount()</th></tr><tr><td>What operation is available?</td><td>Fee.amount()</td></tr><tr><td>What object receives the call?</td><td>The LabFee created with new</td></tr><tr><td>Which override runs?</td><td>LabFee.amount()</td></tr><tr><td>What value returns?</td><td>750</td></tr></table>
+<p>The method does not run both bodies automatically. An override completely supplies the selected implementation. If you want the parent contribution too, explicitly call <code>super.amount()</code> inside the child. This is useful when a child extends a calculation rather than replacing every part.</p>
+<p>Calling this.amount() from amount() normally calls the current object’s override again. Without a stopping condition, that creates recursion rather than reaching the parent. super.amount() deliberately selects parent behaviour and avoids that accidental self-call.</p>
+<div class="callout note"><p>If you know C: a same-named function does not automatically acquire Java’s receiver-based selection. Java checks a method contract through the declared reference type, then chooses the overriding instance implementation from the receiver. The reference itself is still passed by value.</p></div>
+<h2 id="examples">Compare replacement, extension and a new overload</h2>
+<h3>Replace a fee calculation</h3>
+<p>The Fee reference receives a LabFee object. Its amount request returns the lab amount, showing replacement through a general reference.</p>
+<div data-example="ex-1"></div>
+<h3>Extend a parent message</h3>
+<p>DetailedSlip keeps the parent’s Paid text and adds the amount. Its public override also demonstrates that access may widen.</p>
+<div data-example="ex-2"></div>
+<h3>Narrow a reference return</h3>
+<p>LabCopy.duplicate() returns LabCopy rather than Copy. The more specific result remains valid anywhere a Copy was promised.</p>
+<div data-example="ex-3"></div>
+<h3>Add an overload without replacing anything</h3>
+<p>The String parameter creates another label method. The original int signature continues to run when the caller passes an integer.</p>
+<div data-example="ex-4"></div>
+<h2 id="override-rules">Preserve what callers were allowed to rely on</h2>
+<p>An override cannot reduce access. A public parent operation must stay public. A protected operation may become public, but cannot become private or package-private. Otherwise a caller allowed to invoke the parent method could lose that permission after substitution.</p>
+<p>A reference return may become a subtype of the parent return. This is called a <dfn>covariant return</dfn>. Returning String where Object was promised is safe because every String is an Object. Returning Object where String was promised weakens the result and is invalid.</p>
+<p>Primitive returns do not use this rule. An int-returning operation cannot be overridden with a long return. A void operation also remains void. Numeric widening during an ordinary assignment does not change overriding requirements.</p>
+<p>Checked exceptions are failures callers must handle or declare. The exception lesson explains them fully. An override cannot add a broader checked exception than the inherited contract allows. It may omit checked exceptions or narrow them; unchecked exceptions are not restricted in that same way.</p>
+<p>A private parent method is not overridden by a separate subclass declaration. A final instance method cannot be overridden at all. Constructors are not methods inherited for overriding. A static method belongs to a type rather than an instance and follows hiding rules.</p>
+<h2 id="comparison">Overriding and overloading answer different questions</h2>
+<table class="ref"><tr><th>Property</th><th>Overriding</th><th>Overloading</th></tr><tr><td>Parameter list</td><td>Matching inherited signature</td><td>Different parameter types or counts</td></tr><tr><td>Inheritance needed?</td><td>A supertype relationship</td><td>No, one class can declare overloads</td></tr><tr><td>Main selection</td><td>Runtime receiver for instance implementation</td><td>Compile-time argument and receiver types</td></tr><tr><td>Return rule</td><td>Same or compatible covariant reference return</td><td>Return alone cannot distinguish methods</td></tr><tr><td>Helpful annotation</td><td>@Override</td><td>No override annotation for a new overload</td></tr></table>
+<p>Both mechanisms may appear in one call. First the compiler chooses a signature from the available overloads. Then runtime dispatch selects an override of that signature. The next lesson develops this two-stage trace with arguments whose declared and runtime types differ.</p>
+<p>Static hiding is another distinction. A child may declare a static method with the same signature as an accessible parent static method. Call it through the intended class name. Do not use an object expression to suggest that runtime instance selection will occur.</p>
+<p>Fields also do not override like methods. Two same-named fields occupy separate declarations and can hide one another. Prefer private fields with clear operations. This keeps state access from becoming confused with the polymorphic method behaviour you intend to teach or use.</p>
+<h3>Check whether the parent operation is actually inherited</h3>
+<p>Package-private methods need special care across package boundaries. A child in another package does not inherit an inaccessible package-private parent method for overriding. A same-named child declaration may therefore be a separate operation. Protected and public methods can provide intentional extension contracts across packages. Before comparing signatures, check access and inheritance together. This also explains why adding @Override is useful: the compiler verifies an actual supertype relationship rather than accepting a visually similar name.</p>
+<h2 id="common-mistakes">Look beyond the matching name</h2>
+<h3>Changing one parameter type</h3>
+<p>score(long) does not override score(int). The inherited int version remains available. Add @Override to intended replacements and inspect the full parameter list when the compiler rejects it.</p>
+<h3>Reducing visibility to hide an inherited promise</h3>
+<p>A child cannot make a public operation private. If the child should not offer the operation, reconsider the hierarchy rather than fighting access rules. The parent contract is still visible to parent-typed callers.</p>
+<h3>Using super to reach child behaviour</h3>
+<p>super selects a parent implementation explicitly. It does not mean the runtime parent of a reference variable. The receiver is still the current object, and the selected parent body can itself call other overridable methods.</p>
+<h2 id="version-notes">Use stable Java language features</h2>
+<p>Covariant reference returns and @Override are supported on Java 17. None of these examples requires records, pattern matching or preview options. The method rules apply equally when the concrete class is declared in the same source file.</p>
+<h2 id="summary">Replace a method without breaking its promise</h2>
+<p>Match the inherited signature, preserve access and return guarantees, and use @Override to make your intention checkable. Call super only when parent behaviour belongs in the result. Continue to <a href="topic:oop-polymorphism">Polymorphism</a> to combine overload selection, runtime dispatch and casts.</p>

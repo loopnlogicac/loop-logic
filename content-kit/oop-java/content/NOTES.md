@@ -1,4 +1,58 @@
-# OOP (Java) — Batch 1
+# OOP (Java) — Batch 2
+
+Package version: 0.2.0. Format: 1.1. Track: oop-java.
+
+The cumulative package now delivers 27 of 41 topics. This addition contains all eight inheritance-polymorphism topics and all three design topics, in curriculum order. The previous 16 topics remain included. Every covers point in the two new modules is addressed. The remaining 14 topics are the scheduled advanced-java, gui and practice-exam modules; none of their content is claimed here.
+
+## New coverage
+
+| Topic | Coverage and reviewer focus |
+| --- | --- |
+| oop-inheritance | extends and behavioural is-a, superclass constructor and method calls, single/multilevel/hierarchical shapes, one class superclass, Java 17 constructor ordering and sealed-class release note. |
+| oop-method-overriding | Signature/access/return/exception rules, @Override, explicit super calls, covariant reference returns, static hiding, package-private cross-package caveat, comparison with overloading. |
+| oop-polymorphism | Dynamic dispatch, signature selection before runtime overriding, upcast identity, guarded downcasts, ClassCastException versus null, Java 16 instanceof patterns, null overload ambiguity, fields versus methods. |
+| oop-abstract-classes | Abstract methods, partial stateful implementation, concrete completion, constructors, final template workflow with hooks, side effects and constructor-dispatch hazards. |
+| oop-interfaces | Multiple capabilities, public implementations, default conflicts and class precedence, static helper ownership, functional-interface preview, class/interface comparison, Java 8/9 release notes. |
+| oop-final-keyword | Variables/methods/classes, blank final assignment, effectively final capture, lambda preview, constant variables, immutable values and defensive array copies. |
+| oop-object-class | toString, equals(Object), hashCode contracts, exact getClass versus instanceof, full immutable equality implementation, a real String hash collision, mutable-key and inheritance hazards. |
+| oop-composition | has-a versus is-a, delegation, policy replacement, separate and shared components, encapsulation, broad Java composition versus exclusive UML composition. |
+| oop-uml-class-diagrams | Required theory structure, attributes/operations/visibility, association, shared aggregation, composition, inheritance/realization, both multiplicity ends, code translation and constraint enforcement. |
+| oop-solid-principles | All five principles with concrete flawed and repaired code, precondition/postcondition substitution reasoning, injection versus inversion, UML dependency direction, exam/interview reasoning and abstraction costs. |
+| oop-design-patterns | Singleton, simple Factory and Factory Method distinction, Strategy, Observer; each problem/solution/consequence; library examples; class-loader scope, synchronous ordering, unsubscribe/failure/reentrancy policies. |
+
+## Verification for version 0.2.0
+
+- Actual tools: Eclipse Temurin OpenJDK 21.0.13.1+2, javac 21.0.13.1 and Node.js v24.22.1. The JDK was installed in a temporary directory, outside the repository.
+- All 92 newly authored complete programs compiled separately with `javac --release 17 -encoding UTF-8 -Xlint:all -Werror`: 41 examples, 20 code-practice solutions and 31 embedded output-quiz programs. Each was copied to an isolated Main.java and executed as Main.
+- A separate cumulative pass compiled all 262 program entries with `javac --release 17 -encoding UTF-8 -Xlint:all -Werror`, with zero failures and no lint exclusions. This confirms the requested flags independently of the kit checker, which internally adds `-Xlint:-serial`.
+- Every new example output and all 54 code-practice outputs were generated from actual runs. The output-quiz correct options also came from actual runs.
+- A separate calculation audit checked all 54 practice results against the problem statements, including zero/empty input, thresholds, upper bounds, independently owned components, no-event observer state, odd-price integer division and hash collisions.
+- The new topics contain 46 practice problems: 20 executable and 26 written with worked answers. The UML theory topic has four written design exercises. Other topics combine two code exercises with design/contract exercises; SOLID and patterns have five practices each.
+- There are 114 new quiz questions, including 31 independently executable output traces. Correct answer positions vary. The cumulative package contains 299 quiz questions and 262 complete program entries.
+- The content check was run from content-kit using `node tools/check.mjs oop-java/content --report oop-java/content/CHECK_REPORT.txt`, with the temporary JDK bin directory on PATH. The report covers all 27 topics and records 0 errors and 0 warnings.
+- All new lessons meet their curriculum word ranges. The final format/writing check reports no repeated-sentence, repeated-prompt, Bangla-script, section-order or HTML errors.
+- An asset audit confirmed every new source/input/output file is referenced, uses LF, and follows the one-file Main rule. No package declarations, wildcard imports, warning suppressions, dependency requirements or compile-only skips were added.
+- Reference URLs are approved Oracle Java 17 API/JLS pages and dev.java learning pages. Their HTTP responses were checked. Language claims can be checked against the cited JLS sections and Object API contracts.
+
+## Deliberate boundaries and reviewer checks
+
+- Text and code are original. Full lesson bodies are English; all new titles, summaries and key points have Bangla translations. Full Bangla bodies and video links were not added.
+- Design diagrams use pre.diagram text notation with explicit keys for hollow triangles and diamonds. Human review should confirm diagram readability, both multiplicity ends and natural Bangla phrasing.
+- Theory uses written exercises where model reasoning is the goal. Code-practice problems state precise bounded input/output formats and include edge cases. General malformed-input recovery is left to the scheduled exceptions lesson.
+- Supporting classes stay in the same file without public. Each complete program has class Main and public static void main(String[] args). Prose fragments illustrate members or declarations rather than claiming to be separate runnable programs.
+- The final-keyword lesson briefly defines lambdas and IntUnaryOperator to show effective-final capture, linking its prerequisite functional-interface preview. Full lambda and stream teaching remains in advanced-java.
+- SOLID deliberately includes flawed designs that compile cleanly. The invalid read-only write operation is shown but never invoked. Its behavioural contract violation is explained directly, and repaired capability code runs normally.
+- Value examples assume documented non-null constructor strings. Course is final, so instanceof-based equality cannot become asymmetric through a subclass. Equal hash results are explicitly distinguished from equality, including Aa/BB collisions.
+- Observer examples are intentionally bounded and synchronous. Their current registration limits, ordering and no-registration-change assumption are stated. Unsubscription, callback failures, retention and reentrant events are discussed as policies required in a larger implementation.
+- Singleton guarantees are limited to access through one loaded class. The prose does not claim mutable-state thread safety, one instance across JVMs, or immunity to reflection/serialization. Factory-style creation is distinguished from the full Factory Method pattern.
+- Human reviewers should double-check the Java 17 superclass-constructor rule, two-stage overload/override traces, protected/package access caveats, equals/hashCode semantics, exclusive ownership versus garbage collection, and the behavioural examples for LSP.
+- Remaining warnings: none. Omitted new-module curriculum points: none. Suggested additional topic IDs: none. Review status remains draft for editorial review.
+
+---
+
+The following record preserves the prior delivery's coverage and verification history. Its version-specific counts and future-topic statements describe version 0.1.0.
+
+# Batch 1 record — version 0.1.0
 
 Package version: 0.1.0. Format: 1.1. Track: oop-java.
 

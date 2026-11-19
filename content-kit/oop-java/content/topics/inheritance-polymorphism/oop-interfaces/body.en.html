@@ -1,0 +1,68 @@
+<h2 id="introduction">Describe a capability without choosing a family</h2>
+<p class="lead">A campus terminal can read a card and print a receipt. Those capabilities need not share one class parent. An <dfn>interface</dfn> names a contract that different classes can implement. A class can promise several interface capabilities while extending only one class.</p>
+<p>A caller that needs printing should depend on Printable rather than a particular terminal model. The caller asks for print(), and the implementation decides how to perform it. This keeps the request stable while devices differ. Interfaces are therefore useful boundaries between consumers and implementations.</p>
+<p>An interface is also a reference type. You can declare a Printable variable and assign an implementing object to it. You cannot directly construct the interface itself. The object still belongs to its concrete class and keeps the same identity through each interface view.</p>
+<h2 id="syntax">Implement the required public operations</h2>
+<pre><code class="language-java">interface Printable {
+    void print();
+}
+class Terminal implements Printable {
+    @Override
+    public void print() {
+        System.out.println("Receipt ready");
+    }
+}</code></pre>
+<p>An ordinary abstract interface method is implicitly public and abstract. You may omit those words in its declaration. The implementing class must make print public; package-private access would reduce the promised visibility. @Override also checks that the method actually fulfils the interface operation.</p>
+<p>Use commas to implement multiple interfaces: implements Readable, Printable. A class may extend one superclass before that implements list. An interface may itself extend multiple interfaces. This combines contracts without creating multiple class-state inheritance.</p>
+<p>Interface fields are implicitly public, static and final. They represent shared constants rather than mutable per-object storage. An interface has no constructor that initializes instance fields. An implementing class stores the state needed to fulfil its operations.</p>
+<h2 id="how-it-works">Several views can reach one implementation</h2>
+<pre class="diagram">Readable &lt;|.. Terminal ..|&gt; Printable
+                 |
+                 v
+            one object
+         read() and print()
+
+Readable reference --&gt; Terminal object &lt;-- Printable reference</pre>
+<p>The two interface references can point to the same Terminal object. A call through Readable exposes read(), while Printable exposes print(). Changing the declared view does not copy the terminal. Its instance methods use the same underlying state.</p>
+<p>Interface calls participate in dynamic dispatch. The runtime receiver supplies the implementing method. Consumers should depend on the operation’s documented meaning, not guess the concrete class. If several methods must be called in a particular order, that order belongs in the contract too.</p>
+<p>Small capability contracts can avoid irrelevant operations. A document scanner should not need a fake print method merely because another device combines scanning and printing. Split capabilities when clients use them independently. Combine them in one implementation when the real object supports both.</p>
+<div class="callout note"><p>If you know C: an interface is not a collection of untyped function addresses. Java checks parameter types, return types and implementation completeness. The reference can reach only operations permitted by its declared type, with runtime selection of the concrete receiver’s methods.</p></div>
+<h2 id="examples">Use contracts, defaults and explicit conflict resolution</h2>
+<h3>Implement two capabilities</h3>
+<p>Terminal supports Readable and Printable together. Separate references call different public operations on the same terminal.</p>
+<div data-example="ex-1"></div>
+<h3>Use a default and a static helper</h3>
+<p>ExamNotice inherits the default text operation. The date helper is called with Notice.valid because it belongs to the interface itself.</p>
+<div data-example="ex-2"></div>
+<h3>Choose between competing defaults</h3>
+<p>Joint receives unrelated name defaults from Left and Right. Its override resolves the conflict and chooses how to combine the results.</p>
+<div data-example="ex-3"></div>
+<h3>Name a one-operation policy</h3>
+<p>FeePolicy states one calculation and HalfFee implements it. This contract can also support a lambda later, without changing its meaning.</p>
+<div data-example="ex-4"></div>
+<h2 id="default-methods">A default supplies behaviour, not instance storage</h2>
+<p>A <dfn>default method</dfn> is an interface instance method with a body. An implementing class can inherit that body or override it. Defaults allow a contract to provide useful shared behaviour. They do not give the interface mutable instance fields or constructors.</p>
+<p>An inherited suitable class implementation takes precedence over an interface default. If two unrelated interfaces provide competing defaults with the same signature, the class must resolve them explicitly. Java does not choose according to declaration order.</p>
+<p>Inside the resolving override, Left.super.name() requests an eligible direct superinterface’s default. Ordinary super.name() refers to class ancestry instead. These qualified interface calls are restricted; they are not a general mechanism for jumping to any ancestor interface body.</p>
+<p>A more specific subinterface can refine an inherited default, so not every repeated default creates ambiguity. The critical case here is two unrelated candidate defaults with neither more specific than the other. Resolve that case locally and explain the policy to callers.</p>
+<h2 id="static-and-functional">Separate helpers from single-operation contracts</h2>
+<p>A static interface method belongs to the declaring interface. It is not inherited as an instance operation or as a static class method by implementors. Call Notice.valid(7), rather than trying to call it through an ExamNotice object. This makes the helper’s ownership clear.</p>
+<p>A <dfn>functional interface</dfn> has one abstract method contract under Java’s interface rules. Default and static methods do not add abstract requirements. @FunctionalInterface asks the compiler to check this property. It does not require the implementation to use lambda syntax.</p>
+<p>HalfFee is a named class implementing the functional FeePolicy contract. A lambda later offers shorter notation for the same one-operation role. The functional-interface preview matters because many Java library policies use this shape, including computations, predicates and callbacks.</p>
+<p>Keep a functional contract meaningful. Two unrelated operations should not be squeezed into one method with a flag merely to obtain the annotation. Prefer the interface that describes the caller’s need. Concise syntax is a benefit only after the behaviour is clear.</p>
+<h2 id="comparison">Choose the kind of shared structure you need</h2>
+<table class="ref"><tr><th>Property</th><th>Abstract class</th><th>Interface</th></tr><tr><td>Instance fields</td><td>Can own private state</td><td>No instance fields</td></tr><tr><td>Constructors</td><td>Initialize superclass state</td><td>No constructors</td></tr><tr><td>Completed operations</td><td>Concrete instance methods</td><td>Default methods, plus static helpers</td></tr><tr><td>Inheritance limit</td><td>One direct class superclass</td><td>Several implemented contracts</td></tr><tr><td>Typical reason</td><td>A related family shares state or workflow</td><td>Different implementations offer a capability</td></tr></table>
+<p>You can use both approaches together. An abstract report class may implement Printable and share common formatting with its children. Other unrelated printable objects need not join that report hierarchy. The interface preserves the common capability while the class preserves family-specific implementation.</p>
+<h3>Keep default behaviour compatible with Object</h3>
+<p>An interface cannot provide a default implementation of an Object instance method such as toString. That would interfere with the class-based Object behaviour every implementing object already has. Put that implementation in a class instead. Private interface methods, available since Java 9, can help share code among defaults without becoming implementation obligations. They remain internal helpers and do not introduce interface instance fields.</p>
+<h2 id="common-mistakes">Check visibility and ownership of each method</h2>
+<h3>Leaving an implementation package-private</h3>
+<p>An omitted access modifier on a class method does not match the interface’s public promise. Add public to the implementing method. Being declared in the same source file does not relax the overriding rule.</p>
+<h3>Assuming defaults resolve by list order</h3>
+<p>implements Left, Right does not prefer Left. An unrelated conflict needs an explicit override. Choose or combine the direct defaults inside that override rather than relying on a guessed precedence.</p>
+<h3>Treating constants as object state</h3>
+<p>An interface field is shared and final. It cannot hold a separate mutable count for each implementation instance. Put changing state in the class and expose behaviour through the interface operation.</p>
+<h2 id="version-notes">Interface bodies have explicit release boundaries</h2>
+<p>Default methods, static interface methods and functional-interface support arrived in Java 8. Private interface helper methods arrived in Java 9. All are available on Java 17, although the examples here need no private helpers or preview features.</p>
+<h2 id="summary">Promise the capability the caller needs</h2>
+<p>Interfaces support multiple contracts, public implementations and carefully chosen shared defaults. Use abstract classes when related objects also need shared instance state. Continue to <a href="topic:oop-final-keyword">The final Keyword</a> to control assignment and extension without confusing those controls with immutability.</p>

@@ -1,0 +1,64 @@
+<h2 id="introduction">One request can reach different implementations</h2>
+<p class="lead">A transport program totals fares for ordinary and student rides. The loop should ask each ride for its fare without knowing every category. <dfn>Polymorphism</dfn> means using a common type while different objects supply their own valid behaviour.</p>
+<p>Java supports runtime polymorphism through overridden instance methods. Overloading is often called compile-time polymorphism because the compiler selects among parameter signatures. These mechanisms cooperate, but they use different information. Keeping the two decisions separate makes output questions much easier to trace.</p>
+<p>A reference has a declared type visible in the source. The object it reaches has a runtime class established during construction. A Fee variable can hold a LabFee object without turning that object into an ordinary Fee. The broader variable offers a narrower view of the same identity.</p>
+<h2 id="syntax">Use a general reference and a specific object</h2>
+<pre><code class="language-java">Fee fee = new LabFee();
+int amount = fee.amount();</code></pre>
+<p>The assignment is an <dfn>upcast</dfn>: a subtype reference is used through a supertype. No explicit cast is needed. The compiler allows operations declared by Fee and its supertypes. A LabFee-only operation is unavailable through this variable unless you establish a more specific view.</p>
+<p>A <dfn>downcast</dfn> requests that more specific view. It does not add fields or change the object’s class. A wrong non-null cast throws ClassCastException at runtime. Use a type test when the reference may point to different kinds of objects.</p>
+<pre><code class="language-java">if (fee instanceof LabFee lab) {
+    System.out.println(lab.room());
+}</code></pre>
+<p>This Java 16 type pattern tests compatibility and introduces lab on the successful path. The variable has type LabFee there, so its specialist methods are available. The condition is false for null. It also accepts subclasses of LabFee rather than requiring an exact runtime class.</p>
+<h2 id="how-it-works">Resolve the signature, then the instance implementation</h2>
+<p>Start a trace by writing down the declared receiver type and the argument types. Use them to select a method signature at compile time. Only after that choice should you inspect the runtime receiver class. Runtime dispatch chooses the most specific override of the already selected instance signature.</p>
+<table class="ref"><tr><th>Call</th><th>Compile-time signature</th><th>Runtime implementation</th></tr><tr><td>printer.print(value), value declared Object</td><td>print(Object)</td><td>DetailedPrinter.print(Object)</td></tr><tr><td>printer.print("CSE")</td><td>print(String)</td><td>Inherited Printer.print(String)</td></tr></table>
+<p>For the first row, the actual String stored in value does not make print(String) the selected overload. Overload resolution does not inspect runtime argument objects. For the second row, the literal has type String, so the more specific String overload is chosen.</p>
+<p>A subclass may override one signature and inherit another. Dynamic dispatch does not jump sideways from print(Object) to print(String). It searches for an override of the chosen operation. This is why the same receiver can print two different labels in the example.</p>
+<pre class="diagram">declared receiver + declared argument types
+                     |
+                     v
+             choose signature
+                     |
+          overridable instance method?
+                     |
+                     v
+runtime receiver --&gt; choose matching override</pre>
+<div class="callout note"><p>If you know C: the reference view is not a pointer cast that lets you reinterpret arbitrary storage. Java checks casts against runtime type compatibility. You cannot turn a plain parent object into a child by treating its memory as a larger layout.</p></div>
+<h2 id="examples">Trace each decision with concrete receivers</h2>
+<h3>Total through a common Fee view</h3>
+<p>The enhanced for loop uses one operation for both array elements. Each receiver chooses its own amount implementation.</p>
+<div data-example="ex-1"></div>
+<h3>Read specialist data only after a successful test</h3>
+<p>Only the LabPass binds the lab variable and prints its room. A general Pass and null both take the other branch.</p>
+<div data-example="ex-2"></div>
+<h3>Combine overload selection and overriding</h3>
+<p>Compare the declared Object variable with the String literal. Their contents look similar, but they select different signatures.</p>
+<div data-example="ex-3"></div>
+<h3>Compare a field read with a method call</h3>
+<p>The Base reference selects the Base field declaration. The instance method dispatches to Child and reads the Child field.</p>
+<div data-example="ex-4"></div>
+<h2 id="casting">Casts preserve the original object</h2>
+<p>Suppose Pass pass holds new LabPass(12). Upcasting to Pass hides the room operation from the declared view but keeps the same object. A successful downcast recovers a LabPass view. Both references still reach the same room field and share identity.</p>
+<p>Now suppose pass holds new Pass(). That object never had the LabPass contract. A cast cannot install the missing behaviour. The runtime check rejects the request with ClassCastException. A compiler may allow the cast because some Pass references really can hold LabPass objects.</p>
+<p>Casting null to a reference type yields null. The cast itself does not throw ClassCastException. Calling an instance method through the resulting null reference instead raises NullPointerException. These are distinct failures with different causes and different useful guards.</p>
+<p>Pattern variables follow flow-sensitive scope rules. In the simple if shown here, lab is available in the true branch where the match is known. Do not assume it is usable before the condition or on the false branch. More complex negated conditions need careful control-flow reasoning.</p>
+<h2 id="design-use">Move behaviour into the contract before adding type checks</h2>
+<p>A sum of fare() calls is usually clearer than repeated instanceof checks for each fare subtype. Put behaviour that every ride should support on the common abstraction. Then a new ride implementation can supply its calculation without changing the total loop.</p>
+<p>Type tests still have uses. A specialist room operation may genuinely apply only to LabPass, or an external boundary may deliver mixed objects. Use a guarded test when the distinction is part of the problem. Do not turn every polymorphic operation back into a central list of subclass names.</p>
+<p>Arrays can store references of a common supertype, making small polymorphic examples convenient. Java array covariance introduces additional runtime checks when assigning different array types. Those checks are separate from method dispatch. Keep the actual array allocation at the intended base type in these exercises.</p>
+<p>Static methods are selected through type information rather than runtime receiver overriding. Field access also uses the selected declaration. An explicit super.method() asks for parent implementation behaviour. Reserve the term dynamic dispatch here for the overridden instance method path.</p>
+<h3>Watch overloads involving null</h3>
+<p>The null literal is compatible with reference parameter types. If overloads accept Object and String, a null argument selects String because it is more specific. If the alternatives accept unrelated types such as String and Integer, neither is more specific, so the call is ambiguous. An explicit cast can state the intended argument type without constructing an object. This choice still happens at compile time, before any matching receiver override is selected. It is separate from the false result of null instanceof String.</p>
+<h2 id="common-mistakes">Keep the two type questions separate</h2>
+<h3>Reading the right side for overload selection</h3>
+<p>Object text = "hi" still declares text as Object. The compiler does not switch to a String overload because the current contents happen to be a String. Write the declared argument type beside every overloaded call before tracing it.</p>
+<h3>Downcasting because the variable name sounds specific</h3>
+<p>A variable named labPass can still hold a plain Pass if its declared type allows that assignment. Names do not establish runtime compatibility. Use instanceof or a contract that makes the type guarantee explicit.</p>
+<h3>Assuming a cast copies an object</h3>
+<p>A cast changes the permitted view, not identity. If two views permit mutation of the same target, changes remain visible through both. Creating an independent copy needs an actual copying operation and a clear policy for referenced state.</p>
+<h2 id="version-notes">Pattern matching is permanent from Java 16</h2>
+<p>Java 17 supports instanceof type patterns without preview flags. Older Java code commonly writes a type test followed by an explicit cast inside its true branch. The safety idea is the same. No sealed hierarchy is required for these patterns.</p>
+<h2 id="summary">Trace the contract before the object</h2>
+<p>Declared types select accessible signatures; runtime receivers select matching instance overrides. Upcasts preserve identity, while guarded downcasts recover specialist views safely. Continue with <a href="topic:oop-abstract-classes">Abstract Classes</a> to define contracts whose implementations are intentionally incomplete.</p>
