@@ -1,0 +1,47 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine checking a course registration form. Each entry has a course code, then a section, then a credit value. Knowing which words are valid does not tell you whether their order is valid. A grammar supplies that structure.</p>
+<p>A <dfn>context-free grammar</dfn>, or CFG, describes how a named part can expand into smaller parts. The left side of each rule is one nonterminal. A nonterminal is a name such as E for expression. A terminal is a token kind that appears in the final input, such as id or +.</p>
+<p>The lexer from <a href="topic:cd-lexical-analysis">lexical analysis</a> groups characters into tokens. The parser checks those tokens against a grammar. Thus roll + marks has three tokens here, even though its spellings use many characters. The grammar uses id for both names and leaves their actual values to later analysis.</p>
+<p>Formally write G = (N, T, P, S). N is the nonterminal set, T is the terminal set, P is the production set, and S is the start symbol. N and T are disjoint. A production A → α replaces one occurrence of A by the sequence α, regardless of surrounding symbols.</p>
+<h2 id="worked-examples">Worked examples</h2>
+<h3>Read and expand a production</h3>
+<table class="ref"><caption>Expression grammar with multiplication binding more tightly</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">Productions</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>E</td><td>E → E + T | T</td><td>An expression is a sum of terms.</td></tr><tr><td>T</td><td>T → T * F | F</td><td>A term is a product of factors.</td></tr><tr><td>F</td><td>F → ( E ) | id</td><td>A factor is an identifier or a parenthesised expression.</td></tr></tbody></table>
+<p>The vertical bar separates alternative productions; it is not an input token. For example, E → E + T | T abbreviates two rules. Parentheses in F → ( E ) are real terminal tokens. This grammar starts at E and uses nonterminals {E,T,F} and terminals {id,+,*,(,)}.</p>
+<p>A <dfn>sentential form</dfn> is any sequence reachable from the start symbol. It may still contain nonterminals. A sentence contains only terminals. The language L(G) consists of every terminal sentence derivable from S, not every intermediate form.</p>
+<table class="ref"><caption>Two replacement orders for id + id * id</caption><thead><tr><th scope="col">Step</th><th scope="col">Leftmost derivation</th><th scope="col">Rightmost derivation</th></tr></thead><tbody><tr><td>0</td><td>E</td><td>E</td></tr><tr><td>1</td><td>E + T</td><td>E + T</td></tr><tr><td>2</td><td>T + T</td><td>E + T * F</td></tr><tr><td>3</td><td>F + T</td><td>E + T * id</td></tr><tr><td>4</td><td>id + T</td><td>E + F * id</td></tr><tr><td>5</td><td>id + T * F</td><td>E + id * id</td></tr><tr><td>6</td><td>id + F * F</td><td>T + id * id</td></tr><tr><td>7</td><td>id + id * F</td><td>F + id * id</td></tr><tr><td>8</td><td>id + id * id</td><td>id + id * id</td></tr></tbody></table>
+<p>A <dfn>leftmost derivation</dfn> always replaces the leftmost remaining nonterminal. A rightmost derivation replaces the rightmost one. Read each column downward and underline the replaced occurrence. At step two, the leftmost route expands the first E, while the rightmost route expands the final T.</p>
+<p>Both columns describe the same tree. A different order of independent replacements does not itself show ambiguity. The tree records which production creates each group, while a derivation also records the order of replacements. There is one leftmost and one rightmost derivation for this particular ordered parse tree.</p>
+<pre class="diagram">E
+├── E → T → F → id
+├── +
+└── T
+    ├── T → F → id
+    ├── *
+    └── F → id</pre>
+<p>A <dfn>parse tree</dfn> has the start symbol at its root. Each internal nonterminal has children matching the right side of one chosen production. Read terminal leaves from left to right to obtain the sentence. Here the multiplication belongs inside the right term.</p>
+<h3>Find genuine ambiguity</h3>
+<table class="ref"><caption>Two trees for the same three identifiers</caption><thead><tr><th scope="col">Grammar</th><th scope="col">Root split</th><th scope="col">Grouping</th></tr></thead><tbody><tr><td>E → E + E | E * E | id</td><td>+ at the root</td><td>id + (id * id)</td></tr><tr><td>E → E + E | E * E | id</td><td>* at the root</td><td>(id + id) * id</td></tr></tbody></table>
+<p>A grammar is <dfn>ambiguous</dfn> when at least one terminal sentence has two distinct parse trees. The flatter grammar lets either operator become the root for id + id * id. Assigning values 2, 3, and 4 gives 14 for one grouping and 20 for the other. That difference shows why a compiler needs a clear grouping rule.</p>
+<p>The layered E, T, F grammar removes this expression ambiguity. E handles addition, T handles multiplication, and F permits parentheses. A plus cannot appear directly inside an unparenthesised T. This forces multiplication to group before addition in id + id * id.</p>
+<h3>Separate precedence from associativity</h3>
+<table class="ref"><caption>Expression grouping decisions</caption><thead><tr><th scope="col">Input</th><th scope="col">Required grouping</th><th scope="col">Grammar reason</th></tr></thead><tbody><tr><td>id + id * id</td><td>id + (id * id)</td><td>A product stays inside one T.</td></tr><tr><td>id + id + id</td><td>(id + id) + id</td><td>E → E + T puts the earlier sum on the left.</td></tr><tr><td>( id + id ) * id</td><td>(id + id) * id</td><td>F → ( E ) allows the nested sum.</td></tr></tbody></table>
+<p><dfn>Precedence</dfn> chooses which kind of operator groups more tightly. <dfn>Associativity</dfn> chooses grouping among operators at the same level. For subtraction, left association matters: 9 − 2 − 1 means (9 − 2) − 1 = 6. Right association would give 9 − (2 − 1) = 8. Use tree structure to express the intended choice.</p>
+<h3>Use an empty production</h3>
+<table class="ref"><caption>A short list grammar</caption><thead><tr><th scope="col">Step</th><th scope="col">Form</th><th scope="col">Chosen production</th></tr></thead><tbody><tr><td>0</td><td>L</td><td>Start at L.</td></tr><tr><td>1</td><td>id R</td><td>L → id R</td></tr><tr><td>2</td><td>id , id R</td><td>R → , id R</td></tr><tr><td>3</td><td>id , id</td><td>R → ε</td></tr></tbody></table>
+<p>Epsilon, ε, means an empty sequence. In L → id R and R → , id R | ε, R represents zero or more additional identifiers. Choosing ε adds no leaf token to the input. The list contains at least one id because L itself cannot disappear.</p>
+<h2 id="how-it-works">Reasoning and checks</h2>
+<p>To validate a derivation, check one replacement at a time. The unchanged prefix and suffix must remain identical. For a tree, check every parent and its ordered children against one grammar production. Finally compare the leaf sequence with the complete input, including punctuation.</p>
+<p>To demonstrate ambiguity in an exam, give one sentence and draw two trees for it. Two leftmost derivations also suffice if their structural choices differ. Two ordinary derivations may differ only because independent nodes were expanded in a different order. Always identify the changed root split or nested grouping.</p>
+<p>An unambiguous expression grammar solves a specific language-design problem. It does not provide a general algorithm for removing ambiguity from every CFG. Some context-free languages have no unambiguous grammar. In practice, you choose explicit grouping rules, then express them using grammar levels or parser declarations.</p>
+<p>The dangling-else problem offers another ambiguity. In if a then if b then x else y, the else can attach to either if under the naive rule. A language may require attachment to the nearest unmatched if. A matched/unmatched statement grammar can encode that convention, or braces can make the grouping visible.</p>
+<p>A parse tree includes grammar details such as E, T, F and parentheses. An abstract syntax tree usually keeps only meaningful operations and operands. For 2 + 3 * 4, its root is + and its right child is *. Removing grammar-only nodes must preserve the grouping established during parsing.</p>
+<p>Context-free syntax cannot express every program rule conveniently. For example, a grammar can accept id + id without knowing whether either identifier was declared. Type checks and declaration checks belong to semantic analysis. Keeping those stages separate lets you explain whether a failure concerns token spelling, token order, or meaning.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Calling two expansion orders ambiguous</h3>
+<p>A leftmost and a rightmost derivation can share one tree. Compare parent-child choices before claiming two meanings.</p>
+<h3>Treating ε as a printed token</h3>
+<p>An empty production consumes nothing. Do not place an ε character between two input tokens.</p>
+<h3>Fixing precedence but losing association</h3>
+<p>Separate operator levels and then inspect a chain of one operator. A grammar can enforce precedence while choosing the wrong subtraction grouping.</p>
+<h2 id="summary">Summary</h2>
+<p>A CFG explains how tokens form nested phrases. Derivations expand those phrases, while parse trees make their grouping visible. Next, <a href="topic:cd-left-recursion-factoring">reshape grammar rules</a> so a predictive parser can choose a production without looping.</p>

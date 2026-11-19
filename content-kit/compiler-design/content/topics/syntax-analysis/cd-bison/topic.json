@@ -1,0 +1,329 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-bison",
+  "module": "syntax-analysis",
+  "order": 10,
+  "kind": "theory",
+  "title": {
+    "en": "Parser Generators: Bison/Yacc (Introduction)",
+    "bn": "Bison ও Yacc দিয়ে পার্সার তৈরি"
+  },
+  "summary": {
+    "en": "Read a complete calculator grammar, resolve expression conflicts with precedence, and connect Flex tokens and semantic values to Bison.",
+    "bn": "সম্পূর্ণ calculator গ্রামার পড়ি, precedence ঘোষণা দিয়ে দ্বন্দ্ব মেটাই এবং Flex-এর টোকেন Bison-এ পাঠাই।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-operator-precedence"
+  ],
+  "related": [
+    "cd-context-free-grammars"
+  ],
+  "keywords": [
+    "Parser Generators: Bison/Yacc (Introduction)",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "GNU Bison 3.8; Flex 2.6; C17",
+    "notes": [
+      "The %empty directive and api.value.type declaration are GNU Bison features, not portable POSIX Yacc syntax.",
+      "The scanner and parser use the ordinary non-reentrant C interface."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Reasoning and checks"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Map the calculator file sections",
+      "statementHtml": "<p>Identify the declaration, grammar, and epilogue sections of calc.y, including the roles of both %% markers.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>calc.y structure</caption><thead><tr><th scope=\"col\">Section</th><th scope=\"col\">Contents</th><th scope=\"col\">Boundary</th></tr></thead><tbody><tr><td>Declarations</td><td>C prologue, value type, NUM, precedence</td><td>Before first %%.</td></tr><tr><td>Grammar</td><td>input and expr productions with actions</td><td>Between the two %% markers.</td></tr><tr><td>Epilogue</td><td>yyerror and main definitions</td><td>After second %%.</td></tr></tbody></table>\n",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain precedence decisions",
+      "statementHtml": "<p>For the calculator, determine the action after expr + expr on * and after expr * expr on +. Include equal-level cases.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Resolved decisions for the calculator grammar</caption><thead><tr><th scope=\"col\">Completed rule</th><th scope=\"col\">Lookahead</th><th scope=\"col\">Decision</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>expr → expr + expr</td><td>+</td><td>reduce</td><td>Equal precedence and %left.</td></tr><tr><td>expr → expr + expr</td><td>-</td><td>reduce</td><td>+ and - share a left-associative level.</td></tr><tr><td>expr → expr + expr</td><td>*</td><td>shift</td><td>* is declared on a later, higher level.</td></tr><tr><td>expr → expr * expr</td><td>+</td><td>reduce</td><td>The rule has higher precedence.</td></tr><tr><td>expr → expr * expr</td><td>*</td><td>reduce</td><td>Equal level and %left.</td></tr><tr><td>expr → expr - expr</td><td>-</td><td>reduce</td><td>Left association preserves (9-2)-1.</td></tr><tr><td>expr → expr + expr</td><td>) or ;</td><td>reduce</td><td>The completed expression closes before its boundary.</td></tr></tbody></table>\n",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace semantic values",
+      "statementHtml": "<p>Trace 2+3*4; through the calculator productions, showing the values created by each reduction.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Manual semantic-value trace for 2+3*4;</caption><thead><tr><th scope=\"col\">Recognised stack phrases</th><th scope=\"col\">Unread input</th><th scope=\"col\">Grammar action</th><th scope=\"col\">Value created</th></tr></thead><tbody><tr><td>$</td><td>2 + 3 * 4 ; $</td><td>Reduce input → ε</td><td>input</td></tr><tr><td>$ input</td><td>2 + 3 * 4 ; $</td><td>Read NUM 2</td><td>2</td></tr><tr><td>$ input NUM(2)</td><td>+ 3 * 4 ; $</td><td>Reduce expr → NUM</td><td>expr(2)</td></tr><tr><td>$ input expr(2)</td><td>+ 3 * 4 ; $</td><td>Shift +</td><td>—</td></tr><tr><td>$ input expr(2) +</td><td>3 * 4 ; $</td><td>Read NUM 3</td><td>3</td></tr><tr><td>$ input expr(2) + NUM(3)</td><td>* 4 ; $</td><td>Reduce expr → NUM</td><td>expr(3)</td></tr><tr><td>$ input expr(2) + expr(3)</td><td>* 4 ; $</td><td>Shift * by higher precedence</td><td>—</td></tr><tr><td>$ input expr(2) + expr(3) *</td><td>4 ; $</td><td>Read NUM 4</td><td>4</td></tr><tr><td>$ input expr(2) + expr(3) * NUM(4)</td><td>; $</td><td>Reduce expr → NUM</td><td>expr(4)</td></tr><tr><td>$ input expr(2) + expr(3) * expr(4)</td><td>; $</td><td>Reduce expr → expr * expr</td><td>expr(12)</td></tr><tr><td>$ input expr(2) + expr(12)</td><td>; $</td><td>Reduce expr → expr + expr</td><td>expr(14)</td></tr><tr><td>$ input expr(14)</td><td>; $</td><td>Shift ;</td><td>—</td></tr><tr><td>$ input expr(14) ;</td><td>$</td><td>Reduce input → input expr ;</td><td>Print 14</td></tr><tr><td>$ input</td><td>$</td><td>Complete the start input</td><td>Accept</td></tr></tbody></table>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Repair a broken scanner interface",
+      "statementHtml": "<p>A scanner returns NUM but never sets yylval, and it defines NUM as 999 without including calc.tab.h. Explain both fixes.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>Include calc.tab.h instead of inventing NUM’s number. Convert the digit run and assign yylval before returning NUM. The header shares the token codes and semantic-value type with the parser.</p>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Explain recovery without fabricating a value",
+      "statementHtml": "<p>For 8+; 6*7;, explain the error production and state which result the calculator prints.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>The malformed addition triggers yyerror. The input error ; alternative consumes the boundary and runs yyerrok without printing. The next expression reduces 6*7 to 42, and its completed statement prints 42.</p>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does the first %% mark in a Bison grammar?",
+      "options": [
+        "The end of the C file",
+        "The beginning of Flex rules",
+        "A semantic-value conversion",
+        "The start of productions"
+      ],
+      "answer": 3,
+      "explanation": "Declarations precede the first grammar delimiter."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which declaration shares a named numeric token with the scanner?",
+      "options": [
+        "%token NUM",
+        "%left input",
+        "%empty NUM",
+        "%% NUM"
+      ],
+      "answer": 0,
+      "explanation": "Bison places the token definition in the generated header."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is $$ inside a production action?",
+      "options": [
+        "The end marker",
+        "The left-side semantic value",
+        "The first input character",
+        "The lexer return code"
+      ],
+      "answer": 1,
+      "explanation": "The action computes the value of the phrase being reduced."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which value is the expression in input expr ;?",
+      "options": [
+        "$1",
+        "$3",
+        "$2",
+        "$$ only"
+      ],
+      "answer": 2,
+      "explanation": "Right-side positions count input, expr, and semicolon in that order."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which %left declaration has higher precedence?",
+      "options": [
+        "The one written first",
+        "The alphabetically earlier token",
+        "All levels are equal",
+        "The one written later"
+      ],
+      "answer": 3,
+      "explanation": "Bison precedence levels increase in declaration order."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens for equal precedence with %left?",
+      "options": [
+        "Reduce",
+        "Shift",
+        "Always reject",
+        "Call yylex twice"
+      ],
+      "answer": 0,
+      "explanation": "Reduction completes the earlier left-associated operation."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should the scanner do before returning NUM?",
+      "options": [
+        "Call yyparse recursively",
+        "Assign the converted value to yylval",
+        "Return zero first",
+        "Invent a token number"
+      ],
+      "answer": 1,
+      "explanation": "The kind and semantic value travel through the shared interface."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which file should the scanner include for this build?",
+      "options": [
+        "calc.y directly",
+        "lex.yy.c",
+        "calc.tab.h",
+        "An unrelated y.tab.h"
+      ],
+      "answer": 2,
+      "explanation": "The -o name and -d option determine this generated interface header."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which scanner return value means end of input?",
+      "options": [
+        "NUM",
+        "The character ;",
+        "YYUNDEF",
+        "0"
+      ],
+      "answer": 3,
+      "explanation": "Zero is reserved for end of input, not arbitrary invalid text."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does input error ; accomplish?",
+      "options": [
+        "Recover at a statement boundary",
+        "Accept every malformed expression as zero",
+        "Return an error token from Flex",
+        "Remove the need for yyerror"
+      ],
+      "answer": 0,
+      "explanation": "The damaged statement is abandoned and parsing may continue after its semicolon."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a recovered syntax error force yyparse to return failure?",
+      "options": [
+        "Yes, always",
+        "Not necessarily",
+        "Only with multiplication",
+        "Only with named tokens"
+      ],
+      "answer": 1,
+      "explanation": "A parser can recover and finish; an explicit error counter can track any reported error."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Bison declarations and productions are separated by %% markers.",
+      "bn": "Bison-এ ঘোষণা আর প্রোডাকশন %% দিয়ে আলাদা করা হয়।"
+    },
+    {
+      "en": "Semantic actions compute the values of reduced phrases.",
+      "bn": "রিডিউস হওয়া অংশের মান semantic action হিসাব করে।"
+    },
+    {
+      "en": "Later precedence declarations bind more tightly.",
+      "bn": "পরে লেখা precedence ঘোষণার অগ্রাধিকার বেশি।"
+    },
+    {
+      "en": "Flex and Bison share token definitions through a generated header.",
+      "bn": "তৈরি হওয়া header দিয়ে Flex আর Bison একই টোকেনের সংজ্ঞা ব্যবহার করে।"
+    },
+    {
+      "en": "The scanner sets yylval before returning a numeric token.",
+      "bn": "সংখ্যার টোকেন ফেরানোর আগে scanner-কে yylval বসাতে হয়।"
+    },
+    {
+      "en": "An error production can resume parsing after a semicolon.",
+      "bn": "error প্রোডাকশন দিয়ে সেমিকোলনের পর আবার পার্সিং শুরু করা যায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Identify the declaration, grammar, and epilogue sections of calc.y, including the roles of both %% markers.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>calc.y structure</caption><thead><tr><th scope=\"col\">Section</th><th scope=\"col\">Contents</th><th scope=\"col\">Boundary</th></tr></thead><tbody><tr><td>Declarations</td><td>C prologue, value type, NUM, precedence</td><td>Before first %%.</td></tr><tr><td>Grammar</td><td>input and expr productions with actions</td><td>Between the two %% markers.</td></tr><tr><td>Epilogue</td><td>yyerror and main definitions</td><td>After second %%.</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "For the calculator, determine the action after expr + expr on * and after expr * expr on +. Include equal-level cases.\n",
+      "marks": 8,
+      "answerHtml": "<table class=\"ref\"><caption>Resolved decisions for the calculator grammar</caption><thead><tr><th scope=\"col\">Completed rule</th><th scope=\"col\">Lookahead</th><th scope=\"col\">Decision</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>expr → expr + expr</td><td>+</td><td>reduce</td><td>Equal precedence and %left.</td></tr><tr><td>expr → expr + expr</td><td>-</td><td>reduce</td><td>+ and - share a left-associative level.</td></tr><tr><td>expr → expr + expr</td><td>*</td><td>shift</td><td>* is declared on a later, higher level.</td></tr><tr><td>expr → expr * expr</td><td>+</td><td>reduce</td><td>The rule has higher precedence.</td></tr><tr><td>expr → expr * expr</td><td>*</td><td>reduce</td><td>Equal level and %left.</td></tr><tr><td>expr → expr - expr</td><td>-</td><td>reduce</td><td>Left association preserves (9-2)-1.</td></tr><tr><td>expr → expr + expr</td><td>) or ;</td><td>reduce</td><td>The completed expression closes before its boundary.</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "long",
+      "question": "Trace 2+3*4; through the calculator productions, showing the values created by each reduction.\n",
+      "marks": 5,
+      "answerHtml": "<table class=\"ref\"><caption>Manual semantic-value trace for 2+3*4;</caption><thead><tr><th scope=\"col\">Recognised stack phrases</th><th scope=\"col\">Unread input</th><th scope=\"col\">Grammar action</th><th scope=\"col\">Value created</th></tr></thead><tbody><tr><td>$</td><td>2 + 3 * 4 ; $</td><td>Reduce input → ε</td><td>input</td></tr><tr><td>$ input</td><td>2 + 3 * 4 ; $</td><td>Read NUM 2</td><td>2</td></tr><tr><td>$ input NUM(2)</td><td>+ 3 * 4 ; $</td><td>Reduce expr → NUM</td><td>expr(2)</td></tr><tr><td>$ input expr(2)</td><td>+ 3 * 4 ; $</td><td>Shift +</td><td>—</td></tr><tr><td>$ input expr(2) +</td><td>3 * 4 ; $</td><td>Read NUM 3</td><td>3</td></tr><tr><td>$ input expr(2) + NUM(3)</td><td>* 4 ; $</td><td>Reduce expr → NUM</td><td>expr(3)</td></tr><tr><td>$ input expr(2) + expr(3)</td><td>* 4 ; $</td><td>Shift * by higher precedence</td><td>—</td></tr><tr><td>$ input expr(2) + expr(3) *</td><td>4 ; $</td><td>Read NUM 4</td><td>4</td></tr><tr><td>$ input expr(2) + expr(3) * NUM(4)</td><td>; $</td><td>Reduce expr → NUM</td><td>expr(4)</td></tr><tr><td>$ input expr(2) + expr(3) * expr(4)</td><td>; $</td><td>Reduce expr → expr * expr</td><td>expr(12)</td></tr><tr><td>$ input expr(2) + expr(12)</td><td>; $</td><td>Reduce expr → expr + expr</td><td>expr(14)</td></tr><tr><td>$ input expr(14)</td><td>; $</td><td>Shift ;</td><td>—</td></tr><tr><td>$ input expr(14) ;</td><td>$</td><td>Reduce input → input expr ;</td><td>Print 14</td></tr><tr><td>$ input</td><td>$</td><td>Complete the start input</td><td>Accept</td></tr></tbody></table>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

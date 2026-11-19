@@ -1,0 +1,339 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-lr0-slr",
+  "module": "syntax-analysis",
+  "order": 7,
+  "kind": "theory",
+  "title": {
+    "en": "LR(0) Items and SLR Parsing",
+    "bn": "এলআর আইটেম ও এসএলআর পার্সিং"
+  },
+  "summary": {
+    "en": "Construct closure, GOTO, canonical LR(0) states, and complete SLR tables, then trace reductions using FOLLOW sets.",
+    "bn": "closure ও GOTO দিয়ে LR আইটেমের স্টেট বানাই, FOLLOW দিয়ে SLR টেবিল পূরণ করি এবং ইনপুট পার্স করি।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-shift-reduce"
+  ],
+  "related": [
+    "cd-clr-lalr"
+  ],
+  "keywords": [
+    "LR(0) Items and SLR Parsing",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14; no third-party packages are needed."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Reasoning and checks"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Build the LR(0) collection and the SLR table",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>State 3 contains S → b · and A → b ·. FOLLOW separates their SLR reductions.</p>\n"
+    }
+  ],
+  "practice": [
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Construct the five-state SLR table",
+      "statementHtml": "<p>For S → A a | b, A → b, augment the grammar and construct every LR(0) state and SLR table cell.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>SLR for S → A a | b, A → b: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>S' -&gt; · S; S -&gt; · A a; S -&gt; · b; A -&gt; · b</td></tr><tr><td>I1</td><td>S -&gt; A · a</td></tr><tr><td>I2</td><td>S' -&gt; S ·</td></tr><tr><td>I3</td><td>S -&gt; b ·; A -&gt; b ·</td></tr><tr><td>I4</td><td>S -&gt; A a ·</td></tr></tbody></table>\n<table class=\"ref\"><caption>SLR for S → A a | b, A → b: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>A</td><td>1</td></tr><tr><td>0</td><td>S</td><td>2</td></tr><tr><td>0</td><td>b</td><td>3</td></tr><tr><td>1</td><td>a</td><td>4</td></tr></tbody></table>\n<table class=\"ref\"><caption>SLR for S → A a | b, A → b: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">$</th><th scope=\"col\">S</th><th scope=\"col\">A</th></tr></thead><tbody><tr><td>0</td><td>error</td><td>s3</td><td>error</td><td>2</td><td>1</td></tr><tr><td>1</td><td>s4</td><td>error</td><td>error</td><td>—</td><td>—</td></tr><tr><td>2</td><td>error</td><td>error</td><td>acc</td><td>—</td><td>—</td></tr><tr><td>3</td><td>r3</td><td>error</td><td>r2</td><td>—</td><td>—</td></tr><tr><td>4</td><td>error</td><td>error</td><td>r1</td><td>—</td><td>—</td></tr></tbody></table>\n",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace both meanings of the b state",
+      "statementHtml": "<p>Using the same grammar, parse b a and b, showing why state 3 chooses different reductions.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>SLR execution on b a</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>b a $</td><td>s3</td></tr><tr><td>0 3</td><td>a $</td><td>r3</td></tr><tr><td>0 1</td><td>a $</td><td>s4</td></tr><tr><td>0 1 4</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n<table class=\"ref\"><caption>SLR execution on b</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>b $</td><td>s3</td></tr><tr><td>0 3</td><td>$</td><td>r2</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Compare LR(0) with SLR",
+      "statementHtml": "<p>Explain why S → A a | b, A → b is SLR but not LR(0).</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>The b target contains S→b· and A→b·. LR(0) places both reductions on every terminal. SLR places S→b only on $ and A→b only on a, so their cells do not collide.</p>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Handle a zero-length right side",
+      "statementHtml": "<p>Construct and trace the SLR parser for S → A, A → ε on empty input.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Epsilon case: S → A, A → ε: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>S' -&gt; · S; S -&gt; · A; A -&gt; ·</td></tr><tr><td>I1</td><td>S -&gt; A ·</td></tr><tr><td>I2</td><td>S' -&gt; S ·</td></tr></tbody></table>\n<table class=\"ref\"><caption>Epsilon case: S → A, A → ε: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>A</td><td>1</td></tr><tr><td>0</td><td>S</td><td>2</td></tr></tbody></table>\n<table class=\"ref\"><caption>Epsilon case: S → A, A → ε: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">$</th><th scope=\"col\">S</th><th scope=\"col\">A</th></tr></thead><tbody><tr><td>0</td><td>r2</td><td>2</td><td>1</td></tr><tr><td>1</td><td>r1</td><td>—</td><td>—</td></tr><tr><td>2</td><td>acc</td><td>—</td><td>—</td></tr></tbody></table>\n<table class=\"ref\"><caption>Empty input execution</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>$</td><td>r2</td></tr><tr><td>0 1</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Build a two-level expression collection",
+      "statementHtml": "<p>Construct the full SLR collection and table for E → E + T | T, T → T * F | F, F → id.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Second SLR construction: E → E + T | T; T → T * F | F; F → id: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>E' -&gt; · E; E -&gt; · E + T; E -&gt; · T; T -&gt; · T * F; T -&gt; · F; F -&gt; · id</td></tr><tr><td>I1</td><td>E' -&gt; E ·; E -&gt; E · + T</td></tr><tr><td>I2</td><td>T -&gt; F ·</td></tr><tr><td>I3</td><td>E -&gt; T ·; T -&gt; T · * F</td></tr><tr><td>I4</td><td>F -&gt; id ·</td></tr><tr><td>I5</td><td>E -&gt; E + · T; T -&gt; · T * F; T -&gt; · F; F -&gt; · id</td></tr><tr><td>I6</td><td>T -&gt; T * · F; F -&gt; · id</td></tr><tr><td>I7</td><td>E -&gt; E + T ·; T -&gt; T · * F</td></tr><tr><td>I8</td><td>T -&gt; T * F ·</td></tr></tbody></table>\n<table class=\"ref\"><caption>Second SLR construction: E → E + T | T; T → T * F | F; F → id: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>E</td><td>1</td></tr><tr><td>0</td><td>F</td><td>2</td></tr><tr><td>0</td><td>T</td><td>3</td></tr><tr><td>0</td><td>id</td><td>4</td></tr><tr><td>1</td><td>+</td><td>5</td></tr><tr><td>3</td><td>*</td><td>6</td></tr><tr><td>5</td><td>F</td><td>2</td></tr><tr><td>5</td><td>T</td><td>7</td></tr><tr><td>5</td><td>id</td><td>4</td></tr><tr><td>6</td><td>F</td><td>8</td></tr><tr><td>6</td><td>id</td><td>4</td></tr><tr><td>7</td><td>*</td><td>6</td></tr></tbody></table>\n<table class=\"ref\"><caption>Second SLR construction: E → E + T | T; T → T * F | F; F → id: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">*</th><th scope=\"col\">+</th><th scope=\"col\">id</th><th scope=\"col\">$</th><th scope=\"col\">E</th><th scope=\"col\">T</th><th scope=\"col\">F</th></tr></thead><tbody><tr><td>0</td><td>error</td><td>error</td><td>s4</td><td>error</td><td>1</td><td>3</td><td>2</td></tr><tr><td>1</td><td>error</td><td>s5</td><td>error</td><td>acc</td><td>—</td><td>—</td><td>—</td></tr><tr><td>2</td><td>r4</td><td>r4</td><td>error</td><td>r4</td><td>—</td><td>—</td><td>—</td></tr><tr><td>3</td><td>s6</td><td>r2</td><td>error</td><td>r2</td><td>—</td><td>—</td><td>—</td></tr><tr><td>4</td><td>r5</td><td>r5</td><td>error</td><td>r5</td><td>—</td><td>—</td><td>—</td></tr><tr><td>5</td><td>error</td><td>error</td><td>s4</td><td>error</td><td>—</td><td>7</td><td>2</td></tr><tr><td>6</td><td>error</td><td>error</td><td>s4</td><td>error</td><td>—</td><td>—</td><td>8</td></tr><tr><td>7</td><td>s6</td><td>r1</td><td>error</td><td>r1</td><td>—</td><td>—</td><td>—</td></tr><tr><td>8</td><td>r3</td><td>r3</td><td>error</td><td>r3</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does the dot mark in A → b · c?",
+      "options": [
+        "b has been recognised; c is next",
+        "c has been recognised",
+        "The input contains a dot",
+        "A is nullable"
+      ],
+      "answer": 0,
+      "explanation": "Dot position records progress within a production."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which item must closure add for S → · A a and A → b?",
+      "options": [
+        "A → b ·",
+        "A → · b",
+        "S → A · a",
+        "S → A a ·"
+      ],
+      "answer": 1,
+      "explanation": "Closure predicts A before reading any part of its right side."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is GOTO(I0,b) in the five-state example?",
+      "options": [
+        "{S → · b}",
+        "{S → A · a}",
+        "{S → b ·, A → b ·}",
+        "The empty set"
+      ],
+      "answer": 2,
+      "explanation": "Both initial b expectations advance together."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which set limits an SLR reduction A → α?",
+      "options": [
+        "FIRST(α)",
+        "FIRST(A)",
+        "All nonterminals",
+        "FOLLOW(A)"
+      ],
+      "answer": 3,
+      "explanation": "The next token follows the completed A."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does state 3 reduce A → b on a?",
+      "options": [
+        "a belongs to FOLLOW(A)",
+        "a belongs to FIRST(b)",
+        "The rule has the lowest number",
+        "A is the start symbol"
+      ],
+      "answer": 0,
+      "explanation": "S→A a puts a directly after A."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is the augmented completed item accepted?",
+      "options": [
+        "On every terminal",
+        "Only on $",
+        "Only on ε",
+        "Before any input is shifted"
+      ],
+      "answer": 1,
+      "explanation": "The complete start phrase must cover the whole input."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does an epsilon production’s LR item look like?",
+      "options": [
+        "A → ε · ε",
+        "A → · terminal",
+        "A → ·",
+        "A has no item"
+      ],
+      "answer": 2,
+      "explanation": "Its empty right side is complete from the start."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What determines whether two canonical states are the same?",
+      "options": [
+        "Equal state numbers from different drawings",
+        "One shared completed item",
+        "The same outgoing terminal count",
+        "Equality of their full item sets"
+      ],
+      "answer": 3,
+      "explanation": "Set equality determines reuse of a target state."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can SLR conflict where CLR succeeds?",
+      "options": [
+        "FOLLOW combines contexts from different occurrences",
+        "SLR uses no stack",
+        "CLR ignores syntax errors",
+        "SLR cannot shift terminals"
+      ],
+      "answer": 0,
+      "explanation": "LR(1) item lookaheads retain more local context."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many states are popped for S → A a?",
+      "options": [
+        "0",
+        "2",
+        "1",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "The right side contains two grammar symbols."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which initial item starts canonical construction?",
+      "options": [
+        "S′ → S ·",
+        "S → · ε",
+        "S′ → · S",
+        "Every completed production"
+      ],
+      "answer": 2,
+      "explanation": "The augmented seed is closed before the first transition."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An item dot records progress through one production.",
+      "bn": "আইটেমের ডট প্রোডাকশনের কতটুকু পড়া হয়েছে তা দেখায়।"
+    },
+    {
+      "en": "Closure adds rules for a nonterminal immediately after a dot.",
+      "bn": "ডটের পর nonterminal থাকলে closure তার শুরুর নিয়ম যোগ করে।"
+    },
+    {
+      "en": "GOTO moves matching dots and then closes the result.",
+      "bn": "GOTO-তে মিল থাকা ডট এগিয়ে আবার closure নিতে হয়।"
+    },
+    {
+      "en": "SLR reductions use FOLLOW of the production’s left side.",
+      "bn": "SLR রিডাকশনের কলাম বাম পাশের FOLLOW দিয়ে ঠিক হয়।"
+    },
+    {
+      "en": "The augmented start completion accepts only at input end.",
+      "bn": "বাড়তি start নিয়ম শেষ হলে শুধু ইনপুটের শেষে গ্রহণ করা যায়।"
+    },
+    {
+      "en": "An epsilon reduction removes zero stack states.",
+      "bn": "এপসিলন রিডাকশনে স্ট্যাক থেকে কোনো স্টেট বাদ যায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "For S → A a | b, A → b, augment the grammar and construct every LR(0) state and SLR table cell.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>SLR for S → A a | b, A → b: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>S' -&gt; · S; S -&gt; · A a; S -&gt; · b; A -&gt; · b</td></tr><tr><td>I1</td><td>S -&gt; A · a</td></tr><tr><td>I2</td><td>S' -&gt; S ·</td></tr><tr><td>I3</td><td>S -&gt; b ·; A -&gt; b ·</td></tr><tr><td>I4</td><td>S -&gt; A a ·</td></tr></tbody></table>\n<table class=\"ref\"><caption>SLR for S → A a | b, A → b: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>A</td><td>1</td></tr><tr><td>0</td><td>S</td><td>2</td></tr><tr><td>0</td><td>b</td><td>3</td></tr><tr><td>1</td><td>a</td><td>4</td></tr></tbody></table>\n<table class=\"ref\"><caption>SLR for S → A a | b, A → b: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">$</th><th scope=\"col\">S</th><th scope=\"col\">A</th></tr></thead><tbody><tr><td>0</td><td>error</td><td>s3</td><td>error</td><td>2</td><td>1</td></tr><tr><td>1</td><td>s4</td><td>error</td><td>error</td><td>—</td><td>—</td></tr><tr><td>2</td><td>error</td><td>error</td><td>acc</td><td>—</td><td>—</td></tr><tr><td>3</td><td>r3</td><td>error</td><td>r2</td><td>—</td><td>—</td></tr><tr><td>4</td><td>error</td><td>error</td><td>r1</td><td>—</td><td>—</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Using the same grammar, parse b a and b, showing why state 3 chooses different reductions.\n",
+      "marks": 8,
+      "answerHtml": "<table class=\"ref\"><caption>SLR execution on b a</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>b a $</td><td>s3</td></tr><tr><td>0 3</td><td>a $</td><td>r3</td></tr><tr><td>0 1</td><td>a $</td><td>s4</td></tr><tr><td>0 1 4</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n<table class=\"ref\"><caption>SLR execution on b</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>b $</td><td>s3</td></tr><tr><td>0 3</td><td>$</td><td>r2</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "long",
+      "question": "Explain why S → A a | b, A → b is SLR but not LR(0).\n",
+      "marks": 5,
+      "answerHtml": "<p>The b target contains S→b· and A→b·. LR(0) places both reductions on every terminal. SLR places S→b only on $ and A→b only on a, so their cells do not collide.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

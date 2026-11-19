@@ -1,0 +1,97 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Writing every parser state by hand becomes tiring as a language grows. A parser generator accepts grammar rules and builds the state machinery for you. You still decide the language, grouping rules, semantic values, and error behaviour.</p>
+<p><dfn>Bison</dfn> is a parser generator in the Yacc family. Its C parser normally calls yylex to request the next token, then uses LR tables to shift and reduce. Bison defaults to LALR in its usual C configuration; it also offers IELR and canonical LR modes. Changing a construction mode does not repair an ambiguous language definition.</p>
+<p>The calculator below accepts unsigned integer spellings with +, -, *, and parentheses. Each expression ends with ;. Values are stored as double, and each successful statement prints one result. The language omits unary minus, division, and assignments. Keep arithmetic values small and finite; floating-point rounding still applies.</p>
+<h2 id="worked-examples">Worked examples</h2>
+<h3>Read the declaration section of calc.y</h3>
+<pre><code class="language-c">%{
+#include &lt;stdio.h&gt;
+int yylex(void);
+void yyerror(const char *message);
+%}
+%define api.value.type {double}
+%token NUM
+%left '+' '-'
+%left '*'
+%%</code></pre>
+<p>The prologue between %{ and %} is copied into the generated C source. It includes stdio and declares the scanner and error function before the parser uses them. The api.value.type declaration selects double for every semantic value. NUM is a named token; punctuation uses its character code directly.</p>
+<p>The first %% ends declarations and begins productions. A second %% ends productions and begins ordinary C definitions. Put the three displayed calc.y parts in that order to form the complete grammar source. The start symbol is input because its production appears first.</p>
+<h3>Use productions with real semantic actions</h3>
+<pre><code class="language-c">input:
+    %empty
+  | input expr ';'  { printf("%.10g\n", $2); }
+  | input error ';' { yyerrok; }
+  ;
+expr:
+    NUM                  { $$ = $1; }
+  | '(' expr ')'         { $$ = $2; }
+  | expr '+' expr        { $$ = $1 + $3; }
+  | expr '-' expr        { $$ = $1 - $3; }
+  | expr '*' expr        { $$ = $1 * $3; }
+  ;</code></pre>
+<p>The empty input alternative permits zero statements. The recursive alternative accepts another expression followed by ; and prints its value. Inside an action, $$ is the left-side semantic value. $1, $2, and $3 refer to right-side positions, counting terminals and nonterminals alike.</p>
+<p>For expr + expr, $1 and $3 are operand values; $2 is the plus position and is not used numerically. For ( expr ), the expression is position 2, so $$ = $2 preserves its value. For input expr ;, position 2 is again the expression. The statement’s action prints that completed value only after the semicolon has been recognised.</p>
+<h3>Finish calc.y with its C entry points</h3>
+<pre><code class="language-c">%%
+void yyerror(const char *message)
+{
+    fprintf(stderr, "%s\n", message);
+}
+
+int main(void)
+{
+    return yyparse();
+}</code></pre>
+<p>yyparse returns a status code to main. yyerror reports syntax errors on the error stream. A recovered syntax error can allow yyparse to finish successfully later. If an application needs any error to make its final status fail, maintain an explicit error counter in yyerror. Successful recovery does not mean every statement was valid.</p>
+<h3>Resolve expression grouping explicitly</h3>
+<table class="ref"><caption>Resolved decisions for the calculator grammar</caption><thead><tr><th scope="col">Completed rule</th><th scope="col">Lookahead</th><th scope="col">Decision</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>expr → expr + expr</td><td>+</td><td>reduce</td><td>Equal precedence and %left.</td></tr><tr><td>expr → expr + expr</td><td>-</td><td>reduce</td><td>+ and - share a left-associative level.</td></tr><tr><td>expr → expr + expr</td><td>*</td><td>shift</td><td>* is declared on a later, higher level.</td></tr><tr><td>expr → expr * expr</td><td>+</td><td>reduce</td><td>The rule has higher precedence.</td></tr><tr><td>expr → expr * expr</td><td>*</td><td>reduce</td><td>Equal level and %left.</td></tr><tr><td>expr → expr - expr</td><td>-</td><td>reduce</td><td>Left association preserves (9-2)-1.</td></tr><tr><td>expr → expr + expr</td><td>) or ;</td><td>reduce</td><td>The completed expression closes before its boundary.</td></tr></tbody></table>
+<p>The compact expr grammar is ambiguous before precedence policies are applied. Each %left line gives its tokens one precedence level and left association. Later lines have higher precedence. A production normally inherits precedence from its last terminal symbol. Thus the multiplication rule has * precedence even though its final written symbol is expr.</p>
+<p>When a shift/reduce conflict has precedence information on both sides, compare the lookahead token’s precedence with the reduction rule’s precedence. Higher token precedence shifts; higher rule precedence reduces. Equal precedence uses association: %left reduces, %right shifts, and %nonassoc rejects that combination. These declarations settle parser decisions rather than making the underlying ambiguous grammar unambiguous.</p>
+<table class="ref"><caption>Manual semantic-value trace for 2+3*4;</caption><thead><tr><th scope="col">Recognised stack phrases</th><th scope="col">Unread input</th><th scope="col">Grammar action</th><th scope="col">Value created</th></tr></thead><tbody><tr><td>$</td><td>2 + 3 * 4 ; $</td><td>Reduce input → ε</td><td>input</td></tr><tr><td>$ input</td><td>2 + 3 * 4 ; $</td><td>Read NUM 2</td><td>2</td></tr><tr><td>$ input NUM(2)</td><td>+ 3 * 4 ; $</td><td>Reduce expr → NUM</td><td>expr(2)</td></tr><tr><td>$ input expr(2)</td><td>+ 3 * 4 ; $</td><td>Shift +</td><td>—</td></tr><tr><td>$ input expr(2) +</td><td>3 * 4 ; $</td><td>Read NUM 3</td><td>3</td></tr><tr><td>$ input expr(2) + NUM(3)</td><td>* 4 ; $</td><td>Reduce expr → NUM</td><td>expr(3)</td></tr><tr><td>$ input expr(2) + expr(3)</td><td>* 4 ; $</td><td>Shift * by higher precedence</td><td>—</td></tr><tr><td>$ input expr(2) + expr(3) *</td><td>4 ; $</td><td>Read NUM 4</td><td>4</td></tr><tr><td>$ input expr(2) + expr(3) * NUM(4)</td><td>; $</td><td>Reduce expr → NUM</td><td>expr(4)</td></tr><tr><td>$ input expr(2) + expr(3) * expr(4)</td><td>; $</td><td>Reduce expr → expr * expr</td><td>expr(12)</td></tr><tr><td>$ input expr(2) + expr(12)</td><td>; $</td><td>Reduce expr → expr + expr</td><td>expr(14)</td></tr><tr><td>$ input expr(14)</td><td>; $</td><td>Shift ;</td><td>—</td></tr><tr><td>$ input expr(14) ;</td><td>$</td><td>Reduce input → input expr ;</td><td>Print 14</td></tr><tr><td>$ input</td><td>$</td><td>Complete the start input</td><td>Accept</td></tr></tbody></table>
+<h3>Connect the scanner through calc.tab.h</h3>
+<pre><code class="language-c">%option noyywrap nounput noinput never-interactive
+%{
+#include &lt;stdlib.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;math.h&gt;
+#include "calc.tab.h"
+%}
+%%</code></pre>
+<pre><code class="language-c">[0-9]+ {
+    errno = 0;
+    yylval = strtod(yytext, NULL);
+    if (errno == ERANGE || !isfinite(yylval)) {
+        return YYUNDEF;
+    }
+    return NUM;
+}
+[ \t\r\n]+  ;
+.             { return (unsigned char) yytext[0]; }
+%%</code></pre>
+<p>The scanner includes the generated header so NUM and the semantic-value type agree with the parser. For a digit run, strtod converts the spelling and stores it in yylval before returning NUM. A range error returns YYUNDEF so invalid numeric input cannot reuse a previous value. Single punctuation characters are returned as their unsigned character codes.</p>
+<table class="ref"><caption>Scanner/parser handoff for 2+3;</caption><thead><tr><th scope="col">Matched text</th><th scope="col">Scanner return</th><th scope="col">Semantic value</th><th scope="col">Parser meaning</th></tr></thead><tbody><tr><td>2</td><td>NUM</td><td>yylval = 2</td><td>An operand.</td></tr><tr><td>+</td><td>Character code for +</td><td>Unused</td><td>An additive operator.</td></tr><tr><td>3</td><td>NUM</td><td>yylval = 3</td><td>Another operand.</td></tr><tr><td>;</td><td>Character code for ;</td><td>Unused</td><td>End of statement.</td></tr><tr><td>End of input</td><td>0</td><td>Unused</td><td>Parser end-of-input token.</td></tr></tbody></table>
+<p>Whitespace is discarded by the empty scanner action. The final dot rule returns any other character to the parser, where an unsupported character causes a syntax error. Flex returns zero at end of input; do not return zero for an invalid character. Doing so would disguise a damaged suffix as normal input end.</p>
+<h2 id="how-it-works">Reasoning and checks</h2>
+<h3>Understand generation order and interfaces</h3>
+<pre><code class="language-bash">bison -Wall -d -o calc.tab.c calc.y
+flex -o lex.yy.c calc.l
+cc -std=c17 -Wall -Wextra calc.tab.c lex.yy.c -o calc
+./calc</code></pre>
+<p>Bison’s -d option emits calc.tab.h along with calc.tab.c. Generate that header before compiling the scanner. Flex produces lex.yy.c, and the C compiler links both generated sources. The scanner’s noyywrap option removes the need for an external yywrap function. Traditional Yacc commonly uses y.tab.c and y.tab.h; keep the included name consistent with your chosen output names.</p>
+<p>The shown interface is the ordinary non-reentrant C interface: yylex(void), global yylval, yyparse(void), and yyerror(const char *). A pure or reentrant parser changes the function signatures and how values are passed. A reentrant scanner also needs its own matching configuration. Do not combine declarations from those different interfaces without adapting both sides.</p>
+<h3>Recover at a semicolon</h3>
+<table class="ref"><caption>Error-production behaviour for 8+; 6*7;</caption><thead><tr><th scope="col">Input part</th><th scope="col">Parser result</th><th scope="col">Continuation</th></tr></thead><tbody><tr><td>8+;</td><td>Missing right operand; call yyerror</td><td>Discard the damaged expression to the error production.</td></tr><tr><td>; boundary</td><td>Match input error ; and execute yyerrok</td><td>Resume normal error reporting.</td></tr><tr><td>6*7;</td><td>Complete multiplication and statement</td><td>Print 42.</td></tr></tbody></table>
+<p>The reserved error symbol is generated by Bison’s recovery machinery, not returned as an ordinary word by Flex. The parser pops states until it can shift error, then discards unsuitable tokens until ; can complete the recovery rule. yyerrok ends the recovery state so later errors can be reported normally. If no synchronising semicolon appears before EOF, recovery may fail and yyparse returns a failure status.</p>
+<p>For a conflict without usable precedence, Bison commonly defaults to shifting; reduce/reduce conflicts commonly choose the earlier rule. Those defaults are not a sound language specification. Inspect diagnostics, use reports or counterexamples, and repair unexpected conflicts. Adding a precedence declaration to silence an unrelated conflict can conceal a grammar mistake. Keep each declaration tied to a documented expression-grouping rule.</p>
+<p>For unary minus, a larger calculator often declares a separate precedence name and uses %prec on its unary production. The %prec annotation changes that rule’s precedence without adding a lexer token occurrence to its right side. That extension is deliberately absent from this calculator language. Adding it requires an actual unary grammar rule as well as the precedence declaration.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Returning NUM without setting yylval</h3>
+<p>The parser would see a token kind but no reliable operand value. Convert the matched spelling and assign the semantic value before returning NUM.</p>
+<h3>Giving Flex a separately invented NUM value</h3>
+<p>Token numbers are part of the generated interface. Include calc.tab.h so scanner and parser share the same definitions.</p>
+<h3>Declaring multiplication before addition</h3>
+<p>Later precedence lines bind more tightly. Reversing these declarations would make addition outrank multiplication in conflict resolution.</p>
+<h3>Treating recovery as a successful original statement</h3>
+<p>The error alternative prints no expression value. Record the diagnostic and resume at the next statement rather than inventing a result.</p>
+<h2 id="summary">Summary</h2>
+<p>Bison combines grammar rules, semantic actions, and declared precedence into an LR parser. Flex supplies token kinds and values through a shared header. After syntax analysis, <a href="topic:cd-type-checking">type checking</a> examines whether operations have compatible operand types.</p>

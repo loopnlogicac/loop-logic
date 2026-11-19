@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-ll1-parsing",
+  "module": "syntax-analysis",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "LL(1) Parsing",
+    "bn": "LL(1) পার্সিং"
+  },
+  "summary": {
+    "en": "Build a predictive table from FIRST/FOLLOW, detect collisions, and parse complete expressions using a stack.",
+    "bn": "FIRST ও FOLLOW থেকে টেবিল বানিয়ে এক টোকেন দেখে নিয়ম বাছি এবং স্ট্যাক দিয়ে এক্সপ্রেশন পার্স করি।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-first-follow"
+  ],
+  "related": [
+    "cd-recursive-descent"
+  ],
+  "keywords": [
+    "LL(1) Parsing",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14; no third-party packages are needed."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Grammar and representation"
+    },
+    {
+      "id": "how-it-works",
+      "title": "How the parser works"
+    },
+    {
+      "id": "examples",
+      "title": "Examples"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Python version notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Construct every predictive-table entry",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Only non-error entries are printed. The lesson table also shows the error cells.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Parse id plus id times id with a stack",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The right side is pushed in reverse order, so T becomes the next stack top.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Keep a FIRST/FOLLOW conflict visible",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>A → a and A → ε both select a. Keeping both rules prevents silent overwriting.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "Reject a missing operand",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-4.py",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The entry for T on * is empty. No production can begin the missing operand.</p>\n"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Recognise an expression token stream",
+      "statementHtml": "<p>Read one line of tokens separated by spaces, using id, +, *, (, and ). Print <code>accept</code> or <code>reject</code> using the expression grammar. Empty input is rejected; an input $ is rejected as a reserved symbol.</p>\n",
+      "difficulty": "medium",
+      "hints": [
+        "Accept only when the input marker matches the bottom stack marker."
+      ],
+      "id": "p-1",
+      "solution": "practice/p-1.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "title": "Find conflicting predictive cells",
+      "statementHtml": "<p>Read <code>choice</code> or <code>nullable</code>. For choice use S → a A | a B, A → x, B → y. For nullable use S → A a, A → a | ε. Print each conflicting cell as nonterminal, terminal, and rule count, in sorted order. Another mode prints <code>invalid</code>.</p>\n",
+      "difficulty": "hard",
+      "hints": [
+        "Store a list in each table cell."
+      ],
+      "id": "p-2",
+      "solution": "practice/p-2.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Build and use the expression table",
+      "statementHtml": "<p>Construct the complete LL(1) table for E, R, T, Q, F and trace id + id * id.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Complete LL(1) expression table</caption><thead><tr><th scope=\"col\">Nonterminal</th><th scope=\"col\">id</th><th scope=\"col\">+</th><th scope=\"col\">*</th><th scope=\"col\">(</th><th scope=\"col\">)</th><th scope=\"col\">$</th></tr></thead><tbody><tr><td>E</td><td>E → T R</td><td>error</td><td>error</td><td>E → T R</td><td>error</td><td>error</td></tr><tr><td>R</td><td>error</td><td>R → + T R</td><td>error</td><td>error</td><td>R → ε</td><td>R → ε</td></tr><tr><td>T</td><td>T → F Q</td><td>error</td><td>error</td><td>T → F Q</td><td>error</td><td>error</td></tr><tr><td>Q</td><td>error</td><td>Q → ε</td><td>Q → * F Q</td><td>error</td><td>Q → ε</td><td>Q → ε</td></tr><tr><td>F</td><td>F → id</td><td>error</td><td>error</td><td>F → ( E )</td><td>error</td><td>error</td></tr></tbody></table>\n<table class=\"ref\"><caption>Parse id + id * id from beginning to end</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$ E</td><td>id + id * id $</td><td>E -&gt; T R</td></tr><tr><td>$ R T</td><td>id + id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id + id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id + id * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>+ id * id $</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>+ id * id $</td><td>R -&gt; + T R</td></tr><tr><td>$ R T +</td><td>+ id * id $</td><td>match +</td></tr><tr><td>$ R T</td><td>id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>* id $</td><td>Q -&gt; * F Q</td></tr><tr><td>$ R Q F *</td><td>* id $</td><td>match *</td></tr><tr><td>$ R Q F</td><td>id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>$</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>$</td><td>R -&gt; ε</td></tr><tr><td>$</td><td>$</td><td>accept</td></tr></tbody></table>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Diagnose a nullable collision",
+      "statementHtml": "<p>For S → A a and A → a | ε, construct the table and explain the conflicting cell.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>A FIRST/FOLLOW collision; slash retains both alternatives</caption><thead><tr><th scope=\"col\">Nonterminal</th><th scope=\"col\">a</th><th scope=\"col\">$</th></tr></thead><tbody><tr><td>S</td><td>S → A a</td><td>error</td></tr><tr><td>A</td><td>A → a / A → ε</td><td>error</td></tr></tbody></table>\n<p>M[A,a] contains A → a and A → ε. The second choice applies because a is in FOLLOW(A).</p>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Locate a missing operand",
+      "statementHtml": "<p>Trace the expression parser on id + * id until its first error.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Failure at T on *</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$ E</td><td>id + * id $</td><td>E -&gt; T R</td></tr><tr><td>$ R T</td><td>id + * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id + * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id + * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>+ * id $</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>+ * id $</td><td>R -&gt; + T R</td></tr><tr><td>$ R T +</td><td>+ * id $</td><td>match +</td></tr><tr><td>$ R T</td><td>* id $</td><td>error: no rule for T, *</td></tr></tbody></table>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does the 1 in LL(1) count?",
+      "options": [
+        "One grammar rule",
+        "One lookahead token",
+        "One stack symbol total",
+        "One terminal in the language"
+      ],
+      "answer": 1,
+      "explanation": "A single next token guides each expansion."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which table column selects R → ε at the end of an expression?",
+      "options": [
+        "ε",
+        "id",
+        "$",
+        "*"
+      ],
+      "answer": 2,
+      "explanation": "The end marker belongs to FOLLOW(R)."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which operation follows a successful terminal match?",
+      "options": [
+        "Expand all nonterminals",
+        "Push ε",
+        "Advance input twice",
+        "Pop the terminal and advance input"
+      ],
+      "answer": 3,
+      "explanation": "A match discharges one terminal obligation."
+    },
+    {
+      "id": "q-4",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which symbol is on top after reverse-pushing T R?",
+      "options": [
+        "T",
+        "R",
+        "$",
+        "E"
+      ],
+      "answer": 0,
+      "explanation": "The rightmost list element is the stack top.",
+      "code": "if __name__ == \"__main__\":\n    stack = [\"$\"]\n    stack.extend(reversed((\"T\", \"R\")))\n    print(stack[-1])\n",
+      "language": "python"
+    },
+    {
+      "id": "q-5",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many total stack symbols remain after pushing an empty production above $?",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "Only the original bottom marker remains; the empty tuple adds no symbol.",
+      "code": "if __name__ == \"__main__\":\n    stack = [\"$\"]\n    stack.extend(reversed(()))\n    print(len(stack))\n",
+      "language": "python"
+    },
+    {
+      "id": "q-6",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What does the retained list report for a doubly filled predictive cell?",
+      "options": [
+        "1",
+        "0",
+        "2",
+        "error"
+      ],
+      "answer": 2,
+      "explanation": "Both candidates remain available for conflict detection.",
+      "code": "if __name__ == \"__main__\":\n    cell = [(\"a\",), ()]\n    print(len(cell))\n",
+      "language": "python"
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens at M[T,*] for id + * id?",
+      "options": [
+        "T → F Q",
+        "T → ε",
+        "Accept",
+        "Syntax error"
+      ],
+      "answer": 3,
+      "explanation": "A term cannot begin with multiplication."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does A → ε compete with A → a when a belongs to FOLLOW(A)?",
+      "options": [
+        "Both select lookahead a",
+        "ε is an input token",
+        "FOLLOW erases FIRST",
+        "A must always consume a"
+      ],
+      "answer": 0,
+      "explanation": "The nullable alternative leaves the a for the enclosing phrase."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which condition establishes LL(1) for the constructed table?",
+      "options": [
+        "Every row has one filled cell",
+        "Every filled cell has exactly one distinct production",
+        "No grammar rule contains ε",
+        "The start row is full"
+      ],
+      "answer": 1,
+      "explanation": "Error cells are allowed; multiple alternatives in one cell are not."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why must the recogniser reject id id?",
+      "options": [
+        "Identifiers cannot be operands",
+        "The lexer combines both ids",
+        "A valid first id leaves unexpected trailing input",
+        "The end marker is nullable"
+      ],
+      "answer": 2,
+      "explanation": "Acceptance checks the entire stream, not only its first expression."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "LL(1) selects productions with one lookahead token.",
+      "bn": "LL(1) এক টোকেন সামনে দেখে প্রোডাকশন বেছে নেয়।"
+    },
+    {
+      "en": "Nullable right sides use the left side’s FOLLOW columns.",
+      "bn": "ডান পাশ মুছে যেতে পারলে বাম পাশের FOLLOW কলামে নিয়ম বসে।"
+    },
+    {
+      "en": "A multi-production cell is a grammar conflict.",
+      "bn": "এক ঘরে একাধিক প্রোডাকশন থাকলে সিদ্ধান্তে দ্বন্দ্ব হয়।"
+    },
+    {
+      "en": "Reverse pushing preserves left-to-right matching.",
+      "bn": "উল্টো করে স্ট্যাকে তুললে বাম দিকের প্রতীক আগে মেলে।"
+    },
+    {
+      "en": "Acceptance checks both end markers together.",
+      "bn": "গ্রহণের সময় স্ট্যাক আর ইনপুটের শেষের চিহ্ন একসঙ্গে মেলে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Construct the complete LL(1) table for E, R, T, Q, F and trace id + id * id.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>Complete LL(1) expression table</caption><thead><tr><th scope=\"col\">Nonterminal</th><th scope=\"col\">id</th><th scope=\"col\">+</th><th scope=\"col\">*</th><th scope=\"col\">(</th><th scope=\"col\">)</th><th scope=\"col\">$</th></tr></thead><tbody><tr><td>E</td><td>E → T R</td><td>error</td><td>error</td><td>E → T R</td><td>error</td><td>error</td></tr><tr><td>R</td><td>error</td><td>R → + T R</td><td>error</td><td>error</td><td>R → ε</td><td>R → ε</td></tr><tr><td>T</td><td>T → F Q</td><td>error</td><td>error</td><td>T → F Q</td><td>error</td><td>error</td></tr><tr><td>Q</td><td>error</td><td>Q → ε</td><td>Q → * F Q</td><td>error</td><td>Q → ε</td><td>Q → ε</td></tr><tr><td>F</td><td>F → id</td><td>error</td><td>error</td><td>F → ( E )</td><td>error</td><td>error</td></tr></tbody></table>\n<table class=\"ref\"><caption>Parse id + id * id from beginning to end</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$ E</td><td>id + id * id $</td><td>E -&gt; T R</td></tr><tr><td>$ R T</td><td>id + id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id + id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id + id * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>+ id * id $</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>+ id * id $</td><td>R -&gt; + T R</td></tr><tr><td>$ R T +</td><td>+ id * id $</td><td>match +</td></tr><tr><td>$ R T</td><td>id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>* id $</td><td>Q -&gt; * F Q</td></tr><tr><td>$ R Q F *</td><td>* id $</td><td>match *</td></tr><tr><td>$ R Q F</td><td>id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>$</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>$</td><td>R -&gt; ε</td></tr><tr><td>$</td><td>$</td><td>accept</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "For S → A a and A → a | ε, construct the table and explain the conflicting cell.\n",
+      "marks": 8,
+      "answerHtml": "<table class=\"ref\"><caption>A FIRST/FOLLOW collision; slash retains both alternatives</caption><thead><tr><th scope=\"col\">Nonterminal</th><th scope=\"col\">a</th><th scope=\"col\">$</th></tr></thead><tbody><tr><td>S</td><td>S → A a</td><td>error</td></tr><tr><td>A</td><td>A → a / A → ε</td><td>error</td></tr></tbody></table>\n<p>M[A,a] contains A → a and A → ε. The second choice applies because a is in FOLLOW(A).</p>\n"
+    },
+    {
+      "type": "long",
+      "question": "Trace the expression parser on id + * id until its first error.\n",
+      "marks": 5,
+      "answerHtml": "<table class=\"ref\"><caption>Failure at T on *</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$ E</td><td>id + * id $</td><td>E -&gt; T R</td></tr><tr><td>$ R T</td><td>id + * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id + * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id + * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>+ * id $</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>+ * id $</td><td>R -&gt; + T R</td></tr><tr><td>$ R T +</td><td>+ * id $</td><td>match +</td></tr><tr><td>$ R T</td><td>* id $</td><td>error: no rule for T, *</td></tr></tbody></table>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,58 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Think of a route map whose rows name your current task and whose columns show the next sign. An LL(1) table plays that role for a parser. You look up one cell, apply its production, and continue without guessing.</p>
+<p>The first L means reading input from left to right. The second L means constructing a leftmost derivation. The 1 means using one lookahead token to choose the next production. Lookahead is inspected without being consumed until a terminal match occurs.</p>
+<p>An <dfn>LL(1) grammar</dfn> gives at most one applicable production in every predictive-table cell. An empty cell means syntax error for that nonterminal and lookahead. A cell containing two productions is a grammar conflict, even if a particular input never visits it. The implementation refuses to parse with any conflicting table.</p>
+<h2 id="syntax">Grammar and representation</h2>
+<pre><code class="language-text">E → T R
+R → + T R | ε
+T → F Q
+Q → * F Q | ε
+F → ( E ) | id</code></pre>
+<p>Use the transformed expression grammar from <a href="topic:cd-first-follow">FIRST/FOLLOW</a>. Rows are nonterminals E, R, T, Q, and F. Columns are token kinds id, +, *, (, ), and $. The empty sequence has no column because the lexer never returns an epsilon token.</p>
+<table class="ref"><caption>Complete LL(1) expression table</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">id</th><th scope="col">+</th><th scope="col">*</th><th scope="col">(</th><th scope="col">)</th><th scope="col">$</th></tr></thead><tbody><tr><td>E</td><td>E → T R</td><td>error</td><td>error</td><td>E → T R</td><td>error</td><td>error</td></tr><tr><td>R</td><td>error</td><td>R → + T R</td><td>error</td><td>error</td><td>R → ε</td><td>R → ε</td></tr><tr><td>T</td><td>T → F Q</td><td>error</td><td>error</td><td>T → F Q</td><td>error</td><td>error</td></tr><tr><td>Q</td><td>error</td><td>Q → ε</td><td>Q → * F Q</td><td>error</td><td>Q → ε</td><td>Q → ε</td></tr><tr><td>F</td><td>F → id</td><td>error</td><td>error</td><td>F → ( E )</td><td>error</td><td>error</td></tr></tbody></table>
+<p>For each A → α, compute FIRST(α). Enter the production under each terminal in that set. If ε belongs to FIRST(α), also enter the production under every token in FOLLOW(A). The Python table stores a list per cell so a later insertion cannot erase an earlier choice.</p>
+<table class="ref"><caption>Why selected table cells are filled</caption><thead><tr><th scope="col">Cell</th><th scope="col">Production</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>M[E,id]</td><td>E → T R</td><td>id belongs to FIRST(T R).</td></tr><tr><td>M[F,(]</td><td>F → ( E )</td><td>The right side starts with terminal (.</td></tr><tr><td>M[Q,*]</td><td>Q → * F Q</td><td>The right side starts with *.</td></tr><tr><td>M[Q,+]</td><td>Q → ε</td><td>+ belongs to FOLLOW(Q).</td></tr><tr><td>M[R,$]</td><td>R → ε</td><td>$ belongs to FOLLOW(R).</td></tr><tr><td>M[T,*]</td><td>error</td><td>No term can start with *.</td></tr></tbody></table>
+<h2 id="how-it-works">How the parser works</h2>
+<h3>Use the stack as a list of unfinished work</h3>
+<p>Place $ at the bottom of a stack and the start symbol above it. Append a separate $ to the input. The trace prints the stack from bottom to top, so its top is at the right. At every step, the stack describes what still needs to match the remaining input.</p>
+<p>If the stack top is a terminal, it must equal the lookahead. Pop that terminal and advance one input token. If the top is a nonterminal A, consult M[A,lookahead]. Pop A and push the selected right side in reverse order. An ε rule pushes nothing and consumes no input.</p>
+<table class="ref"><caption>Parse id + id * id from beginning to end</caption><thead><tr><th scope="col">Stack (top at right)</th><th scope="col">Remaining input</th><th scope="col">Action</th></tr></thead><tbody><tr><td>$ E</td><td>id + id * id $</td><td>E -&gt; T R</td></tr><tr><td>$ R T</td><td>id + id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id + id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id + id * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>+ id * id $</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>+ id * id $</td><td>R -&gt; + T R</td></tr><tr><td>$ R T +</td><td>+ id * id $</td><td>match +</td></tr><tr><td>$ R T</td><td>id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id * id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>* id $</td><td>Q -&gt; * F Q</td></tr><tr><td>$ R Q F *</td><td>* id $</td><td>match *</td></tr><tr><td>$ R Q F</td><td>id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id $</td><td>match id</td></tr><tr><td>$ R Q</td><td>$</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>$</td><td>R -&gt; ε</td></tr><tr><td>$</td><td>$</td><td>accept</td></tr></tbody></table>
+<p>The first expansion replaces E by T R. Reverse pushing leaves T on top and R below it. After F matches the first id, Q sees + and vanishes. R then selects + T R. The second T handles id * id before the final R vanishes at $.</p>
+<p>Acceptance requires matching both end markers. An empty grammar-work stack without a consumed input marker is not enough. Likewise, reading all ordinary tokens does not permit ignoring unfinished nonterminals. For id +, T remains on top when lookahead is $, so the parser rejects the missing operand.</p>
+<h3>Test the grammar rather than trusting its shape</h3>
+<table class="ref"><caption>A FIRST/FOLLOW collision; slash retains both alternatives</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">a</th><th scope="col">$</th></tr></thead><tbody><tr><td>S</td><td>S → A a</td><td>error</td></tr><tr><td>A</td><td>A → a / A → ε</td><td>error</td></tr></tbody></table>
+<p>For S → A a and A → a | ε, FIRST(a) contains a. Because A can disappear, its ε rule also selects FOLLOW(A), which contains a. One token of lookahead cannot choose whether the first a belongs to A or to the following terminal. The grammar is not LL(1), although the language itself has an LL(1) description S → a R, R → a | ε.</p>
+<table class="ref"><caption>Two kinds of predictive collision</caption><thead><tr><th scope="col">Situation</th><th scope="col">Example</th><th scope="col">Overlap</th></tr></thead><tbody><tr><td>FIRST/FIRST</td><td>S → a A | a B</td><td>Both alternatives begin with a.</td></tr><tr><td>FIRST/FOLLOW</td><td>A → a | ε with a in FOLLOW(A)</td><td>Consuming a and leaving a both apply.</td></tr><tr><td>Two nullable alternatives</td><td>A → B | C, both nullable</td><td>Both use FOLLOW(A).</td></tr></tbody></table>
+<p>For alternatives α and β, their terminal FIRST sets must be disjoint. If α is nullable, FIRST(β) must also avoid FOLLOW(A). Apply the symmetric condition when β is nullable. If both are nullable and FOLLOW(A) is nonempty, their selection sets collide. Constructing the table checks these conditions directly.</p>
+<h3>Recognise errors at the current decision</h3>
+<p>For id + * id, the parser has already matched id and + when T sees *. M[T,*] is empty, so report an expected operand at that point. For ( id $, the parser eventually expects ) but sees $. These failures occur at different operations: a missing production versus a terminal mismatch.</p>
+<p>The predictive recogniser stops at the first syntax error. A teaching tool can report the stack top, lookahead, and possible non-error columns in that row. A production parser may recover using synchronising tokens, such as ; or ). Recovery should never turn a damaged statement into a successful one without recording the error.</p>
+<p>Table construction costs depend on the grammar and its FIRST/FOLLOW calculation. Once a fixed LL(1) grammar has a table, each stack operation is constant time apart from pushing a fixed-length right side. For ordinary reduced LL(1) grammars, parsing uses O(n) actions and O(n) worst-case stack space for n tokens. Nested parentheses demonstrate why the stack may grow with input depth.</p>
+<p>The recogniser does not evaluate arithmetic or build an abstract syntax tree. Its job is to decide whether the token order fits the grammar. You can attach construction actions to productions later, but those actions must preserve the intended precedence and association. Keep recognition traces separate from numeric evaluation so a correct value cannot hide an invalid token sequence.</p>
+<h2 id="examples">Examples</h2>
+<h3>Construct every predictive-table entry</h3>
+<p>Only non-error entries are printed. The lesson table also shows the error cells.</p>
+<div data-example="ex-1"></div>
+<h3>Parse id plus id times id with a stack</h3>
+<p>The right side is pushed in reverse order, so T becomes the next stack top.</p>
+<div data-example="ex-2"></div>
+<h3>Keep a FIRST/FOLLOW conflict visible</h3>
+<p>A → a and A → ε both select a. Keeping both rules prevents silent overwriting.</p>
+<div data-example="ex-3"></div>
+<h3>Reject a missing operand</h3>
+<p>The entry for T on * is empty. No production can begin the missing operand.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Pushing a production in forward order</h3>
+<p>A Python list pops at its right end. Pushing T then R would expand R first. Use reversed(rhs) so the leftmost grammar symbol is handled next.</p>
+<h3>Overwriting a conflict</h3>
+<p>Assigning table[A,a] = rule can silently hide an earlier rule. Retain all candidates and reject a table with multiple choices.</p>
+<h3>Matching an epsilon token</h3>
+<p>The ε alternative removes unfinished work without advancing input. Its selection comes from FOLLOW, not from an epsilon column.</p>
+<h3>Accepting an early input prefix</h3>
+<p>The valid prefix id does not make id id valid. Require the stack and the complete token stream to reach their end markers together.</p>
+<h2 id="version-notes">Python version notes</h2>
+<div class="callout version"><p>Python 3.12 lists support the stack operations used here. Dictionary insertion order does not decide a grammar choice; conflicting cells retain every alternative.</p>
+</div>
+<h2 id="summary">Summary</h2>
+<p>A predictive table turns grammar decisions into deterministic stack operations. A conflict exposes insufficient lookahead for that grammar. In <a href="topic:cd-recursive-descent">recursive descent</a>, ordinary Python functions carry out similar decisions and can compute expression values.</p>

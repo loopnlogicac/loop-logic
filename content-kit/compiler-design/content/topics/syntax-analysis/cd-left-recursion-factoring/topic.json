@@ -1,0 +1,310 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-left-recursion-factoring",
+  "module": "syntax-analysis",
+  "order": 2,
+  "kind": "theory",
+  "title": {
+    "en": "Left Recursion and Left Factoring",
+    "bn": "লেফট রিকার্শন বাদ দেওয়া ও লেফট ফ্যাক্টরিং"
+  },
+  "summary": {
+    "en": "Remove immediate and indirect left recursion, then factor shared prefixes without changing the recognised token strings.",
+    "bn": "সরাসরি ও পরোক্ষ left recursion সরাই, তারপর একই শুরু থাকা নিয়মগুলো গুছিয়ে লিখি।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-context-free-grammars"
+  ],
+  "related": [
+    "cd-first-follow"
+  ],
+  "keywords": [
+    "Left Recursion and Left Factoring",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14; no third-party packages are needed."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Reasoning and checks"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Transform an addition rule",
+      "statementHtml": "<p>Eliminate immediate recursion from E → E + T | T and show zero and one repetitions.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Remove immediate left recursion from E → E + T | T</caption><thead><tr><th scope=\"col\">Part</th><th scope=\"col\">Before</th><th scope=\"col\">After</th></tr></thead><tbody><tr><td>Base alternative</td><td>T</td><td>E → T R</td></tr><tr><td>Repeated suffix</td><td>+ T</td><td>R → + T R | ε</td></tr><tr><td>One addition</td><td>E ⇒ E + T ⇒ T + T</td><td>E ⇒ T R ⇒ T + T R ⇒ T + T</td></tr><tr><td>Zero additions</td><td>E ⇒ T</td><td>E ⇒ T R ⇒ T</td></tr></tbody></table>\n",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Break a two-name cycle",
+      "statementHtml": "<p>With A before B, eliminate indirect recursion from A → B a | c and B → A b | d.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Ordered elimination with A before B</caption><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">A rules</th><th scope=\"col\">B rules</th><th scope=\"col\">New rule</th></tr></thead><tbody><tr><td>Original</td><td>A → B a | c</td><td>B → A b | d</td><td>—</td></tr><tr><td>Substitute A into B</td><td>A → B a | c</td><td>B → B a b | c b | d</td><td>—</td></tr><tr><td>Remove B recursion</td><td>A → B a | c</td><td>B → c b R | d R</td><td>R → a b R | ε</td></tr></tbody></table>\n",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Factor a three-way choice",
+      "statementHtml": "<p>Factor S → a b c | a b d | a e until no shared nonempty prefix remains.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>S → a R; R → b Q | e; Q → c | d. The first choice consumes a, then b or e distinguishes the branches.</p>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Preserve an empty remainder",
+      "statementHtml": "<p>Factor S → a b | a and derive its shortest sentence.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>S → a R; R → b | ε. Derive S ⇒ a R ⇒ a. Without ε the one-token sentence would be lost.</p>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Handle a grammar without a base",
+      "statementHtml": "<p>Can A → A a derive a finite terminal sentence? Is A → a R, R → a R | ε equivalent?</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>No finite derivation removes the last A. The proposed rewrite accepts a, so it changes the empty language into a nonempty one.</p>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why does E → E + T trap a naive top-down call?",
+      "options": [
+        "It consumes too many plus signs",
+        "T is a terminal",
+        "It requires an empty input",
+        "E calls E before consuming input"
+      ],
+      "answer": 3,
+      "explanation": "The recursive call repeats the same unresolved job."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the repeated suffix in A → A x | b?",
+      "options": [
+        "x",
+        "A",
+        "b",
+        "A x"
+      ],
+      "answer": 0,
+      "explanation": "Remove the leading recursive A to identify the suffix."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which rewrite preserves A → A x | b?",
+      "options": [
+        "A → x R; R → b",
+        "A → b R; R → x R | ε",
+        "A → b R; R → x",
+        "A → R b; R → ε"
+      ],
+      "answer": 1,
+      "explanation": "The base is followed by zero or more x tokens."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is B after substituting A → B a | c into B → A b | d?",
+      "options": [
+        "B → B b a | c | d",
+        "B → A a | d",
+        "B → B a b | c b | d",
+        "B → c b only"
+      ],
+      "answer": 2,
+      "explanation": "Append the original b to each A alternative."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which language-preserving remainder is needed for S → a b | a?",
+      "options": [
+        "R → a | b",
+        "R → a b",
+        "R → b only",
+        "R → b | ε"
+      ],
+      "answer": 3,
+      "explanation": "The shorter alternative has an empty suffix."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does eliminating left recursion alone prove LL(1)?",
+      "options": [
+        "No",
+        "Yes for every CFG",
+        "Yes if there are two rules",
+        "Yes if ε is absent"
+      ],
+      "answer": 0,
+      "explanation": "Different productions may still select the same lookahead."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What can change when a grammar is rewritten but its language stays equal?",
+      "options": [
+        "Its accepted terminal sentences",
+        "Parse-tree shape",
+        "Its token alphabet must change",
+        "Its shortest sentence must change"
+      ],
+      "answer": 1,
+      "explanation": "Structure and semantic actions need separate review."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should happen to A → A before using the nonempty-suffix formula?",
+      "options": [
+        "Treat A as a terminal",
+        "Add an ε base unconditionally",
+        "Remove the useless self-loop",
+        "Repeat the rule forever"
+      ],
+      "answer": 2,
+      "explanation": "The rule adds nothing and creates an empty recursive suffix."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which situation can hide left recursion from a first-symbol check?",
+      "options": [
+        "A terminal before A",
+        "A nonrecursive base",
+        "A final semicolon",
+        "A nullable prefix before A"
+      ],
+      "answer": 3,
+      "explanation": "The prefix can vanish before the recursive call consumes input."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How should a transformed subtraction parser preserve left association?",
+      "options": [
+        "Fold successive terms into a left accumulator",
+        "Evaluate the tail from the right",
+        "Ignore the minus tokens",
+        "Reverse the source tokens"
+      ],
+      "answer": 0,
+      "explanation": "A left fold retains (9-2)-1 rather than 9-(2-1)."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Left recursion can pass through other nonterminals.",
+      "bn": "অন্য nonterminal ঘুরেও left recursion তৈরি হতে পারে।"
+    },
+    {
+      "en": "A fresh tail represents zero or more recursive suffixes.",
+      "bn": "নতুন tail দিয়ে আগের suffix শূন্য বা একাধিকবার বসানো যায়।"
+    },
+    {
+      "en": "Left factoring delays a choice until after a shared prefix.",
+      "bn": "একই শুরুর অংশ পড়ার পর সিদ্ধান্ত নিতে left factoring কাজে লাগে।"
+    },
+    {
+      "en": "An empty remainder needs an epsilon alternative.",
+      "bn": "বাকি অংশ খালি হলে এপসিলনের নিয়ম রাখতে হয়।"
+    },
+    {
+      "en": "Preserve expression association when tree shape changes.",
+      "bn": "ট্রির গঠন বদলালেও এক্সপ্রেশনের হিসাবের দিক ঠিক রাখতে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Eliminate immediate recursion from E → E + T | T and show zero and one repetitions.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>Remove immediate left recursion from E → E + T | T</caption><thead><tr><th scope=\"col\">Part</th><th scope=\"col\">Before</th><th scope=\"col\">After</th></tr></thead><tbody><tr><td>Base alternative</td><td>T</td><td>E → T R</td></tr><tr><td>Repeated suffix</td><td>+ T</td><td>R → + T R | ε</td></tr><tr><td>One addition</td><td>E ⇒ E + T ⇒ T + T</td><td>E ⇒ T R ⇒ T + T R ⇒ T + T</td></tr><tr><td>Zero additions</td><td>E ⇒ T</td><td>E ⇒ T R ⇒ T</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "With A before B, eliminate indirect recursion from A → B a | c and B → A b | d.\n",
+      "marks": 8,
+      "answerHtml": "<table class=\"ref\"><caption>Ordered elimination with A before B</caption><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">A rules</th><th scope=\"col\">B rules</th><th scope=\"col\">New rule</th></tr></thead><tbody><tr><td>Original</td><td>A → B a | c</td><td>B → A b | d</td><td>—</td></tr><tr><td>Substitute A into B</td><td>A → B a | c</td><td>B → B a b | c b | d</td><td>—</td></tr><tr><td>Remove B recursion</td><td>A → B a | c</td><td>B → c b R | d R</td><td>R → a b R | ε</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "long",
+      "question": "Factor S → a b c | a b d | a e until no shared nonempty prefix remains.\n",
+      "marks": 5,
+      "answerHtml": "<p>S → a R; R → b Q | e; Q → c | d. The first choice consumes a, then b or e distinguishes the branches.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
