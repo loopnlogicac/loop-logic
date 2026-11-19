@@ -11,8 +11,10 @@ import { WatchService } from '../app/watch.ts';
 import { VideoExtrasService } from '../app/video-extras.ts';
 import { AdaptiveQuizService } from '../app/adaptive-quiz.ts';
 import { LabService } from '../app/labs.ts';
+import { NoteService } from '../app/notes.ts';
 import { TutorialService } from '../app/tutorials.ts';
 import { ReadingService } from '../reading/service.ts';
+import { MasteryService } from '../app/mastery.ts';
 import { MemoryStore, type Store } from '../store/store.ts';
 import { SupabaseStore } from '../store/supabase.ts';
 import { gatewayFromEnv } from '../ai/gateway.ts';
@@ -23,7 +25,9 @@ import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
 import { ClassService } from '../app/classes.ts';
 import { OrderService } from '../app/orders.ts';
+import { ReportService } from '../app/reports.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
+import { StudyPlanService } from '../app/study-plan.ts';
 import { SearchService } from '../app/search.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -80,16 +84,20 @@ const server = createApp({
   reading,
   instructor,
   learner,
+  notes: new NoteService(store, tutorials),
   labs,
   watch,
   extras,
   adaptiveQuiz: new AdaptiveQuizService(store, tutorials),
   tutorials,
+  mastery: new MasteryService(store, tutorials),
   admin,
   classes,
   orders,
+  reports: new ReportService(store, Object.entries(env).filter(([key]) => /KEY|SECRET|TOKEN|PASSWORD/.test(key)).map(([, value]) => value ?? '').filter((value) => value.length >= 8)),
   runner,
   search,
+  studyPlan: new StudyPlanService(store, tutorials),
   store,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),

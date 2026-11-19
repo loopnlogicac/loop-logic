@@ -1,0 +1,59 @@
+<h2 id="introduction">Structure মিলিয়ে সম্পূর্ণ প্রোগ্রাম</h2>
+<p class="lead">Phone book list operation-কে ছোট app বানায়। Contact যোগ, নামে খোঁজা, মুছে ফেলা, sort আর পরের session-এর জন্য save করবে। Menu কাজগুলো জুড়বে, প্রতিটি command নিজের মতো মেমরি rule বানাবে না।</p>
+<p>প্রতি contact node নিজের name অ্যারে, phone অ্যারে আর next পয়েন্টার রাখে। Head পুরো chain-এর মালিক। নাম unique, case-sensitive তুলনা: ContactA আর contacta আলাদা key। সব উদাহরণ কাল্পনিক লেবেল, ব্যক্তিগত record নয়।</p>
+<p>Phone number text। 01700000001 integer করলে শুরুর zero হারায়; optional plus-ও পরিচয়ের অংশ। এখানে এক থেকে ষোলো phone character: digit, শুরুতে optional plus। নামে এক থেকে চব্বিশ ASCII letter, digit বা underscore। সর্বোচ্চ বত্রিশ contact উদাহরণ সীমিত রাখে।</p>
+<h2 id="design">Menu-র আগে command contract</h2>
+<p>Menu একবারে পুরো line পড়ে। A name-phone যোগ, F নামে খোঁজে, D মুছে, S sort, L list, W contacts.txt লেখে, R সেই ফাইল reload, Q quit। EOF-ও session শেষ করে সব contact ছাড়ে। Command letter uppercase।</p>
+<table class="ref"><thead><tr><th scope="col">ইনপুট</th><th scope="col">অর্থ</th><th scope="col">Response</th></tr></thead><tbody><tr><td>A ContactA 0017</td><td>Unique contact যোগ</td><td>added, rejected বা no মেমরি</td></tr><tr><td>F ContactA</td><td>Exact name lookup</td><td>Name আর phone, বা not found</td></tr><tr><td>D ContactA</td><td>Exact match সরানো</td><td>deleted বা not found</td></tr><tr><td>S</td><td>strcmp-তে নাম sort</td><td>sorted</td></tr><tr><td>L</td><td>বর্তমান ক্রম প্রিন্ট</td><td>contacts: তারপর শূন্য বা বেশি row</td></tr><tr><td>W or R</td><td>Save বা load</td><td>saved/loaded বা failure message</td></tr><tr><td>Q</td><td>Run শেষ</td><td>বাড়তি row নেই</td></tr></tbody></table>
+<p>Field limit দেখার আগে গ্রহণযোগ্য পুরো line ধরার মতো buffer-এ parser পড়ে। কাটা name নীরবে অন্য বৈধ contact হবে না। Extra টোকেন command invalid করে। Buffer-এর বড় line drain করে invalid line জানায়, যাতে বাকি byte দ্বিতীয় command না হয়।</p>
+<p>Working directory-র local contacts.txt ব্যবহার হয়। Scratch folder-এ চালাও, কারণ W write mode-এ আগের content বদলে দেয়। ফাইলে space দিয়ে আলাদা name-phone pair, প্রতি line-এ এক contact। এই format-এ নামে space নেই; quoted বহু-শব্দের নাম চাইলে অন্য parser লাগবে।</p>
+<h2 id="how-it-works">Edit আর sort-এ ownership রাখো</h2>
+<p>Add আগে field rule, distinct name আর contact limit দেখে, তারপর allocate। সফল হলে bounded text node-এ copy করে head-এ ঢোকায়। Allocation failure-এ list বদলায় না। Search strcmp equality বা chain-এর শেষ পর্যন্ত next ধরে।</p>
+<p>Deletion incoming link-এর পয়েন্টার ধরে হাঁটে। Link head বা আগের node-এর next field হতে পারে। Matched node-এর successor দিয়ে বদলে owning chain থেকে record সরায়, তারপর free। নাম না পেলে কিছু বদলায় না।</p>
+<pre class="diagram">ContactA যোগের আগে:
+head -&gt; [ContactB | 01700000002 | NULL]
+যোগের পরে:
+head -&gt; [ContactA | +8801700000001 | next] -&gt; [ContactB | ... | NULL]
+ContactA মুছলে:
+head -----------------------------------&gt; [ContactB | ... | NULL]
+সরানো ContactA allocation ছাড়া হয়।</pre>
+<p>Sort বারবার মূল chain থেকে পরের node নিয়ে আলাদা sorted chain-এ বসায়। নাম তুলনা করে জায়গা খুঁজে দুই link ঠিক করে। Contact text বিনিময় বা নতুন node allocation হয় না। মূল chain ফাঁকা হলে head sorted chain পায়।</p>
+<p>Insertion-sort নকশা O(n squared) সময় আর বাড়তি O(1) পয়েন্টার নেয়। Search, delete আর duplicate-checking add worst case O(n)। List আর save-এ O(n) record visit, সঙ্গে লেখা text-এর পরিমাণ। প্রতি record-এ fixed অ্যারে-সহ মোট owned storage O(n)।</p>
+<h2 id="examples">Edit আর ফাইল round-trip চালাও</h2>
+<h3>পুরো contact menu চালাও</h3>
+<p>নাম unique, case-sensitive। Sort link বদলায়, phone-এ zero আর optional plus থাকে।</p>
+<div data-example="ex-1"></div>
+<h3>List save, বদল আর reload</h3>
+<p>বর্তমান folder-এর contacts.txt-এ sorted row save হয়। Load ক্রম বানিয়ে deleted contact ফেরায়। W ফাইল বদলায় বলে scratch folder নাও।</p>
+<div data-example="ex-2"></div>
+<h2 id="file-storage">Temporary list-এ load</h2>
+<p>Save বর্তমান list order-এ contact লেখে। প্রতিটি fprintf আর শেষ fclose দেখে, কারণ buffered আউটপুট close-এ ব্যর্থ হতে পারে। সফল W saved বলে। Empty list empty ফাইল বানায়, সেটি বৈধ saved phone book।</p>
+<p>Save-এর চেয়ে load-এর rollback শক্ত। R ফাইল খুলে bounded পুরো row parse করে validated record temporary list-এ যোগ করে। ভুল field, duplicate name, বেশি record, read error বা allocation failure load reject করে। Temporary list ছাড়া হয়, edited in-মেমরি list অক্ষত।</p>
+<p>Front insertion temporary তৈরিতে ফাইল order উল্টায়। সব row আর ফাইল close সফল হলে loader সেটি আবার উল্টায়। তারপর আগের list free করে restored head প্রকাশ করে। এতে disk-এ saved order থাকে, ফাইল আগে থেকেই sorted বলা হয় না।</p>
+<p>W ইচ্ছা করে portable basic save, atomic storage transaction নয়। w-তে খোলাই পরের write শেষের আগে পুরোনো ফাইল truncate করে। Failed write-এ partial content থাকতে পারে, মেমরি contact তবু আছে। শক্ত app temporary ফাইল লিখে completion দেখে সফল হলে original বদলায়; power-loss durability-তে platform support-ও লাগে।</p>
+<p>দ্বিতীয় উদাহরণ read-এর আগে write করে, তাই আগের contacts.txt-এ নির্ভর নয়। Sorted record save, মেমরি থেকে একটিকে delete, reload আর restored row list করে। Practice-ও read-এর আগে ফাইল বানায়। Malformed-load পরীক্ষা করতে মেমরি-তে contact রেখে ফাইলে খারাপ row দাও, R আর L দিয়ে rollback দেখো।</p>
+<h2 id="edge-cases">Menu-র সীমা পরীক্ষা</h2>
+<p>Empty list-এ search, delete, sort, list আর save চলে। Search-delete not found, sort empty head, list শুধু heading। শেষ contact মুছলে head NULL। Duplicate add নীরবে phone overwrite না করে reject।</p>
+<p>strcpy-র আগে length দেখা হয় বলে valid name node অ্যারে overflow করে না। Phone-এ শুধু plus, মাঝের punctuation আর ষোলোর বেশি character বাদ। 001-এর মতো সংখ্যার শুরুর zero থাকে। উদাহরণ byte-oriented ASCII validation, Unicode name policy নয়।</p>
+<p>Rejected add বা malformed command-এর পরে menu চলে, কারণ partial contact link হয়নি। ফাইল load-এও বত্রিশ record সীমা। Q না থাকলেও EOF exit, final cleanup প্রতিটি বাকি node দেখে। সফল আর rejected দুই load-এই handle close।</p>
+<p>Linked list edit আর শেখায় সহজ, exact-name search linear। বড় phone book hash index বা balanced ট্রি যোগ করতে পারে, তবে প্রতিটি contact-এর owner একজন স্পষ্ট থাকবে। একাধিক index update-এ consistent success-or-rollback policy, বিশেষ করে allocation failure-এ দরকার।</p>
+<p>প্রতি temporary add আগের নাম scan করে duplicate দেখে বলে n contact load O(n squared)। Edited আর new list একসঙ্গে own করে, তাই peak storage দুই set ধরে। Sort node-এর বাইরে শুধু link ভেরিয়েবল নেয়। বড় app-এ temporary name index repeated duplicate search কমাতে পারে।</p>
+<pre class="diagram">Sort-এর আগে:
+head -&gt; [ContactC] -&gt; [ContactA] -&gt; [ContactB] -&gt; NULL
+Relink করে sort-এর পরে:
+head -&gt; [ContactA] -&gt; [ContactB] -&gt; [ContactC] -&gt; NULL
+সফল load-এর আগে:
+live head -&gt; edited record    temporary head -&gt; parsed record
+Commit-এর পরে:
+live head -&gt; restored parsed record; পুরোনো edited record ছাড়া
+Rejected load-এ:
+live head -&gt; আগের edited record; temporary record ছাড়া</pre>
+<h2 id="common-mistakes">Interface বদলানোর আগে ডেটা রক্ষা</h2>
+<h3>সরাসরি live head-এ load</h3>
+<p>পরের খারাপ row অর্ধেক phone book রেখে দেবে। আলাদা বানিয়ে পুরো load সফল হলেই live list বদলাও।</p>
+<h3>সীমাহীন string ইনপুট</h3>
+<p>লম্বা টোকেন node field overwrite করতে পারে। Bounded line পড়ে পুরো টোকেন length যাচাই, contract মিললেই copy।</p>
+<h3>Save failure পুরোনো disk ফাইল রাখে ভাবা</h3>
+<p>Basic writer error জানায়, truncation ফেরাতে পারে না। নিরাপদ replacement নকশায় সীমাটা মনে রাখো।</p>
+<h2 id="summary">ছোট app দিয়ে ownership পরীক্ষা</h2>
+<p>Phone book এক menu-তে list edit, sort, ইনপুট validation আর ফাইল lifetime মেলায়। প্রতিটি command বৈধ list রাখে বা সম্পূর্ণ নতুনটি প্রকাশ করে। শেষে <a href="topic:ds-interview-questions">interview question</a> দিয়ে পছন্দগুলো মুখে বোঝাও।</p>

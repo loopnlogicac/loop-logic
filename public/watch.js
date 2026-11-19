@@ -1,9 +1,11 @@
+import { savedStrings, savedEditor } from './saved.js';
 // Video course player: plays a course's YouTube playlists in order, inside the site.
 import { currentUser, fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast, ensureSignedIn, getConfig } from './common.js';
 import { tryNowButton, learnerSections, editLink, openEditor } from './video-extras.js';
 
 const T = {
   en: {
+    ...savedStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · videos play from YouTube; views count on the channel',
     courses: 'Courses', contents: 'Course videos', of: (a, b) => `Video ${a} of ${b}`,
     watched: (a, b) => `${a} of ${b} watched`, prev: '← Previous', next: 'Next →', doneNext: '✓ Done, next video', markDone: '✓ Mark as watched', undo: 'Mark as not watched',
@@ -12,6 +14,7 @@ const T = {
     hm: (h, m) => (h ? `${h} h ${m} min` : `${m} min`), quizMark: 'quiz',
   },
   bn: {
+    ...savedStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · ভিডিও চলে ইউটিউব থেকে; ভিউ চ্যানেলেই গোনা হয়',
     courses: 'কোর্স', contents: 'কোর্সের ভিডিও', of: (a, b) => `${b}টির মধ্যে ${a} নম্বর ভিডিও`,
     watched: (a, b) => `${b}টির মধ্যে ${a}টি দেখা হয়েছে`, prev: '← আগেরটি', next: 'পরেরটি →', doneNext: '✓ দেখা শেষ, পরের ভিডিও', markDone: '✓ দেখা হয়েছে', undo: 'দেখা হয়নি হিসেবে রাখো',
@@ -69,6 +72,7 @@ function render() {
           tryNowButton(cur.extras?.tryNow),
           cur.youtubeUrl ? el('a', { class: 'btn ghost small', href: cur.youtubeUrl, target: '_blank', rel: 'noopener noreferrer', text: L.onYt }) : null)),
     );
+    left.append(savedEditor(`video:${course.id}:${cur.id}`, L));
     const extrasBox = el('div', { class: 'vx-stack' }, ...learnerSections(course.id, cur));
     left.append(extrasBox, el('p', { style: 'margin:10px 0 0' }, editLink(config, () => {
       editing = true;

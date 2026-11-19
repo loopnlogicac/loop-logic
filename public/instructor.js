@@ -1,15 +1,18 @@
+import { downloadFile } from './download.js';
 // Instructor dashboard (design: "admin site and instructor dashboard" canvas, Instructor page).
 // Classes, students, insights, assignments, content studio, exam packs, announcements.
 // Figures come from what students in the class actually did; class-wide numbers are
 // hidden below the privacy minimum, and AI questions are counted, never shown as text.
-import { api, el, toast, currentUser, showSignIn, num, ago, store } from './common.js';
+import { getLang, api, el, toast, currentUser, showSignIn, num, ago, store } from './common.js';
 
+const T = { en: {}, bn: {} };
 const $ = (id) => document.getElementById(id);
 const content = $('adm-content');
 const NAV = [
   ['overview', 'Overview', 'M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z'],
   ['students', 'Students', 'M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
   ['insights', 'Insights', 'M3 3v18h18M7 15l4-4 3 3 5-6'],
+  ['gradebook', 'gradebook', 'M3 3h18v18H3zM3 9h18M9 3v18'],
   ['assignments', 'Assignments', 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
   ['studio', 'Content studio', 'M15 10l4.5-2.5v9L15 14M3 6h12v12H3z'],
   ['packs', 'Exam packs', 'M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5L5.5 21l2-7.5L2 9h7z'],
@@ -47,7 +50,7 @@ const go = (h) => { if (location.hash === `#${h}`) route(); else location.hash =
 const currentClass = () => classes.find((c) => c.id === store.get('ll_class')) ?? classes[0] ?? null;
 
 function shell(active) {
-  $('adm-nav').replaceChildren(...NAV.map(([id, label, d]) => el('a', { href: `#${id}`, class: 'adm-nav-item', 'aria-current': id === active ? 'page' : null }, icon(d), el('span', { text: label }))));
+  $('adm-nav').replaceChildren(...NAV.map(([id, label, d]) => el('a', { href: `#${id}`, class: 'adm-nav-item', 'aria-current': id === active ? 'page' : null }, icon(d), el('span', { text: id === 'gradebook' ? T[getLang()].gradebook : label }))));
   const sel = $('ins-class');
   sel.replaceChildren(...classes.map((c) => el('option', { value: c.id, text: c.name })), el('option', { value: '__new', text: '+ New class…' }));
   sel.value = currentClass()?.id ?? '__new';
@@ -133,8 +136,13 @@ function studentsPage() {
   ];
 }
 
+Object.assign(T.en, { masteryGain: 'Average gain per topic', masteryTopic: 'Topic', masteryStudents: 'Students with both checks', masteryPoints: 'Gain (percentage points)', masteryHidden: (n) => `Shown when at least ${n} students completed both checks on a topic.` });
+Object.assign(T.bn, { masteryGain: 'টপিক অনুযায়ী গড় উন্নতি', masteryTopic: 'টপিক', masteryStudents: 'দুই চেকই শেষ করেছে', masteryPoints: 'উন্নতি (শতাংশ পয়েন্ট)', masteryHidden: (n) => `একটি টপিকের দুই চেকই অন্তত ${n} জন শেষ করলে দেখাবে।` });
+
 function insightsPage() {
+  const L = T[getLang()];
   return [
+    card(L.masteryGain, dash.masteryGain?.length ? table([L.masteryTopic, L.masteryPoints, L.masteryStudents], dash.masteryGain.map((r) => [r.title, `${r.gain > 0 ? '+' : ''}${r.gain}`, num(r.students)])) : empty(L.masteryHidden(dash.minGroup))),
     card('How far the class has got, module by module', el('p', { class: 'adm-hint', text: 'Share of students who opened every ready topic in the module.' }),
       dash.heat ? el('div', { class: 'ins-heat' }, ...dash.heat.map((m) => el('div', { class: `ins-cell ${m.pct === null ? 'none' : m.pct >= 75 ? 'hi' : m.pct >= 40 ? 'mid' : 'lo'}` }, el('strong', { text: m.pct === null ? '—' : `${m.pct}%` }), el('span', { text: m.title })))) : dash.class.track ? hidden() : empty('Link a tutorial track to the class in Class settings.')),
     row(
@@ -142,6 +150,20 @@ function insightsPage() {
       card('Video quizzes', dash.class.course ? (dash.videoQuizzes.length ? table(['Video', 'Students', 'Average'], dash.videoQuizzes.map((v) => [v.title, num(v.students), `${v.avg}%`])) : hidden()) : empty('Link a video course to the class in Class settings.'))),
     card('Topics the class finds hardest', dash.hardTopics.length ? table(['Topic', 'Average quiz score', 'Students'], dash.hardTopics.map((t) => [t.title, `${t.avg}%`, num(t.students)])) : hidden()),
   ];
+}
+
+Object.assign(T.en, { gradebook: 'Gradebook', student: 'Student', overall: 'Overall completion (%)', download: 'Download CSV', noStudents: 'No enrolled students yet.', noAssignments: 'Create an assignment to start the gradebook.', gradebookHelp: 'Each cell shows completion and the average quiz score for quizzes attempted in that assignment. Overall completion counts completed assignment items.', quiz: 'quiz', incomplete: 'Incomplete' });
+Object.assign(T.bn, { gradebook: 'গ্রেডবুক', student: 'শিক্ষার্থী', overall: 'মোট সম্পন্ন (%)', download: 'CSV ডাউনলোড করো', noStudents: 'এখনো কোনো শিক্ষার্থী যোগ দেয়নি।', noAssignments: 'গ্রেডবুক শুরু করতে একটি অ্যাসাইনমেন্ট দাও।', gradebookHelp: 'প্রতি ঘরে কাজ সম্পন্ন হয়েছে কি না আর ওই অ্যাসাইনমেন্টে দেওয়া কুইজের গড় নম্বর দেখাবে। মোট শতাংশে অ্যাসাইনমেন্টের কতগুলো কাজ শেষ হয়েছে তা গোনা হয়।', quiz: 'কুইজ', incomplete: 'অসম্পন্ন' });
+
+function gradebookPage() {
+  const L = T[getLang()];
+  const download = button(L.download, null);
+  download.onclick = busy(download, () => downloadFile(`/api/instructor/classes/${encodeURIComponent(dash.class.id)}/gradebook.csv?lang=${getLang()}`, 'gradebook.csv'));
+  return card(L.gradebook, el('p', { class: 'adm-hint', text: L.gradebookHelp }), download,
+    dash.assignments.length ? table([L.student, ...dash.assignments.map((a) => a.title), L.overall], dash.roster.map((s) => [s.email, ...dash.assignments.map((a) => {
+      const r = s.assignments.find((r) => r.id === a.id);
+      return el('span', { 'aria-label': `${r.done === r.of ? '✓' : L.incomplete} · ${L.quiz}: ${r.quizPercent ?? '—'}` }, r.done === r.of ? '✓ ' : `${r.done}/${r.of} `, r.quizPercent === null ? '—' : `${r.quizPercent}%`);
+    }), s.overallPercent === null ? '—' : `${s.overallPercent}%`]), L.noStudents) : empty(L.noAssignments));
 }
 
 async function assignmentsPage() {
@@ -236,14 +258,14 @@ function settingsPage() {
   newCode.onclick = busy(newCode, async () => { if (!confirm('The old code will stop working. Continue?')) return; const r = await api('POST', `/api/instructor/classes/${c.id}/code`); toast(`New code: ${r.code}`); await loadClasses(); await refresh(); });
   return [newClassPage(c), card('Class code', row(el('span', { class: 'ins-code', text: c.code }), newCode)),
     card('Archive the class', el('p', { class: 'adm-hint', text: 'Students can no longer see it, and it leaves your list. Their own progress is kept.' }),
-      button('Archive this class', async () => { if (!confirm(`Archive "${c.name}"?`)) return; await api('DELETE', `/api/instructor/classes/${c.id}`); store.del('ll_class'); toast('Archived.'); await loadClasses(); go('overview'); }, 'danger'))];
+      button('Archive this class', async () => { if (!confirm(`Archive "${c.name}"?`)) return; await api('DELETE', `/api/instructor/classes/${c.id}?lang=${getLang()}`); store.del('ll_class'); toast('Archived.'); await loadClasses(); go('overview'); }, 'danger'))];
 }
 
 // ── loading and routing ──
 async function loadClasses() { classes = await api('GET', '/api/instructor/classes'); }
 async function refresh() { dash = null; await route(); }
-const PAGES = { overview: overviewPage, students: studentsPage, insights: insightsPage, assignments: assignmentsPage, studio: studioPage, packs: packsPage, announcements: announcementsPage, questions: questionsPage, settings: settingsPage };
-const TITLES = { overview: 'Class overview', students: 'Students', insights: 'Insights', assignments: 'Assignments', studio: 'Content studio', packs: 'Exam packs', announcements: 'Announcements', questions: 'Student questions', settings: 'Class settings' };
+const PAGES = { gradebook: gradebookPage, overview: overviewPage, students: studentsPage, insights: insightsPage, assignments: assignmentsPage, studio: studioPage, packs: packsPage, announcements: announcementsPage, questions: questionsPage, settings: settingsPage };
+const TITLES = { gradebook: T[getLang()].gradebook, overview: 'Class overview', students: 'Students', insights: 'Insights', assignments: 'Assignments', studio: 'Content studio', packs: 'Exam packs', announcements: 'Announcements', questions: 'Student questions', settings: 'Class settings' };
 let routeSeq = 0;
 async function route() {
   const name = location.hash.slice(1) || 'overview';
@@ -258,7 +280,7 @@ async function route() {
   content.replaceChildren(el('div', { class: 'skeleton' }));
   try {
     if (!dash || dash.class.id !== c.id) {
-      dash = await api('GET', `/api/instructor/classes/${c.id}`);
+      dash = await api('GET', `/api/instructor/classes/${c.id}?lang=${getLang()}`);
       Object.assign(c, { students: dash.kpis.students, pending: dash.kpis.pending });
     }
     if (name === 'packs' || name === 'studio') { /* these load their own data */ }

@@ -1,0 +1,64 @@
+<h2 id="introduction">A room you rent while the program runs</h2>
+<p class="lead">Imagine arranging chairs for a programming lab. A fixed array is like reserving twenty chairs before anyone arrives. Dynamic memory lets you wait for the student count before choosing the space. You ask for storage while the program is running, use it, then return it when the task ends.</p>
+<p>A <dfn>dynamic allocation</dfn> is a request for a block of memory whose lifetime you control. C provides the request functions in <code>stdlib.h</code>. You receive a pointer to the block, rather than a new array variable with a named size. You must keep enough information to use that pointer safely.</p>
+<p>Dynamic storage helps when input determines the number of marks, records, or rows. It also lets a helper create data that survives the helper's return. You already know from <a href="topic:c-dangling-wild-pointers">pointer lifetimes</a> why returning an automatic local variable's address fails. An allocated object has a different lifetime, so returning its pointer can be correct.</p>
+<p>Allocation does add work. You must check failure, initialize the contents, respect the block's bounds, and release it. Choose a small fixed array when its capacity is sensible. Dynamic memory solves a storage need; it does not automatically make a program faster or simpler.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>An allocation request uses a byte count. The expression <code>sizeof *mark</code> asks for enough bytes for the pointed-to type. Although it contains a dereference symbol, this ordinary sizeof operand is not evaluated. No memory is read through an uninitialized pointer here.</p>
+<p>A successful malloc result converts to the required object pointer type in C. A cast is unnecessary. Include stdlib.h so the compiler sees the correct declaration. Test the result before the first assignment through the pointer.</p><pre><code class="language-c">int *mark = malloc(sizeof *mark);
+if (mark == NULL) {
+    return 1;
+}
+*mark = 78;
+free(mark);
+</code></pre><table class="ref"><thead><tr><th scope="col">Function</th><th scope="col">Job</th><th scope="col">What you still manage</th></tr></thead><tbody><tr><td>malloc</td><td>Request uninitialized storage</td><td>Byte count and initial values</td></tr><tr><td>calloc</td><td>Request an array with all bits zero</td><td>Element count and type meaning</td></tr><tr><td>realloc</td><td>Change an existing allocation size</td><td>Failure and possible movement</td></tr><tr><td>free</td><td>End an allocated lifetime</td><td>Which pointer owns the block</td></tr></tbody></table>
+
+<h2 id="how-it-works">Two lifetimes, one pointer</h2>
+<p>A local pointer variable and its allocated target are different objects. The pointer below belongs to main's block. The integer it selects belongs to an allocation. Ending the pointer variable's scope does not release that integer. Losing the last usable pointer would instead make the allocation unreachable.</p>
+<p>People often say local variables live on the stack and dynamic objects live on the heap. These are useful implementation pictures. The C standard describes automatic and allocated storage duration without requiring a particular stack or heap design. A local array is not guaranteed to use a machine stack either.</p>
+<p>Follow the single-mark example in time. Before malloc succeeds, main owns no allocated integer. After success, mark holds the block's base address. The assignment stores 78 into that integer. printf reads the initialized value. Finally, free ends the allocation's lifetime, even though the pointer variable still exists.</p>
+<p>After free, do not read or compare the stale pointer value. Assigning NULL to the pointer is allowed and gives it a useful empty state. That assignment does not repair another pointer which copied the old address. Any such borrowed pointer must stop being used before release.</p><pre class="diagram">main block                  allocated storage
+mark [address] ----------&gt; [integer: 78]
+
+after free(mark):
+mark [stale value]           allocation lifetime ended
+after mark = NULL:
+mark [NULL]                  no owned block</pre><p>Think of ownership as responsibility, rather than a C keyword. The owner decides when the allocation ends. A borrower may inspect the data while the owner keeps it alive. Write this agreement beside helpers that return or receive allocated storage. The compiler cannot infer the full agreement from int * alone.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>Start with a single mark, then count several marks, then move allocation into a helper. Each program has one clear owner. Watch where ownership begins and which function eventually calls free. The printed values come from initialized integers, so their meaning does not depend on any numeric address.</p>
+
+<h3>One allocated mark</h3>
+<p>The single integer makes the allocation lifetime easy to see. sizeof measures an int through the pointer's type. malloc does not provide an initial mark, so the assignment is essential. The failure branch leaves before any dereference. A successful run prints Mark: 78, then releases the only allocation. No automatic local variable is passed to free.</p>
+<div data-example="ex-1"></div>
+
+<h3>Allocate room for three marks</h3>
+<p>The count variable describes three elements rather than three bytes. Multiplying by sizeof converts that element count to the allocation size. Each loop iteration writes one mark before adding it. The total starts at zero independently of the allocated contents. Releasing marks once releases the whole array; you do not free the address of each element.</p>
+<div data-example="ex-2"></div>
+
+<h3>A helper returns a live allocation</h3>
+<p>make_mark's result pointer is local, but the object created by malloc has allocated storage duration. Returning the address value lets main reach that object after the helper has finished. main prints Returned mark: 85 and becomes the function that must release it. This would fail if the helper instead returned the address of an automatic local integer.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Counts, failure, and useful limits</h2>
+<p>The count in a dynamic array must travel with the pointer. A pointer does not remember how many elements you requested. For three integers, indices zero through two are valid. Index three is outside the block even if nearby memory appears unused. Allocator bookkeeping never enlarges your permitted array bounds.</p>
+<p>Validate a signed count before converting it to size_t. A negative int converted first can become a huge positive value. For a general count, check multiplication with <code>count &gt; SIZE_MAX / sizeof *items</code> before requesting count times the element size. SIZE_MAX is available from stdint.h. Small classroom limits also make arithmetic and input handling easier to inspect.</p>
+<p>An empty collection deserves an explicit policy. You can represent it with a NULL pointer and a count of zero, skipping allocation entirely. This avoids depending on whether a zero-byte request returns NULL or a pointer that still needs releasing. Never index an empty collection.</p>
+<p>Allocation failure is an ordinary branch in your program. A tiny request usually succeeds, but success is not guaranteed by its size. A helper can return NULL and let its caller decide what to report. A longer operation must also release any earlier blocks before leaving on failure.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Losing the rented room</h3>
+<p>Assigning a second allocation to the only pointer to the first block loses the first address. Free the first block when its work is complete, or keep another owner until then. A pointer assignment copies an address; it never releases the old target for you.</p>
+<h3>Using automatic storage as an allocated object</h3>
+<p>Do not call free on the address of a local int or a fixed local array. Those objects follow their own storage duration. Only release an allocation base returned by an allocation function, and release it once. Passing a pointer into the middle of the block is also invalid.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Sketch the pointer and its target separately before writing an allocation helper. Name the owner in the helper's contract: for make_mark, the caller becomes responsible for the returned block. Keep a count beside every allocated sequence. Prefer <code>sizeof *pointer</code> over spelling the target type twice.</p>
+<p>Place cleanup close enough to the work that you can review every exit. If input fails after allocation, release the block before returning. Use allocated storage only while its owner can guarantee that the lifetime continues. Later, <a href="topic:c-memory-leaks">memory tools</a> will help check those paths.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>The malloc, calloc, realloc, and free interfaces are long-standing C features. These examples use C99 declarations and target C17. C11 adds aligned allocation for stronger alignment needs, which this lesson does not require. Ordinary int objects fit the alignment guarantee of malloc. The stack and heap drawing describes a common implementation, not a required machine layout.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>You can now choose a run-time storage size, distinguish a pointer's lifetime from its target's lifetime, and identify an owner. The owner checks allocation, initializes the data, and ends its lifetime exactly once. Next, compare the allocation choices in <a href="topic:c-malloc-calloc">malloc and calloc</a>.</p>
