@@ -1,0 +1,392 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-views",
+  "module": "sql-advanced",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Views",
+    "bn": "ভিউ"
+  },
+  "summary": {
+    "en": "Name reusable queries, understand which views allow updates, and expose only intended data.",
+    "bn": "ভিউ দিয়ে দরকারি কোয়েরির নাম দাও, আপডেটের নিয়ম বোঝো, আর প্রয়োজনের ডেটাই দেখাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-set-operations"
+  ],
+  "related": [],
+  "keywords": [
+    "views",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give a useful query a stable name"
+    },
+    {
+      "id": "syntax",
+      "title": "Define the interface explicitly"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Separate live results from update mappings"
+    },
+    {
+      "id": "examples",
+      "title": "Read, update and revisit the same data"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "A shorter column list is not a complete security policy"
+    },
+    {
+      "id": "best-practices",
+      "title": "Treat the definition as an interface contract"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use MySQL security and update rules"
+    },
+    {
+      "id": "summary",
+      "title": "Name the query and review its authority"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Name a public student directory",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The MAT directory exposes Rafi and Fahim without email or hometown. INVOKER uses the caller permissions.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Update through a filtered view",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The base student row changes. CHECK OPTION would reject moving this row to department 2 through this view.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Summarise enrollments in a read-only view",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Seven summary rows describe registered students. GROUP BY and COUNT prevent updates because each view row can represent several base rows.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Observe live data and rollback",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>Product 1 disappears while its stock is zero and returns after rollback. The view does not keep yesterday&#x27;s result.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Create a contact-free member list",
+      "statementHtml": "<p>Create member_directory with member_id and member_name only. Show its rows ordered by id, insert member 5 with no email, then show the directory again.</p>",
+      "hints": [
+        "Name the visible columns rather than selecting every column."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/library.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Maintain an available-stock view",
+      "statementHtml": "<p>Create stocked with product_id and stock, filtered to stock &gt; 0 with CHECK OPTION. Show product 4, restock it to 3 in the base table, then show it through the view.</p>",
+      "hints": [
+        "A filtered-out base row must be changed through an authorized path."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Moving a row out of sight",
+      "statementHtml": "<p>Compare updating department_id from 1 to 2 through a CSE view with and without WITH CHECK OPTION.</p>",
+      "hints": [
+        "Separate visibility from permission to change the base table."
+      ],
+      "answerHtml": "<p>Without CHECK OPTION the update can succeed and the student disappears from that view. With CHECK OPTION the view predicate must remain true, so MySQL rejects the update. The option governs writes through the view; direct authorized updates to students can still move the row.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Expose a safe reporting interface",
+      "statementHtml": "<p>A clerk may see names but not email. Explain the required privilege design and a definer-view risk.</p>",
+      "hints": [
+        "A hidden column is still readable if the user can query the base table."
+      ],
+      "answerHtml": "<p>Expose explicit approved columns through a carefully owned SQL SECURITY DEFINER view. Grant the clerk SELECT on that view and no broad base-table SELECT. Give the definer only the base privileges the view needs. A privileged definer or a later view change can expose extra data, so review both ownership and the definition.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many rows does a CSE-only view expose?",
+      "language": "sql",
+      "code": "CREATE VIEW cse_list AS SELECT student_id FROM students WHERE department_id = 1;\nSELECT COUNT(*) AS n FROM cse_list;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 4 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "There are four CSE students."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does updating a name through a simple view change the base row?",
+      "language": "sql",
+      "code": "CREATE VIEW names AS SELECT student_id, student_name FROM students;\nUPDATE names SET student_name = 'Ayesha R.' WHERE student_id = 101;\nSELECT COUNT(*) AS n FROM students WHERE student_name = 'Ayesha R.';\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "The updatable view maps directly to one base row."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many grouped rows appear in a per-student enrollment view?",
+      "language": "sql",
+      "code": "CREATE VIEW totals AS SELECT student_id, COUNT(*) AS n FROM enrollments GROUP BY student_id;\nSELECT COUNT(*) AS n FROM totals;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 7 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "Seven students have registrations; the count is of summary groups."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does CREATE VIEW persist for an ordinary MySQL view?",
+      "options": [
+        "A query definition",
+        "A frozen copy of every result row",
+        "An index for each projected column"
+      ],
+      "answer": 0,
+      "explanation": "MySQL computes the view result when queried; ordinary views are not materialized snapshots."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which view is inherently non-updatable?",
+      "options": [
+        "A single-table filtered directory",
+        "A GROUP BY view with COUNT(*)",
+        "A single-table projection of key and name"
+      ],
+      "answer": 1,
+      "explanation": "Aggregation loses the one-to-one mapping needed to update a base row."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does WITH CHECK OPTION validate?",
+      "options": [
+        "Every SELECT is sorted",
+        "The user owns the server",
+        "Writes through the view still satisfy its predicate"
+      ],
+      "answer": 2,
+      "explanation": "The option constrains INSERT and UPDATE through an updatable view, not display order."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Whose permissions apply to SQL SECURITY INVOKER?",
+      "options": [
+        "The caller",
+        "Always root",
+        "The first student row"
+      ],
+      "answer": 0,
+      "explanation": "INVOKER does not lend the owner privileges to the caller."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why prefer explicit view columns to SELECT *?",
+      "options": [
+        "It creates a unique index.",
+        "The exposed interface is clear and reviewable.",
+        "It makes every view updatable."
+      ],
+      "answer": 1,
+      "explanation": "An explicit list documents exactly what readers may see. It does not itself grant security."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Does a view protect email when its user also has SELECT on students?",
+      "options": [
+        "Yes; views override all grants.",
+        "Yes; omitted columns are encrypted.",
+        "No; the user can query students directly."
+      ],
+      "answer": 2,
+      "explanation": "Access control must close the alternate base-table route."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What can DROP VIEW remove?",
+      "options": [
+        "The view definition while preserving base rows",
+        "Every table used by the view",
+        "Only rows currently visible through the view"
+      ],
+      "answer": 0,
+      "explanation": "DROP VIEW removes the named query object, not its source data."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An ordinary view stores a query definition rather than a result snapshot.",
+      "bn": "সাধারণ ভিউতে ফলের কপি নয়, কোয়েরির সংজ্ঞা থাকে।"
+    },
+    {
+      "en": "Simple views can update their underlying table.",
+      "bn": "সহজ ভিউ দিয়ে মূল টেবিলের ডেটা আপডেট করা যায়।"
+    },
+    {
+      "en": "CHECK OPTION prevents writes escaping the view filter.",
+      "bn": "CHECK OPTION থাকলে ভিউয়ের শর্ত ভাঙে এমন পরিবর্তন করা যায় না।"
+    },
+    {
+      "en": "Aggregated views are not updatable.",
+      "bn": "অ্যাগ্রিগেট করা ভিউ দিয়ে মূল সারি আপডেট করা যায় না।"
+    },
+    {
+      "en": "View security depends on privileges and SQL SECURITY.",
+      "bn": "ভিউয়ের নিরাপত্তা পারমিশন আর SQL SECURITY-এর ওপর নির্ভর করে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Compare updating department_id from 1 to 2 through a CSE view with and without WITH CHECK OPTION.",
+      "marks": 6,
+      "answerHtml": "<p>Without CHECK OPTION the update can succeed and the student disappears from that view. With CHECK OPTION the view predicate must remain true, so MySQL rejects the update. The option governs writes through the view; direct authorized updates to students can still move the row.</p>"
+    },
+    {
+      "type": "design",
+      "question": "A clerk may see names but not email. Explain the required privilege design and a definer-view risk.",
+      "marks": 8,
+      "answerHtml": "<p>Expose explicit approved columns through a carefully owned SQL SECURITY DEFINER view. Grant the clerk SELECT on that view and no broad base-table SELECT. Give the definer only the base privileges the view needs. A privileged definer or a later view change can expose extra data, so review both ownership and the definition.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Create member_directory with member_id and member_name only. Show its rows ordered by id, insert member 5 with no email, then show the directory again.",
+      "marks": 8,
+      "answerHtml": "<p>Create an invoker view selecting member_id and member_name from members. Query it ordered by member_id. Insert member 5, Maliha Noor, with date 2026-03-01 and NULL email in members, then repeat the view query. The view now includes five rows without any refresh.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Views",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/views.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

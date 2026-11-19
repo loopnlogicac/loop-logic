@@ -1,0 +1,452 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-window-functions",
+  "module": "sql-advanced",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Window Functions",
+    "bn": "উইন্ডো ফাংশন"
+  },
+  "summary": {
+    "en": "Rank rows and compute running values while retaining each underlying result.",
+    "bn": "উইন্ডো ফাংশন দিয়ে প্রতিটি সারি রেখেই র‍্যাঙ্ক আর চলতি যোগফল বের করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 70,
+  "prerequisites": [
+    "db-indexes"
+  ],
+  "related": [],
+  "keywords": [
+    "window functions",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Keep each row while calculating across neighbours"
+    },
+    {
+      "id": "syntax",
+      "title": "Read the OVER clause in three parts"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Choose what a tie should mean"
+    },
+    {
+      "id": "examples",
+      "title": "Compare row positions, mark ranks and cumulative money"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not erase ties accidentally"
+    },
+    {
+      "id": "best-practices",
+      "title": "Specify the population, peers and frame"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use MySQL 8.0 window support"
+    },
+    {
+      "id": "summary",
+      "title": "Give every calculation a precise window"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Number results within each section",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Each section starts at one. The student key breaks equal-mark ties without changing section membership.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Make a tie visible",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Students 101 and 102 tie at 80. Their ranks are 1 and 1; the 60-mark result ranks 3 but has dense rank 2.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Accumulate payments in a fixed sequence",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The totals are 180.00, 1180.00, 1560.00 and 1580.00 BDT. Payment identifiers make the sequence unambiguous.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Retain tied leaders with a derived table",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Five sections have recorded results, so five leaders appear in the original data. Section 36 contributes no result row.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Contrast peer-aware RANGE with ROWS",
+      "level": "advanced",
+      "file": "examples/ex-5.sql",
+      "output": "examples/ex-5.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The two February 2 payments share peer_total 1560.00. row_total advances first to 1180.00 and then to 1560.00.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Find one leader per section",
+      "statementHtml": "<p>Return section_id and student_id for ROW_NUMBER = 1 using descending marks then ascending id. Next delete all results in a transaction, repeat the report, and roll back.</p>",
+      "hints": [
+        "Number before filtering, then use an outer SELECT."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Accumulate payments separately for each order",
+      "statementHtml": "<p>List order_id, payment_id and running_bdt with an explicit ROWS frame, ordered by order and payment. Then add payment 305 of 10 BDT for order 203 on 2026-03-02 and repeat.</p>",
+      "hints": [
+        "The partition is the order, not the payment date."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Choose tie rules for a prize",
+      "statementHtml": "<p>A section has marks 90, 90, 80. Compare ROW_NUMBER, RANK and DENSE_RANK, and choose a function for two prize places including ties.</p>",
+      "hints": [
+        "Define whether a place means a row, a competition rank or a distinct mark."
+      ],
+      "answerHtml": "<p>ROW_NUMBER gives 1, 2, 3 after a deterministic tie breaker. RANK gives 1, 1, 3. DENSE_RANK gives 1, 1, 2. For the best two distinct mark levels including ties, use DENSE_RANK &lt;= 2 and include all three students. For competition places 1 and 2, RANK &lt;= 2 keeps only the tied leaders.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Explain a default running total",
+      "statementHtml": "<p>Two payments on the same date produce the same SUM OVER (ORDER BY paid_on). Why, and how do you obtain one step per payment?</p>",
+      "hints": [
+        "The window order and frame have separate jobs."
+      ],
+      "answerHtml": "<p>The default ordered aggregate frame uses RANGE through the current peer group. Equal dates are peers, so both rows include both payments. Use ORDER BY paid_on, payment_id with ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW. Keep the final ORDER BY aligned to make the printed progression visible.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Moving average boundaries",
+      "statementHtml": "<p>Explain AVG(marks) OVER (PARTITION BY section_id ORDER BY student_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW).</p>",
+      "hints": [
+        "Draw the frame around each row."
+      ],
+      "answerHtml": "<p>Each section starts a new calculation. The first row averages only itself because no preceding row exists. Later rows average the current mark and the preceding student-id row in that section. This is a two-row moving average, not a two-mark-value range and not an academic ranking.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What is the largest ROW_NUMBER within section 33?",
+      "language": "sql",
+      "code": "SELECT MAX(pos) AS n FROM (SELECT ROW_NUMBER() OVER (ORDER BY marks DESC, student_id) AS pos\n    FROM results WHERE section_id = 33) AS r;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+------+\n| n    |\n+------+\n|    3 |\n+------+",
+        "+------+\n| n    |\n+------+\n| -1   |\n+------+",
+        "+------+\n| n    |\n+------+\n| 999  |\n+------+"
+      ],
+      "answer": 0,
+      "explanation": "Section 33 has three result rows."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many first-ranked rows survive the original section partitions?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM (SELECT RANK() OVER (PARTITION BY section_id ORDER BY marks DESC) AS\n    pos FROM results) AS r WHERE pos = 1;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 5 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Five nonempty sections each have one highest mark in the seed data."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What final running total covers every payment?",
+      "language": "sql",
+      "code": "SELECT MAX(total) AS n FROM (SELECT SUM(amount_bdt) OVER (ORDER BY paid_on, payment_id ROWS\n    UNBOUNDED PRECEDING) AS total FROM payments) AS p;\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+---------+\n| n       |\n+---------+\n| -1      |\n+---------+",
+        "+---------+\n| n       |\n+---------+\n| 999     |\n+---------+",
+        "+---------+\n| n       |\n+---------+\n| 1580.00 |\n+---------+"
+      ],
+      "answer": 2,
+      "explanation": "All payment amounts are positive and total 1580.00 BDT."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which operation reduces result rows to one row per section?",
+      "options": [
+        "GROUP BY section_id",
+        "PARTITION BY section_id alone",
+        "ROW_NUMBER alone"
+      ],
+      "answer": 0,
+      "explanation": "Window partitions group calculations while preserving rows. GROUP BY changes result granularity."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which rank sequence follows marks 90, 90, 80?",
+      "options": [
+        "RANK: 1, 1, 2",
+        "RANK: 1, 1, 3",
+        "RANK: 1, 2, 3"
+      ],
+      "answer": 1,
+      "explanation": "RANK counts the two tied rows before the next row, leaving a gap."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why avoid student_id inside the RANK ordering when equal marks should tie?",
+      "options": [
+        "Identifiers cannot be sorted.",
+        "RANK requires exactly two columns.",
+        "The unique identifier would split mark peers."
+      ],
+      "answer": 2,
+      "explanation": "Rank peers are defined by the entire window ORDER BY, not only the first column."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Can WHERE directly test ROW_NUMBER() in the same SELECT block?",
+      "options": [
+        "No; filter it in an outer query.",
+        "Yes; WHERE runs after window calculations.",
+        "Only if PARTITION BY is omitted."
+      ],
+      "answer": 0,
+      "explanation": "WHERE filters input before the window is evaluated. A derived table exposes the computed value."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What does PARTITION BY order_id do to a running payment total?",
+      "options": [
+        "Collapses payments into one row",
+        "Restarts the sum for each order",
+        "Sorts the final display by order"
+      ],
+      "answer": 1,
+      "explanation": "Partitioning defines independent windows. Final display ordering remains separate."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which frame makes the cumulative sum advance one ordered row at a time?",
+      "options": [
+        "RANGE CURRENT ROW only",
+        "ROWS BETWEEN 1 FOLLOWING AND 2 FOLLOWING",
+        "ROWS UNBOUNDED PRECEDING"
+      ],
+      "answer": 2,
+      "explanation": "The frame begins at the first row and ends at the current row; a unique order fixes the sequence."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why does a window over results omit section 36?",
+      "options": [
+        "No result row exists in that section.",
+        "PARTITION BY deletes the section.",
+        "Window functions require three rows per partition."
+      ],
+      "answer": 0,
+      "explanation": "Windows decorate existing input rows. An outer join is needed to introduce missing categories."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which rule includes the best two distinct mark levels, including ties?",
+      "options": [
+        "A LIMIT 2 without ordering",
+        "DENSE_RANK() over marks at most two",
+        "ROW_NUMBER() at most two"
+      ],
+      "answer": 1,
+      "explanation": "Dense ranking counts mark levels; row numbering and LIMIT count rows."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What can a same-block WHERE marks >= 80 change before ranking?",
+      "options": [
+        "Only the final display order",
+        "Only the stored marks",
+        "The population seen by the window"
+      ],
+      "answer": 2,
+      "explanation": "WHERE filters input first. To rank all rows and later filter a ranking, use an outer query."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Window calculations retain individual rows instead of collapsing groups.",
+      "bn": "উইন্ডো ফাংশনে গ্রুপের সারিগুলো আলাদা থাকে।"
+    },
+    {
+      "en": "PARTITION BY restarts a window calculation for each group.",
+      "bn": "PARTITION BY দিলে প্রতিটি গ্রুপে হিসাব নতুন করে শুরু হয়।"
+    },
+    {
+      "en": "RANK leaves gaps after ties; DENSE_RANK does not.",
+      "bn": "সমান মানের পর RANK-এ ফাঁক থাকে, DENSE_RANK-এ থাকে না।"
+    },
+    {
+      "en": "ROW_NUMBER needs a unique ordering for predictable numbering.",
+      "bn": "ROW_NUMBER-এর নম্বর স্থির রাখতে অর্ডারে টাই ভাঙার কলাম দাও।"
+    },
+    {
+      "en": "An explicit ROWS frame gives a row-by-row running sum.",
+      "bn": "স্পষ্ট ROWS ফ্রেম দিলে সারি ধরে চলতি যোগফল পাওয়া যায়।"
+    },
+    {
+      "en": "Filter window results through an outer query or CTE.",
+      "bn": "উইন্ডো ফাংশনের ফল দিয়ে বাছতে বাইরের কোয়েরি বা CTE ব্যবহার করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "A section has marks 90, 90, 80. Compare ROW_NUMBER, RANK and DENSE_RANK, and choose a function for two prize places including ties.",
+      "marks": 6,
+      "answerHtml": "<p>ROW_NUMBER gives 1, 2, 3 after a deterministic tie breaker. RANK gives 1, 1, 3. DENSE_RANK gives 1, 1, 2. For the best two distinct mark levels including ties, use DENSE_RANK &lt;= 2 and include all three students. For competition places 1 and 2, RANK &lt;= 2 keeps only the tied leaders.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Two payments on the same date produce the same SUM OVER (ORDER BY paid_on). Why, and how do you obtain one step per payment?",
+      "marks": 8,
+      "answerHtml": "<p>The default ordered aggregate frame uses RANGE through the current peer group. Equal dates are peers, so both rows include both payments. Use ORDER BY paid_on, payment_id with ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW. Keep the final ORDER BY aligned to make the printed progression visible.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Explain AVG(marks) OVER (PARTITION BY section_id ORDER BY student_id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW).",
+      "marks": 8,
+      "answerHtml": "<p>Each section starts a new calculation. The first row averages only itself because no preceding row exists. Later rows average the current mark and the preceding student-id row in that section. This is a two-row moving average, not a two-mark-value range and not an academic ranking.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Return section_id and student_id for ROW_NUMBER = 1 using descending marks then ascending id. Next delete all results in a transaction, repeat the report, and roll back.",
+      "marks": 8,
+      "answerHtml": "<p>In a derived table compute ROW_NUMBER partitioned by section_id and ordered by marks descending then student_id. In the outer query keep position one and order by section_id. The leaders are 101, 103, 102, 104 and 105 for sections 31 through 35. Deleting all results inside a transaction makes the repeated report empty; rollback restores it.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Window Functions",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/window-functions.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

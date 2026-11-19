@@ -1,0 +1,67 @@
+<h2 id="introduction">Name the steps in a report</h2>
+<p class="lead">A shop balance report needs item totals and payment totals before it can compare billed and paid amounts. Putting all of that into one nested expression can be difficult to read. A common table expression lets you give each intermediate question a name within the statement.</p>
+<p>A <dfn>common table expression</dfn>, usually shortened to CTE, is a named query result introduced by WITH. The main query can use its name as a relation. The name is temporary in a very specific sense: its scope is one SQL statement, not the lifetime of the connection.</p>
+<p>A nonrecursive CTE helps arrange work into readable stages. A recursive CTE adds a way to repeatedly follow relationships, such as a mentor&#x27;s team of teachers. These two uses share the WITH structure but need different reasoning. Recursion must have a starting population, a progress rule and a clear way to stop.</p>
+<p>The university dataset has teachers but no mentoring hierarchy. The recursive examples therefore create a small teacher_links relation referencing those existing teachers. That extra relation belongs to the local example. It introduces the hierarchy explicitly instead of pretending that ordinary department membership is a parent-child relationship.</p>
+<h2 id="syntax">Separate ordinary names from recursive self-reference</h2>
+<p>A nonrecursive WITH clause has a name, AS, and a parenthesized SELECT. The main SELECT follows it. Several definitions share one WITH keyword and are separated by commas. Later definitions can build on earlier ones, so choose names that describe the stage rather than the order you happened to write it.</p>
+<p>The item_totals CTE groups order_items by order_id. payment_totals groups payments independently. The final query joins those summaries to orders. Each summary has at most one row per order, which is the property that prevents item-payment multiplication. Naming the stages helps you inspect that cardinality directly.</p>
+<p>A recursive definition uses WITH RECURSIVE. Its first member is the anchor, which produces the starting rows without referring to the CTE. The recursive member refers to the CTE and expands the preceding round. UNION ALL combines the rows across rounds in the examples.</p>
+<p>The output columns of the anchor and recursive member must align in number and compatible types. Column names and important type widths come from the nonrecursive part. A growing path string needs an anchor cast wide enough to hold later paths. A short initial string does not imply that later concatenations may grow without limit.</p>
+<p>MySQL restricts what the recursive member may do. It cannot contain aggregate or window functions, GROUP BY, ORDER BY or DISTINCT in that member, and the recursive reference has placement restrictions. Keep recursion focused on expansion, then sort, aggregate or rank the completed result in an outer query.</p>
+<pre><code class="language-sql">WITH RECURSIVE &lt;walk_name&gt; AS (
+    &lt;anchor_query&gt;
+    UNION ALL
+    &lt;recursive_query_with_stop_condition&gt;
+)
+SELECT &lt;columns&gt; FROM &lt;walk_name&gt; ORDER BY &lt;display_order&gt;;</code></pre>
+<h2 id="how-it-works">Trace a hierarchy one round at a time</h2>
+<p>The mentoring relation gives Nusrat, teacher 11, no mentor. Arif, 12, and Sajid, 14, report to 11. Farhana, 13, reports to 12. Selecting rows with mentor_id IS NULL seeds the root. The anchor assigns depth zero because no relationship has yet been followed.</p>
+<p>In the first recursive round, join teacher_links children to the current parent rows. Teachers 12 and 14 match parent 11, so both receive depth one. In the next round, teacher 13 matches parent 12 and receives depth two. Parent 14 has no child and contributes nothing further.</p>
+<p>The following round finds no children below teacher 13. With no new rows, the recursive process stops. The final result includes the anchor and every generated round. ORDER BY depth, teacher_id prints a level-by-level view, but it does not dictate the server&#x27;s internal traversal schedule.</p>
+<p>Starting at a named teacher asks a different question from starting at all roots. A walk anchored at 12 includes 12 and 13. A walk anchored at leaf 14 includes only 14. A root-only anchor cannot discover a disconnected cyclic component with no root, so anchor choice is part of the report&#x27;s meaning.</p>
+<p>Depth counts edges from the selected start. The anchor is zero; every expansion adds one. A predicate such as parent.depth &lt; 10 permits a child at depth ten but does not expand it further. Check that boundary carefully when a policy says ten levels, since people sometimes count the starting level as one.</p>
+<p>A foreign key on mentor_id guarantees that a referenced teacher exists. It does not prevent cycles. Teachers could reference each other, or a longer chain could return to an earlier teacher. Such data can keep generating rows forever when UNION ALL is used without another guard.</p>
+<p>The cyclic example tracks a comma-delimited visited path. Before appending a child, it searches for that child&#x27;s complete identifier token in the parent&#x27;s path. Delimiters matter: looking for 1 inside 11 would produce a false match. The guard rejects a repeated identifier within that path and prevents the cycle from expanding again.</p>
+<p>A depth limit complements the path guard. It bounds work even if unexpected data or a path-encoding mistake appears. It is still a deliberate truncation policy, not proof that the entire hierarchy was visited. If a legitimate path is deeper than the limit, the report stops early and should describe that limitation.</p>
+<table class="ref">
+<caption>New rows in each mentoring expansion round</caption>
+<thead><tr><th scope="col">Round</th><th scope="col">Teachers produced</th><th scope="col">Depth</th></tr></thead>
+<tbody>
+<tr><td>Anchor</td><td>11 Nusrat</td><td>0</td></tr>
+<tr><td>First expansion</td><td>12 Arif and 14 Sajid</td><td>1</td></tr>
+<tr><td>Second expansion</td><td>13 Farhana</td><td>2</td></tr>
+<tr><td>Next expansion</td><td>No children; stop</td><td>No new depth</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Build stages before walking relationships</h2>
+<p>The first report names ordinary per-student summaries. The shop example then names two independent aggregates before joining them. Neither query needs recursion because each stage can be computed without referring to itself.</p>
+<p>The hierarchy examples add self-reference. In the cyclic case, teacher 11 is assigned mentor 13, creating the loop 11 to 12 to 13 to 11 when following children. An explicit anchor at 11 ensures the walk starts even though there is no longer a root for that component.</p>
+<p>The path column both explains the traversal and provides its visited check. CAST reserves 200 characters for this small example. Larger identifiers or deeper hierarchies need an appropriate capacity or another representation. A path that silently cannot hold the intended traversal is not a reliable safety mechanism.</p>
+<h3>Name a per-student result summary</h3>
+<p>The CTE supplies six student summaries for this one statement. It does not create a permanent table.</p>
+<div data-example="ex-1"></div>
+<h3>Keep payment and item totals independent</h3>
+<p>Order 202 has 1380.00 billed and 1380.00 paid. Separate aggregation avoids the two-item, two-payment multiplication.</p>
+<div data-example="ex-2"></div>
+<h3>Walk a small mentoring hierarchy</h3>
+<p>Nusrat is depth 0; Arif and Sajid are depth 1; Farhana is depth 2. The local teaching relation extends the shared teachers without changing the dataset.</p>
+<div data-example="ex-3"></div>
+<h3>Stop a cyclic walk using a visited path</h3>
+<p>Starting explicitly at 11 still visits four teachers. The path rejects revisiting 11 through 13; commas prevent confusing identifier 1 with 11.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">A different depth still makes a different row</h2>
+<h3>Deduplication uses the complete recursive state</h3>
+<p>UNION DISTINCT can remove duplicate complete rows, but it does not automatically recognize repeated entities. If the recursive result includes depth, the rows (11,0) and (11,3) differ. A cycle can keep producing new depths, so distinct combination alone will not stop that traversal.</p>
+<p>An identity-only recursion with distinct combination can stop revisits when its state really is just that identity. Adding a path, running cost or depth changes the state and the deduplication rule. Explain which state determines progress before choosing an operator. A cycle policy should not depend on accidental duplicate suppression.</p>
+<h3>CTE scope and physical execution differ</h3>
+<p>Another common mistake is using a CTE name in the next statement. The semicolon ends its scope. If a second report needs the same stage, repeat the WITH definition or choose a persistent object such as a view when that better fits the application. A CTE is not a connection-wide temporary table.</p>
+<p>Do not assume that a CTE is always faster than a derived table. MySQL can merge or materialize suitable nonrecursive CTEs according to optimizer rules. A clear named stage improves readability, but its physical storage and execution are separate decisions. Inspect the plan when performance matters.</p>
+<p>Recursive expansion can grow rapidly when the relationship is a graph rather than a tree. One person reachable through several paths may appear several times even without a cycle. Decide whether the report needs every path or each person once. A per-path visited guard prevents cycles but still permits several valid routes to the same teacher.</p>
+<h2 id="best-practices">Define the traversal contract first</h2>
+<p>Write the anchor condition in everyday language: all roots, one selected mentor, or another chosen population. Then state what one recursive step means and what depth measures. Finally state whether repeated people across different paths should remain. Those decisions determine the SQL structure.</p>
+<p>Keep a small trace table while designing recursion. Include the current teacher, mentor, depth and visited path where relevant. Test a root, an interior node, a leaf and a cycle. These cases reveal anchor errors and stopping errors more effectively than a single long acyclic chain.</p>
+<h2 id="version-notes">Use the server limit as a backstop</h2>
+<p>MySQL 8.0 supports recursive CTEs. The cte_max_recursion_depth setting limits recursive levels and defaults to 1000. Reaching the limit raises an error rather than returning an endorsed partial hierarchy. Do not raise it as a substitute for fixing a cycle. The shared tables additionally require 8.0.16 for enforced CHECK constraints.</p>
+<h2 id="summary">Name stages and prove recursive progress</h2>
+<p>Ordinary CTEs organise a statement; recursive CTEs expand a clearly defined state until no further rows qualify. Make roots, depth, path capacity and cycle handling explicit. Next, <a href="topic:db-stored-procedures">stored procedures and functions</a> package reusable database behaviour with parameters and control flow.</p>

@@ -1,0 +1,59 @@
+<h2 id="introduction">Give each job only the access it needs</h2>
+<p class="lead">A results clerk may need to read names and marks without changing grades. A shop application may need to create orders without managing server accounts. Separate database accounts let you express those different jobs and reduce the consequences of a mistake in one component.</p>
+<p><dfn>Authentication</dfn> checks who is connecting. <code>Authorization</code> checks what that account may do. A successful login does not imply permission to read every table. Keeping these checks separate makes an access-denied error easier to diagnose without handing out unnecessary administrator rights.</p>
+<p>The <code>least privilege</code> principle means granting only the actions and data a job actually needs. It applies to operation type, object scope, visible columns, delegation and account lifetime. A read-only reporting account should not receive global administration merely because that makes the first query succeed.</p>
+<p>The exercises run as an administrator inside an isolated teaching server. They create a specifically named temporary account, inspect narrow grants and remove it afterward. The sample password exists only for these local exercises. Real application credentials belong in protected runtime secret configuration, with an appropriate rotation process.</p>
+<h2 id="syntax">An account includes its host</h2>
+<p>MySQL identifies an account by both user name and host, such as <code>&#x27;report_reader&#x27;@&#x27;localhost&#x27;</code>. Another host part can identify a different account with different credentials and privileges. Do not treat the visible user name alone as the complete identity when diagnosing access.</p>
+<p>CREATE USER creates the account and its authentication configuration. It does not automatically grant table access to the database selected in the current connection. GRANT supplies specific privileges, such as SELECT on one view or UPDATE on a chosen column. REVOKE removes a granted privilege; DROP USER removes the account.</p>
+<p>Privilege scopes include global, database, table and column levels. A grant on every database is much broader than a grant on students in one schema. Column-level grants can restrict edits such as UPDATE(hometown), but you must also consider read privileges needed by the actual update predicates and expressions.</p>
+<p>The current exercise database has a generated name. The examples use DATABASE() and prepared SQL to insert that name into the GRANT or REVOKE statement. Identifiers cannot be supplied through ordinary value placeholders, so the schema name is quoted as an identifier. This code uses only the trusted database name created for the exercise.</p>
+<p>Do not build privilege statements by concatenating untrusted user input. Values and identifiers need different handling, and administrative SQL deserves a narrow interface. In an application, account management is usually an administrative responsibility rather than a feature exposed to ordinary end users.</p>
+<pre><code class="language-sql">CREATE USER &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27; IDENTIFIED BY &#x27;&lt;local_secret&gt;&#x27;;
+GRANT &lt;needed_privileges&gt; ON &lt;schema&gt;.&lt;object&gt; TO &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;
+REVOKE &lt;removed_privileges&gt; ON &lt;schema&gt;.&lt;object&gt; FROM &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;
+DROP USER &#x27;&lt;user&gt;&#x27;@&#x27;&lt;host&gt;&#x27;;</code></pre>
+<h2 id="how-it-works">Trace grants from creation to removal</h2>
+<p>Immediately after CREATE USER, the account has no table grants in the current schema. The first example counts metadata rows to demonstrate that absence. Creating an account is therefore not the same action as making a reporting login useful; the relevant data permissions must be added deliberately.</p>
+<p>Granting SELECT on students creates a table-level authorization for that account. The information_schema.table_privileges report shows SELECT for the current schema and table. After REVOKE SELECT on that same scope, the report becomes empty. The account still exists until DROP USER executes.</p>
+<p>The two-operation practice grants SELECT and UPDATE, then revokes UPDATE. SELECT remains. REVOKE is selective: it removes the specified grant rather than resetting the entire account. Conversely, revoking one table-level grant is not a deny rule that overrides all possible broader grants.</p>
+<p>MySQL permissions are additive across applicable scopes and active roles. A database-level SELECT can still authorize a read after a table-level SELECT is removed. An active role can also supply access. Inspect the full effective grant design before concluding that a narrow revoke successfully removed the capability.</p>
+<p>A name-only view can provide an approved reporting interface. With SQL SECURITY DEFINER, underlying access is checked using the definer context. The reader needs SELECT on the view but need not receive direct SELECT on students. In a real deployment, choose a narrowly privileged view owner instead of an unnecessarily powerful administrator.</p>
+<p>The example definition is created by the exercise administrator so it can be executed in the fresh database. That convenience is not a recommended production owner policy. The security lesson is the separation between a caller&#x27;s view privilege and the definer&#x27;s underlying privileges, plus the need to close alternate base-table access.</p>
+<p>Column-level UPDATE(hometown) authorizes an even narrower kind of edit. Its metadata appears in column_privileges rather than as a complete table UPDATE grant. When designing a real statement, test the whole operation under the target account, including any columns read in WHERE. An isolated grant listing does not prove application compatibility.</p>
+<table class="ref">
+<caption>Life of the isolated reader account</caption>
+<thead><tr><th scope="col">Administrative step</th><th scope="col">Account exists</th><th scope="col">Direct student-table grants</th></tr></thead>
+<tbody>
+<tr><td>CREATE USER</td><td>Yes</td><td>None</td></tr>
+<tr><td>GRANT SELECT, UPDATE</td><td>Yes</td><td>SELECT and UPDATE</td></tr>
+<tr><td>REVOKE UPDATE</td><td>Yes</td><td>SELECT only</td></tr>
+<tr><td>DROP USER</td><td>No</td><td>Account removed</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Inspect exact operations and scopes</h2>
+<p>The first account receives no table access. The next receives one table operation and loses it again. The view example grants a read on a restricted interface. None of these exercises grants ALL, global access or GRANT OPTION to the temporary reader.</p>
+<p>The metadata queries run through the administrative connection so you can inspect the grants consistently. They are not a substitute for testing login and allowed or denied statements as the target user. A complete deployment review should use that user&#x27;s connection and verify both successful reads and rejected writes.</p>
+<h3>Create an account without table access</h3>
+<p>The new account has no table grants. This example removes the teaching account after inspection.</p>
+<div data-example="ex-1"></div>
+<h3>Grant only student reads, then revoke them</h3>
+<p>The first privilege report contains SELECT; the second is empty. Dynamic SQL names the current exercise database rather than a fixed schema.</p>
+<div data-example="ex-2"></div>
+<h3>Expose names through a narrowly owned view</h3>
+<p>The account receives SELECT on public_students only. The example view is owned by the exercise administrator; a deployed view should use a narrowly privileged owner.</p>
+<div data-example="ex-3"></div>
+<h2 id="common-mistakes">Broad access can survive a narrow revoke</h2>
+<h3>Inspect every source of authority</h3>
+<p>A user may still read students after a table-level SELECT revoke because a broader database or global privilege remains. Roles can supply another source. Review SHOW GRANTS and the relevant role configuration, then remove the actual broad source if policy requires it. MySQL privileges do not work as a general table-level deny system.</p>
+<p>Do not respond to an access error by granting ALL ON *.*. That can add account-management and data-changing powers far beyond one failed report. Identify the denied operation, object and effective account first. Grant the narrow missing capability only when the job should genuinely have it.</p>
+<h3>Verify account context and reconnect</h3>
+<p>USER() and CURRENT_USER() can help distinguish the connection identity from the authenticated account context. Host matching and server configuration can make assumptions about local connections misleading. Inside definer objects, security context adds another distinction, so inspect these functions in the relevant calling context rather than reading one value as a universal identity.</p>
+<p>Grant changes can take effect at different times depending on privilege scope and active sessions. For a clean verification, reconnect as the target account after the administrative change. Directly editing mysql system grant tables is not the normal management workflow. CREATE USER, GRANT and REVOKE maintain privileges without a routine FLUSH PRIVILEGES step.</p>
+<h2 id="best-practices">Verify allowed work and rejected work</h2>
+<p>Maintain separate application and administrator accounts. Give report readers no data-changing privileges unless their role requires them. Avoid GRANT OPTION unless controlled delegation is part of the job. Review host restrictions, password management and account removal alongside object grants.</p>
+<p>Test the actual report using a fresh connection as the intended account. Confirm that approved view reads succeed and direct sensitive-table reads or writes fail as designed. Also inspect broad grants and active roles. A successful narrow example cannot prove that no alternate authorization source exists.</p>
+<h2 id="version-notes">Account management is explicit in MySQL 8</h2>
+<p>MySQL 8.0 and 8.4 use explicit CREATE USER before GRANT; GRANT is not an implicit account-creation shortcut. Authentication defaults differ across releases, so avoid copying obsolete plugin instructions without checking the server. The dataset baseline remains 8.0.16, while the account-management actions here require suitable administrative privileges.</p>
+<h2 id="summary">Review effective authority, not only one grant</h2>
+<p>An account has an identity, authentication settings and additive privilege sources. Grant the smallest useful interface, remove unnecessary access and verify through a target-user connection. Next, <a href="topic:db-functional-dependencies">functional dependencies</a> shifts from controlling access to reasoning about the rules that should shape table design.</p>

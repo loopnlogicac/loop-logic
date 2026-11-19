@@ -1,0 +1,444 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-subqueries",
+  "module": "sql-advanced",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Subqueries",
+    "bn": "সাবকোয়েরি"
+  },
+  "summary": {
+    "en": "Use nested queries for comparisons, membership and existence without losing NULL or duplicate meaning.",
+    "bn": "সাবকোয়েরি দিয়ে তুলনা, তালিকায় থাকা আর ম্যাচ আছে কি না পরীক্ষা করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-joins"
+  ],
+  "related": [],
+  "keywords": [
+    "subqueries",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Ask a small question inside a larger one"
+    },
+    {
+      "id": "syntax",
+      "title": "Match the subquery shape to the comparison"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Distinguish membership, witnesses and universal tests"
+    },
+    {
+      "id": "examples",
+      "title": "Follow the smaller question to its answer"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Protect meaning around NULL"
+    },
+    {
+      "id": "best-practices",
+      "title": "Choose a readable equivalent before tuning"
+    },
+    {
+      "id": "version-notes",
+      "title": "Keep the result shape portable"
+    },
+    {
+      "id": "summary",
+      "title": "State the inner question precisely"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Compare each mark with the overall mean",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The mean is about 67.18. Six results exceed it; the aggregate subquery returns one scalar value.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Match a composite enrollment identity",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The row subquery compares both key columns together. Ayesha has 85 and Tanvir has 65 in section 31.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Use ANY and ALL for comparisons",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>Backpack at 1200.00 exceeds at least one study price, 850.00. Nothing exceeds every study price.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Find students without registration",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The inner predicate changes for each student. Only Fahim has no enrollment match.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Compare a result with its own section mean",
+      "level": "advanced",
+      "file": "examples/ex-5.sql",
+      "output": "examples/ex-5.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Section 31 has mean 75, so 85 qualifies and 65 does not. Correlation compares each mark with the relevant group.</p>"
+    },
+    {
+      "id": "ex-6",
+      "title": "Name a derived payment summary",
+      "level": "intermediate",
+      "file": "examples/ex-6.sql",
+      "output": "examples/ex-6.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The table subquery creates one summary per paid order. Orders 203 and 204 have no payments and display 0.00.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Find missing results safely",
+      "statementHtml": "<p>List student_id and section_id for enrollments without results, ordered by both keys. Delete every result inside a transaction, repeat the report, then roll back.</p>",
+      "hints": [
+        "Compare the whole composite identity."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Compare against a possibly empty price group",
+      "statementHtml": "<p>Return product_id for products priced above ALL study products, ordered by id. Change the study products category to archive inside a transaction, repeat, and roll back.</p>",
+      "hints": [
+        "ALL succeeds when no comparison can be false."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "A nullable exclusion list",
+      "statementHtml": "<p>Explain why 101 NOT IN (102, NULL) is unknown. Give a safer exclusion design.</p>",
+      "hints": [
+        "Expand NOT IN into AND comparisons."
+      ],
+      "answerHtml": "<p>101 differs from 102, but comparison with NULL is unknown. NOT IN needs both differences to be true. Use NOT EXISTS with an equality against a correlated candidate key, and decide separately whether NULL outer keys should be retained.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Scalar cardinality",
+      "statementHtml": "<p>What do scalar subqueries returning zero rows and two rows do? Compare them with AVG on an empty table.</p>",
+      "hints": [
+        "Distinguish the number of rows from their values."
+      ],
+      "answerHtml": "<p>A zero-row scalar subquery gives NULL. A two-row scalar subquery raises a cardinality error even if the two values match. AVG without GROUP BY returns one row containing NULL on empty input, so it satisfies scalar cardinality.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many students have at least one result according to EXISTS?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students AS s WHERE EXISTS (SELECT 1 FROM results AS r WHERE\n    r.student_id = s.student_id);\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 6 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "Six students have results; Sadia and Fahim do not."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many enrollments lack a matching composite result key?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM enrollments AS e WHERE NOT EXISTS (SELECT 1 FROM results AS r WHERE\n    r.student_id = e.student_id AND r.section_id = e.section_id);\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Only the enrollment for student 107 is pending."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many products exceed ALL prices of an absent category?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM products WHERE price_bdt > ALL (SELECT price_bdt FROM products WHERE\n    category = 'absent');\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 6 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "The empty comparison set makes ALL true for all six non-null prices."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does an empty scalar subquery supply?",
+      "options": [
+        "NULL",
+        "Zero",
+        "A cardinality error"
+      ],
+      "answer": 0,
+      "explanation": "No row becomes a NULL scalar. Multiple rows, rather than zero rows, cause the cardinality error."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which subquery form can compare student_id and section_id together?",
+      "options": [
+        "A subquery returning three unrelated columns",
+        "A row subquery",
+        "Only a scalar aggregate"
+      ],
+      "answer": 1,
+      "explanation": "A row comparison has matching arity and compares the composite identity."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why can EXISTS use SELECT 1?",
+      "options": [
+        "The returned value must equal one.",
+        "EXISTS sums the ones.",
+        "Only the presence of a row matters."
+      ],
+      "answer": 2,
+      "explanation": "EXISTS ignores the selected value. SELECT NULL also establishes existence when a row is returned."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What is price > ANY over an empty price set?",
+      "options": [
+        "False",
+        "True",
+        "Always NULL"
+      ],
+      "answer": 0,
+      "explanation": "There is no witness satisfying the comparison; ALL has the opposite empty-set rule."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which nested query refers to r.section_id from its enclosing query?",
+      "options": [
+        "An independent view definition",
+        "A correlated subquery",
+        "An uncorrelated scalar constant"
+      ],
+      "answer": 1,
+      "explanation": "The outer reference makes the inner condition depend on the current result row."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why can replacing IN with an ordinary join increase row counts?",
+      "options": [
+        "IN always sorts the table.",
+        "A join disables WHERE.",
+        "Several inner matches can repeat one outer row."
+      ],
+      "answer": 2,
+      "explanation": "Membership is one yes/no decision. A join emits each matching pair unless uniqueness prevents repetition."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What must a derived table in FROM have in MySQL?",
+      "options": [
+        "A table alias",
+        "An ORDER BY even when not displayed",
+        "Exactly one row"
+      ],
+      "answer": 0,
+      "explanation": "The alias names the temporary relation for column references; many rows are allowed."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Is EXISTS (SELECT NULL FROM enrollments WHERE student_id = 101) true?",
+      "options": [
+        "It is unknown because the selected value is NULL.",
+        "Yes; a matching row exists.",
+        "No; NULL cannot establish existence."
+      ],
+      "answer": 1,
+      "explanation": "EXISTS depends on whether any row is returned, not on the selected value."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Can separate student-id and section-id IN lists replace composite enrollment membership?",
+      "options": [
+        "Yes; two IN tests always preserve pair identity.",
+        "Only if ORDER BY uses both columns.",
+        "Not generally; they can combine values from different pairs."
+      ],
+      "answer": 2,
+      "explanation": "The pair must match within one inner row. Independent lists can admit a pair that was never enrolled."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A scalar subquery must return at most one row and one column.",
+      "bn": "স্কেলার সাবকোয়েরিতে সর্বোচ্চ এক সারি আর এক কলাম থাকতে পারে।"
+    },
+    {
+      "en": "EXISTS asks whether any matching row is present.",
+      "bn": "EXISTS দিয়ে ম্যাচ করে এমন কোনো সারি আছে কি না দেখো।"
+    },
+    {
+      "en": "A correlated subquery refers to its outer row.",
+      "bn": "করিলেটেড সাবকোয়েরি বাইরের কোয়েরির সারির মান ব্যবহার করে।"
+    },
+    {
+      "en": "NOT IN can become unknown when its list contains NULL.",
+      "bn": "NOT IN-এর তালিকায় NULL থাকলে শর্তের ফল অজানা হতে পারে।"
+    },
+    {
+      "en": "ALL over an empty set is true; ANY is false.",
+      "bn": "খালি সেটের জন্য ALL সত্য হয়, আর ANY মিথ্যা হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Explain why 101 NOT IN (102, NULL) is unknown. Give a safer exclusion design.",
+      "marks": 6,
+      "answerHtml": "<p>101 differs from 102, but comparison with NULL is unknown. NOT IN needs both differences to be true. Use NOT EXISTS with an equality against a correlated candidate key, and decide separately whether NULL outer keys should be retained.</p>"
+    },
+    {
+      "type": "design",
+      "question": "What do scalar subqueries returning zero rows and two rows do? Compare them with AVG on an empty table.",
+      "marks": 8,
+      "answerHtml": "<p>A zero-row scalar subquery gives NULL. A two-row scalar subquery raises a cardinality error even if the two values match. AVG without GROUP BY returns one row containing NULL on empty input, so it satisfies scalar cardinality.</p>"
+    },
+    {
+      "type": "program",
+      "question": "List student_id and section_id for enrollments without results, ordered by both keys. Delete every result inside a transaction, repeat the report, then roll back.",
+      "marks": 8,
+      "answerHtml": "<p>Select each enrollment for which NOT EXISTS a result matching both student_id and section_id. Order by those two keys. Initially only (107,35) appears. Delete results inside a transaction and repeat: all twelve enrollments now qualify. ROLLBACK restores the original results.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Subqueries",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/subqueries.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

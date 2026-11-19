@@ -1,0 +1,74 @@
+<h2 id="introduction">Give repeated database work a callable interface</h2>
+<p class="lead">Several reports may need to count a student&#x27;s registrations or assign the same pass label. Copying the logic into every caller makes changes harder to coordinate. A stored routine gives that behaviour a name inside the database and accepts values through parameters.</p>
+<p>A <dfn>stored procedure</dfn> is a database routine invoked with CALL. It can perform several statements, return result sets and pass values back through parameters. A <code>stored function</code> returns one declared scalar value and can be used in an expression. Choose by the required interface, rather than by which syntax looks shorter.</p>
+<p>Storing logic in the database does not automatically make it faster or safer. The routine still needs clear privileges, sensible transaction boundaries and understandable error handling. A complicated routine can hide expensive queries just as easily as an application function can.</p>
+<p>The examples use registration counts, result labels and a bounded arithmetic loop. The count works with the shared enrollment table. The label reflects the teaching pass boundary already used by results. The small loop isolates control flow without claiming that row-by-row processing is the best way to summarise a table.</p>
+<h2 id="syntax">Send a complete definition through the client</h2>
+<p>A routine body often contains BEGIN and END with several semicolon-terminated statements between them. The mysql command-line client normally treats a semicolon as the end of the submission. DELIMITER temporarily changes that client terminator so the whole routine definition can be sent together.</p>
+<p>DELIMITER is not server SQL. In the examples, DELIMITER // tells the client to wait for //. Semicolons inside the body remain ordinary SQL statement separators. After the definition ends with END//, DELIMITER ; restores normal client behaviour. Many application drivers send the complete definition directly and do not understand a DELIMITER command.</p>
+<p>CREATE PROCEDURE declares the routine name and parameters. IN supplies a value to the procedure. OUT sends a value back to the caller. INOUT does both. The caller commonly supplies session variables such as @registrations as writable receivers for OUT and INOUT arguments.</p>
+<p>CREATE FUNCTION also declares a RETURNS type. Its RETURN statements must provide a compatible value. A stored function has no OUT parameter list like a procedure; it returns its scalar result through the function expression. The pass_label function therefore fits naturally beside marks in a SELECT list.</p>
+<p>The examples declare SQL SECURITY INVOKER. This uses the caller&#x27;s privileges rather than lending the routine owner&#x27;s privileges. Callers still need EXECUTE access as well as any underlying rights required by invoker execution. A production design should review both the routine interface and its effective security context.</p>
+<pre><code class="language-sql">DELIMITER //
+CREATE PROCEDURE &lt;name&gt;(IN &lt;input_name&gt; INT, OUT &lt;output_name&gt; INT)
+SQL SECURITY INVOKER
+BEGIN
+    DECLARE &lt;local_name&gt; INT DEFAULT 0;
+    &lt;statements_using_parameters_and_locals&gt;;
+END//
+DELIMITER ;</code></pre>
+<h2 id="how-it-works">Follow values through parameters and local state</h2>
+<p>When you call count_registrations for student 101, IN p_student_id receives 101. SELECT COUNT(*) computes three and assigns it into the OUT parameter. When CALL finishes, the caller&#x27;s @registrations variable receives that value. A separate SELECT displays it without needing the procedure to emit a result set itself.</p>
+<p>Student 108 has no enrollment. COUNT without GROUP BY still returns one row containing zero, so the OUT parameter becomes zero. This is different from SELECT INTO returning no ordinary row, which needs careful handling because a variable may retain a previous value. Aggregate shape can simplify a routine&#x27;s contract.</p>
+<p>A <code>local variable</code> exists within its BEGIN-END block. DECLARE statements appear before executable statements in that block. DEFAULT can initialise a value, and SET changes it later. Local variables such as v_count differ from @session_variables, which belong to the connection and can remain after the routine returns.</p>
+<p>Distinct prefixes help prevent ambiguous names. p_student_id is an input, v_count is local state and student_id is a table column. Without that separation, a predicate like student_id = student_id may compare the wrong objects and count every row. Qualifying columns with aliases gives another useful layer of clarity.</p>
+<p>IF checks conditions in order. The result_status procedure first counts recorded results. A zero count produces no results; otherwise it produces recorded. That message describes presence, not academic success. A student with a fail grade still has a recorded result and must not be classified as pending.</p>
+<p>The function checks NULL before comparing a mark with 40. SQL comparisons with NULL are unknown, so handling it explicitly makes the chosen pending label visible. For known marks, 40 and above return pass and lower values return fail. The function is a teaching label, not a replacement for validating marks against the table constraint.</p>
+<p>The WHILE procedure starts v_step at one and p_total at zero. Every iteration adds the current step and then increments it. A limit of four produces totals one, three, six and ten. A limit of zero performs no iterations because the first condition is already false.</p>
+<p>Validation rejects a NULL limit, negative limit or limit above 100 before the loop starts. This bounds both the work and the integer result for the example. SIGNAL with SQLSTATE 45000 reports an application-defined failure. Clear validation is better than allowing an unreasonable loop to run until a timeout.</p>
+<table class="ref">
+<caption>Trace sum_steps with a limit of four</caption>
+<thead><tr><th scope="col">Point</th><th scope="col">v_step used</th><th scope="col">p_total afterward</th></tr></thead>
+<tbody>
+<tr><td>Initial state</td><td>Not yet added</td><td>0</td></tr>
+<tr><td>First iteration</td><td>1</td><td>1</td></tr>
+<tr><td>Second iteration</td><td>2</td><td>3</td></tr>
+<tr><td>Third iteration</td><td>3</td><td>6</td></tr>
+<tr><td>Fourth iteration</td><td>4</td><td>10</td></tr>
+<tr><td>Next condition</td><td>5 exceeds limit</td><td>Loop ends at 10</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Inspect both ordinary and boundary calls</h2>
+<p>The registration procedure is called for a student with several enrollments and one with none. The IF example then distinguishes pending results from recorded ones. These are related questions with different source tables and should not be collapsed into one vague status.</p>
+<p>The arithmetic loop demonstrates local state and progress. The scalar function demonstrates expression use and a NULL boundary. INOUT finally shows a parameter that begins with a caller value and returns a changed value. Reading the initial and final values is the easiest way to understand that direction.</p>
+<p>For SQL data work, prefer set-based statements when they express the task clearly. SUM over rows is usually better than fetching every row into a procedural loop. Control flow is useful for decisions and workflows; learning a loop does not make loops the default reporting tool.</p>
+<h3>Return a count through an OUT parameter</h3>
+<p>The OUT value becomes 3 for Ayesha and 0 for Fahim. A session variable receives the value after CALL.</p>
+<div data-example="ex-1"></div>
+<h3>Use IF and a local variable</h3>
+<p>The local count is zero for Sadia, so IF assigns no results. The procedure does not mistake a pending mark for zero.</p>
+<div data-example="ex-2"></div>
+<h3>Repeat a bounded calculation with WHILE</h3>
+<p>The loop adds 1 + 2 + 3 + 4 to give 10. Validation bounds the work; the increment guarantees progress.</p>
+<div data-example="ex-3"></div>
+<h3>Return a scalar from a stored function</h3>
+<p>MAT 101 labels 72 and 90 as pass and 39 as fail. The separate NULL call returns pending rather than fail.</p>
+<div data-example="ex-4"></div>
+<h3>Use INOUT to adjust a value</h3>
+<p>The input value 20.00 returns as 35.00. INOUT both reads the caller value and sends the updated value back.</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">Keep routine and transaction boundaries separate</h2>
+<h3>CALL does not define atomicity</h3>
+<p>CALL does not automatically wrap every statement of an ordinary procedure into one transaction. With autocommit enabled and no explicit transaction, several updates may commit separately. If the operation must succeed as one unit, establish a clear transaction contract between caller and procedure.</p>
+<p>Do not let a procedure unexpectedly COMMIT a transaction owned by its caller. Conversely, do not assume a caller knows that the procedure starts or ends a transaction. Document who controls the boundary. Stored functions and triggers have additional restrictions and cannot perform ordinary transaction control in the same way as a procedure.</p>
+<h3>Loop progress and function declarations are promises</h3>
+<p>A loop that never changes its condition variable can run indefinitely. Draw the condition, body and update as separate steps. Check that every path through the body eventually reaches progress or exits deliberately. Validation and a bounded limit make that reasoning easier, but they do not repair a missing increment.</p>
+<p>DETERMINISTIC claims that the same inputs give the same result. MySQL does not prove that claim by inspecting every possible execution. The pass-label function genuinely depends only on its parameter and declares NO SQL because it reads no table data. Do not copy those characteristics onto a function that reads changing rows.</p>
+<p>Stored-function creation may require extra authority or server configuration when binary logging is enabled. A failure there is an administrative policy issue, not evidence that changing the function&#x27;s declared behaviour dishonestly is acceptable. Describe its actual data access and determinism, then resolve the required privileges with the database administrator.</p>
+<h2 id="best-practices">Make routine contracts small and explicit</h2>
+<p>Choose parameter types that match the domain and validate unsupported inputs early. Return labels or counts with clear meanings, including the empty case. Keep routine names and output names specific enough that a caller can understand them without reading every statement in the body.</p>
+<p>Use a small number of purposeful routines instead of moving all application code into the server. Review their dependencies when changing tables or permissions. A routine definition can remain stored while an underlying assumption becomes false, so versioned schema changes should include the routines that depend on those assumptions.</p>
+<h2 id="version-notes">Client syntax and server features differ</h2>
+<p>The routine features shown here are supported by MySQL 8.0 and 8.4. DELIMITER belongs to the mysql client and must be adapted when definitions are submitted through another tool. The shared datasets require MySQL 8.0.16 for enforced CHECK constraints. Function-creation permissions can also depend on binary-logging settings.</p>
+<h2 id="summary">Choose the interface and trace every value</h2>
+<p>Use procedures for callable multi-step work and functions for scalar expressions. Separate local state from session variables, bound loops and state who controls transactions. Continue with <a href="topic:db-triggers">triggers</a> to see database behaviour that runs automatically in response to row changes.</p>

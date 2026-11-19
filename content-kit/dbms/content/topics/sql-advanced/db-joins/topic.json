@@ -1,0 +1,478 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-joins",
+  "module": "sql-advanced",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Joins",
+    "bn": "টেবিল জয়েন"
+  },
+  "summary": {
+    "en": "Combine related rows while keeping missing matches and duplicate counts under control.",
+    "bn": "জয়েন দিয়ে টেবিলের ডেটা মেলাও, আর ম্যাচ না পেলে সারিটা রাখবে কি না ঠিক করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-aggregate-group-by"
+  ],
+  "related": [],
+  "keywords": [
+    "joins",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Join relationships, not merely tables"
+    },
+    {
+      "id": "syntax",
+      "title": "Choose the pair rule and the preserved side"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace pairs before counting them"
+    },
+    {
+      "id": "examples",
+      "title": "Inspect preserved rows and actual pairs"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Locate filters at the right stage"
+    },
+    {
+      "id": "best-practices",
+      "title": "Make relationship assumptions visible"
+    },
+    {
+      "id": "version-notes",
+      "title": "MySQL outer-join limits"
+    },
+    {
+      "id": "summary",
+      "title": "Keep the report population explicit"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Students with department codes",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>All eight students have a matching department. The foreign key explains that coverage; the join itself does not invent departments.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Include students without enrollments",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Fahim, student 108, remains with zero enrollments. COUNT(*) would count his padded row as one.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Keep the same report using RIGHT JOIN",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The right side is students. Sadia has section 35; Fahim has a NULL section because no enrollment matches.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Build pairs and compare classmates",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The self join returns the MAT pair 104 and 108 once. The cross join makes two planning combinations without claiming course ownership.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Full outer join of enrollments and results",
+      "level": "advanced",
+      "file": "examples/ex-5.sql",
+      "output": "examples/ex-5.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The anti-match branch is empty because every result references an enrollment. The pending enrollment for 107 still appears with NULL marks.</p>"
+    },
+    {
+      "id": "ex-6",
+      "title": "Follow enrollments through sections to courses",
+      "level": "intermediate",
+      "file": "examples/ex-6.sql",
+      "output": "examples/ex-6.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Ayesha takes CSE 212, CSE 213 and MAT 101. Section identity connects the enrollment to the correct course.</p>"
+    },
+    {
+      "id": "ex-7",
+      "title": "Compare match filtering with result filtering",
+      "level": "intermediate",
+      "file": "examples/ex-7.sql",
+      "output": "examples/ex-7.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>ON preserves students 106, 107 and 108 with NULL marks. Moving the marks condition into WHERE removes all three.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Count every student in every department",
+      "statementHtml": "<p>Return department_code and COUNT(student_id) as students for all departments, ordered by code. Then delete student 108 and repeat the report inside a transaction before rolling back.</p>",
+      "hints": [
+        "The preserved table must be departments."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Find unborrowed library copies",
+      "statementHtml": "<p>List book_id and title for books with no loans, ordered by book_id. Then remove all loans in a transaction and repeat the same report before rollback.</p>",
+      "hints": [
+        "Test the non-null primary key on the optional side."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/library.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Avoid multiplied money",
+      "statementHtml": "<p>Order 202 has two items and two payments. Why is summing both after a raw join wrong? Give a correct design.</p>",
+      "hints": [
+        "Draw a two-by-two grid before adding amounts."
+      ],
+      "answerHtml": "<p>The join makes four item-payment pairs. Each item and each payment appears twice, so both sums double. First group order_items by order_id for 1380.00 BDT. Separately group payments by order_id for 1380.00 BDT. Join those one-row-per-order summaries to orders.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "An unmatched right row",
+      "statementHtml": "<p>A legacy import has result (999, 88, 70) without an enrollment. Explain which full-join branch returns it and whether the current schema accepts it.</p>",
+      "hints": [
+        "Separate query semantics from the foreign-key guarantee."
+      ],
+      "answerHtml": "<p>The left branch cannot produce it because enrollments supplies that branch. The second branch finds no enrollment and keeps the result through e.student_id IS NULL. The current composite foreign key rejects that import, so this row cannot occur while constraints remain enforced.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Choose a join for a seat plan",
+      "statementHtml": "<p>Describe the row count when 8 students are crossed with 6 sections, then explain why this is not an enrollment list.</p>",
+      "hints": [
+        "Count choices rather than recorded relationships."
+      ],
+      "answerHtml": "<p>The cross join gives 8 times 6, or 48 candidate pairs. It contains choices that nobody registered for. The enrollments table has 12 actual pairs. Join through enrollments when reporting registration; use the cross product only when all combinations are intended.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many rows does the complete student-enrollment LEFT JOIN produce?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students AS s LEFT JOIN enrollments AS e ON e.student_id = s.student_id;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+----+\n| n  |\n+----+\n| 13 |\n+----+",
+        "+----+\n| n  |\n+----+\n| -1 |\n+----+",
+        "+----+\n| n  |\n+----+\n| 999 |\n+----+"
+      ],
+      "answer": 0,
+      "explanation": "Twelve actual enrollments plus one padded row for student 108 give thirteen."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many rows does the result filter remove from the preserved student list?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students AS s LEFT JOIN results AS r ON r.student_id = s.student_id\n    WHERE r.marks >= 80;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 3 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "The three qualifying result rows belong to 101, 102 and 104."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many unordered MAT classmate pairs satisfy the self-join condition?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students AS a JOIN students AS b ON a.department_id = b.department_id\n    AND a.student_id < b.student_id WHERE a.department_id = 2;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "Students 104 and 108 produce one pair."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why can one student appear three times in an enrollment join?",
+      "options": [
+        "The student has three matching child rows.",
+        "The student primary key is broken.",
+        "INNER JOIN removes key constraints."
+      ],
+      "answer": 0,
+      "explanation": "A join returns pairs. A unique parent key does not make child matches unique."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which expression counts zero for an unmatched enrollment?",
+      "options": [
+        "COUNT(s.student_id)",
+        "COUNT(e.section_id)",
+        "COUNT(*)"
+      ],
+      "answer": 1,
+      "explanation": "The child key is NULL in the padded row; both other counts include that row."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which side does A RIGHT JOIN B preserve?",
+      "options": [
+        "A",
+        "Only matching rows",
+        "B"
+      ],
+      "answer": 2,
+      "explanation": "RIGHT names the preserved input. You can swap inputs and write a LEFT JOIN."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why use a.student_id < b.student_id in a classmate self join?",
+      "options": [
+        "To remove self-pairs and reversed duplicates",
+        "To keep only NULL identifiers",
+        "To make all classmates disappear"
+      ],
+      "answer": 0,
+      "explanation": "Strict ordering chooses one orientation of each pair and excludes equal identifiers."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What happens to unmatched rows when WHERE r.marks >= 80 follows a left join?",
+      "options": [
+        "They remain because LEFT overrides WHERE.",
+        "They are removed.",
+        "They become 80."
+      ],
+      "answer": 1,
+      "explanation": "NULL >= 80 is unknown. WHERE keeps only true conditions."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "How does the full-join emulation avoid repeating matched pairs?",
+      "options": [
+        "UNION ALL automatically removes duplicates.",
+        "It groups every column.",
+        "Its second branch keeps only unmatched right rows."
+      ],
+      "answer": 2,
+      "explanation": "UNION ALL preserves duplicates; the anti-match condition prevents a second copy of matched pairs."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which connection identifies the course of an enrollment?",
+      "options": [
+        "enrollments to sections to courses",
+        "students directly to courses by department",
+        "results to teachers by marks"
+      ],
+      "answer": 0,
+      "explanation": "The enrollment names a section, and that section names its course. A department match alone is too broad."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "When is SUM(DISTINCT amount_bdt) an unsafe repair for multiplied payments?",
+      "options": [
+        "Only when no rows match",
+        "When two genuine payments have the same amount",
+        "When every payment has a different order"
+      ],
+      "answer": 1,
+      "explanation": "DISTINCT compares amounts, not payment identities. It can discard real equal-valued payments."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why is NATURAL JOIN fragile when schemas evolve?",
+      "options": [
+        "It prevents all index access.",
+        "It always creates a Cartesian product.",
+        "New shared column names can change its matching condition."
+      ],
+      "answer": 2,
+      "explanation": "NATURAL JOIN derives matches from common column names, so an added column can silently alter the relationship."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An inner join keeps matching pairs.",
+      "bn": "ইনার জয়েনে শর্ত মিলে এমন জোড়াগুলো থাকে।"
+    },
+    {
+      "en": "An outer join preserves unmatched rows on its chosen side.",
+      "bn": "আউটার জয়েনে বেছে নেওয়া পাশের ম্যাচ না পাওয়া সারিও থাকে।"
+    },
+    {
+      "en": "An ON filter and a WHERE filter can change outer-join results.",
+      "bn": "আউটার জয়েনে ON আর WHERE-এ শর্ত দিলে ফল আলাদা হতে পারে।"
+    },
+    {
+      "en": "A cross join produces every pair of input rows.",
+      "bn": "ক্রস জয়েনে দুই টেবিলের সব সম্ভাব্য জোড়া তৈরি হয়।"
+    },
+    {
+      "en": "Count a non-null child key when counting matches.",
+      "bn": "কয়টা ম্যাচ হলো গুনতে চাইল্ড টেবিলের নন-নাল কী গোনো।"
+    },
+    {
+      "en": "Combine a left join and unmatched right rows for a full join.",
+      "bn": "ফুল জয়েন পেতে লেফট জয়েনের সঙ্গে ডান পাশের বাকি সারিগুলো যোগ করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Order 202 has two items and two payments. Why is summing both after a raw join wrong? Give a correct design.",
+      "marks": 6,
+      "answerHtml": "<p>The join makes four item-payment pairs. Each item and each payment appears twice, so both sums double. First group order_items by order_id for 1380.00 BDT. Separately group payments by order_id for 1380.00 BDT. Join those one-row-per-order summaries to orders.</p>"
+    },
+    {
+      "type": "design",
+      "question": "A legacy import has result (999, 88, 70) without an enrollment. Explain which full-join branch returns it and whether the current schema accepts it.",
+      "marks": 8,
+      "answerHtml": "<p>The left branch cannot produce it because enrollments supplies that branch. The second branch finds no enrollment and keeps the result through e.student_id IS NULL. The current composite foreign key rejects that import, so this row cannot occur while constraints remain enforced.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Describe the row count when 8 students are crossed with 6 sections, then explain why this is not an enrollment list.",
+      "marks": 8,
+      "answerHtml": "<p>The cross join gives 8 times 6, or 48 candidate pairs. It contains choices that nobody registered for. The enrollments table has 12 actual pairs. Join through enrollments when reporting registration; use the cross product only when all combinations are intended.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Return department_code and COUNT(student_id) as students for all departments, ordered by code. Then delete student 108 and repeat the report inside a transaction before rolling back.",
+      "marks": 8,
+      "answerHtml": "<p>Begin with departments, LEFT JOIN students on department_id, group by the department key and code, and count the student key. Order by code. In a transaction delete student 108, repeat the same query, and roll back. The MAT count changes from two to one; other departments stay unchanged.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Joins",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/join.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

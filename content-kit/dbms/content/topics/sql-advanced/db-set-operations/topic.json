@@ -1,0 +1,394 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-set-operations",
+  "module": "sql-advanced",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Set Operations",
+    "bn": "সেট অপারেশন"
+  },
+  "summary": {
+    "en": "Combine compatible result sets and choose deliberately between set and bag behaviour.",
+    "bn": "সেট অপারেশন দিয়ে কোয়েরির ফল মেলাও, আর একই সারি একবার রাখবে নাকি বারবার রাখবে ঠিক করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-subqueries"
+  ],
+  "related": [],
+  "keywords": [
+    "set operations",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.31",
+    "notes": [
+      "Shared datasets require enforced CHECK constraints from MySQL 8.0.16.",
+      "INTERSECT and EXCEPT require MySQL 8.0.31; older alternatives are explained."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Combine answers with the same shape"
+    },
+    {
+      "id": "syntax",
+      "title": "Align columns before choosing an operator"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Count complete rows and their occurrences"
+    },
+    {
+      "id": "examples",
+      "title": "Compare native operations and compatible rewrites"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not confuse membership with row pairing"
+    },
+    {
+      "id": "best-practices",
+      "title": "Make population and repetition explicit"
+    },
+    {
+      "id": "version-notes",
+      "title": "Respect the native syntax boundary"
+    },
+    {
+      "id": "summary",
+      "title": "Choose identity before combination"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Compare distinct and repeated department membership",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>UNION returns three departments. UNION ALL returns twelve rows because eight students and four teachers contribute independently.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Find students with both enrollment and results",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Both versions return 101 through 106. DISTINCT in the older EXISTS version removes repeated enrollments.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Subtract students with recorded marks",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Sadia, 107, has enrollment but no result. Fahim is absent from the left input and cannot appear in this difference.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Show NULL matching and intersection multiplicity",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The first intersection contains NULL and Dhaka. INTERSECT ALL keeps two CSE occurrences and one each for MAT and EEE.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Build one city directory",
+      "statementHtml": "<p>Return distinct city names as town from student hometowns and customer cities, excluding NULL, ordered by town. Load both datasets. Then set all student hometowns to NULL inside a transaction and repeat before rollback.</p>",
+      "hints": [
+        "Use UNION for a directory of names, not a count of people."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql",
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Compare missing and present registration",
+      "statementHtml": "<p>Use EXCEPT to return student_id for students without enrollment, ordered by id. Delete all enrollments in a transaction and repeat before rollback.</p>",
+      "hints": [
+        "The left input sets the candidate population."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Emulate nullable intersection",
+      "statementHtml": "<p>Write the reasoning for an older-server intersection of hometowns that must include a shared NULL once.</p>",
+      "hints": [
+        "Use MySQL null-safe equality for row membership."
+      ],
+      "answerHtml": "<p>Select DISTINCT a.hometown from one input and keep rows with an EXISTS match in the other. Use a.hometown &lt;=&gt; b.hometown so two NULLs match. Ordinary equality would lose the shared NULL. DISTINCT is necessary because EXISTS does not remove repetitions from the left input.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Count bags by hand",
+      "statementHtml": "<p>The left input contains CSE three times, MAT once; the right contains CSE twice and EEE once. Give INTERSECT ALL and EXCEPT ALL.</p>",
+      "hints": [
+        "Track one counter for each distinct value."
+      ],
+      "answerHtml": "<p>INTERSECT ALL keeps the smaller count per value: CSE twice. EXCEPT ALL subtracts right counts from left counts with a floor at zero: CSE once and MAT once. EEE has no left occurrence and cannot survive subtraction.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many distinct departments survive UNION of students and teachers?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM (SELECT department_id FROM students UNION SELECT department_id FROM\n    teachers) AS d;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 3 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "All three department identifiers occur."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many students remain in enrollment EXCEPT results?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM (SELECT student_id FROM enrollments EXCEPT SELECT student_id FROM\n    results) AS d;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Repeated enrollment identifiers collapse, leaving 107."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many occurrences survive INTERSECT ALL of department identifiers?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM (SELECT department_id FROM students INTERSECT ALL SELECT\n    department_id FROM teachers) AS d;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 4 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "The minimum counts are two for CSE and one for each other department, totalling four."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What must paired set-operation inputs agree on?",
+      "options": [
+        "Their column counts and compatible types",
+        "Their table names",
+        "Their row counts"
+      ],
+      "answer": 0,
+      "explanation": "Column positions are paired. Equal row counts and equal table names are unnecessary."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which operator preserves repeated rows without deduplication?",
+      "options": [
+        "INTERSECT DISTINCT",
+        "UNION ALL",
+        "UNION DISTINCT"
+      ],
+      "answer": 1,
+      "explanation": "ALL preserves input multiplicity. UNION without ALL uses distinct semantics."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does EXCEPT reverse its answer when you swap inputs?",
+      "options": [
+        "Never; it is commutative.",
+        "Only when ORDER BY is absent.",
+        "It can; difference is directional."
+      ],
+      "answer": 2,
+      "explanation": "Left-minus-right and right-minus-left ask different membership questions."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Where should final set-result ordering be written?",
+      "options": [
+        "After the complete set expression",
+        "Only inside the first SELECT",
+        "Only inside each stored dataset"
+      ],
+      "answer": 0,
+      "explanation": "A final ORDER BY orders the combined output. An input order does not promise final order."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "How does INTERSECT DISTINCT treat two NULL values?",
+      "options": [
+        "As values that can never intersect",
+        "As equal for duplicate matching",
+        "As an error"
+      ],
+      "answer": 1,
+      "explanation": "Set duplicate comparisons treat NULLs as equal; ordinary SQL equality still produces unknown."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which MySQL release first supports native INTERSECT and EXCEPT?",
+      "options": [
+        "8.0.16",
+        "5.7",
+        "8.0.31"
+      ],
+      "answer": 2,
+      "explanation": "Earlier MySQL releases need EXISTS or join-based rewrites."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which set operator has higher precedence in MySQL?",
+      "options": [
+        "INTERSECT",
+        "UNION",
+        "EXCEPT"
+      ],
+      "answer": 0,
+      "explanation": "INTERSECT binds more tightly than UNION and EXCEPT. Parentheses make mixed expressions clear."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "UNION removes duplicate complete rows.",
+      "bn": "UNION পুরো সারি মিলিয়ে ডুপ্লিকেট বাদ দেয়।"
+    },
+    {
+      "en": "UNION ALL retains every input occurrence.",
+      "bn": "UNION ALL-এ ইনপুটের সব কপি থাকে।"
+    },
+    {
+      "en": "INTERSECT keeps rows found on both sides.",
+      "bn": "INTERSECT দুই পাশেই আছে এমন সারি রাখে।"
+    },
+    {
+      "en": "EXCEPT keeps left rows absent from the right.",
+      "bn": "EXCEPT বাম পাশের যেসব সারি ডানে নেই সেগুলো রাখে।"
+    },
+    {
+      "en": "Native INTERSECT and EXCEPT need MySQL 8.0.31 or later.",
+      "bn": "সরাসরি INTERSECT আর EXCEPT চালাতে MySQL 8.0.31 বা পরের ভার্সন লাগে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Write the reasoning for an older-server intersection of hometowns that must include a shared NULL once.",
+      "marks": 6,
+      "answerHtml": "<p>Select DISTINCT a.hometown from one input and keep rows with an EXISTS match in the other. Use a.hometown &lt;=&gt; b.hometown so two NULLs match. Ordinary equality would lose the shared NULL. DISTINCT is necessary because EXISTS does not remove repetitions from the left input.</p>"
+    },
+    {
+      "type": "design",
+      "question": "The left input contains CSE three times, MAT once; the right contains CSE twice and EEE once. Give INTERSECT ALL and EXCEPT ALL.",
+      "marks": 8,
+      "answerHtml": "<p>INTERSECT ALL keeps the smaller count per value: CSE twice. EXCEPT ALL subtracts right counts from left counts with a floor at zero: CSE once and MAT once. EEE has no left occurrence and cannot survive subtraction.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Return distinct city names as town from student hometowns and customer cities, excluding NULL, ordered by town. Load both datasets. Then set all student hometowns to NULL inside a transaction and repeat before rollback.",
+      "marks": 8,
+      "answerHtml": "<p>Project non-null student hometowns as town and UNION customer cities, then ORDER BY town. This produces one copy of each town. Set student hometowns to NULL inside a transaction and repeat: only customer cities remain. Roll back the trial update.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Set Operations",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/set-operations.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

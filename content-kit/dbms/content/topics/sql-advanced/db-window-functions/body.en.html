@@ -1,0 +1,68 @@
+<h2 id="introduction">Keep each row while calculating across neighbours</h2>
+<p class="lead">A marksheet can show each student&#x27;s mark and their position within the section. GROUP BY alone cannot do that because grouping collapses several results into one summary row. Window functions calculate across related rows while leaving those individual marks visible.</p>
+<p>A <dfn>window function</dfn> computes a value for the current row using a defined collection of related rows. That collection is its window. You can divide the input into sections, order each section by marks and attach a rank to every result. The output still contains one row for each input result.</p>
+<p>This makes windows useful for leaderboards, running payment totals and comparisons with nearby records. The challenge is choosing the meaning of related rows. A section partition, a sort order and a moving frame describe different parts of the calculation. Treating them as interchangeable causes plausible but incorrect numbers.</p>
+<p>The university seed has no equal marks within a section, so the tie example deliberately changes one mark locally. Without a tie, ROW_NUMBER, RANK and DENSE_RANK can look identical. A good explanation must show the data state where their rules separate.</p>
+<h2 id="syntax">Read the OVER clause in three parts</h2>
+<p>The OVER clause tells a function how to see its input. PARTITION BY divides rows into independent groups. ORDER BY inside OVER defines a sequence or peer ordering within each partition. An optional frame selects the relevant subset for functions such as SUM and AVG.</p>
+<p>For section positions, use <code>PARTITION BY section_id</code>. Every section restarts its calculation. For a single overall leaderboard, omit PARTITION BY. This changes the population being compared, even if the printed rows are later grouped visually by section.</p>
+<p>The window ORDER BY is separate from the final query ORDER BY. The first determines the calculation; the second determines display. You can calculate descending-mark positions and print by student identifier, but readers may find that harder to trace. Align the two when presenting a teaching report.</p>
+<p>A frame such as <code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code> starts at the first ordered row and ends at the current row. It creates a cumulative calculation for aggregate window functions. ROWS refers to positions in the ordered input, not a numeric distance between marks or dates.</p>
+<p>A named window can reduce repeated OVER definitions when several functions genuinely need the same partition and order. However, ranking by marks and numbering by marks plus student_id require different peer rules. Sharing a definition merely to shorten text can accidentally change the ranking meaning.</p>
+<pre><code class="language-sql">&lt;function&gt;() OVER (
+    PARTITION BY &lt;group_columns&gt;
+    ORDER BY &lt;calculation_order&gt;
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+)</code></pre>
+<h2 id="how-it-works">Choose what a tie should mean</h2>
+<p>ROW_NUMBER assigns consecutive numbers: 1, 2, 3 and so on. When marks tie, a unique tie breaker such as student_id makes the choice repeatable. Without that tie breaker, SQL may assign the tied rows either internal order. The final display sort cannot repair numbers already assigned ambiguously.</p>
+<p>RANK assigns the same rank to peers and leaves gaps afterward. Marks 80, 80 and 60 produce ranks 1, 1 and 3. Two rows occupy the first competitive place, so the next row comes third. This is appropriate when the rank counts rows ahead of the current mark level.</p>
+<p>DENSE_RANK also ties peers but does not leave gaps. The same marks receive 1, 1 and 2. It counts distinct ordered mark levels. If a prize rule asks for the best two different mark levels, dense rank at most two includes all three students in this example.</p>
+<p>Do not add student_id to a RANK ordering when equal marks should remain tied. Peers must match every expression in the window ORDER BY. A unique identifier makes every row different, so RANK would behave like distinct row positions. Put identifiers in the final display order instead.</p>
+<p>For a running payment total, define both the partition and the chronology. Partitioning by order_id computes separate balances for separate orders. Omitting the partition accumulates all payments together. A date plus payment_id gives a deterministic sequence when several payments share one date.</p>
+<p>The explicit ROWS frame advances one row at a time. Starting with 180 BDT, the next 1000 BDT produces 1180, the next 380 produces 1560, and the final 20 produces 1580. Every row retains its original amount beside the cumulative amount, so you can inspect each step.</p>
+<p>With an ordered aggregate and no explicit frame, the default uses RANGE through the current peer group. Equal ordering values share that boundary. If two payments have the same paid_on date, both can display the total including both payments. That is correct for a total through the current date, but different from a payment-by-payment ledger.</p>
+<p>A moving frame asks another question. <code>ROWS BETWEEN 1 PRECEDING AND CURRENT ROW</code> uses at most two rows. The first row has no predecessor and uses only itself. At a new partition the frame starts again, so it never reaches into the previous section&#x27;s marks.</p>
+<table class="ref">
+<caption>Trace the modified section 33 tie</caption>
+<thead><tr><th scope="col">Student</th><th scope="col">Marks</th><th scope="col">ROW_NUMBER</th><th scope="col">RANK</th><th scope="col">DENSE_RANK</th></tr></thead>
+<tbody>
+<tr><td>101</td><td>80</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>102</td><td>80</td><td>2</td><td>1</td><td>1</td></tr>
+<tr><td>103</td><td>60</td><td>3</td><td>3</td><td>2</td></tr>
+</tbody>
+</table>
+<p>The tie table uses the modified marks from the second example. Student 101 receives the earlier row number only because the numbering order includes student_id. Both ranking functions compare marks alone. That difference lets the table show reproducible numbering without pretending that Ayesha earned a higher mark than Tanvir.</p>
+<h2 id="examples">Compare row positions, mark ranks and cumulative money</h2>
+<p>First number results separately inside each section. Then introduce a tie in section 33 and inspect all three ranking functions side by side. The two leaders share competition rank one, while only ROW_NUMBER chooses separate row positions for them.</p>
+<p>The payment examples contrast an explicit ROWS total with the default peer-aware RANGE behaviour. The modified dates are part of that isolated example. They demonstrate a date tie without changing the shared shop data used by the other lessons.</p>
+<p>The leader report places the window expression inside a derived table. Its outer query filters place = 1. That two-stage structure is necessary because WHERE in the same SELECT block runs before window values are available. A CTE can provide the same readable separation.</p>
+<h3>Number results within each section</h3>
+<p>Each section starts at one. The student key breaks equal-mark ties without changing section membership.</p>
+<div data-example="ex-1"></div>
+<h3>Make a tie visible</h3>
+<p>Students 101 and 102 tie at 80. Their ranks are 1 and 1; the 60-mark result ranks 3 but has dense rank 2.</p>
+<div data-example="ex-2"></div>
+<h3>Accumulate payments in a fixed sequence</h3>
+<p>The totals are 180.00, 1180.00, 1560.00 and 1580.00 BDT. Payment identifiers make the sequence unambiguous.</p>
+<div data-example="ex-3"></div>
+<h3>Retain tied leaders with a derived table</h3>
+<p>Five sections have recorded results, so five leaders appear in the original data. Section 36 contributes no result row.</p>
+<div data-example="ex-4"></div>
+<h3>Contrast peer-aware RANGE with ROWS</h3>
+<p>The two February 2 payments share peer_total 1560.00. row_total advances first to 1180.00 and then to 1560.00.</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">Do not erase ties accidentally</h2>
+<h3>Define the prize rule before ranking</h3>
+<p>A request for the top three students can mean exactly three rows, three competition places or three distinct mark levels. ROW_NUMBER, RANK and DENSE_RANK correspond to those different interpretations. Ask which rule the report needs before choosing a function. An arbitrary LIMIT does not express a policy for tied boundaries.</p>
+<p>Window functions see the rows that survive earlier FROM, WHERE and grouping stages. If WHERE removes low marks before ranking, positions are calculated within that filtered population. Ranking all students and then filtering selected positions is different from filtering students first. Use an outer query when the ranking population must remain broad.</p>
+<h3>Inspect intermediate ledger balances</h3>
+<p>Adding a window does not introduce missing categories. Section 36 has no results, so no window partition exists for it in a results-only query. Start from sections and join the optional results when you need every section represented. Then define how NULL result rows should participate before ranking them.</p>
+<p>A running total can be incorrect even when its final value matches a normal SUM. If equal dates are ordered inconsistently, the intermediate balances can belong to different payments on different runs. Verify the sequence and intermediate steps, not only the grand total. Financial explanations need a clear event identity as well as an amount.</p>
+<h2 id="best-practices">Specify the population, peers and frame</h2>
+<p>Write down three choices before building a window report: which rows share a calculation, which values determine peers, and which frame contributes to an aggregate. A leaderboard often needs peer-aware marks; a ledger often needs a unique event sequence. These goals can require different OVER clauses in one query.</p>
+<p>Keep the raw values alongside the calculated values while inspecting a report. Section, student_id and marks make ranking errors visible. Payment date, identifier and amount make cumulative errors traceable. Remove diagnostic columns only after you can explain each calculation from its inputs.</p>
+<h2 id="version-notes">Use MySQL 8.0 window support</h2>
+<p>Window functions are available in MySQL 8.0 and 8.4, including the ranking functions used here. The shared data requires 8.0.16 for CHECK constraints. Window expressions are not permitted in a same-block WHERE filter. Derived tables and CTEs remain the standard way to expose and filter their computed results in MySQL.</p>
+<h2 id="summary">Give every calculation a precise window</h2>
+<p>Partitions define the population, ordering defines positions and peers, and frames define aggregate contributions. Choose tie rules deliberately and filter computed ranks outside their query block. Continue with <a href="topic:db-cte">common table expressions</a> to name report stages and build controlled recursive traversals.</p>

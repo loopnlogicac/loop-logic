@@ -1,0 +1,392 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-indexes",
+  "module": "sql-advanced",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Indexes",
+    "bn": "ইনডেক্স"
+  },
+  "summary": {
+    "en": "Build useful lookup paths, read an execution plan, and balance faster reads against write costs.",
+    "bn": "ইনডেক্স দিয়ে ডেটা খোঁজা সহজ করো, কোয়েরির প্ল্যান পড়ো, আর আপডেটের বাড়তি খরচ বোঝো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-views"
+  ],
+  "related": [],
+  "keywords": [
+    "indexes",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Add a route to the rows you need"
+    },
+    {
+      "id": "syntax",
+      "title": "Build the key in a useful order"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Read a plan as a choice, not a stopwatch"
+    },
+    {
+      "id": "examples",
+      "title": "Compare access declarations with stable answers"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid indexes that cost more than they save"
+    },
+    {
+      "id": "best-practices",
+      "title": "Design for a workload, then measure"
+    },
+    {
+      "id": "version-notes",
+      "title": "Expect plan details to vary"
+    },
+    {
+      "id": "summary",
+      "title": "Pay for access paths that serve real work"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Add a department and name access path",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The leading department equality narrows the range, then names are ordered within it. Result correctness does not depend on the optimizer using this index.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Inspect a stable primary-key lookup",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The plan uses PRIMARY with const access and one estimated row. EXPLAIN reports a plan; the following SELECT returns Exercise book.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Keep suffix-only filtering correct",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Both return Rafi. Only the second supplies the leftmost equality of the composite index; the first may need scanning or another access method.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Remove an unnecessary secondary index",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>Desk lamp remains the zero-stock product after the index is dropped. Removing a secondary index changes access choices, not logical answers.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Index overdue-loan filtering",
+      "statementHtml": "<p>Create idx_return_due on loans(returned_on, due_on). Return loan_id for unreturned loans due before 2026-03-01. Then return the same report before 2026-01-01, both ordered by id.</p>",
+      "hints": [
+        "Equality on returned_on can precede the due-date range."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/library.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Show that an index preserves results",
+      "statementHtml": "<p>Create idx_category_price on products(category, price_bdt). List product_id for stationery costing at least 60 BDT. Drop that index and repeat, ordered by id both times.</p>",
+      "hints": [
+        "Compare logical membership before discussing timing."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Choose composite column order",
+      "statementHtml": "<p>For WHERE department_id = ? AND admitted_on &gt;= ? ORDER BY admitted_on, student_id, propose an index and explain the range limit.</p>",
+      "hints": [
+        "Put the equality column before the range column."
+      ],
+      "answerHtml": "<p>Use (department_id, admitted_on, student_id). The department equality selects a prefix, then admission dates define a range. Student identifiers break date ties. A range on admitted_on limits how later columns narrow the search interval, though they can still help ordering or index condition filtering. Measure the actual workload before adding it.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Read estimates carefully",
+      "statementHtml": "<p>Explain type, possible_keys, key, rows, filtered and Extra in traditional EXPLAIN.</p>",
+      "hints": [
+        "Separate candidate indexes from the chosen index."
+      ],
+      "answerHtml": "<p>type describes the access method, such as const, ref, range or ALL. possible_keys lists candidate indexes; key is the chosen one. rows estimates how many rows are examined. filtered estimates the percentage passing the condition. Extra describes additional work such as sorting or covering access. These estimates do not measure elapsed time.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many CSE rows remain after adding a composite index?",
+      "language": "sql",
+      "code": "CREATE INDEX idx_dn ON students (department_id, student_name);\nSELECT COUNT(*) AS n FROM students WHERE department_id = 1;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 4 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "Index creation does not change the four matching rows."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does dropping a stock index remove zero-stock products?",
+      "language": "sql",
+      "code": "CREATE INDEX idx_s ON products (stock);\nDROP INDEX idx_s ON products;\nSELECT COUNT(*) AS n FROM products WHERE stock = 0;\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "One zero-stock product remains."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many index parts are declared in a two-column secondary index?",
+      "language": "sql",
+      "code": "CREATE INDEX idx_dn ON students (department_id, student_name);\nSELECT COUNT(*) AS n FROM information_schema.statistics WHERE table_schema = DATABASE() AND\n    table_name = 'students' AND index_name = 'idx_dn';\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "The metadata contains one row for each declared index column."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which lookup naturally uses the leftmost prefix of (department_id, student_name)?",
+      "options": [
+        "department_id = 1",
+        "student_name = a value alone",
+        "Any unrelated column equality"
+      ],
+      "answer": 0,
+      "explanation": "The leading department value gives a contiguous B-tree interval. A suffix alone lacks that ordinary prefix access."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does key in EXPLAIN report?",
+      "options": [
+        "The primary key declaration only",
+        "The index actually chosen",
+        "Every possible index"
+      ],
+      "answer": 1,
+      "explanation": "possible_keys lists candidates; key names the selected access path."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why might a table scan beat an index on a tiny table?",
+      "options": [
+        "Indexes are invalid on small tables.",
+        "A scan changes the answer.",
+        "Index traversal and row lookups can cost more."
+      ],
+      "answer": 2,
+      "explanation": "The optimizer estimates cost. Scanning a few rows may be cheaper than multiple lookups."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What changes when a secondary index is dropped?",
+      "options": [
+        "Available access paths",
+        "The stored product names",
+        "The truth of the WHERE condition"
+      ],
+      "answer": 0,
+      "explanation": "The same logical query remains valid unless an explicit index hint depends on the dropped index."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What cost does every additional index add to INSERT?",
+      "options": [
+        "It removes row locks.",
+        "Its index entries must be maintained.",
+        "It automatically commits the transaction twice."
+      ],
+      "answer": 1,
+      "explanation": "Inserts change both table storage and applicable index structures."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Does Using filesort prove a query used disk?",
+      "options": [
+        "Yes; it always writes a file.",
+        "Yes; it disables memory sorting.",
+        "No; it names a sorting method."
+      ],
+      "answer": 2,
+      "explanation": "The plan label does not determine whether the sort fits in memory."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why is YEAR(admitted_on) = 2026 often worse for an ordinary date index?",
+      "options": [
+        "The expression can block a direct date-range lookup.",
+        "YEAR returns random values.",
+        "Dates cannot be indexed."
+      ],
+      "answer": 0,
+      "explanation": "A half-open date range on admitted_on often makes the ordinary B-tree access clearer."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An index is an extra access path with maintenance cost.",
+      "bn": "ইনডেক্স ডেটা খোঁজার বাড়তি পথ দেয়, তবে সেটা আপডেট রাখার খরচও আছে।"
+    },
+    {
+      "en": "Composite B-tree indexes work from their leftmost columns.",
+      "bn": "কম্পোজিট B-tree ইনডেক্সে বাঁ পাশের কলাম থেকে খোঁজা শুরু হয়।"
+    },
+    {
+      "en": "EXPLAIN describes the optimizer choice rather than proving speed.",
+      "bn": "EXPLAIN অপটিমাইজারের বেছে নেওয়া পথ দেখায়, গতি নিশ্চিত করে না।"
+    },
+    {
+      "en": "Small or low-selectivity queries may prefer a table scan.",
+      "bn": "ছোট টেবিল বা অনেক সারি ফেরায় এমন কোয়েরিতে টেবিল স্ক্যানই ভালো হতে পারে।"
+    },
+    {
+      "en": "Extra indexes consume space and slow data changes.",
+      "bn": "বেশি ইনডেক্সে জায়গা লাগে, আর ডেটা বদলাতেও সময় বাড়ে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "For WHERE department_id = ? AND admitted_on >= ? ORDER BY admitted_on, student_id, propose an index and explain the range limit.",
+      "marks": 6,
+      "answerHtml": "<p>Use (department_id, admitted_on, student_id). The department equality selects a prefix, then admission dates define a range. Student identifiers break date ties. A range on admitted_on limits how later columns narrow the search interval, though they can still help ordering or index condition filtering. Measure the actual workload before adding it.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Explain type, possible_keys, key, rows, filtered and Extra in traditional EXPLAIN.",
+      "marks": 8,
+      "answerHtml": "<p>type describes the access method, such as const, ref, range or ALL. possible_keys lists candidate indexes; key is the chosen one. rows estimates how many rows are examined. filtered estimates the percentage passing the condition. Extra describes additional work such as sorting or covering access. These estimates do not measure elapsed time.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Create idx_return_due on loans(returned_on, due_on). Return loan_id for unreturned loans due before 2026-03-01. Then return the same report before 2026-01-01, both ordered by id.",
+      "marks": 8,
+      "answerHtml": "<p>Create idx_return_due on loans(returned_on, due_on). Filter returned_on IS NULL and due_on before the chosen fixed date, then order by loan_id. Before 2026-03-01 only loan 402 qualifies. Before 2026-01-01 no loan qualifies. Index creation changes access options, not those logical answers.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Indexes",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/optimization-indexes.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

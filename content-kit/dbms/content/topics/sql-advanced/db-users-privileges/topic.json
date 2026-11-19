@@ -1,0 +1,392 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-users-privileges",
+  "module": "sql-advanced",
+  "order": 11,
+  "kind": "lesson",
+  "title": {
+    "en": "Users and Privileges",
+    "bn": "ইউজার ও পারমিশন"
+  },
+  "summary": {
+    "en": "Create scoped accounts, grant only needed actions, and remove access without confusing authentication and authorization.",
+    "bn": "আলাদা ইউজার বানাও, কাজের জন্য যতটুকু পারমিশন দরকার ততটুকুই দাও, আর দরকার শেষে সরাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-transactions-sql"
+  ],
+  "related": [],
+  "keywords": [
+    "users privileges",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give each job only the access it needs"
+    },
+    {
+      "id": "syntax",
+      "title": "An account includes its host"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace grants from creation to removal"
+    },
+    {
+      "id": "examples",
+      "title": "Inspect exact operations and scopes"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Broad access can survive a narrow revoke"
+    },
+    {
+      "id": "best-practices",
+      "title": "Verify allowed work and rejected work"
+    },
+    {
+      "id": "version-notes",
+      "title": "Account management is explicit in MySQL 8"
+    },
+    {
+      "id": "summary",
+      "title": "Review effective authority, not only one grant"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Create an account without table access",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The new account has no table grants. This example removes the teaching account after inspection.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Grant only student reads, then revoke them",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The first privilege report contains SELECT; the second is empty. Dynamic SQL names the current exercise database rather than a fixed schema.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Expose names through a narrowly owned view",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The account receives SELECT on public_students only. The example view is owned by the exercise administrator; a deployed view should use a narrowly privileged owner.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Grant two operations and revoke one",
+      "statementHtml": "<p>Create the teaching reader account. Grant SELECT and UPDATE on students, list its table privileges, revoke UPDATE, list them again, then drop the account.</p>",
+      "hints": [
+        "REVOKE UPDATE should leave SELECT intact."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Grant a single-column update",
+      "statementHtml": "<p>Create the teaching reader account. Grant UPDATE(hometown) on students. Show column_name and privilege_type from column_privileges for this account and current schema. Revoke that column grant, show the report again, then drop the account.</p>",
+      "hints": [
+        "Column-level authorization can restrict which values may be edited."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Separate login from permission",
+      "statementHtml": "<p>An account logs in successfully but SELECT from results is denied. Explain the two checks and propose a minimal reporting grant.</p>",
+      "hints": [
+        "A successful connection does not imply data access."
+      ],
+      "answerHtml": "<p>Authentication accepted the account credentials and host match. Authorization separately decides whether that account can read results. Grant SELECT on the required report view, or on only the needed table when appropriate. Do not fix a read failure by granting ALL ON *.*. Verify the actual matched account with CURRENT_USER().</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Review broad and inherited grants",
+      "statementHtml": "<p>After REVOKE SELECT ON one table, a user can still read it. Give two possible reasons and a verification plan.</p>",
+      "hints": [
+        "MySQL privileges are additive across applicable grant sources."
+      ],
+      "answerHtml": "<p>A database-level or global SELECT grant can still authorize the read. An active role can also supply the privilege. Inspect SHOW GRANTS and the relevant active roles, then remove the broad source if policy requires it. Test using a new connection as the target user; a narrow revoke is not a general deny rule.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many student-table grants exist immediately after creating the reader?",
+      "language": "sql",
+      "code": "CREATE USER 'llk_b2_reader'@'localhost' IDENTIFIED BY 'B2-reader-demo-482!';\nSELECT COUNT(*) AS n FROM information_schema.table_privileges\nWHERE grantee = '''llk_b2_reader''@''localhost''' AND table_schema = DATABASE();\nDROP USER 'llk_b2_reader'@'localhost';\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "CREATE USER grants no table privileges."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many table privileges remain after granting SELECT and UPDATE then revoking UPDATE?",
+      "language": "sql",
+      "code": "CREATE USER 'llk_b2_reader'@'localhost' IDENTIFIED BY 'B2-reader-demo-482!';\nSET @privilege_sql = CONCAT('GRANT SELECT, UPDATE ON `', DATABASE(),\n    '`.students TO \\'llk_b2_reader\\'@\\'localhost\\'');\nPREPARE privilege_stmt FROM @privilege_sql;\nEXECUTE privilege_stmt;\nDEALLOCATE PREPARE privilege_stmt;\nSET @privilege_sql = CONCAT('REVOKE UPDATE ON `', DATABASE(),\n    '`.students FROM \\'llk_b2_reader\\'@\\'localhost\\'');\nPREPARE privilege_stmt FROM @privilege_sql;\nEXECUTE privilege_stmt;\nDEALLOCATE PREPARE privilege_stmt;\nSELECT COUNT(*) AS n FROM information_schema.table_privileges\nWHERE grantee = '''llk_b2_reader''@''localhost''' AND table_schema = DATABASE() AND table_name\n    = 'students';\nDROP USER 'llk_b2_reader'@'localhost';\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Only SELECT remains."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many column privileges result from granting UPDATE(hometown)?",
+      "language": "sql",
+      "code": "CREATE USER 'llk_b2_reader'@'localhost' IDENTIFIED BY 'B2-reader-demo-482!';\nSET @privilege_sql = CONCAT('GRANT UPDATE (hometown) ON `', DATABASE(),\n    '`.students TO \\'llk_b2_reader\\'@\\'localhost\\'');\nPREPARE privilege_stmt FROM @privilege_sql;\nEXECUTE privilege_stmt;\nDEALLOCATE PREPARE privilege_stmt;\nSELECT COUNT(*) AS n FROM information_schema.column_privileges\nWHERE grantee = '''llk_b2_reader''@''localhost''' AND table_schema = DATABASE();\nDROP USER 'llk_b2_reader'@'localhost';\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "Exactly one column-level UPDATE grant is created."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which pair identifies a MySQL account?",
+      "options": [
+        "User name and host",
+        "User name and current table",
+        "Password and row count"
+      ],
+      "answer": 0,
+      "explanation": "Host matching is part of account identity, so similarly named accounts can have different grants."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does CREATE USER automatically grant SELECT on the current database?",
+      "options": [
+        "Only on InnoDB tables",
+        "No",
+        "Yes on every table"
+      ],
+      "answer": 1,
+      "explanation": "Account creation and data privileges are separate operations."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does REVOKE SELECT normally preserve?",
+      "options": [
+        "Only its password hash is deleted",
+        "A permanent deny overriding all roles",
+        "The account itself"
+      ],
+      "answer": 2,
+      "explanation": "REVOKE removes that grant. DROP USER removes the account."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which scope is closest to least privilege for one report?",
+      "options": [
+        "SELECT on the required report view",
+        "ALL ON *.*",
+        "GRANT OPTION globally"
+      ],
+      "answer": 0,
+      "explanation": "Grant only the operation and object required. Delegation rights are unnecessary for a reader."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why can a table-level revoke fail to remove effective read access?",
+      "options": [
+        "Every view bypasses all privileges.",
+        "A broader grant or active role still supplies SELECT.",
+        "REVOKE is only a comment."
+      ],
+      "answer": 1,
+      "explanation": "Privileges accumulate. Removing one source does not negate another source."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why avoid a shared root account in an application?",
+      "options": [
+        "Root cannot run SELECT.",
+        "Root always skips password checks.",
+        "It gives excessive power and weakens accountability."
+      ],
+      "answer": 2,
+      "explanation": "Dedicated accounts limit damage and identify which component performed an action."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "How should an application obtain its account password?",
+      "options": [
+        "From protected runtime secret configuration",
+        "From a public lesson example copied unchanged",
+        "From a committed SQL source file"
+      ],
+      "answer": 0,
+      "explanation": "The sample password is only for the isolated exercise account. Real credentials need separate protected management."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Is FLUSH PRIVILEGES normally needed after CREATE USER and GRANT?",
+      "options": [
+        "Only after a view grant",
+        "No",
+        "Yes after every grant statement"
+      ],
+      "answer": 1,
+      "explanation": "The account-management statements update the privilege system directly. Routine use does not require manual grant-table reloads."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "MySQL identifies an account by both user and host.",
+      "bn": "MySQL অ্যাকাউন্টে ইউজারের নাম আর হোস্ট দুটোই মেলে।"
+    },
+    {
+      "en": "CREATE USER creates an account without granting table access.",
+      "bn": "CREATE USER অ্যাকাউন্ট বানায়, নিজে থেকে টেবিল পড়ার পারমিশন দেয় না।"
+    },
+    {
+      "en": "GRANT authorizes specific actions on a chosen scope.",
+      "bn": "GRANT দিয়ে নির্দিষ্ট জায়গায় নির্দিষ্ট কাজের পারমিশন দাও।"
+    },
+    {
+      "en": "REVOKE removes a grant but does not delete the account.",
+      "bn": "REVOKE পারমিশন সরায়, অ্যাকাউন্ট মুছে দেয় না।"
+    },
+    {
+      "en": "Least privilege limits both operations and exposed data.",
+      "bn": "লিস্ট প্রিভিলেজ মানে যতটুকু কাজ আর ডেটা দরকার ততটুকুর অ্যাক্সেস।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "An account logs in successfully but SELECT from results is denied. Explain the two checks and propose a minimal reporting grant.",
+      "marks": 6,
+      "answerHtml": "<p>Authentication accepted the account credentials and host match. Authorization separately decides whether that account can read results. Grant SELECT on the required report view, or on only the needed table when appropriate. Do not fix a read failure by granting ALL ON *.*. Verify the actual matched account with CURRENT_USER().</p>"
+    },
+    {
+      "type": "design",
+      "question": "After REVOKE SELECT ON one table, a user can still read it. Give two possible reasons and a verification plan.",
+      "marks": 8,
+      "answerHtml": "<p>A database-level or global SELECT grant can still authorize the read. An active role can also supply the privilege. Inspect SHOW GRANTS and the relevant active roles, then remove the broad source if policy requires it. Test using a new connection as the target user; a narrow revoke is not a general deny rule.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Create the teaching reader account. Grant SELECT and UPDATE on students, list its table privileges, revoke UPDATE, list them again, then drop the account.",
+      "marks": 8,
+      "answerHtml": "<p>Create the temporary reader account, grant SELECT and UPDATE only on students in the current exercise schema, and list its two table privileges. Revoke UPDATE on the same scope and list SELECT alone. Drop the account afterward. Use a prepared statement to quote the generated current database identifier.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Users and Privileges",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/account-management-statements.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,68 @@
+<h2 id="introduction">Attach a response to a row change</h2>
+<p class="lead">A results office wants a record whenever a mark changes. Asking every application screen to remember that extra insert is easy to get wrong. A trigger attaches the response to the table operation, so an authorized direct update can invoke the same database-side behaviour.</p>
+<p>A <dfn>trigger</dfn> is a stored program associated with a table event and timing. MySQL runs it for each affected row of an INSERT, UPDATE or DELETE. The caller does not invoke it with CALL. The triggering data-change statement causes it to run automatically.</p>
+<p>This automatic behaviour is useful for limited validation, normalisation and transactional auditing. It also makes effects less visible to someone reading only the original UPDATE. Keep triggers small and explain their dependencies. A table with many hidden actions can be difficult to maintain and diagnose.</p>
+<p>The examples trim an inserted member name, log mark changes and track loan insertions and deletions. They also show a rollback boundary. The audit tables are ordinary InnoDB tables, so their records follow the same transaction outcome as the original row changes.</p>
+<h2 id="syntax">Choose one event and one timing</h2>
+<p>CREATE TRIGGER gives the trigger a name, timing, event, target table and FOR EACH ROW body. BEFORE runs before the row operation is stored. AFTER runs after that row operation succeeds. These timings exist for INSERT, UPDATE and DELETE, giving six basic combinations.</p>
+<p>An INSERT has a proposed NEW row but no OLD row. A DELETE has an OLD row but no replacement NEW row. UPDATE has both: OLD contains the previous values, and NEW contains the proposed values. Prefix column names with these row-image names inside the trigger.</p>
+<p>OLD values are read-only. A BEFORE INSERT or BEFORE UPDATE trigger can assign suitable writable NEW columns before they are stored. An AFTER trigger cannot rewrite NEW. Generated columns have additional restrictions, so let their expressions compute derived grades instead of attempting to assign them manually.</p>
+<p>A single SQL statement can be a trigger body. Several statements need BEGIN and END, and the mysql client then needs a temporary DELIMITER just as it does for procedures. The delimiter controls submission by the client, not the event timing inside the server.</p>
+<p>The mark audit table records a student key, section key, old mark and new mark. Its auto-increment audit_id provides a stable display sequence for this lesson. It does not claim to be a timestamp or an unbroken counter. Rolled-back inserts can leave gaps in auto-increment sequences.</p>
+<pre><code class="language-sql">CREATE TRIGGER &lt;name&gt;
+&lt;BEFORE_or_AFTER&gt; &lt;INSERT_or_UPDATE_or_DELETE&gt; ON &lt;table_name&gt;
+FOR EACH ROW
+&lt;statement_using_available_row_images&gt;;</code></pre>
+<h2 id="how-it-works">Trace the statement and its side effect together</h2>
+<p>The name-cleaning trigger runs BEFORE INSERT on members. NEW.member_name initially contains spaces around Maliha Noor. TRIM removes those spaces and assigns the cleaned value back to NEW.member_name. The inserted base row therefore contains the cleaned name, rather than a second later update.</p>
+<p>The mark-audit trigger runs AFTER UPDATE on results. It compares OLD.marks with NEW.marks and inserts a log only when the value changed. MySQL can invoke an UPDATE trigger even when a row is assigned its existing value. The explicit comparison prevents those no-op assignments from adding misleading history.</p>
+<p>The comparison uses <code>&lt;=&gt;</code>, MySQL&#x27;s null-safe equality, then negates it. Marks are NOT NULL in this schema, but the pattern states the intended change test clearly. On nullable audit fields, ordinary inequality could become unknown and skip a real transition between NULL and a known value.</p>
+<p>Changing Tanvir&#x27;s MAT 101 mark from 39 to 41 creates one audit record. The base table&#x27;s generated grade changes from F to D by its own expression. The trigger records the mark transition; it does not need to repeat the grading formula. Keeping those responsibilities separate avoids two conflicting sources of grade logic.</p>
+<p>AFTER INSERT on loans reads NEW.loan_id and writes an insert event. AFTER DELETE reads OLD.loan_id and writes a delete event. The audit identifier is intentionally not a foreign key back to the deleted loan. A historical record must remain meaningful after the row it describes has gone.</p>
+<p>For a statement affecting several rows, the row trigger runs separately for each affected row. Updating eleven marks by one can therefore insert eleven audit records. Each execution sees its own OLD and NEW images. MySQL does not provide a statement-level trigger that receives the whole changed row set at once.</p>
+<p>When the caller starts a transaction, updates one result and then rolls back, the audit insert rolls back too. Before rollback, the caller can count one audit row. After rollback, the count returns to zero and the original mark returns. Both the main change and its log are transactional work.</p>
+<p>A trigger error can fail the triggering statement. For InnoDB, changes from that statement, including its trigger effects, are rolled back. That does not mean all earlier successful statements in the surrounding transaction are always undone. The application still needs a clear error policy for the whole operation.</p>
+<table class="ref">
+<caption>Images supplied by each row event</caption>
+<thead><tr><th scope="col">Event</th><th scope="col">BEFORE access</th><th scope="col">AFTER access</th></tr></thead>
+<tbody>
+<tr><td>INSERT</td><td>Read NEW; assign writable NEW columns</td><td>Read stored NEW</td></tr>
+<tr><td>UPDATE</td><td>Read OLD and NEW; assign writable NEW columns</td><td>Read OLD and stored NEW</td></tr>
+<tr><td>DELETE</td><td>Read OLD</td><td>Read OLD</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Inspect timing, row images and rollback</h2>
+<p>Start with BEFORE INSERT name cleaning, where the stored row proves that NEW was changed in time. The mark example then reads both row images. The loan events show the one-sided images for insertion and deletion. Finally, the transaction example shows why an ordinary audit table cannot promise evidence of rolled-back attempts.</p>
+<p>The stock guard uses SIGNAL to reject a negative proposed stock or deletion of a stocked product. The shared CHECK constraint already enforces nonnegative stock, so the trigger is not presented as the only protection. It illustrates the available BEFORE UPDATE and BEFORE DELETE images and an explicit business error message.</p>
+<p>A declarative constraint is usually preferable when it expresses the whole invariant directly. Use NOT NULL, UNIQUE, CHECK and foreign keys for the rules they handle well. A trigger can add more specialised behaviour, but duplicating simple rules creates extra code that must remain consistent.</p>
+<h3>Clean a name before insertion</h3>
+<p>BEFORE INSERT changes NEW.member_name before storage. The saved name has no leading or trailing spaces.</p>
+<div data-example="ex-1"></div>
+<h3>Record old and new marks</h3>
+<p>The audit records 39 to 41. The generated grade becomes D automatically; the trigger does not write generated grade columns.</p>
+<div data-example="ex-2"></div>
+<h3>Log insertion and deletion events</h3>
+<p>INSERT exposes NEW.loan_id and DELETE exposes OLD.loan_id. The audit table deliberately keeps identifiers without a foreign key back to deleted loans.</p>
+<div data-example="ex-3"></div>
+<h3>Rollback also removes an audit row</h3>
+<p>The count changes from 1 to 0 after rollback, and the mark returns to 40. Both tables use InnoDB.</p>
+<div data-example="ex-4"></div>
+<h3>Validate before update and guard before delete</h3>
+<p>The valid update leaves Bookmark at zero stock. A negative stock update or deletion of a stocked product would be rejected; CHECK already guards negative stock too.</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">Audit coverage has boundaries</h2>
+<h3>Cascades and TRUNCATE need separate audit coverage</h3>
+<p>MySQL foreign-key cascades do not activate child-table triggers. If deleting a student cascades to results, an AFTER DELETE trigger on results does not record those child deletions. This is a serious coverage gap if you claim a complete mark history. Audit the parent operation or use an explicit deletion workflow that records the required details.</p>
+<p>TRUNCATE TABLE also does not behave like a sequence of DELETE events for row triggers. It is a schema-level operation with implicit-commit behaviour. If policy requires a record of every removed row, control access to such operations and design a separate administrative audit route. A row trigger alone is not a complete security audit system.</p>
+<h3>A transactional log is not an autonomous log</h3>
+<p>A trigger cannot issue COMMIT or ROLLBACK to create an independent transaction. Ordinary InnoDB audit writes remain tied to the caller&#x27;s transaction. If you need durable evidence of attempted actions that later roll back, use an appropriate external or server audit mechanism with a clearly defined trust boundary.</p>
+<p>Do not update the same table again from its own trigger body as a substitute for assigning NEW. MySQL restricts modifying a table already used by the triggering statement. BEFORE timing with SET NEW is the appropriate pattern for writable row normalisation. More complex cascading workflows deserve explicit design rather than recursive side effects.</p>
+<p>Audit ownership matters too. A user able to edit or delete the audit table can rewrite ordinary history. Grant access according to the intended trust model, protect the trigger definition and review its definer account. An automatic INSERT does not make a table tamper-proof.</p>
+<h2 id="best-practices">Keep automatic effects easy to discover</h2>
+<p>Name triggers by event and purpose, and keep their bodies focused. When reviewing an UPDATE, inspect associated triggers and their target tables. Include those hidden writes in lock, performance and failure analysis. A small row operation can become expensive when every row performs extra queries.</p>
+<p>Test one real change, one no-op change, a multi-row change and a rollback. Also inspect operations that bypass the assumed event route, such as cascades and TRUNCATE. These cases define what the audit actually covers. Claims about history should match that observed scope rather than the trigger&#x27;s reassuring name.</p>
+<p>For application reports, store only audit fields that have a clear meaning. If you add a timestamp, decide whether it records statement time, transaction time or another event. This lesson uses explicit mark transitions and identifiers so its output does not depend on the wall clock.</p>
+<h2 id="version-notes">Use MySQL row-trigger rules</h2>
+<p>The trigger timings and row images used here work in MySQL 8.0 and 8.4. Trigger execution uses the definer security context and requires appropriate privileges. The shared datasets use InnoDB and require 8.0.16 for CHECK enforcement. Cascaded referential actions still do not invoke the corresponding child row triggers in MySQL.</p>
+<h2 id="summary">Describe the event and the audit boundary</h2>
+<p>Choose timing from the action you need, use only the row images supplied by that event, and remember that audit inserts share the transaction. Keep cascade and administrative-operation gaps explicit. Next, <a href="topic:db-transactions-sql">transactions in SQL</a> make commit, rollback and savepoint boundaries visible in ordinary workflows.</p>

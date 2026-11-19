@@ -1,0 +1,422 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-triggers",
+  "module": "sql-advanced",
+  "order": 9,
+  "kind": "lesson",
+  "title": {
+    "en": "Triggers",
+    "bn": "ট্রিগার"
+  },
+  "summary": {
+    "en": "React to row changes with carefully timed validation and transactional audit records.",
+    "bn": "টেবিলের সারি বদলালে ট্রিগার দিয়ে নিয়ম পরীক্ষা করো আর পরিবর্তনের লগ রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 70,
+  "prerequisites": [
+    "db-stored-procedures"
+  ],
+  "related": [],
+  "keywords": [
+    "triggers",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Attach a response to a row change"
+    },
+    {
+      "id": "syntax",
+      "title": "Choose one event and one timing"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace the statement and its side effect together"
+    },
+    {
+      "id": "examples",
+      "title": "Inspect timing, row images and rollback"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Audit coverage has boundaries"
+    },
+    {
+      "id": "best-practices",
+      "title": "Keep automatic effects easy to discover"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use MySQL row-trigger rules"
+    },
+    {
+      "id": "summary",
+      "title": "Describe the event and the audit boundary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Clean a name before insertion",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/library.sql"
+      ],
+      "explanationHtml": "<p>BEFORE INSERT changes NEW.member_name before storage. The saved name has no leading or trailing spaces.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Record old and new marks",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The audit records 39 to 41. The generated grade becomes D automatically; the trigger does not write generated grade columns.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Log insertion and deletion events",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/library.sql"
+      ],
+      "explanationHtml": "<p>INSERT exposes NEW.loan_id and DELETE exposes OLD.loan_id. The audit table deliberately keeps identifiers without a foreign key back to deleted loans.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Rollback also removes an audit row",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The count changes from 1 to 0 after rollback, and the mark returns to 40. Both tables use InnoDB.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Validate before update and guard before delete",
+      "level": "intermediate",
+      "file": "examples/ex-5.sql",
+      "output": "examples/ex-5.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The valid update leaves Bookmark at zero stock. A negative stock update or deletion of a stocked product would be rejected; CHECK already guards negative stock too.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Audit real changes but ignore no-op updates",
+      "statementHtml": "<p>Create the mark audit objects from the example. Update student 101 in section 31 to 86 twice. Show old_marks and new_marks ordered by audit_id.</p>",
+      "hints": [
+        "Compare OLD and NEW with null-safe equality."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Keep an audit transactional",
+      "statementHtml": "<p>Create the mark audit. Set student 106 in section 32 to 45 in a transaction and roll back. Show audit count and mark, then perform the same update in a committed transaction and show both again.</p>",
+      "hints": [
+        "Define all trigger objects before starting the transaction."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Map timing and row images",
+      "statementHtml": "<p>List which row images exist for INSERT, UPDATE and DELETE, and when NEW can be assigned.</p>",
+      "hints": [
+        "An inserted row has no old image; a deleted row has no new image."
+      ],
+      "answerHtml": "<p>INSERT provides NEW only; DELETE provides OLD only; UPDATE provides both. BEFORE INSERT and BEFORE UPDATE can assign ordinary writable NEW columns. OLD is read-only. AFTER triggers observe stored values and cannot rewrite NEW. Generated columns have additional restrictions and should be left to their expressions.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Audit a cascading deletion",
+      "statementHtml": "<p>If a student deletion cascades to results, will an AFTER DELETE trigger on results record those deletions in MySQL? Propose an audit approach.</p>",
+      "hints": [
+        "Distinguish explicit row changes from referential actions."
+      ],
+      "answerHtml": "<p>No. MySQL foreign-key cascades do not activate triggers on the child table. Audit the parent operation with the needed child details before deletion, or use an explicit authorized deletion workflow that writes the required audit records. Do not claim complete child history from a child trigger alone.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many audit records follow one mark change and one no-op update?",
+      "language": "sql",
+      "code": "CREATE TABLE mark_audit (\n    audit_id INT AUTO_INCREMENT PRIMARY KEY,\n    student_id INT NOT NULL,\n    section_id INT NOT NULL,\n    old_marks INT NOT NULL,\n    new_marks INT NOT NULL\n) ENGINE=InnoDB;\nDELIMITER //\nCREATE TRIGGER audit_mark_update AFTER UPDATE ON results FOR EACH ROW\nBEGIN\n    IF NOT (OLD.marks <=> NEW.marks) THEN\n        INSERT INTO mark_audit (student_id, section_id, old_marks, new_marks)\n        VALUES (NEW.student_id, NEW.section_id, OLD.marks, NEW.marks);\n    END IF;\nEND//\nDELIMITER ;\nUPDATE results SET marks = 86 WHERE student_id = 101 AND section_id = 31;\nUPDATE results SET marks = 86 WHERE student_id = 101 AND section_id = 31;\nSELECT COUNT(*) AS n FROM mark_audit;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "Only the first update changes marks, so the IF body inserts one record."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many audit rows survive rollback of the only change?",
+      "language": "sql",
+      "code": "CREATE TABLE mark_audit (\n    audit_id INT AUTO_INCREMENT PRIMARY KEY,\n    student_id INT NOT NULL,\n    section_id INT NOT NULL,\n    old_marks INT NOT NULL,\n    new_marks INT NOT NULL\n) ENGINE=InnoDB;\nDELIMITER //\nCREATE TRIGGER audit_mark_update AFTER UPDATE ON results FOR EACH ROW\nBEGIN\n    IF NOT (OLD.marks <=> NEW.marks) THEN\n        INSERT INTO mark_audit (student_id, section_id, old_marks, new_marks)\n        VALUES (NEW.student_id, NEW.section_id, OLD.marks, NEW.marks);\n    END IF;\nEND//\nDELIMITER ;\nSTART TRANSACTION;\nUPDATE results SET marks = 86 WHERE student_id = 101 AND section_id = 31;\nROLLBACK;\nSELECT COUNT(*) AS n FROM mark_audit;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "The only audit insert is undone with the mark update."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many result rows fire the audit when every mark increases by one?",
+      "language": "sql",
+      "code": "CREATE TABLE mark_audit (\n    audit_id INT AUTO_INCREMENT PRIMARY KEY,\n    student_id INT NOT NULL,\n    section_id INT NOT NULL,\n    old_marks INT NOT NULL,\n    new_marks INT NOT NULL\n) ENGINE=InnoDB;\nDELIMITER //\nCREATE TRIGGER audit_mark_update AFTER UPDATE ON results FOR EACH ROW\nBEGIN\n    IF NOT (OLD.marks <=> NEW.marks) THEN\n        INSERT INTO mark_audit (student_id, section_id, old_marks, new_marks)\n        VALUES (NEW.student_id, NEW.section_id, OLD.marks, NEW.marks);\n    END IF;\nEND//\nDELIMITER ;\nUPDATE results SET marks = marks + 1;\nSELECT COUNT(*) AS n FROM mark_audit;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+----+\n| n  |\n+----+\n| -1 |\n+----+",
+        "+----+\n| n  |\n+----+\n| 999 |\n+----+",
+        "+----+\n| n  |\n+----+\n| 11 |\n+----+"
+      ],
+      "answer": 2,
+      "explanation": "All eleven seeded marks are below 100, and every row changes once."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which row image is available to DELETE triggers?",
+      "options": [
+        "OLD",
+        "NEW only",
+        "Both NEW and OLD"
+      ],
+      "answer": 0,
+      "explanation": "The deleted row has an old image and no new replacement row."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "When can a trigger assign NEW.member_name?",
+      "options": [
+        "AFTER INSERT only",
+        "BEFORE INSERT or BEFORE UPDATE",
+        "AFTER DELETE"
+      ],
+      "answer": 1,
+      "explanation": "The BEFORE timing can alter writable values before storage; AFTER cannot rewrite the stored row."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How many times does a MySQL row trigger run for an UPDATE affecting three rows?",
+      "options": [
+        "Once per statement",
+        "Only for the first row",
+        "Three times"
+      ],
+      "answer": 2,
+      "explanation": "FOR EACH ROW means one invocation per affected row, including rows whose values may remain unchanged."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What happens to an InnoDB audit insert when its transaction rolls back?",
+      "options": [
+        "It rolls back too.",
+        "It always survives as an independent log.",
+        "It commits the original update."
+      ],
+      "answer": 0,
+      "explanation": "The audit write belongs to the same transaction; an ordinary trigger cannot create an autonomous commit."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Can a MySQL trigger issue COMMIT?",
+      "options": [
+        "Only for tables with foreign keys",
+        "No",
+        "Yes after each row"
+      ],
+      "answer": 1,
+      "explanation": "Transaction control inside a trigger is prohibited. The caller controls the transaction."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why omit a foreign key from an audit identifier to a row that may be deleted?",
+      "options": [
+        "Audit identifiers must be random.",
+        "Foreign keys disable all triggers.",
+        "Historical evidence must survive that row deletion."
+      ],
+      "answer": 2,
+      "explanation": "A restricting reference could block deletion, while a cascading reference could erase the history."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which mechanism usually best enforces one-row stock >= 0?",
+      "options": [
+        "An enforced CHECK constraint",
+        "A manual report once a month",
+        "An AFTER SELECT trigger"
+      ],
+      "answer": 0,
+      "explanation": "A simple invariant belongs in a declarative constraint when supported; a trigger can handle more involved row-change logic."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Will TRUNCATE invoke a DELETE row trigger for every removed row?",
+      "options": [
+        "Only if the trigger uses OLD",
+        "No",
+        "Yes, once for each deleted row"
+      ],
+      "answer": 1,
+      "explanation": "TRUNCATE is a DDL-style operation and does not activate DELETE row triggers in MySQL."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A MySQL trigger runs once for each affected row.",
+      "bn": "MySQL ট্রিগার বদলানো প্রতিটি সারির জন্য একবার চলে।"
+    },
+    {
+      "en": "INSERT provides NEW; DELETE provides OLD.",
+      "bn": "INSERT-এ NEW পাও, আর DELETE-এ OLD পাও।"
+    },
+    {
+      "en": "UPDATE provides both OLD and NEW values.",
+      "bn": "UPDATE-এ আগের OLD আর নতুন NEW দুটো মানই পাও।"
+    },
+    {
+      "en": "A BEFORE trigger can assign writable NEW columns.",
+      "bn": "BEFORE ট্রিগারে লেখা যায় এমন NEW কলামের মান বদলাতে পারো।"
+    },
+    {
+      "en": "InnoDB audit inserts roll back with their triggering changes.",
+      "bn": "InnoDB-তে মূল পরিবর্তন রোলব্যাক হলে ট্রিগারের লগও রোলব্যাক হয়।"
+    },
+    {
+      "en": "Foreign-key cascades do not activate MySQL triggers.",
+      "bn": "MySQL-এ ফরেন কী ক্যাসকেডে ট্রিগার চলে না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "List which row images exist for INSERT, UPDATE and DELETE, and when NEW can be assigned.",
+      "marks": 6,
+      "answerHtml": "<p>INSERT provides NEW only; DELETE provides OLD only; UPDATE provides both. BEFORE INSERT and BEFORE UPDATE can assign ordinary writable NEW columns. OLD is read-only. AFTER triggers observe stored values and cannot rewrite NEW. Generated columns have additional restrictions and should be left to their expressions.</p>"
+    },
+    {
+      "type": "design",
+      "question": "If a student deletion cascades to results, will an AFTER DELETE trigger on results record those deletions in MySQL? Propose an audit approach.",
+      "marks": 8,
+      "answerHtml": "<p>No. MySQL foreign-key cascades do not activate triggers on the child table. Audit the parent operation with the needed child details before deletion, or use an explicit authorized deletion workflow that writes the required audit records. Do not claim complete child history from a child trigger alone.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Create the mark audit objects from the example. Update student 101 in section 31 to 86 twice. Show old_marks and new_marks ordered by audit_id.",
+      "marks": 8,
+      "answerHtml": "<p>Create the InnoDB audit table and an AFTER UPDATE row trigger on results. Insert OLD and NEW marks only when they differ. Updating (101,31) from 85 to 86 produces one audit row. Assigning 86 again invokes the trigger but fails its change test, so the audit still contains only the 85-to-86 transition.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Triggers",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/triggers.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
