@@ -1,0 +1,62 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">উচ্চতা অনুযায়ী student সাজাবে ভাবো। পাশাপাশি ভুল order-এ থাকা দুজনকে বদলে পুরো row হাঁটো। একবার শেষে সবচেয়ে লম্বা ডানে। <dfn>Bubble sort</dfn> বাকি row-তে এই local repair করে।</p>
+<p>Pass,comparison,invariant শেখায় bubble sort ভালো। সিদ্ধান্ত দেখা সহজ, কিন্তু worst কাজ quadratic। ছোট example-এ প্রতিটি swap বোঝাও। বড় dataset-এর speed এর মূল শক্তি নয়।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">for pass = 0 to n - 2
+    swapped = false
+    for j = 0 to n - 2 - pass
+        if a[j] &gt; a[j + 1]
+            swap a[j] and a[j + 1]
+            swapped = true
+    a[n - 1 - pass] is now in place
+    if not swapped: stop early</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>এক pass maximum ডানে ঠেলে</h3>
+<p>Ascending-এ a[j],a[j+1] তুলনা; বাঁটি বড় হলেই swap। দুইটির বড় ডানে যায়। পরের comparison-এ carried maximum আবার পরেরটির সঙ্গে মেলে। তাই বড় value এক pass-এ অনেক cell যেতে পারে।</p>
+<p>[7,3,5,3,1]-এ 7 প্রথমে 3,পরে5,3,1 পেরিয়ে [3,5,3,1,7]। Maximum final। পরের pass-এ final7 নয়, unsorted prefix দেখো।</p>
+<p>ছোট value আলাদা চলে। শেষের1 প্রথম pass-এ মাত্র এক cell বামে, কারণ আগের pair দেখা হয়ে গেছে। Reverse order-এ বহু pass লাগে কেন বোঝা যায়। Local repair-এ দুজনই final হয় না।</p>
+<h3>Unfinished prefix ছোট করো</h3>
+<p>Pass zero থেকে। j zero থেকে n-2-pass পর্যন্ত, j+1 তুলনা। শেষ right index n-1-pass। শেষে বৃহত্তম remaining value ওইখানে final suffix-এ যায়।</p>
+<p>সর্বোচ্চ n-1 pass। এতগুলো maximum বসলে প্রথমটিও ঠিক। Singleton-এ pass নেই,empty-তে access নেই। ছোট case-এ signed index দিয়ে n-1 expression সামলানো সহজ।</p>
+<p>Pass মানে unfinished prefix জুড়ে sweep; comparison এক pair check; swap শুধু ভুল order-এ data movement। আলাদা গোনো। Same size-এ প্রথম pass comparison এক হলেও swap অনেক আলাদা হতে পারে।</p>
+<h3>পুরো pass বদল না হলে থামো</h3>
+<p>প্রতি pass শুরুতে swapped=false; exchange-এ true। পুরো pass-এ কোনো exchange না হলে unfinished prefix-এর সব adjacent pair ordered। Suffix আগেই final, তাই পুরো array sorted; থামতে পারো।</p>
+<p>Flag প্রতিবার reset চাই। আগের true থাকলে পরে sorted prefix early exit দেবে না। Sort ঠিক, best-case সুবিধা নেই। একটি comparison-এর পর flag দেখলে পরের reversed pair থাকতেই থেমে যেতে পারো।</p>
+<p>Already ascending n&gt;1-এ n-1 comparison,zero swap,stop। Nearly sorted-এও লাভ হতে পারে, সব ছোট disturbance linear নয়। শেষের tiny value বামে আসতে বহু pass লাগতে পারে।</p>
+<h3>Equal-key record-এর order রাখো</h3>
+<p><dfn>Stable</dfn> sort equal key-এর আগের record order রাখে। 3A,3B দুই paper-এর arrival মনে রাখো। Strict greater-than equal neighbor swap করে না। A-কে B পার হতে একসময় swap লাগত, যা হয় না।</p>
+<p>Greater-than-or-equal করলে এই যুক্তি ভাঙে। Equal record অকারণে বদলায়, equal input-ও early stop নাও দেয়। Plain integer-এ tie reversal দেখা যায় না; label বা record ID ধরে বোঝো।</p>
+<p>Bubble input-এই বদলায়, কয়েক counter,flag,saved value রাখে। Strict comparison-এ stable এবং in-place। গুণ দুটি আলাদা; অন্য constant-space sort tie order হারাতে পারে। Sorted number দেখে নয়, labeled equal record অনুসরণ করে তুলনা করো।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>চার shrinking sweep maximum ডানে নেয়। আট adjacent swap-এ 1 3 3 5 7।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা sort করো</h3>
+<p>Negative mark-ও comparison-এ সাজে। Keyboard example শেষে -2 -2 0 1 4 7।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>Sorted হওয়ার পর পাশের value বদলালেই নতুন group। Distinct mark তিনটি।</p>
+<div data-example="ex-3"></div>
+<h3>এক pass-কে পুরো sort বলো না</h3>
+<p>এক sweep-এর চার swap-এ 3 5 3 1 7। শেষ7 ঠিক, prefix-এ এখনও উল্টো neighbor।</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>Pass 1</td><td>[3,5,3,1,7]</td><td>চার swap-এ 7 final cell-এ।</td></tr><tr><td>Pass 2</td><td>[3,3,1,5,7]</td><td>বাকি maximum 5 ডানে যায়।</td></tr><tr><td>Pass 3</td><td>[3,1,3,5,7]</td><td>ডানের unfinished 3 final হয়।</td></tr><tr><td>Pass 4</td><td>[1,3,3,5,7]</td><td>শেষ reversed pair ঠিক হয়।</td></tr></tbody></table>
+<div data-lab="bubble-sort"></div>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Inner pass-এ current right endpoint-এ এতক্ষণ দেখা সর্বোচ্চ মান। পরের comparison-এ invariant থাকে। তাই শেষে unfinished prefix-এর maximum ডানে। পরের pass-এর আগে suffix-এ already placed বৃহত্তম মানগুলো।</p>
+<p>প্রতি pass suffix এক বাড়ায় বা no inversion বলে থামে। Swap দুই existing মান বদলায়, কিছু তৈরি-মুছে না। এতে order ও original collection থাকা দুটোই প্রমাণ হয়।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Worst comparison (n-1)+(n-2)+…+1=n(n-1)/2। Distinct reverse order-এ তত adjacent swap। তাই Θ(n²)। Uniform random permutation model-এ average-ও Θ(n²)। Early exit-এ best Θ(n),auxiliary Θ(1)।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>Equal value swap করা</h3>
+<p>Strict greater-than নাও। Equality ascending মেনেই আছে; swap করলে stability proof হারায়।</p>
+<h3>Index n-1 পর্যন্ত pair scan</h3>
+<p>j+1-ও পড়া হয়। Right index n হওয়ার আগেই pair loop থামাও।</p>
+<h3>একটি swap-free comparison-এ sorted ধরা</h3>
+<p>পুরো pass বদল না হলেই unfinished prefix-এর সব neighbor order প্রমাণ।</p>
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>Flag সাধারণ C17 int:zero-তে no exchange,one-এ exchange। Loop header-এ pass,j declaration C99 থেকে।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Neighbor swap-এ unfinished maximum ডানে নাও, পুরো unchanged pass হলে থামো।</p>
+<p>বাকি prefix থেকে সরাসরি minimum নিতে <a href="topic:algo-selection-sort">selection sort</a> পড়ো।</p>
