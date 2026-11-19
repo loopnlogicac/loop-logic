@@ -1,15 +1,21 @@
+import { studyPlanStrings, studyPlan } from './study-plan.js';
+import { masteryStrings, topicChecks } from './mastery.js';
 // Tutorials: track list → topic list → topic page (lesson, runnable examples, labs,
 // quiz graded on the server, practice with solutions, exam questions).
 import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
+import { savedStrings, savedEditor } from './saved.js';
 import { mountLab, renderFigure } from './lab-player.js';
 import { codeRunner, runnerStatus } from './runner.js';
+import { adaptiveStrings, adaptiveQuiz } from './adaptive-quiz.js';
 
 let RUN = { enabled: false, languages: [] };
 
 const T = {
   en: {
+    ...savedStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · every example in these tutorials was compiled and run before publishing',
     title: 'Tutorials', sub: (t, l) => `Step-by-step written lessons with runnable code, interactive labs, quizzes and practice. ${t} topics and ${l} labs so far, with more added every week.`,
+    ...studyPlanStrings.en,
     topics: 'topics', labs: 'labs', of: 'of', soon: 'Coming soon', start: 'Start', open: 'Open', inProgress: 'Being written',
     levels: { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
     kinds: { lesson: 'Lesson', theory: 'Concepts', project: 'Project', 'question-bank': 'Practice sheet' },
@@ -21,10 +27,13 @@ const T = {
     results: (n, s) => `${n} topics match “${s}”`, noResults: (s) => `No topic matches “${s}” yet. Try another word, or browse the tutorials below.`,
     noBn: 'The full Bangla version of this lesson is coming. You are reading the English text; key points and quiz help are in Bangla where available.',
     bnAvail: 'This lesson is also available in Bangla. Switch with the EN · বাংলা button.', course: 'Video course', notReady: 'not yet written',
+    ...masteryStrings.en,
   },
   bn: {
+    ...savedStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · এই টিউটোরিয়ালের প্রতিটি উদাহরণ প্রকাশের আগে কম্পাইল করে চালানো হয়েছে',
     title: 'টিউটোরিয়াল', sub: (t, l) => `ধাপে ধাপে লেখা পাঠ, চালানো যায় এমন কোড, ইন্টারঅ্যাকটিভ ল্যাব, কুইজ আর অনুশীলন। এখন পর্যন্ত ${t}টি টপিক আর ${l}টি ল্যাব; প্রতি সপ্তাহে আরও যোগ হচ্ছে।`,
+    ...studyPlanStrings.bn,
     topics: 'টপিক', labs: 'ল্যাব', of: '/', soon: 'শিগগিরই আসছে', start: 'শুরু করো', open: 'খোলো', inProgress: 'লেখা চলছে',
     levels: { beginner: 'শুরুর স্তর', intermediate: 'মাঝারি', advanced: 'উচ্চতর' },
     kinds: { lesson: 'পাঠ', theory: 'ধারণা', project: 'প্রজেক্ট', 'question-bank': 'অনুশীলন শিট' },
@@ -36,10 +45,13 @@ const T = {
     results: (n, s) => `“${s}”-এর সঙ্গে ${n}টি টপিক মিলেছে`, noResults: (s) => `“${s}”-এর সঙ্গে এখনো কোনো টপিক মেলেনি। অন্য শব্দে খোঁজো, অথবা নিচের টিউটোরিয়াল দেখো।`,
     noBn: 'এই পাঠের পূর্ণ বাংলা সংস্করণ আসছে। এখন ইংরেজি লেখা দেখছ; মূল কথা আর কুইজের সাহায্য যেখানে আছে বাংলায় পাবে।',
     bnAvail: 'এই পাঠ বাংলাতেও আছে। EN · বাংলা বোতাম দিয়ে বদলাও।', course: 'ভিডিও কোর্স', notReady: 'এখনো লেখা হয়নি',
+    ...masteryStrings.bn,
   },
 };
 const t = () => T[getLang()];
 const main = document.getElementById('main');
+Object.assign(T.en, adaptiveStrings.en);
+Object.assign(T.bn, adaptiveStrings.bn);
 const q = new URLSearchParams(location.search);
 const trackId = q.get('track');
 const topicId = q.get('topic');
@@ -120,6 +132,7 @@ async function renderTopic() {
     runnerStatus(),
   ]);
   RUN = rs;
+  const checks = await topicChecks(d.track.id, d.topic.id, L);
   document.title = `${d.topic.title} · ${d.track.title}`;
   const body = el('article', { class: `tut-body lang-${d.topic.bodyLang}`, lang: d.topic.bodyLang });
   body.innerHTML = d.topic.bodyHtml; // sanitised on the server (tag and attribute whitelist)
@@ -176,9 +189,10 @@ async function renderTopic() {
             d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
             d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
           el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
-        langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, quiz, practice, exam, videos, refs, pager)));
+        checks.before, langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, checks.after, quiz, practice, exam, videos, refs, studyPlan(L, { track: d.track.id, topic: d.topic.id }), pager)));
   fillAdSlots();
   api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
+  main.querySelector('.tut-title').after(savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L));
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 }
 
@@ -265,7 +279,8 @@ function quizBlock(d) {
     } catch (e) { result.textContent = e.message; }
     btn.disabled = false;
   };
-  return el('section', { class: 'tut-extra', id: 'quiz' }, el('h2', { text: L.quiz }), ...items, el('div', { class: 'quiz-actions' }, btn, result));
+  const adaptive = adaptiveQuiz(d, L, (on) => { for (const item of items) item.hidden = on; btn.disabled = on; result.hidden = on; });
+  return el('section', { class: 'tut-extra', id: 'quiz' }, el('h2', { text: L.quiz }), ...items, el('div', { class: 'quiz-actions' }, btn, adaptive.button, result), adaptive.panel);
 }
 
 function practiceBlock(d) {

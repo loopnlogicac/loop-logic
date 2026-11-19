@@ -1,0 +1,78 @@
+<h2 id="introduction">সাধারণ Python operation-এ নিজের অবজেক্ট</h2>
+<p class="lead">Marks collection Python-এ স্বাভাবিকভাবে মানাবে। print(record)-এ লেবেল, len(record)-এ marks count বা ফল তুলনা চাইতে পারো। <dfn>Special method</dfn> নির্দিষ্ট নামের hook, যা ক্লাসকে ভাষার operation-এ জোড়ে।</p>
+<p>দুই পাশে দুই underscore বলে dunder method, অর্থ double underscore। নামের নির্দিষ্ট contract। __average__ বানালেই নতুন average operator হয় না। Language hook নেই এমন কাজে সাধারণ average method দাও।</p>
+<p>Operator-এ অবজেক্ট বোঝা সহজ হবে। দুই distance যোগ অর্থপূর্ণ, দুই student সাধারণত নয়। আগে অর্থ, গ্রহণযোগ্য operand type আর নতুন value নাকি mutation ঠিক করো।</p>
+
+<h2 id="syntax">Operation মেলা hook বাছো</h2>
+<p>ক্লাস body-তে সাধারণ instance method-এর self আগে। Addition-এর মতো binary-তে অন্য operand-ও আসে। Operation ব্যবহার হলে Python hook ডাকে।</p>
+<table class="ref"><thead><tr><th scope="col">Operation</th><th scope="col">Hook</th><th scope="col">Contract</th></tr></thead><tbody><tr><td>str(x), print(x)</td><td>__str__</td><td>str ফেরাও</td></tr><tr><td>repr(x)</td><td>__repr__</td><td>str ফেরাও</td></tr><tr><td>len(x)</td><td>__len__</td><td>Nonnegative int</td></tr><tr><td>x + y</td><td>__add__</td><td>ফল বা NotImplemented</td></tr><tr><td>x == y</td><td>__eq__</td><td>তুলনার ফল বা NotImplemented</td></tr><tr><td>x &lt; y</td><td>__lt__</td><td>তুলনার ফল বা NotImplemented</td></tr></tbody></table>
+<p>Caller-এ len(collection), collection.__len__() নয়। সাধারণ operation বাড়তি নিয়ম মানায়; len negative result বাদ দেয়। Direct hook call কিছু machinery পাশ কাটায়, পড়াও কঠিন।</p>
+
+<h2 id="how-it-works">দেখানো আর debugging আলাদা</h2>
+<p>__str__ ব্যবহারকারীকে, যেমন 250 BDT। __repr__ developer-কে, যেমন Balance(250)। সম্ভব হলে representation অস্পষ্ট নয়। Resource বা জটিল অবজেক্টে executable code হতেই হবে না।</p>
+<p>__str__ না থাকলে default conversion __repr__ নিতে পারে। উল্টোটা সাধারণ নিয়ম নয়: শুধু __str__ দিলে custom repr হয় না। List-এর মতো container element-এর repr দেখায়, তাই অবজেক্ট আর এক-element list প্রিন্ট আলাদা।</p>
+<p>দুই hook-এই string চাই। __str__-এ print করে None ফেরানো ভুল; caller text value চায়, extra effect নয়। Formatted string ফেরাও, print দেখাক।</p>
+<pre class="diagram">print(value)  --&gt; str(value)  --&gt; value type-এর __str__
+repr(value)   -----------------&gt; value type-এর __repr__
+print([value]) ----------------&gt; list text-এর মধ্যে element repr</pre>
+<p>Implicit operation-এ special lookup সাধারণত type-এ। এক instance-এ নতুন __len__ assign করে len(instance) বদলানো নির্ভরযোগ্য নয়। Protocol ক্লাসে দাও; implicit কাজ plain attribute call-এর মতো নয়।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>C operator struct type দেখে user ফাংশন ডাকে না। Python type hook-এ dispatch করে। Hook-এও precise contract চাই; সহজ syntax domain অবজেক্ট যোগের অর্থ ঠিক করে না।</p></div>
+
+<h2 id="examples">প্রতি operator-এর অর্থ পড়ো</h2>
+<p>ছোট value-like অবজেক্টে অর্থ পরিষ্কার। Direct আর list display মিলিয়ে length, addition, order দেখো। ফল explicit ক্লাস rule মেনে, address নয়।</p>
+
+<h3>Reader আর developer-এর balance display</h3>
+<p>Direct print __str__, repr আর list element __repr__ নেয়। Text-এ অবজেক্ট address নেই।</p>
+<div data-example="ex-1"></div>
+
+<h3>Marks group মাপো আর পরীক্ষা</h3>
+<p>Length marks count দুই। __bool__ না থাকায় empty group zero length দিয়ে false।</p>
+<div data-example="ex-2"></div>
+
+<h3>Distance যোগ, string বাদ</h3>
+<p>Addition নতুন 55 distance, a থাকে 20। দুই operand protocol string combination না নেওয়ায় ধরা TypeError unsupported প্রিন্ট করে।</p>
+<div data-example="ex-3"></div>
+
+<h3>বলা key-তে record তুলনা</h3>
+<p>Sort আগে marks, tie-তে roll। Equality একই দুই-field key নেয়, তাই আলাদা তৈরি matching result equal।</p>
+<div data-example="ex-4"></div>
+
+<h3>Invalid length নিরাপদে দেখো</h3>
+<p>সাধারণ len negative ফল দেখে ValueError তোলে। Handler ইচ্ছাকৃত ভুলকে স্থির ব্যাখ্যার message করে।</p>
+<div data-example="ex-5"></div>
+
+<h2 id="operator-contracts">Unsupported operand-এ সত্যি বলো</h2>
+<p>__add__ combined value-র নতুন অবজেক্ট দিতে পারে। স্পষ্ট অন্য policy না থাকলে দুই operand আগের মতো রাখে। Distance দুই distance যোগে আরেকটি দেয়; unrelated string সমর্থিত নয়।</p>
+<p>Unsupported type-এ singleton NotImplemented ফেরাও। Python উপযুক্ত হলে অন্য operand-এর reflected operation চেষ্টা করে। দুইপাশ না পারলে TypeError। NotImplemented value, অন্য উদ্দেশ্যের NotImplementedError exception নয়।</p>
+<p>__radd__-এর মতো reflected method অন্য পাশ থেকে শুরু operation দেয়। Dispatch subtype সম্পর্কও দেখে। সব ক্লাস-এ চাই না; accepted combination ছোট আর documented রাখো। Distance + Distance চললেই 0 + Distance চলে না।</p>
+<p>Equality-তে NotImplemented অন্য operand-কে সুযোগ দেয়। কেউ equality না দিলে identity fallback। Ordering আলাদা: দুই প্রাসঙ্গিক পাশ বাদ দিলে less-than সাধারণত TypeError।</p>
+<p>স্বাভাবিক strict order থাকলে __lt__। sorted less-than নেয়, শুধু sort-এ __le__ লাগে না; __lt__ অন্য comparison নিজে বানায় না। Explicit tie-তে (marks, roll)-এর মতো tuple তুলনা চলে।</p>
+
+<h2 id="length-equality-and-hashing">আলাদা protocol মিলিয়ে রাখো</h2>
+<p>Length প্রতিনিধিত্ব করা জিনিস গুনবে। Marks group-এ count, total নয়। Nonnegative int দাও। len-এ negative ValueError, non-integer TypeError। খুব বড় length-এ platform size limit-ও আছে।</p>
+<p>__bool__ বা বিশেষ truth rule না থাকলে Python __len__ নেয়। Zero false, positive true, empty list-এর মতো। Caller if group ধরার আগে অর্থ বলো।</p>
+<p>Equality coherent চাই। শুধু marks তুলনায় ভিন্ন roll equal হতে পারে; দুই field-এ অন্য মডেল। সহজে লেখা field নয়, অর্থ দেখে বাছো।</p>
+<p>Dictionary key-র hash রাখা অবস্থায় stable চাই। Equal অবজেক্ট-এর hash equal। উপযুক্ত __hash__ ছাড়া __eq__ দিলে Python সাধারণত unhashable করে, ভুল ঠেকায়। Error চেপে দিতে mutable marks list-এ hash জোর কোরো না।</p>
+<p>Non-mutating value অবজেক্ট বোঝা সহজ। Addition fresh distance দিলে old alias আগের মান রাখে। পরে mutation থাকলে equality-hash আবার দেখো। পরের ডেটা ক্লাস কিছু method বানায়।</p>
+
+<h2 id="tracing-the-contract">ছোট public contract-এ dispatch trace</h2>
+<p>Hook যোগের আগে caller ভাবো। Marks group শুধু readable text আর length দিতে পারে। Plus দিলে concatenate, corresponding mark যোগ নাকি total? অর্থ অস্পষ্ট হলে named operation রাখো।</p>
+<p>Distance-এ addition পরিষ্কার। Supported pair টেস্ট, operand অপরিবর্তিত নিশ্চিত, unrelated type-এ পুরো expression-এর TypeError দেখো। Hook-এর NotImplemented এক stage; caller final behavior দেখে।</p>
+<p>Ordering টেস্ট-এ tie চাই। সমান marks-এ roll ভিন্ন, tie-breaker final sequence বলে। বাছা field-এ equal হলে stable sort-এর অবস্থানকে identity-দেওয়া নতুন order বলবে না।</p>
+<p>Representation টেস্ট arbitrary address নয়, অর্থপূর্ণ মান দেখে। ছোট value ক্লাস-এ constructor-এর মতো নাম-field। বড় বা sensitive ডেটা-তে সব dump না করে উপযোগী summary।</p>
+
+<h2 id="common-mistakes">সঠিক ধরনের ফল ফেরাও</h2>
+<h3>__str__ থেকে integer</h3>
+<p>Numeric মান হলেও hook str ফেরাবে। f-string বা str(value)। Python ভুল type নীরবে convert করবে না।</p>
+<h3>সব অপরিচিত type-এ False</h3>
+<p>অন্য type-এর অর্থপূর্ণ তুলনা আটকাতে পারে। Unsupported-এ NotImplemented, supported unequal তুলনায় False।</p>
+<h3>Addition-এ operand mutate</h3>
+<p>Caller সাধারণত a + b-তে a একই আশা করে। এই value-like design-এ নতুন result। অন্য operation-এ mutation দিলে আলাদা বোঝাও।</p>
+<h3>এক ordering method সব দেয় ভাবা</h3>
+<p>__lt__ less-than, less-than-or-equal নিজে নয়। Promise করা প্রতিটি operation টেস্ট। মডেল-এর বাড়তি operator বানিও না।</p>
+
+<h2 id="version-notes">Protocol contract স্পষ্ট</h2>
+<p>Hook Python 3.10–3.12-তে চলে। NotImplemented machinery-তে ফেরাবে, normal truth value নয়; দেখানো runtime range-এ Boolean ব্যবহার deprecated। Generated repr stable ফাইল format নয়। Persistent ডেটা-তে JSON বা explicit format।</p>
+
+<h2 id="summary">ছোট অর্থপূর্ণ interface</h2>
+<p>Special method-এ Python অবজেক্ট দেখায়, মাপে, মেলায়, তুলনা করে। Required type দাও, unsupported-এ NotImplemented। পরের <a href="topic:py-dataclasses">ডেটা ক্লাস</a> declared field থেকে routine initialization-comparison বানায়।</p>

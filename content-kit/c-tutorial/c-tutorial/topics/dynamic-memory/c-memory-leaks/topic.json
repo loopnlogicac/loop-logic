@@ -1,0 +1,388 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-memory-leaks",
+  "module": "dynamic-memory",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Memory Leaks and Tools",
+    "bn": "মেমরি লিক আর টুলস"
+  },
+  "summary": {
+    "en": "Track owners and borrowers, clean every exit path, and interpret AddressSanitizer and Valgrind diagnostics.",
+    "bn": "মেমরির মালিক আর ধার করা পয়েন্টার চিনে রাখো, সব পথে মেমরি ছাড়ো আর টুলের রিপোর্ট বুঝতে শেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "c-realloc-free"
+  ],
+  "related": [
+    "c-dynamic-memory-intro",
+    "c-malloc-calloc",
+    "c-realloc-free"
+  ],
+  "keywords": [
+    "Memory Leaks and Tools",
+    "C17",
+    "dynamic-memory"
+  ],
+  "standards": {
+    "minimum": "c99",
+    "notes": [
+      "These complete programs target C17; declarations in loops require C99 or later."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A leak is storage you forgot to return"
+    },
+    {
+      "id": "syntax",
+      "title": "Read the C notation"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Read a memory report as a trail"
+    },
+    {
+      "id": "examples",
+      "title": "Worked programs"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Exercise branches, not only large inputs"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Mistakes and repairs"
+    },
+    {
+      "id": "best-practices",
+      "title": "Habits to use in your programs"
+    },
+    {
+      "id": "version-notes",
+      "title": "C versions and portability"
+    },
+    {
+      "id": "summary",
+      "title": "What you can now do"
+    }
+  ],
+  "examples": [
+    {
+      "title": "Clean up two owned integers",
+      "explanationHtml": "<p>The second-allocation failure branch releases first; the successful path releases both.</p>",
+      "id": "ex-1",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true
+    },
+    {
+      "title": "A sum helper borrows storage",
+      "explanationHtml": "<p>sum reads the three values without freeing them; main remains the owner.</p>",
+      "id": "ex-2",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true
+    },
+    {
+      "title": "Release each loop iteration",
+      "explanationHtml": "<p>Each round creates and releases its own integer; their accumulated values total 60.</p>",
+      "id": "ex-3",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true
+    }
+  ],
+  "practice": [
+    {
+      "title": "Balance repeated ownership",
+      "statementHtml": "<p>Read rounds from 0 to 20. Print Rounds: then the sum 1 through rounds. In each round allocate one int, store its round number, add its value, and release it.</p>",
+      "hints": [
+        "No block should survive to the next round."
+      ],
+      "difficulty": "easy",
+      "id": "p-1",
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Release before an early result",
+      "statementHtml": "<p>Read count from 1 to 20 and at most count values from -100 to 100. Print Count and values:. Stop at the first negative value and print negative; otherwise print nonnegative. Use an allocated array and clean both paths.</p>",
+      "hints": [
+        "An early successful return can leak too."
+      ],
+      "difficulty": "medium",
+      "id": "p-2",
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Two resources, two releases",
+      "statementHtml": "<p>Read a and b from -100 to 100. Print Two values: then a-b, storing each input in a separate allocated integer. Clean up if the second allocation fails.</p>",
+      "hints": [
+        "The first block remains owned when a later request fails."
+      ],
+      "difficulty": "medium",
+      "id": "p-3",
+      "solution": "practice/p-3.c",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Return a borrowed search result",
+      "statementHtml": "<p>Read target from -100 to 100. Print Target: then Found: and the value if target occurs in allocated data {4,7,9}, otherwise missing. A helper returns a borrowed pointer or NULL.</p>",
+      "hints": [
+        "Use the result before releasing the owner, and never free the borrowed result."
+      ],
+      "difficulty": "hard",
+      "id": "p-4",
+      "solution": "practice/p-4.c",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "Which ownership event produces an unreachable allocation leak?",
+      "explanation": "The block remains live but no usable owner can release it.",
+      "difficulty": "medium",
+      "id": "q-1",
+      "options": [
+        "Calling free once at the end",
+        "Losing the last usable pointer without release",
+        "Returning a copied integer value",
+        "Borrowing data during a helper call"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What distinguishes a dangling pointer from a leak?",
+      "explanation": "A dangling pointer outlives its target; a leak keeps storage alive.",
+      "difficulty": "medium",
+      "id": "q-2",
+      "options": [
+        "It always stores NULL",
+        "It necessarily points to stack memory",
+        "Its target lifetime has already ended",
+        "It owns an unusually large block"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Who releases an array borrowed by a const int * sum helper?",
+      "explanation": "const restricts writes through that view, not ownership.",
+      "difficulty": "medium",
+      "id": "q-3",
+      "options": [
+        "The sum helper automatically",
+        "Both functions",
+        "The compiler because of const",
+        "The owner after the helper finishes"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "If allocation two fails after allocation one succeeds, what cleanup is needed?",
+      "explanation": "The first successful allocation is still owned.",
+      "difficulty": "medium",
+      "id": "q-4",
+      "options": [
+        "Release the first allocation",
+        "Release the failed NULL result only",
+        "Release neither",
+        "Read through the second pointer"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which GCC flag requests source locations useful in memory reports?",
+      "explanation": "Debug information lets tools relate executed addresses to source lines.",
+      "difficulty": "medium",
+      "id": "q-5",
+      "options": [
+        "-E",
+        "-g",
+        "-S",
+        "-w"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "How should Valgrind and AddressSanitizer be used while comparing diagnoses?",
+      "explanation": "Their instrumentation can interfere, so use separate runs and comparable inputs.",
+      "difficulty": "medium",
+      "id": "q-6",
+      "options": [
+        "Run Valgrind on the ASan build together",
+        "Disable every warning",
+        "Use separate ordinary and instrumented builds",
+        "Change input randomly between runs"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why can one clean sanitizer run miss an early-return leak?",
+      "explanation": "Tools observe executed paths and supported error classes.",
+      "difficulty": "medium",
+      "id": "q-7",
+      "options": [
+        "Sanitizers prove only arithmetic",
+        "Early returns always free memory",
+        "Leaks require signed overflow",
+        "That input may never take the early return"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "output",
+      "prompt": "What sum prints after both owned integers are initialized?",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int *first = malloc(sizeof *first);\n    if (first == NULL) {\n        return 1;\n    }\n    int *second = malloc(sizeof *second);\n    if (second == NULL) {\n        free(first);\n        return 1;\n    }\n    *first = 12;\n    *second = 18;\n    printf(\"Sum: %d\\n\", *first + *second);\n    free(second);\n    free(first);\n    return 0;\n}\n",
+      "explanation": "The two values 12 and 18 are added before either allocation is released.",
+      "difficulty": "medium",
+      "id": "q-8",
+      "options": [
+        "Sum: 30",
+        "Sum: 12",
+        "Sum: 18",
+        "Sum: 0"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "output",
+      "prompt": "What does the borrowing sum helper read from its live owner?",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint sum(const int *values, size_t count)\n{\n    int total = 0;\n    for (size_t i = 0; i < count; i++) {\n        total += values[i];\n    }\n    return total;\n}\n\nint main(void)\n{\n    int *owner = malloc(3 * sizeof *owner);\n    if (owner == NULL) {\n        return 1;\n    }\n    owner[0] = 4;\n    owner[1] = 7;\n    owner[2] = 9;\n    const int *view = owner;\n    printf(\"Borrowed sum: %d\\n\", sum(view, 3));\n    free(owner);\n    return 0;\n}\n",
+      "explanation": "The view sees all three initialized integers.",
+      "difficulty": "medium",
+      "id": "q-9",
+      "options": [
+        "Borrowed sum: 16",
+        "Borrowed sum: 20",
+        "Borrowed sum: 0",
+        "Borrowed sum: 9"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "output",
+      "prompt": "What total survives after each loop allocation is released?",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int total = 0;\n    for (int round = 1; round <= 3; round++) {\n        int *value = malloc(sizeof *value);\n        if (value == NULL) {\n            return 1;\n        }\n        *value = round * 10;\n        total += *value;\n        free(value);\n    }\n    printf(\"Total: %d\\n\", total);\n    return 0;\n}\n",
+      "explanation": "The automatic accumulator keeps copied integer values from three rounds.",
+      "difficulty": "medium",
+      "id": "q-10",
+      "options": [
+        "Total: 30",
+        "Total: 0",
+        "Total: 60",
+        "Total: 90"
+      ],
+      "answer": 2
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A memory leak leaves an allocation live beyond its useful ownership.",
+      "bn": "দরকার শেষ হলেও অ্যালোকেশন ছাড়া না হলে মেমরি লিক হয়।"
+    },
+    {
+      "en": "A dangling pointer outlives its target storage.",
+      "bn": "পয়েন্টার থাকলেও তার মেমরির মেয়াদ শেষ হলে সেটি dangling হয়।"
+    },
+    {
+      "en": "Borrowing a pointer does not transfer release responsibility.",
+      "bn": "পয়েন্টার ধার নিলেই মেমরি ছাড়ার দায়িত্ব চলে আসে না।"
+    },
+    {
+      "en": "Every exit after allocation needs an ownership review.",
+      "bn": "অ্যালোকেশনের পর ফাংশন থেকে বের হওয়ার প্রতিটি পথ দেখে মেমরি ছাড়ো।"
+    },
+    {
+      "en": "Memory reports describe executed paths, so test different branches.",
+      "bn": "মেমরি টুল চালানো পথের রিপোর্ট দেয়, তাই আলাদা ব্রাঞ্চও চালিয়ে দেখো।"
+    },
+    {
+      "en": "Use separate builds for Valgrind and AddressSanitizer.",
+      "bn": "Valgrind আর AddressSanitizer-এর জন্য আলাদা বিল্ড ব্যবহার করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Distinguish an unreachable leak and a use-after-free.",
+      "marks": 4,
+      "answerHtml": "<p>An unreachable leak keeps an allocation live after the last usable owner address is lost. A use-after-free accesses storage after release. The first misses a release; the second accesses too late or releases too early.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Describe a diagnostic workflow for a leak that occurs only after input rejection.",
+      "marks": 7,
+      "answerHtml": "<p>Compile a debug build with AddressSanitizer and supported leak detection. Run input that reaches the rejection branch. Read the allocation site in the leak report, then trace ownership from that request through the rejecting return. Add release for each live owned resource. Rebuild and rerun both accepted and rejected input. Inspect the code too, because one path cannot prove all branches.</p>"
+    },
+    {
+      "type": "output",
+      "question": "Trace the total across separately allocated rounds.\n\n#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    int total = 0;\n    for (int round = 1; round <= 3; round++) {\n        int *value = malloc(sizeof *value);\n        if (value == NULL) {\n            return 1;\n        }\n        *value = round * 10;\n        total += *value;\n        free(value);\n    }\n    printf(\"Total: %d\\n\", total);\n    return 0;\n}\n",
+      "marks": 4,
+      "answerHtml": "<pre class=\"output\">Total: 60</pre><p>Only the integer values are copied into total; each round releases its own block.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Memory Leaks and Tools — C reference",
+      "url": "https://valgrind.org/docs/manual/mc-manual.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

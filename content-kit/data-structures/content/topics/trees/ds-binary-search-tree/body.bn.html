@@ -1,0 +1,80 @@
+<h2 id="introduction">তুলনা থেকে দিক বেছে নাও</h2>
+<p class="lead">ট্রিতে roll number রেখে একটা দ্রুত খুঁজতে চাও ধরো। প্রতিটি ঘরে target ছোট হলে বামে, বড় হলে ডানে যাবে। <dfn>বাইনারি সার্চ ট্রি</dfn> বা BST প্রতিটি subtree-র key নির্দিষ্ট সীমার মধ্যে রেখে এই সিদ্ধান্ত নিরাপদ করে।</p>
+<p>নিয়মটা পুরো subtree-র জন্য। নোডের left link-এর নিচের সব key সেই নোডের key-র ছোট হবে। Right link-এর নিচের সব key বড় হবে। এই পাঠে unique integer key রাখা হয়, তাই সমান key insert করলে ট্রি বদলায় না।</p>
+<p>BST হলো বাড়তি ordering rule-সহ বাইনারি ট্রি। এটি complete গঠন বা কম height-এর নিশ্চয়তা দেয় না। আগে থেকে <a href="topic:ds-tree-traversals">inorder traversal</a> আর linked child পয়েন্টার জানা চাই। এবার সেই ধারণা দিয়ে search, insertion আর পাশের key খোঁজা শিখবে।</p>
+
+<h2 id="syntax">Key-র নিয়ম আর link-এর দায় ঠিক করো</h2>
+<pre><code class="language-text">search(root, key):
+    while root exists and root.key differs from key:
+        root = root.left if key is smaller, otherwise root.right
+    return root
+insert(root link, key):
+    follow the same comparisons
+    equal: keep the existing node
+    empty link: allocate and initialize a leaf, then publish it</code></pre>
+<p>Root link caller-এর। রিকার্সিভ insertion তার address পায়, তাই ফাঁকা root বা child link দুটোই পূরণ করতে পারে। ইটারেটিভ insertion বর্তমান owner link-এর পয়েন্টার ব্যবহার করে। সেই পয়েন্টার সরালে ট্রির নোড সরে না; কোন link নতুন leaf পেতে পারে তা বাছা হয়।</p>
+<pre class="diagram">6 insert-এর আগে:           6 insert-এর পরে:
+        [8]                         [8]
+       /   \                       /   \
+     [3]   [10]                   [3]   [10]
+       \                            \
+       NULL                         [6]
+নতুন leaf-এর পথের সীমা: 3 &lt; key &lt; 8
+নতুন record: [key=6 | left=NULL | right=NULL]</pre>
+<p>নতুন key 6 অবশ্যই 3-এর বড় আর 8-এর ছোট হবে। শুধু সরাসরি parent দেখলে ওপরের সীমা বাদ পড়বে। Root থেকে তুলনা ধরে চললে দুই শর্তই আপনাআপনি থাকে। পরে যেকোনো key বদলে দিলে শর্ত ভাঙতে পারে, তাই সাধারণ BST insertion সম্পর্কহীন key লেখে না।</p>
+
+<h2 id="how-it-works">এক পথ ধরে search আর insert</h2>
+<p>Root থেকে search শুরু করে target আর তার key তুলনা করো। সমান হলে সফল। Target ছোট হলে পুরো right subtree বাদ দাও, কারণ তার সব key root-এর বড়। একইভাবে target বড় হলে left subtree বাদ যায়।</p>
+<p>উদাহরণের ট্রিতে 6 খুঁজলে 8, তারপর 3, তারপর 6 আসে। 7 খুঁজলেও একই পথ, তারপর 6-এর ফাঁকা right link। যে interval টিকে ছিল তার মধ্যে key নেই, ফাঁকা link সেটাই প্রমাণ করে। পুরো ট্রি ফাঁকা ছিল, এমন নয়।</p>
+<table class="ref"><caption>6 খোঁজার ধাপ</caption><thead><tr><th scope="col">বর্তমান key</th><th scope="col">তুলনা</th><th scope="col">পরের কাজ</th></tr></thead><tbody><tr><td>8</td><td>6 ছোট</td><td>বাম link ধরো</td></tr><tr><td>3</td><td>6 বড়</td><td>ডান link ধরো</td></tr><tr><td>6</td><td>সমান</td><td>এই নোড ফেরাও</td></tr></tbody></table>
+<p>রিকার্সিভ search একই case ফাংশন call দিয়ে বলে। Base case NULL বা সমান হওয়া সামলায়। রিকার্সিভ case ঠিক একটি child পাঠায়, তাই দুই subtree ঘেঁটে দেখে না। ইটারেটিভ search রিকার্সিভ call-এর storage বাঁচিয়ে শুধু current পয়েন্টার রাখে।</p>
+<p>Insertion নতুন key-র search-এর পথ ধরে। এই ট্রি set রাখে বলে মিলে গেলে allocation লাগে না। ফাঁকা link-এ Node allocate করে দুই child পয়েন্টার NULL করো। Initialization সফল হলেই পয়েন্টারটি link-এ বসাও।</p>
+<p>Allocation ব্যর্থ হলে insertion failure জানায়, আগের সব key রাখে। তারপর প্রোগ্রাম ফেরার আগে নিজের ট্রি destroy করে। ব্যর্থ চেষ্টা হয়েছে বলে আংশিক initialized record দিয়ে owner link overwrite করা চলে না। C উদাহরণগুলো প্রতিটি insertion-এর ফল যাচাই করে।</p>
+<div data-lab="bst-insert-search"></div>
+<p>Lab input.values দেওয়া ক্রমে insert করে, তারপর input.key খোঁজে। তার comparison path প্রথম উদাহরণের রিকার্সিভ insertion আর ইটারেটিভ search-এর সঙ্গে মেলে। পেলে found এক, না পেলে শূন্য। সফল search-এর comparison count-এ মিলে যাওয়া নোডটিও থাকে।</p>
+<p>Edge height h হলে search আর insertion সর্বোচ্চ h+1 রাখা নোডে যায়। সময় O(h+1)। রিকার্সিভ version-এ O(h+1) call space, ইটারেটিভ version-এ বাড়তি O(1) জায়গা লাগে। সফল insertion একটি record যোগ করে, duplicate বাড়তি storage নেয় না।</p>
+<p>বাড়তে থাকা unique ইনপুট-এ বারবার insertion দিয়ে n key বানাতে O(n squared) সময় লাগতে পারে। মোটামুটি balanced গঠনে O(n log n) লাগে। প্রতিটি সাধারণ BST-র জন্য দ্বিতীয় সীমা বলবে না। এর নিজের কোনো rotation rule নেই যা balance নিশ্চিত করবে।</p>
+
+<h2 id="examples">দুই ধরনের implementation চালাও</h2>
+<p>প্রথম প্রোগ্রাম সীমিত insertion sequence পড়ে, inorder key প্রিন্ট করে, তারপর search result আর edge height জানায়। দ্বিতীয়টি insertion-এ owner-link লুপ আর রিকার্সিভ search ব্যবহার করে। Duplicate নতুন শাখা হবেই ধরে না নিয়ে সমান key-তে দুইটির আচরণ তুলনা করো।</p>
+
+<h3>Recursively insert, iteratively search করো</h3>
+<p>Search 8, 3, তারপর 6 ধরে। প্রতিটি left subtree-তে ছোট key আছে বলে inorder সাজানো।</p>
+<div data-example="ex-1"></div>
+
+<h3>Iteratively insert, recursively search করো</h3>
+<p>Child link-এর পয়েন্টার থাকায় আলাদা parent case ছাড়াই লুপ নতুন নোড বসাতে পারে। Duplicate 3 কিছু যোগ করে না।</p>
+<div data-example="ex-2"></div>
+
+<h3>সর্বনিম্ন, সর্বোচ্চ আর পরের বড় key খোঁজো</h3>
+<p>8-এর successor হলো 9, তার right subtree-র সর্বনিম্ন। সংখ্যায় পাশাপাশি থাকার কোনো শর্ত নেই।</p>
+<div data-example="ex-3"></div>
+
+<h2 id="variations">Minimum, maximum আর strict successor</h2>
+<p>রাখা সবচেয়ে ছোট key বাম link ধরে শেষ পৌঁছানো নোডে। নোডের left child থাকলে সেই পুরো subtree-তে ছোট key আছে। Left link NULL না হওয়া পর্যন্ত চলো। একই যুক্তি উল্টে maximum-এর জন্য ডান link ধরো।</p>
+<p>ফাঁকা ট্রির minimum বা maximum নেই। NULL ফেরাও, caller পরিষ্কার empty ফল প্রিন্ট করুক। শূন্য বা -1 দিয়ে missing key বোঝাবে না, কারণ দুটোই বৈধ ডেটা হতে পারে। উদাহরণগুলো key পড়ার আগে ফেরত পাওয়া পয়েন্টার দেখে।</p>
+<p><dfn>Successor</dfn> হলো query-র চেয়ে কঠোরভাবে বড়, রাখা key-গুলোর সবচেয়ে ছোটটি। Query আগেই থাকতে হবে না। বর্তমান key বড় হলে candidate হিসেবে রেখে বামে চলো। বড় না হলে candidate না বদলে ডানে যাও।</p>
+<pre class="diagram">8-এর successor:
+        [8] --right--&gt; [10] --left--&gt; [9]
+নামার আগে: candidate=NULL
+10-এ: candidate=10, বামে যাও
+9-এ: candidate=9, বামে NULL-এ যাও
+নামার পরে: result=9; কোনো link বদলায়নি</pre>
+<p>রাখা নোডের right subtree থাকলে successor সেই subtree-র minimum। না থাকলে বড় কোনো ancestor উত্তর দিতে পারে। Candidate পদ্ধতি root-এর পথ ধরে দুটো অবস্থাই সামলায়। Query সর্বোচ্চ key-র সমান বা বড় হলে candidate NULL থেকে যায়।</p>
+<p>এই লুপ-গুলোতে minimum, maximum আর successor প্রতিটি O(h+1) সময় আর বাড়তি O(1) জায়গা নেয়। Range count-এ দুই child দরকার হতে পারে বলে অনেক নোডে যেতে হয়। পুরো subtree interval-এর বাইরে হলে pruning সাহায্য করে, কিন্তু worst-case কাজ তখনও O(n)।</p>
+
+<h2 id="edge-cases">Performance-এর উত্তরে গঠনও বলো</h2>
+<p>ফাঁকা search-এ রাখা নোডের সঙ্গে তুলনা শূন্য। এক নোডে একবারে মেলে, অথবা একটা missing link আসে। Linked BST-তে নির্দিষ্ট full অবস্থা নেই; পাওয়া মেমরি বৃদ্ধি সীমিত করে। বারো key-র ইনপুট সীমা প্রোগ্রামগুলোর, BST-র সংজ্ঞার নয়।</p>
+<p>1,2,3,4,5 insert করে দেখো। প্রতিটি নতুন key আগের সব key পেরিয়ে ডানে যায়, edge height চার হয়। 3,1,5,2,4 দিলে একই set-এর খাটো গঠন হয়। দুটোতেই inorder 1 থেকে 5 প্রিন্ট করে, তাই শুধু সাজানো আউটপুট দেখে performance বোঝা যায় না।</p>
+<p>Search result পয়েন্টার ট্রির নিজের record দেখায়। Record বেঁচে থাকা পর্যন্ত ব্যবহার করা যায়। পরে deletion সেটিকে অবৈধ করতে পারে। তাই node field-এ সরাসরি access লাগে না এমন caller-এর জন্য key ফেরানো interface সহজ হতে পারে।</p>
+
+<h2 id="common-mistakes">Subtree-র নিয়ম দুর্বল কোরো না</h2>
+<h3>নিয়ম না বলে duplicate বসানো</h3><p>কিছু BST record-এ সমান key-র count রাখে, কিছু সবসময় এক পাশে রাখে। এই পাঠে duplicate উপেক্ষা করা হয়। নিয়ম মেশালে search আর deletion মিলবে না, তাই এখানকার প্রতিটি routine-এ set-এর নিয়ম রাখো।</p>
+<h3>সমান কি না দেখার আগেই allocate করা</h3><p>Duplicate-এর কারণে অব্যবহৃত allocated record পড়ে থাকা উচিত নয়। আগে search করে ফাঁকা প্রান্তে allocate করো। অন্য নকশায় আগে allocation করলে insert না হওয়ার প্রতিটি পথে বাড়তি নোড ছাড়তে হবে।</p>
+<h3>এক তুলনায় বাকি নোড অর্ধেক হয় ধরে নেওয়া</h3><p>চেইনে প্রতিটি ধাপে বাদ যাওয়া subtree ফাঁকা হতে পারে। অর্ধেক হওয়া গঠনের ওপর নির্ভর করে, শুধু binary শব্দের ওপর নয়। O(h+1)-কে n-এর হিসাবে লেখার আগে height বলো।</p>
+
+<h2 id="version-notes">C17-এ পয়েন্টার update</h2>
+<div class="callout version"><p>রিকার্সিভ আর ইটারেটিভ routine-গুলো portable C17। পয়েন্টার by value পাঠালে caller-এর root ভেরিয়েবল বদলানো যায় না। কোনো কাজ root বদলাতে পারলে root ফেরাও বা আসল owner link-এর পয়েন্টার পাঠাও।</p></div>
+
+<h2 id="summary">ক্রম কাজের পরিসর ছোট করে</h2>
+<p>BST ancestor-এর সীমা থেকে নিরাপদ search direction পায়। Insertion সেই সীমা রাখে, আর গঠন পথের দৈর্ঘ্য ঠিক করে। পরের <a href="topic:ds-bst-deletion">BST deletion</a> পাঠে বেঁচে থাকা subtree না হারিয়ে record সরাবে।</p>

@@ -76,7 +76,7 @@ export class ApiError extends Error {
   constructor(code, message, status) { super(message); this.code = code; this.status = status; }
 }
 
-export async function api(method, path, body, extraHeaders = {}) {
+export async function api(method, path, body, extraHeaders = {}, format = 'json') {
   const headers = { 'content-type': 'application/json', ...extraHeaders };
   const token = await accessToken();
   if (token) headers.authorization = `Bearer ${token}`;
@@ -86,11 +86,11 @@ export async function api(method, path, body, extraHeaders = {}) {
   } catch {
     throw new ApiError('network', getLang() === 'bn' ? 'সার্ভারে পৌঁছানো যায়নি। আবার চেষ্টা করো।' : 'Could not reach the server. Try again.', 0);
   }
-  const data = await res.json().catch(() => ({}));
+  const data = res.ok && format === 'text' ? await res.text() : await res.json().catch(() => ({}));
   if (res.status === 401) {
     writeAuth(null);
     const cfg = await getConfig();
-    if (cfg.authMode === 'hybrid' && token) return api(method, path, body, extraHeaders); // expired sign-in: carry on as a guest
+    if (cfg.authMode === 'hybrid' && token) return api(method, path, body, extraHeaders, format); // expired sign-in: carry on as a guest
     await showSignIn(data.error?.message);
     throw new ApiError('unauthenticated', data.error?.message ?? 'Sign in to continue.', 401);
   }
@@ -148,6 +148,8 @@ async function mountAccount(actions, bn) {
   if (!cfg.supabaseUrl || cfg.authMode === 'anonymous') return;
   const user = currentUser();
   if (!user) { actions.insertBefore(el('button', { type: 'button', class: 'btn-signin acct', text: bn ? 'সাইন ইন' : 'Sign in', onclick: () => showSignIn() }), actions.querySelector('.btn-pro')); return; }
+  const { mountNotices } = await import('./notices.js');
+  mountNotices(actions);
   const initials = (user.name || user.email || '?').split(/[\s@.]+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const menu = el('div', { class: 'acct-menu', hidden: true },
     el('div', { class: 'acct-who' }, el('strong', { text: user.name || (bn ? 'সাইন ইন করা আছে' : 'Signed in') }), el('span', { text: user.email ?? '' })),

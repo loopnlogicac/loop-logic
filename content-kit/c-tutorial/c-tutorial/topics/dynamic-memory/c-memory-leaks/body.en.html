@@ -1,0 +1,69 @@
+<h2 id="introduction">A leak is storage you forgot to return</h2>
+<p class="lead">Imagine booking a lab room, finishing the class, and leaving without returning its key. The room still exists, but nobody who needs it can use that booking. A <dfn>memory leak</dfn> is allocated storage that your program fails to release when its ownership should end. Losing the last usable pointer makes such storage unreachable.</p>
+<p>Small programs may finish before a leak seems important. A long-running service can repeat the same mistake thousands of times. Memory consumption grows, later allocations fail, and unrelated work becomes slower. The operating system reclaiming process memory at exit does not make the ownership design correct during execution.</p>
+<p>Leaks differ from dangling pointers. A leak keeps storage alive without useful ownership. A dangling pointer refers to storage whose lifetime has already ended. A rushed attempt to fix one by adding free everywhere can create the other. The right question is which code owns the allocation and when its borrowers finish.</p>
+<p>Memory diagnostics help you test that reasoning. AddressSanitizer finds many invalid accesses; LeakSanitizer can report unfreed allocations on supported systems. Valgrind Memcheck offers another view of memory use. None of these tools can decide every intended lifetime from one successful execution. You still need a clear contract and several paths through the program.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>An ownership comment describes what a function promises. For example, a search helper may return a pointer into its input array. That pointer is borrowed: the caller must not free it separately. A factory returning a fresh allocation makes a different promise, transferring responsibility to the caller.</p>
+<p>Cleanup often follows acquisition in reverse order. If the second allocation fails, release the first. If later input fails, release both successful allocations. This pattern ensures that an early return has the same ownership result as the normal return: no unneeded block remains live.</p><pre><code class="language-c">int *second = malloc(sizeof *second);
+if (second == NULL) {
+    free(first);
+    return 1;
+}
+/* Use both live allocations here. */
+free(second);
+free(first);
+</code></pre><table class="ref"><thead><tr><th scope="col">Role</th><th scope="col">May inspect values?</th><th scope="col">May end the allocation?</th></tr></thead><tbody><tr><td>Owner</td><td>Yes, within bounds</td><td>Yes, after borrowers finish</td></tr><tr><td>Borrower</td><td>Yes, while owner keeps it live</td><td>No, unless ownership transfers</td></tr><tr><td>Pointer after free</td><td>No target access</td><td>No second release</td></tr></tbody></table>
+
+<h2 id="how-it-works">Read a memory report as a trail</h2>
+<p>Build a diagnostic executable with debug information so reported addresses can be mapped to source lines. With GCC, use -g and a moderate optimization level while investigating. Add -fsanitize=address,undefined and -fno-omit-frame-pointer. Run the program using representative input, including early exits. Sanitizer support and exact messages depend on your platform.</p>
+<p>For example, compile examples/ex-1.c with gcc -std=c17 -Wall -Wextra -Wpedantic -Werror -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer. Add -o memory-check to name the executable. Then run ASAN_OPTIONS=detect_leaks=1 ./memory-check on systems with LeakSanitizer support. The intact example should finish without a memory diagnostic.</p>
+<p>A heap-use-after-free report usually contains the invalid access location, the earlier free location, and the original allocation location. Read the first invalid operation rather than editing the last visible symptom. Match the three locations to the intended ownership timeline. If the access was required, the owner released too early. If the release was correct, the borrower lasted too long.</p>
+<p>A leak report points to allocation sites. The allocation line may be perfectly valid; the missing cleanup may be far away. Trace every branch after that request. Look for an overwritten owner, a return inside a validation branch, or a helper contract that leaves both caller and callee expecting the other to free.</p><pre class="diagram">allocate --&gt; owner --&gt; borrower reads --&gt; borrower finishes --&gt; free
+                 |
+                 +--&gt; validation fails --&gt; free --&gt; return
+
+leak:       allocate --&gt; lose last owner --&gt; block stays live
+dangling:   allocate --&gt; free --&gt; borrower reads ended storage</pre><p>For Valgrind, compile a separate ordinary debug executable without AddressSanitizer instrumentation. Run valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./memory-check. Memcheck distinguishes definitely lost storage from blocks still reachable by pointers at exit. Both deserve interpretation against your design; a reachable cache is different from an accidentally abandoned local result.</p>
+<p>Do not combine Valgrind and AddressSanitizer for the same run. They use different memory instrumentation approaches and can interfere. Keep the input identical when comparing their reports. Read tool documentation if a report mentions unsupported instructions, missing runtime support, or other environment problems rather than attributing every message to your C code.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>These programs show ownership patterns that should complete without memory errors. The point is to recognize a good lifetime before diagnosing a bad one. Trace the second-allocation failure branch even though a normal small run usually takes the success branch. Correct cleanup must be written for both possibilities.</p>
+
+<h3>Clean up two owned integers</h3>
+<p>The first request establishes one owner. A failed second request must not abandon it. On success, both integers are initialized, the program prints Sum: 30, and each allocation is released exactly once. Read the code as two possible paths with the same final ownership state. The absence of a failure during a small run does not remove that branch's importance.</p>
+<div data-example="ex-1"></div>
+
+<h3>A sum helper borrows storage</h3>
+<p>The view pointer copies the owner's address for a read-only helper call. sum receives the length explicitly and adds 4, 7, and 9 to print Borrowed sum: 20. The helper neither stores the view for later nor releases it. main waits until the call finishes before freeing the allocation, so every read happens within the lifetime.</p>
+<div data-example="ex-2"></div>
+
+<h3>Release each loop iteration</h3>
+<p>The owner exists inside each loop iteration. A successful round initializes a value, adds it to a separate automatic total, and releases the allocation before the next request. The total survives because it stores integer values rather than borrowed pointers. The three rounds contribute 10, 20, and 30. No allocation needs to remain live after a round ends.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Exercise branches, not only large inputs</h2>
+<p>A clean run says something about the path actually taken. If input is always valid, it never tests cleanup after a failed read. If a search always finds its target, it does not test the absence branch. Use an empty case, a one-element case, and a rejected-value case where the interface permits them. Check that each path releases the same owned resources.</p>
+<p>Allocation failure is hard to force reliably by asking for a huge block. Operating systems can reserve virtual memory without backing every byte immediately. A useful test design lets a wrapper reject a chosen allocation request. That controlled failure exercises cleanup without exhausting the machine. The wrapper must preserve the original allocation function's contract.</p>
+<p>Leaks from partial construction are common. When building a table of rows, record how many rows have succeeded. A failure during row k owns exactly rows zero through k-1 plus the outer table. Free those rows, then the table. Never walk uninitialized row pointers while trying to clean up.</p>
+<p>A borrowed interior pointer must not be freed even when its numeric address happens to equal the allocation base. Ownership comes from the interface agreement, not an address comparison. A helper can accept const int * to prevent integer writes through that view, but const does not extend the target lifetime or transfer release responsibility.</p>
+<p>Some diagnostics are indirect. An out-of-bounds write can damage unrelated state and cause a crash much later. Sanitizers often stop at the first invalid write, which is closer to the cause. Fix that earliest error, rebuild, and run again before treating later messages as independent defects.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Adding free to every function</h3>
+<p>A borrowed pointer parameter is not automatically owned. Freeing it inside a display or sum helper can leave the caller with a dangling owner. Write whether each helper borrows, consumes, or returns ownership. The sum helper below borrows for the duration of its call and never releases the array.</p>
+<h3>Ignoring a return inside a loop</h3>
+<p>A validation failure inside an allocation-owning loop can bypass cleanup. Put release immediately before that return, or use a carefully structured cleanup section. Review every return that follows an allocation. A successful final path does not compensate for a leak in an earlier branch.</p>
+<h3>Treating silence as a proof</h3>
+<p>No diagnostic on one input does not prove all lifetimes are correct. A tool may lack leak support or may never reach the failing branch. Pair memory tools with code inspection and deliberate path coverage. State which error classes a particular run could actually observe.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Name ownership at function boundaries before adding cleanup calls. Keep acquisition and release paired in the design, including failed input and partial allocation. Prefer one owner with several short-lived borrowers over unclear shared responsibility. Borrowers should finish before a resize or release operation changes the target lifetime.</p>
+<p>While debugging, keep source lines and compiler settings with the report. A report for an older executable may point at code you already changed. Rebuild after each repair and rerun the relevant input. Check both memory diagnostics and the program's numeric results; memory-safe code can still implement the wrong calculation.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>C17 does not include a garbage collector or built-in ownership type. AddressSanitizer, LeakSanitizer, and Valgrind are development tools outside the language standard. Their availability and report wording vary. The example programs use standard C17 allocation and release operations and need no tool-specific API calls. C99 loop declarations set their minimum source-language version.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>A leak leaves unwanted allocated storage alive; a dangling pointer outlasts its target. Clear ownership, balanced cleanup, and tested error branches prevent both. Use diagnostic reports to trace allocation, access, and release back to their source lines. Next, apply these habits to <a href="topic:c-dynamic-arrays">dynamic one- and two-dimensional arrays</a>.</p>

@@ -1,0 +1,59 @@
+<h2 id="introduction">Keep the roll attached to the mark</h2>
+<p class="lead">Suppose you store rolls in one array and scores in another. Sorting only the scores would attach each result to the wrong student. An <dfn>array of structures</dfn> keeps every student's related fields inside one element. Moving an entire element then moves the roll and score together.</p>
+<p>The array still has one element type: struct Mark. That type happens to contain several members. An index chooses one record, and a dot chooses one field inside it. marks[2].score means the score member of the third record. The operations combine rules you already know rather than introducing a new storage mechanism.</p>
+<p>A class register naturally uses this layout. You can fill records from input, find a roll with a linear search, order records by a chosen key, or keep only students who passed. Each operation needs a count of valid records. The array's full capacity is not automatically the number of students actually entered.</p>
+<p>In these examples, a small fixed-capacity array keeps the focus on record operations. The same search and sorting ideas work on an allocated block of structures when its owner supplies a valid count. Dynamic allocation changes ownership, while the field access and record movement rules stay the same.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>Declare struct Mark marks[10] for ten record slots. Each slot contains both roll and score. A brace pair around each initializer makes the record boundary visible. When reading one score, scanf needs the address of marks[i].score, so place the address operator before the complete member expression.</p>
+<p>Use a whole struct Mark temporary when swapping. Swapping only the score members would break the record association. A whole-record assignment copies every member value, which is exactly the operation a record sort needs. The examples' records have no pointer members requiring additional ownership work.</p><pre><code class="language-c">struct Mark marks[] = {{4, 70}, {2, 90}, {8, 80}};
+int value = marks[1].score;
+struct Mark temporary = marks[0];
+marks[0] = marks[1];
+marks[1] = temporary;
+</code></pre><table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Purpose</th></tr></thead><tbody><tr><td>marks[i]</td><td>One complete student result</td></tr><tr><td>marks[i].roll</td><td>Search key for that record</td></tr><tr><td>marks[i].score</td><td>Value used for totals or ranking</td></tr><tr><td>count</td><td>Number of initialized records</td></tr></tbody></table>
+
+<h2 id="how-it-works">Search by a key and move whole records</h2>
+<p>A linear search checks records from index zero toward count. At each step, compare the roll field with the requested roll. Stop on a match and keep its index. An index of -1 can represent absence when the count fits int. Do not use that sentinel as an array subscript.</p>
+<p>The search example checks roll four first, then finds roll two at index one. That same element contains score ninety. The lookup prints both fields from the matching record, preserving their relationship. If duplicate rolls are permitted, this algorithm chooses the first match. A real register may instead reject duplicates when data is entered.</p>
+<p>Sorting needs an explicit comparison rule. The worked sort orders score descending, so a lower left score must move right. Whenever adjacent records are out of order, swap both complete records. A pass moves a low score toward the end. Repeating passes eventually leaves the array in descending score order.</p>
+<p>The simple adjacent-swap sort takes quadratic time in the worst case. For n records, it can perform roughly n*(n-1)/2 comparisons. That cost is reasonable for these tiny inputs and easy to trace. A linear search costs O(n) because it may inspect every record. The extra temporary record uses constant auxiliary storage.</p>
+<p>Stability describes what happens to equal keys. This score sort swaps only when the left score is strictly lower. Equal-score neighbors therefore keep their original relative order. Rolls four and eight both have seventy, so four remains before eight. If you add a secondary roll comparison, you intentionally change that tie policy.</p>
+<p>Filtering can compact records inside the same array. Keep a write index for the next passing record. Scan with a separate read index, copying each accepted complete record to the write position. The write index never moves beyond the read index, so an unread record is not overwritten. The final write index becomes the new logical count.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The register programs begin with only three records so you can trace every access. First add scores without changing the register. Then search by roll. Finally sort by score and observe that the tied records preserve their order. The exercises add input and an explicit logical count.</p>
+
+<h3>Total three student scores</h3>
+<p>The loop bound comes from the actual initialized array object. Each index selects a Mark record, then .score selects the integer added to total. Rolls are not changed or used as numeric positions. The output Total: 240 is independent of record order. If the array moves into a helper, that helper will need an explicit count instead of this sizeof formula.</p>
+<div data-example="ex-1"></div>
+
+<h3>Find one roll in the register</h3>
+<p>The search keeps -1 until a match occurs. After finding roll two, it records index one and stops. The final condition prevents an invalid negative subscript in the missing case. Both printed fields come from the same chosen element. The order of records affects how many comparisons occur, but it does not detach a score from its roll.</p>
+<div data-example="ex-2"></div>
+
+<h3>Rank by score with whole-record swaps</h3>
+<p>The temporary has the same structure type as each array element. Swapping transfers roll and score together. A strict score comparison leaves equal scores in their existing relative order, so roll four remains before roll eight. Trace the first pass: the ninety moves left of seventy, and the equal seventies do not swap. The final output displays complete ranked records.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Empty registers and ties are part of the interface</h2>
+<p>A count of zero means no record fields may be read. A total can still start and finish at zero, a search can report missing, and a filter can keep zero records. A maximum-record operation would instead need an absence result or a positive-count precondition. Never seed a best record from marks[0] when count is zero.</p>
+<p>A one-record array already satisfies any ordinary sorting order. The outer sorting loop should run zero passes. With signed counts, count-1 can become -1 safely for the loop test used here. With size_t, subtracting one from zero wraps, so a general unsigned loop must guard the empty case or use a different condition.</p>
+<p>The input exercises permit duplicate rolls and preserve the first-match rule for searching. Sorting by roll with a strict comparison preserves equal-roll order. A production register would usually require unique keys, but that is an additional validation policy. State the assumption before relying on it.</p>
+<p>An array parameter loses its automatic sizeof element-count calculation after adjustment to a pointer. Pass the logical count to helpers explicitly. The expression sizeof marks / sizeof marks[0] works only where marks is still an actual array object. A large capacity never grants permission to read uninitialized unused records.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Sorting fields separately</h3>
+<p>Do not move a score without its roll. An array of structures makes the correct swap natural: assign complete records through a structure temporary. Compare one field as the ordering key, but move the whole element. This also preserves future fields added to the record type.</p>
+<h3>Using the missing index</h3>
+<p>A search result of -1 means there is no valid selected record. Check it before reading marks[index].score. A missing key is an expected result, not a reason to inspect whatever memory happens to precede the array. Keep the absent branch explicit in the output behavior.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Write the ordering rule before the comparison expression. Say whether score is ascending or descending and what equal scores mean. Test both a genuine swap and a tie. If a later field is added, review the key choice while retaining whole-record swaps.</p>
+<p>Keep capacity, logical count, and current index distinct. Validate each input record before accepting it into the logical count. For a filter, preserve the accepted order unless the problem asks for a new order. A simple representation is most useful when its edge-case policy is also clear.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Arrays of structures and structure assignment are available in C89 and later. These C17 programs use C99 loop declarations. No exact structure byte size is assumed. The sorting algorithm is written directly for teaching; standard qsort is another option once you can provide a compatible comparison function and understand its lack of a stability guarantee.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>An array of structures stores complete records as elements. Search uses a selected key, while sorting and filtering move whole records. Preserve a logical count and decide tie and absence rules. Next, access a record through an address in <a href="topic:c-structures-and-pointers">Structures and Pointers</a>.</p>
