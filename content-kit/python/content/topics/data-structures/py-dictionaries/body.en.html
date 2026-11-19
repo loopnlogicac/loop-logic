@@ -1,0 +1,70 @@
+<h2 id="introduction">Look up a value by its meaning</h2>
+<p class="lead">A marks list answers which value appears at position zero. A teacher usually asks a different question: what mark belongs to roll 18? A <dfn>dictionary</dfn> connects lookup labels, called keys, to associated values.</p>
+<p>You can think of a dictionary as a register whose left column identifies an entry. Each key has one current value. Two students may share the same mark because values need not be unique. Repeating a key replaces the earlier association rather than creating a second row.</p>
+<p>Use dictionaries for roll-to-mark records, item-to-price catalogues and word-to-count reports. A key describes which entry you want without requiring a numeric position. That often removes the need to keep two parallel lists synchronized.</p>
+
+<h2 id="syntax">Write keys beside their values</h2>
+<pre><code class="language-python">marks = {12: 72, 18: 85}
+marks[25] = 91
+saved = marks[12]
+optional = marks.get(99, "missing")</code></pre>
+            <p>Braces enclose dictionary entries. A colon separates a key from its value, and commas separate entries. Empty braces create an empty dictionary. Square-bracket lookup retrieves the value for one key; it does not refer to the key's insertion position.</p>
+            <p>Assignment through a key adds an absent entry or replaces a present value. Keys must be hashable, such as integers, strings or tuples of hashable components. Values may be any objects, including lists and nested dictionaries.</p>
+            <p>Use bracket lookup when absence means the data is wrong and should raise KeyError. Use get when a missing key is an expected situation. Without a second argument, get returns None for absence. An explicit fallback makes counting and optional labels easier to read.</p>
+            <table class="ref"><caption>Dictionary access choices</caption><thead><tr><th scope="col">Expression</th><th scope="col">Result</th></tr></thead><tbody>
+            <tr><td>key in data</td><td>Whether the key exists</td></tr><tr><td>data.keys()</td><td>A view of keys</td></tr><tr><td>data.values()</td><td>A view of saved values</td></tr><tr><td>data.items()</td><td>A view of key-value pairs</td></tr></tbody></table>
+
+<h2 id="how-it-works">Keys identify entries; views follow the mapping</h2>
+<p>Dictionaries use hashing and equality to locate keys efficiently. A typical lookup takes constant time on average, although collision-heavy cases can take longer. Repeated lookup by roll is therefore usually much faster than repeatedly scanning every record in a list.</p>
+<p>A <dfn>view</dfn> follows the current dictionary rather than copying its entries at creation. If you save data.keys() and later insert a key, that saved view sees it. Use list(data.keys()) when you want a separate snapshot of the current keys.</p>
+<p>Direct iteration over a dictionary visits keys. Iterating over items supplies two-value tuples that unpack naturally into key and value. Iterating over values is useful when the keys are irrelevant, such as summing quantities.</p>
+<p>Dictionary iteration preserves insertion order. Replacing a value keeps its key in the same position. Deleting a key and inserting it again places it at the end. The first observed order is useful for some reports, but sorted(data) is clearer when the report requires alphabetic or numeric order.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>C arrays index by integer position; a Python dictionary can use a course code or coordinate as a key. You would commonly implement this lookup with a hash table in C. Python manages the table, but missing keys and shared mutable values still need thought.</p></div>
+
+<h2 id="examples">Lookup, traverse, build and count</h2>
+<p>The examples distinguish the mapping itself from the objects stored as values. They also separate the order useful for data collection from the order requested for a final report.</p>
+
+<h3>Look up and update a mark</h3>
+<p>Key 12 retrieves 72 before the update. get supplies missing for absent roll 99 without inserting it. Reassigning key 12 changes its value; adding key 25 places a new entry at the end.</p>
+<div data-example="ex-1"></div>
+
+<h3>Visit keys, values and pairs</h3>
+<p>The keys view reflects the later ruler entry. values supplies the quantities, whose sum is 21. items provides key-value pairs that unpack into the two loop targets in insertion order.</p>
+<div data-example="ex-2"></div>
+
+<h3>Build a price mapping with a comprehension</h3>
+<p>Only notebook reaches the discount threshold, so discounted has one entry. The second comprehension maps each integer from 1 through 4 to its square. The colon separates each generated key from its value.</p>
+<div data-example="ex-3"></div>
+
+<h3>Count words without a missing-key failure</h3>
+<p>Each unseen word starts from zero; each repeat increases its saved count. The final report sorts keys alphabetically rather than depending on first occurrence. book has 2, pen has 3 and ruler has 1.</p>
+<div data-example="ex-4"></div>
+
+<h3>Separate outer copies from shared values</h3>
+<p>The list under lab is shared by the shallow dictionary copy, so original also sees 25. The new key belongs only to copied because the outer dictionaries have separate entries.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="counting">Grow a frequency table one observation at a time</h2>
+<p>A frequency is the number of times a value appears. Begin with an empty dictionary. For every word, read its old count with a default of zero, add one, and save the new count under the same word key.</p>
+<p>After reading pen, book, pen, the table contains pen with two and book with one. The second pen updates an existing entry. There are two keys but three total observations. Summing the values should recover the number of processed words.</p>
+<p>A dictionary comprehension builds a mapping from an iterable in one expression. Put the generated key before the colon and the generated value after it. A trailing condition can exclude entries, as in keeping only expensive items for a discount.</p>
+<p>If generated keys repeat, the later generated value wins. This matters when trying to invert a mapping whose values are not unique. To preserve every original key under a repeated value, build lists of keys as the final practice task does.</p>
+<p>Counting takes average linear time in the number of observations because each observation performs a small number of dictionary operations. Sorting the distinct keys for a report adds work based on the number of distinct keys. Collection and display have separate costs.</p>
+
+<p>A fallback of None can be ambiguous when None is itself a saved value. If the distinction matters, test key in data before reading, or use a separate marker object in a more advanced interface. Do not treat get(key) is None as proof that the key is absent.</p>
+<p>Deleting an entry with del data[key] requires that key to exist. The pop method can remove an entry and return its old value, with an optional fallback for absence. These operations answer a different question from get, which leaves the mapping unchanged.</p>
+
+<h2 id="common-mistakes">Handle missing keys and shared values deliberately</h2>
+<h3>Incrementing before a count exists</h3><p>The statement counts[word] += 1 first reads counts[word]. It fails on a word's first occurrence unless you initialize that key. Using get(word, 0) handles both first and later occurrences in one readable expression.</p>
+<h3>Testing the wrong side</h3><p>The expression 80 in marks asks whether 80 is a key, not whether any student earned 80. Test marks.values() for that question. Remember that scanning values can take linear time because values do not have the key lookup structure.</p>
+<h3>Assuming an outer copy duplicates lists</h3><p>copy makes a new dictionary whose values still refer to the same nested objects. Editing a shared list changes what both mappings can see. Create new inner lists when independent groups are required.</p>
+<h3>Changing the number of entries during traversal</h3><p>Adding or deleting keys while iterating over the dictionary can raise RuntimeError. Collect keys to delete first, then remove them afterward. Replacing values for existing keys does not resize the key collection, though clear two-stage logic can still be easier to review.</p>
+
+<h2 id="version-notes">Order is part of modern dictionary behavior</h2>
+
+
+<div class="callout version"><p>Insertion order has been a language guarantee since Python 3.7 and is available on the Python 3.10–3.12 baseline here. Dictionary views remain live views rather than snapshots.</p></div>
+
+<h2 id="summary">Choose keys that match the question</h2>
+<p>Dictionaries replace positional searching with meaningful keys. Use views for traversal, comprehensions for compact construction and get for optional counts. Next, <a href="topic:py-strings-advanced">working with strings</a> combines these containers with text cleaning and word algorithms.</p>

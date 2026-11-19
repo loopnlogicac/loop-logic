@@ -1,0 +1,70 @@
+<h2 id="introduction">Make the call explain its values</h2>
+<p class="lead">A receipt needs an item, a quantity and a price. Remembering the order is easy with three familiar values, but optional settings can make a call confusing. Python arguments let you supply values by position or by meaningful parameter names.</p>
+<p>A function's parameter list is its interface: the agreement about what callers may supply. Good interfaces make common calls brief and unusual choices visible. Defaults handle ordinary cases, while keyword-only parameters can require clarity for options that are easy to confuse.</p>
+<p>Argument binding happens before the body starts. If a required value is missing or a parameter receives two values, Python raises TypeError instead of guessing. These errors protect the agreement between the function and its callers.</p>
+
+<h2 id="syntax">Positions, keywords and defaults</h2>
+<pre><code class="language-python">def bill(quantity, unit_price=10, *, delivery=0):
+    return quantity * unit_price + delivery
+
+cost = bill(3, delivery=20)
+other = bill(unit_price=15, quantity=2)</code></pre>
+            <p>Positional arguments fill ordinary parameters from left to right. Keyword arguments use names, so their written order can differ from the definition. An ordinary positional argument must appear before ordinary named arguments in these straightforward calls.</p>
+            <p>A default supplies a value when its parameter is omitted. Explicit values override it, including zero, False or an empty string. Among ordinary positional-or-keyword parameters, required parameters cannot follow one with a default.</p>
+            <p>A bare star starts keyword-only parameters. They cannot be filled by position. A keyword-only parameter without a default is still required. This is useful for choices such as separator, strict mode or an output unit where a bare literal would be unclear.</p>
+
+<h2 id="how-it-works">Bind objects without copying them</h2>
+<p>Calls evaluate argument expressions and bind local parameter names to the resulting objects. Python does not automatically duplicate a supplied list. Reassigning a local parameter changes only that binding. Calling append through the parameter edits the shared list object.</p>
+<p>Default expressions are evaluated when def runs. This rule is harmless for immutable values such as the integer 10. It becomes surprising when a list default is edited: omitted calls keep reaching the same saved list.</p>
+<p>Use None as a marker when omission should create fresh state. Inside the body, test is None and then construct a list. Do not use a truthiness check for this purpose, because an explicitly supplied empty list is false but may be intentionally shared.</p>
+<p>A caller who supplies a list should be able to predict whether it will change. State mutation in the docstring. If a function promises independence, copy the appropriate structure and remember that shallow copying does not duplicate nested mutable values.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python binds parameters to objects. Rebinding a parameter does not reassign the caller variable, but mutating a supplied list is visible to the caller. Unlike C function calls, Python supports named arguments and definition-time defaults without manual wrapper functions.</p></div>
+
+<h2 id="examples">See the binding decisions in real calls</h2>
+<p>The shared-default program is a deliberately poor interface whose behavior is still defined. Compare it with the None-based version. The final examples distinguish collecting arguments in a definition from expanding containers at a call.</p>
+
+<h3>Call with positions or names</h3>
+<p>The first call uses the default unit price. Keyword calls attach arguments to parameter names rather than their written order. A positional item can precede keyword options in the same call.</p>
+<div data-example="ex-1"></div>
+
+<h3>Observe a shared mutable default</h3>
+<p>The default list is created when def executes, not on each call. Therefore the second call sees the earlier 12. An explicitly supplied empty list is a different object. The copied return values make each displayed stage clear.</p>
+<div data-example="ex-2"></div>
+
+<h3>Create a fresh default list per call</h3>
+<p>None marks an omitted history. Each omitted call creates a new list. Passing saved intentionally shares its object with the function, so both the returned list and saved contain 5 and 25.</p>
+<div data-example="ex-3"></div>
+
+<h3>Collect extra values and named options</h3>
+<p>scores is a tuple containing extra positional arguments, and details is a dictionary of extra keywords. With no extra arguments they are empty containers. Their names are conventional; the stars determine their roles.</p>
+<div data-example="ex-4"></div>
+
+<h3>Require an explicit separator option</h3>
+<p>In the definition, stars collect arguments. In the call, *words expands the list and **options expands keyword entries. separator follows *words in the definition, so callers must supply it by name.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="variable-arguments">Collect extras and expand saved values</h2>
+<p>A parameter prefixed with one star collects extra positional arguments into a tuple. The conventional name is args, but any valid descriptive name works. A parameter prefixed with two stars collects extra keyword arguments into a dictionary, conventionally named kwargs.</p>
+<p>Collection does not remove explicit parameters from the interface. If a function has label before *scores, the first supplied positional value binds label. Only remaining positional values enter scores. Named parameters already matched by the interface do not enter the extra-keyword dictionary.</p>
+<p>The call side uses the same symbols for the opposite direction. One star expands an iterable into positional arguments; two stars expand a mapping into keyword arguments. The keys for keyword expansion must be strings. Duplicating a keyword across expansions raises TypeError.</p>
+<p>An empty expanded list supplies no positional values. An empty expanded mapping supplies no keyword values. The function's ordinary required-argument rules still apply, so empty expansion does not make a required parameter optional.</p>
+<p>Parameters after *args are keyword-only too. This lets a function accept many words while reserving separator as an explicit named setting. Keep such interfaces focused: accepting every possible argument without validation can hide spelling errors or incorrect assumptions.</p>
+
+<p>A default can also capture a calculation earlier than intended. If a default expression calls another function, that call happens during definition. It does not happen anew whenever the argument is omitted. Move the calculation inside the body if each call needs a fresh result.</p>
+<p>Before adding *args, ask whether callers naturally supply several separate values or already have one collection. A function accepting a list parameter may communicate the data model better than a variable-length signature. Expansion is useful when adapting an existing collection to a function whose interface genuinely takes separate arguments.</p>
+<p>Flexible arguments do not replace validation. An arithmetic function may still require every collected value to be numeric. State that requirement and decide how unsupported option names are reported. Accepting arguments successfully only proves that binding worked; it does not prove that the supplied values make sense.</p>
+
+<h2 id="common-mistakes">Defaults and flexible interfaces need care</h2>
+<h3>Overwriting a caller's empty container</h3><p>Using history = history or [] creates a new list when the caller supplies an empty list. That may violate an intended in-place interface. Test specifically for None so that omission and emptiness remain separate cases.</p>
+<h3>Giving one parameter two arguments</h3><p>If the first positional value fills quantity, also passing quantity=2 is an error. Follow binding from left to right before considering extra arguments. Reading the function signature often resolves the error message immediately.</p>
+<h3>Hiding every option in kwargs</h3><p>Explicit parameters document supported options. A broad **kwargs collection can accept a misspelled option silently unless the body checks it. Prefer named parameters for stable options and reserve extra keyword collection for a clear purpose.</p>
+<p>Renaming a parameter can break keyword callers even when its position stays unchanged. Treat public parameter names as part of the interface. Good names clarify units and roles, such as unit_price rather than the vague value.</p>
+
+<h2 id="version-notes">Portable argument binding</h2>
+
+
+<div class="callout version"><p>Keyword-only parameters, starred argument collection and call expansion shown here work on Python 3.10–3.12. A mutable default is shared by calls to the same function definition in all these versions.</p></div>
+
+<h2 id="summary">Design calls that readers can follow</h2>
+<p>Use positions for obvious required values, keywords for clarity, safe defaults for omitted choices and stars for a real variable-length need. Next, <a href="topic:py-scope-lambda">scope and lambda</a> explain where the names inside functions are found.</p>

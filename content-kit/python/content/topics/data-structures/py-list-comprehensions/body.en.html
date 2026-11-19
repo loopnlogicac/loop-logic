@@ -1,0 +1,72 @@
+<h2 id="introduction">Describe the list you want</h2>
+<p class="lead">Suppose a canteen records prices in taka, but another calculation needs poisha. You need a new list with every price multiplied by one hundred. A <dfn>list comprehension</dfn> describes that new list directly: the result expression, the source values, and any selection rule.</p>
+<p>You already know how to start an empty list and append values inside a for loop. A comprehension is a shorter expression for that common pattern. It is useful when the main purpose is collecting results. It is less helpful when each item requires a long sequence of actions.</p>
+<p>Read a comprehension as a sentence about the result. Ask what one output item looks like, where the input item comes from, and whether it belongs. These questions make the expression easier to understand than counting brackets first.</p>
+
+<h2 id="syntax">Separate transformation from selection</h2>
+<pre><code class="language-python">marks = [35, 60, 79, 40]
+passes = [mark for mark in marks if mark &gt;= 40]
+labels = ["pass" if mark &gt;= 40 else "retry" for mark in marks]</code></pre>
+            <p>The expression before for is the transformation. The for clause supplies one candidate at a time. The optional final if is a filter: a rule that rejects some candidates. A rejected candidate contributes no output item. The others keep their relative order.</p>
+            <p>A conditional expression has a different job. The phrase value_if_true if condition else value_if_false chooses one of two values. It belongs before for when every input should produce an output. This is why labels has four items while passes has only three.</p>
+            <table class="ref"><caption>Three questions when reading a comprehension</caption><thead><tr><th scope="col">Part</th><th scope="col">Question</th></tr></thead><tbody>
+            <tr><td>Result expression</td><td>What is stored?</td></tr><tr><td>for clause</td><td>Which items are visited?</td></tr><tr><td>Final if</td><td>Which visits contribute a value?</td></tr></tbody></table>
+            <p>A comprehension produces a list immediately. That list can be assigned, passed to another operation, or printed. It does not postpone the calculation until you read an item. For very large results, storing every output can require substantial memory.</p>
+
+<h2 id="how-it-works">Translate the expression into a loop</h2>
+<pre><code class="language-python">passes = []
+for mark in marks:
+    if mark &gt;= 40:
+        passes.append(mark)</code></pre>
+            <p>The loop above explains the filtered comprehension. Visit 35 and reject it. Visit 60 and append it, then append 79 and 40. The final list is [60, 79, 40]. Only the successful tests evaluate the result expression.</p>
+            <p>That evaluation order matters when a calculation has a restricted domain. Filtering out zero before division prevents a zero denominator. Keep such guards clear enough that another reader can see why the expression is safe. A clever-looking expression is not useful if its safety is hard to check.</p>
+            <p>The target name of a Python 3 comprehension stays inside that comprehension's scope. An outer variable with the same name keeps its value. Still, choosing descriptive names helps you read nested expressions without confusing a row with a column.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>A comprehension replaces the common C pattern of allocating a result array and filling it in a loop. Python sizes the result automatically. It is still ordinary iteration, so nested clauses can perform as much work as nested C loops.</p></div>
+
+<h2 id="examples">Transform, select and build nested results</h2>
+<p>These programs move from one-dimensional lists to tables. Compare the number of output items with the number of source items before running each program. Filtering may shorten the result; transformation alone preserves the count.</p>
+
+<h3>Convert taka to poisha</h3>
+<p>Each amount produces one new integer. The result is [1200, 2500, 4000], while the source list remains [12, 25, 40]. The comprehension does not edit taka.</p>
+<div data-example="ex-1"></div>
+
+<h3>Select passes or label every mark</h3>
+<p>The final if removes 35 from passes. The if/else before for chooses a label without removing any item. Consequently the labels list still contains four entries.</p>
+<div data-example="ex-2"></div>
+
+<h3>Flatten rows in reading order</h3>
+<p>The row loop runs first. Each row then supplies its values; an empty row contributes nothing. Positions 0, 2 and 4 of flat contain 2, 6 and 10.</p>
+<div data-example="ex-3"></div>
+
+<h3>Transpose a rectangular marks table</h3>
+<p>For column zero, the inner comprehension collects 70 and 65. Repeating for columns one and two creates three independent column lists. Their totals are 135, 155 and 175.</p>
+<div data-example="ex-4"></div>
+
+<h3>Build rows without sharing them</h3>
+<p>A new inner list is constructed for each row. Marking the first row leaves the second row unchanged. The identity check prints False because the row containers are different.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="nested-comprehensions">Read repeated for clauses from left to right</h2>
+<p>A flattened table uses two for clauses in one pair of brackets. The left clause chooses the row. The right clause visits every value of that row before the next row begins. This is the same order as writing the corresponding loops on separate indented lines.</p>
+<p>For rows [[2, 4], [], [6]], the first row contributes 2 and 4. The empty row contributes nothing, then the final row contributes 6. The result is [2, 4, 6]. Flattening forgets the original row boundaries, so keep the nested form when those boundaries carry meaning.</p>
+<p>A nested comprehension is different: the result expression itself creates a list. In a transpose, one inner list collects a column. The outer comprehension chooses which column to collect next. A two-by-three rectangle becomes a three-by-two rectangle.</p>
+<p>The indexed transpose assumes equal row lengths. Decide the column count from the problem's table definition. Reading the first row's length is reasonable only after checking that a first row exists. A ragged table needs an explicit policy for missing cells.</p>
+<p>Use fresh inner constructions for a grid whose cells will change. Multiplying one row list repeats references rather than creating independent rows. The comprehension can avoid that sharing because its inner list expression runs again for every outer iteration.</p>
+
+<p>Nested loops can multiply the result size. Pairing every one of r rows with every one of c columns creates r times c results. A filter may shorten that output, but Python still visits the candidate combinations required by its loop clauses. Estimate those visits before applying the expression to large data.</p>
+<p>Evaluation follows loop order even when an expression reads other data. An outer filter can reject a whole row before its inner loop begins. An inner filter rejects individual cells after a row is selected. Put each condition beside the value it describes, and expand the expression into loops if its placement becomes hard to explain.</p>
+
+<h2 id="common-mistakes">Keep the computation visible</h2>
+<h3>Using a comprehension only for edits</h3><p>The append method returns None. Collecting its return values gives a list of Nones while also changing another list. A normal loop states the intended edits more clearly. If you need a new list, place the desired values directly in the result expression.</p>
+<h3>Hiding too much logic</h3><p>Three nested loops and several conditions may fit on one line, yet be difficult to explain. Expand the work into loops when you need temporary names, error handling, or several branches. Shorter source text does not guarantee a clearer algorithm.</p>
+<h3>Changing the source while collecting</h3><p>A comprehension should normally read a stable source. Appending to the same list being visited can keep extending the work. Removing items may skip values. Build the new list first and assign it afterward if replacement is your goal.</p>
+<p>A comprehension does not automatically make expensive work cheap. If every output searches the whole source again, the total work can still grow quadratically. Count the operations performed per input, then consider whether a set or dictionary can avoid repeated searches.</p>
+
+<h2 id="version-notes">Comprehensions in Python 3</h2>
+
+
+<div class="callout version"><p>Python 3.10–3.12 support all comprehension forms used here. Their loop targets do not leak into the enclosing scope, unlike historical Python 2 list comprehensions.</p></div>
+
+<h2 id="summary">Use compact expressions when they read clearly</h2>
+<p>Comprehensions work best for a visible transformation with a short selection rule. Translate nested clauses into ordinary loops whenever the order is unclear. Next, <a href="topic:py-tuples">tuples</a> hold grouped values whose positions should remain fixed.</p>

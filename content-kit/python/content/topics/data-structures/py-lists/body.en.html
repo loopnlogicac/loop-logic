@@ -1,0 +1,62 @@
+<h2 id="introduction">Keep related values together</h2>
+<p class="lead">A class register holds many roll numbers in a useful order. A Python <dfn>list</dfn> does the same for values. You can add an item, replace it, or remove it without inventing a separate variable for every roll.</p>
+<p>A list is an ordered, changeable sequence. Ordered means each item has a position. Changeable means the same list can hold different contents later. Duplicate values are allowed, so two equal marks still represent two students.</p>
+<p>Python lists can mix types, but a list of comparable marks is easier to process than unrelated values. Choose a name such as marks or rolls that tells you what each item means. Use direct iteration when you need every value and indexing when a position matters.</p>
+
+<h2 id="syntax">Create, select and replace</h2>
+<pre><code class="language-python">marks = [72, 85, 64]
+first = marks[0]
+marks[1] = 90
+middle = marks[1:3]</code></pre>
+            <p>Square brackets create the list and also select positions from it. A comma separates adjacent values. Index zero reaches the first item, while index minus one reaches the last. For a list of length n, valid positive indexes run from zero through n minus one.</p>
+            <p>A slice makes a new outer list containing selected items. Its start is included and its stop is excluded. Missing boundaries use the sequence ends in the chosen direction. A negative step walks backwards. Slices clip out-of-range boundaries, but a single invalid index raises IndexError.</p>
+            <table class="ref"><caption>Choose a list operation by its job</caption><thead><tr><th scope="col">Operation</th><th scope="col">Effect</th></tr></thead><tbody>
+            <tr><td>append(value)</td><td>Add one item at the end</td></tr><tr><td>insert(index, value)</td><td>Make room before an index</td></tr>
+            <tr><td>pop(index)</td><td>Remove and return an item; default is the last</td></tr><tr><td>remove(value)</td><td>Delete the first equal item</td></tr>
+            <tr><td>sort()</td><td>Rearrange the same list in ascending order</td></tr></tbody></table>
+
+<h2 id="how-it-works">Names point to lists</h2>
+<p>A list stores references to its items. Assigning the list to another name copies the reference, not all its contents. These two names are <dfn>aliases</dfn>: two ways to reach one object. Any edit through either name is visible through the other.</p>
+            <pre class="diagram">original ---&gt; [10, 20] &lt;--- alias
+separate ---&gt; [10, 20]</pre>
+            <p>The copy method creates an independent outer container. With integers, replacing an item in that copy leaves the original slot alone. With nested lists, both outer containers still point to the same inner rows. This is called a shallow copy. Copy rows individually when you need a separate two-dimensional table.</p>
+            <p>For a rectangular table, matrix[row][column] first selects a row list and then an item inside it. The row and column indexes have separate limits. A table may also have rows of different lengths, so checking only the outer length cannot prove every column exists.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>A Python list grows automatically and can refer to objects of different types. Unlike a C array, it has no fixed declared element count. Index mistakes raise exceptions rather than granting access to unrelated memory. Python manages the storage lifetime.</p></div>
+
+<h2 id="examples">Edit a register and inspect sharing</h2>
+<p>Track the list after every operation. For nested lists, draw one arrow per stored row reference. That picture explains why an outer copy does not protect the inner rows.</p>
+
+<h3>Read positions and slices</h3>
+<p>The first and last marks are 72 and 91. The slice stops before position 3; reversing makes a new list. A slice beyond the end is empty.</p>
+<div data-example="ex-1"></div>
+
+<h3>Update a registration queue</h3>
+<p>Appending adds 30 at the end, then insert adds 15 before position 1. pop returns 30; remove deletes the value 18. Sorting keeps the surviving rolls in ascending order.</p>
+<div data-example="ex-2"></div>
+
+<h3>Compare aliases and a copy</h3>
+<p>Both original and alias refer to one list, so both see 30. separate has its own outer list. Changing its first integer does not change original.</p>
+<div data-example="ex-3"></div>
+
+<h3>Build independent rows</h3>
+<p>Each loop creates a fresh row. The shallow copy still shares those rows with grid, so editing shallow also writes 9 into grid. The two original rows remain distinct.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Empty lists and growing work</h2>
+<p>An empty list has length zero and is false in a condition. Looping over it does no work. Before reading the last item or calling pop without an index, check whether an item exists. Removing an absent value raises ValueError, so use membership when absence is a normal case.</p>
+<p>Reading a position takes constant time. Searching by value may inspect every item. Appending is constant time on average over many appends, although occasional resizing copies references. Inserting at the front or removing from the middle shifts later references and can take linear time.</p>
+<p>Sorting compares items and usually needs work proportional to n log n. Mixed integers and strings cannot normally be ordered together. Keep data types consistent, or choose an explicit ordering rule after learning functions. Use sorted(values) when the original order must remain available.</p>
+
+<h2 id="common-mistakes">Watch which object you change</h2>
+<h3>Saving the result of sort</h3><p>Writing marks = marks.sort() loses the list reference held by marks because sort returns None. Call marks.sort() by itself. The method communicates by changing the list, unlike sorted, which returns a new list.</p>
+<h3>Repeating one inner row</h3><p>The expression [[0, 0]] * 3 repeats a reference to one row three times. Editing one cell then appears to change three rows. Create each row separately, as the final example does.</p>
+<h3>Deleting while moving forwards</h3><p>Removing an item during forward iteration shifts the next item into its place. The loop may skip that item. Build a separate list of values to keep, or iterate over a copy when removal is necessary.</p>
+
+<h2 id="version-notes">Portable list behavior</h2>
+
+
+<div class="callout version"><p>The list operations here work on Python 3.10 through 3.12. Their copy methods remain shallow; a newer interpreter does not make nested rows independent.</p></div>
+
+<h2 id="summary">Choose order and ownership deliberately</h2>
+<p>Lists are useful when position and change both matter. Separate searching by value from selecting by index, and separate aliases from copies. Next, <a href="topic:py-list-comprehensions">list comprehensions</a> express many list-building loops as readable expressions.</p>
