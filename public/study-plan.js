@@ -26,8 +26,8 @@ export function studyPlan(L, context) {
             const result = graded.results[q.id]; status.textContent = `${result.correct ? L.planCorrect : L.planWrong}: ${result.explanation}`;
           } catch { status.textContent = L.planError; button.disabled = false; }
         };
-        box.append(el('fieldset', { class: 'quiz-item' }, el('legend', { text: q.prompt }), el('a', { href: r.href, text: r.title }), el('p', { class: 'small muted', text: r.reason }), q.figure ? renderFigure(q.figure) : null, q.code ? el('pre', {}, el('code', { text: q.code })) : null,
-          ...q.options.map((o, k) => el('label', { class: 'opt' }, el('input', { type: 'radio', name: `review-${i}`, onchange: () => { choice = k; } }), o)), button, status));
+        box.append(el('fieldset', { class: 'quiz-item', style: 'margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:12px' }, el('legend', { text: q.prompt }), el('a', { href: r.href, text: r.title }), el('p', { class: 'small muted', text: r.reason }), q.figure ? renderFigure(q.figure) : null, q.code ? el('pre', {}, el('code', { text: q.code })) : null,
+          ...q.options.map((o, k) => el('label', { class: 'opt', style: 'display:flex;align-items:flex-start;gap:8px;margin:10px 0' }, el('input', { type: 'radio', name: `review-${i}`, onchange: () => { choice = k; } }), o)), button, status));
       }
       if (!d.next && !d.review.length) box.append(el('p', { text: L.planEmpty }));
       box.append(el('button', { type: 'button', class: 'btn ghost small', text: L.planRefresh, onclick: load }));

@@ -45,14 +45,14 @@ export class StudyPlanService {
       next = trackTopics.slice(at + 1).find((t) => !seen.has(keyOf(t.track, t.topic)));
       if (!next && !context) next = trackTopics.find((t) => !seen.has(keyOf(t.track, t.topic)));
     }
-    if (!next && !context) next = catalog.find((t) => !seen.has(keyOf(t.track, t.topic)));
+    if (!next) next = catalog.find((t) => t.track !== anchor?.track && !seen.has(keyOf(t.track, t.topic)));
     const L = lang === 'bn' ? {
-      start: 'এটি তোমার জন্য প্রথম না-পড়া টপিক।',
+      start: 'এই টপিক খোলার কোনো রেকর্ড এখনো নেই।',
       next: (title: string) => `${title}-এর পর কারিকুলামে এটি পরের না-পড়া টপিক।`,
       score: (p: number, title: string) => `${title}-এ তোমার নম্বর ছিল ${p}%।`,
       wrong: (title: string) => `${title}-এর এই প্রশ্নে আগেরবার ভুল হয়েছিল।`,
     } : {
-      start: 'This is your first unopened topic.',
+      start: 'This topic has no recorded view yet.',
       next: (title: string) => `Continue after ${title} with the next unopened topic in that track.`,
       score: (p: number, title: string) => `You scored ${p}% on ${title}.`,
       wrong: (title: string) => `You answered this question incorrectly on ${title}.`,

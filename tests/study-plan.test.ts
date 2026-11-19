@@ -30,6 +30,8 @@ test('later correct answers remove review questions; checks influence score reas
   const p = await plan.plan('a', 'en', { track: first.track, topic: first.topic }); assert.equal(p.next!.topic, topics[2]!.topic); assert.equal(p.review.length, 1); assert.equal(p.review[0]!.question.id, qs[1]!.id); assert.match(p.review[0]!.reason, /80%/);
   await assert.rejects(plan.plan('a', 'en', { track: first.track, topic: 'missing' }), /not available/);
   assert.equal((await plan.plan('new', 'en')).review.length, 0);
+  const end = await plan.plan('a', 'en', { track: first.track, topic: topics.at(-1)!.topic });
+  assert.ok(end.next && end.next.track !== first.track, 'the last topic can continue into another unopened track');
 });
 
 test('study-plan HTTP route ignores supplied learner IDs and validates topic context', async () => {
