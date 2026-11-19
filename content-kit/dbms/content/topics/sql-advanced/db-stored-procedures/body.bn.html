@@ -1,0 +1,74 @@
+<h2 id="introduction">Repeated database কাজের callable interface</h2>
+<p class="lead">কয়েক report registration count বা একই pass label চায়। Caller-পিছু copy-তে change সমন্বয় কঠিন। Stored routine database-এ নাম আর parameter দেয়।</p>
+<p><dfn>Stored procedure</dfn> CALL-এ চলে,multi-statement,result set,parameter-এ মান ফেরায়। <code>Stored function</code> এক declared scalar ফেরায়,expression-এ চলে। ছোট syntax নয়,interface দেখে বাছো।</p>
+<p>Database-এ রাখলেই faster-safer নয়। Privilege,transaction boundary,error handling চাই। App function-এর মতো routine-ও expensive query লুকাতে পারে।</p>
+<p>উদাহরণ registration count,result label,bounded loop। Count shared enrollment নেয়,label আগের pass boundary। ছোট loop control flow শেখায়,row-by-row summary সেরা দাবি নয়।</p>
+<h2 id="syntax">Client দিয়ে পুরো definition পাঠাও</h2>
+<p>BEGIN-END-এ কয়েক semicolon statement। mysql client সাধারণত semicolon-এ submission শেষ। DELIMITER client terminator বদলে পুরো routine একসঙ্গে পাঠায়।</p>
+<p>DELIMITER server SQL নয়। // দিলে client তা পর্যন্ত অপেক্ষা,ভেতরের semicolon SQL separator। END//-এর পরে DELIMITER ; স্বাভাবিক করে। Driver প্রায়ই complete definition পাঠায়,DELIMITER বোঝে না।</p>
+<p>CREATE PROCEDURE name-parameter। IN ভিতরে মান,OUT বাইরে,INOUT দুটো। Caller @registrations-এর মতো session variable writable receiver দেয়।</p>
+<p>CREATE FUNCTION RETURNS type বলে,RETURN compatible value। Procedure-এর মতো OUT list নেই,expression-এর scalar। তাই pass_label SELECT-এ marks-এর পাশে মানায়।</p>
+<p>Example SQL SECURITY INVOKER-এ caller privilege,owner ধার নয়। EXECUTE আর underlying অধিকার দুটো লাগবে। Production-এ interface-effective context review।</p>
+<pre><code class="language-sql">DELIMITER //
+CREATE PROCEDURE &lt;name&gt;(IN &lt;input_name&gt; INT, OUT &lt;output_name&gt; INT)
+SQL SECURITY INVOKER
+BEGIN
+    DECLARE &lt;local_name&gt; INT DEFAULT 0;
+    &lt;statements_using_parameters_and_locals&gt;;
+END//
+DELIMITER ;</code></pre>
+<h2 id="how-it-works">Parameter আর local state ধরে মান</h2>
+<p>101-এ count_registrations কল করলে IN p_student_id101 পায়। COUNT(*) তিন OUT-এ দেয়। CALL শেষে @registrations তিন পায়,আলাদা SELECT দেখায়;procedure নিজে result set দিতে হয় না।</p>
+<p>108-এর enrollment নেই। GROUP BY ছাড়া COUNT এক zero row দেয়,OUT zero। সাধারণ SELECT INTO no-row হলে আগের মান থাকতে পারে,সাবধান। Aggregate shape contract সহজ করে।</p>
+<p><code>Local variable</code> BEGIN-END block-এর। Executable statement-এর আগে DECLARE,DEFAULT initialize,SET update। v_count local, @session_variables connection-এর,return-এর পরেও থাকে।</p>
+<p>p_student_id input,v_count local,student_id table column আলাদা prefix। না হলে student_id=student_id ভুল objects মিলিয়ে সব row গুনতে পারে। Alias-qualified column clarity বাড়ায়।</p>
+<p>IF ক্রমে দেখে। result_status আগে result গোনে,zero হলে no results,নইলে recorded। এটি উপস্থিতি,academic success নয়। Fail-ও recorded,pending নয়।</p>
+<p>Function আগে NULL,পরে40 তুলনা। NULL comparison unknown বলে pending explicit। Known40+pass,নিচেfail। Label শেখায়,table-এর mark constraint validation-এর বদলি নয়।</p>
+<p>WHILE-এ v_step1,p_total0। Add step,তারপর increment। Limit4-এ1,3,6,10। Zero-তে প্রথম condition false,iteration নেই।</p>
+<p>আগে NULL,negative,100-এর বেশি reject। Work-result bounded। SIGNAL SQLSTATE45000 application failure বলে। Timeout পর্যন্ত unreasonable loop নয়,clear validation।</p>
+<table class="ref">
+<caption>Limit চার দিয়ে sum_steps trace</caption>
+<thead><tr><th scope="col">ধাপ</th><th scope="col">ব্যবহৃত v_step</th><th scope="col">পরের p_total</th></tr></thead>
+<tbody>
+<tr><td>শুরু</td><td>এখনও যোগ হয়নি</td><td>0</td></tr>
+<tr><td>প্রথম</td><td>1</td><td>1</td></tr>
+<tr><td>দ্বিতীয়</td><td>2</td><td>3</td></tr>
+<tr><td>তৃতীয়</td><td>3</td><td>6</td></tr>
+<tr><td>চতুর্থ</td><td>4</td><td>10</td></tr>
+<tr><td>পরের condition</td><td>5 limit পেরোয়</td><td>10-এ শেষ</td></tr>
+</tbody>
+</table>
+<h2 id="examples">সাধারণ আর boundary call</h2>
+<p>Count বহু enrollment আর none-এ। IF pending বনাম recorded। Related হলেও source table আলাদা,এক vague status নয়।</p>
+<p>Loop local-progress,function expression-NULL শেখায়। INOUT caller value নিয়ে বদলে ফেরায়। Before-after মানে direction সহজ।</p>
+<p>SQL-এ set-based statement পরিষ্কার হলে ভালো। প্রতিটি row procedural loop-এ না এনে SUM সাধারণত সহজ। Control flow decision-workflow-এ,loop শিখলেই default report tool নয়।</p>
+<h3>OUT-এ count</h3>
+<p>Ayesha3,Fahim0। CALL-এর পরে session variable পায়।</p>
+<div data-example="ex-1"></div>
+<h3>IF আর local variable</h3>
+<p>Sadia-র local count zero,তাই no results। Pending-কে zero mark ভাবেনি।</p>
+<div data-example="ex-2"></div>
+<h3>WHILE-এ bounded হিসাব</h3>
+<p>1+2+3+4=10। Validation work বেঁধে,increment progress দেয়।</p>
+<div data-example="ex-3"></div>
+<h3>Function থেকে scalar</h3>
+<p>MAT101-এ72,90pass;39fail। NULL call pending,fail নয়।</p>
+<div data-example="ex-4"></div>
+<h3>INOUT-এ adjust</h3>
+<p>20.00 পড়ে35.00 ফেরে। একই parameter input-output দুটো।</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">Routine আর transaction boundary আলাদা</h2>
+<h3>CALL atomicity ঠিক করে না</h3>
+<p>Ordinary procedure-এর সব statement CALL নিজে এক transaction করে না। Autocommit-এ explicit transaction ছাড়া update আলাদা commit। এক unit চাইলে caller-procedure contract বলো।</p>
+<p>Caller-owned transaction procedure হঠাৎ COMMIT করবে না। আবার caller জানে ধরে start-end নয়। Owner document। Function-trigger-এর বাড়তি restriction,procedure-এর মতো transaction control নয়।</p>
+<h3>Progress আর declaration promise</h3>
+<p>Condition variable না বদলালে infinite। Condition,body,update আলাদা আঁকো। প্রতিটি পথে progress বা deliberate exit। Bound-validation missing increment সারায় না।</p>
+<p>DETERMINISTIC একই input-এ একই ফলের দাবি,MySQL সব execution পরীক্ষা করে প্রমাণ নয়। Pass-label শুধু parameter-নির্ভর,table না পড়ায় NO SQL সত্য। Changing row পড়া function-এ একই declaration copy নয়।</p>
+<p>Binary log-এ function creation-এ extra privilege/config লাগতে পারে। Failure admin policy,মিথ্যা behavior declaration-এর যুক্তি নয়। Actual data access-determinism বলো,DBA-র সঙ্গে authority মেটাও।</p>
+<h2 id="best-practices">ছোট explicit contract</h2>
+<p>Domain-মেলা type,unsupported input early reject। Label-count-এর empty case-সহ অর্থ বলো। Name দেখে caller body না পড়েও বুঝুক।</p>
+<p>সব app code server-এ নয়,অল্প purposeful routine। Table-permission বদলালে dependency review। Routine stored থাকলেও assumption ভুল হতে পারে,versioned schema-তে dependent routine-ও ধরো।</p>
+<h2 id="version-notes">Client syntax আর server feature</h2>
+<p>Routine 8.0/8.4-তে। DELIMITER mysql client-এর,অন্য tool-এ adapt। Shared CHECK8.0.16। Function-create privilege binary-log setting-এও।</p>
+<h2 id="summary">Interface বেছে প্রতিটি মান trace</h2>
+<p>Multi-step-এ procedure,scalar expression-এ function। Local-session আলাদা,bounded loop,transaction owner বলো। পরের <a href="topic:db-triggers">trigger</a> row change-এ automatic আচরণ দেখায়।</p>
