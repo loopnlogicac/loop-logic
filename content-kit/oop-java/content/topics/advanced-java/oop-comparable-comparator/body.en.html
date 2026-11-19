@@ -1,0 +1,62 @@
+<h2 id="introduction">Define what comes before what</h2>
+<p class="lead">A result sheet ranks high marks first. A roll register lists small roll numbers first. Both contain the same students, but they need different orderings. <dfn>Comparable</dfn> gives a type one natural ordering. <dfn>Comparator</dfn> supplies an independent ordering for a particular task.</p>
+<p>A sorting algorithm does not need to know what a mark or roll means. It asks a comparison operation which object should come first. Your comparison must answer consistently for every accepted pair. A short comparison that sometimes contradicts itself can break sorting or sorted-collection behavior.</p>
+<p>Choose the domain rule before writing code. For an exam ranking, say whether marks ascend or descend, what happens on a tie, and whether missing data is allowed. Without those decisions, two plausible implementations can produce different reports while both appear sorted.</p>
+<h2 id="syntax">Recognize the two contracts</h2>
+<pre><code class="language-java">class Student implements Comparable&lt;Student&gt; {
+    private final int roll;
+    Student(int roll) { this.roll = roll; }
+    @Override
+    public int compareTo(Student other) {
+        return Integer.compare(roll, other.roll);
+    }
+}
+Comparator&lt;Student&gt; byRoll = (left, right) -&gt; left.compareTo(right);</code></pre>
+<p>Comparable compares the receiver with one other value. Comparator compares two supplied values. Their results use the same sign rule: negative means left comes first, zero means equivalent under this ordering, and positive means left comes after right. A comparator need not return exactly minus one or one.</p>
+<p>The lambda has two parameters because Comparator.compare needs two arguments. The arrow separates parameters from the body. Method references such as Result::mark name existing methods with a matching shape. The dedicated <a href="topic:oop-lambdas-streams">lambda lesson</a> develops those expressions further.</p>
+<h2 id="how-it-works">Compare one key at a time</h2>
+<p>For descending marks, compare the larger mark first. If the marks differ, stop. If they match, compare ascending rolls. This is a <dfn>lexicographic ordering</dfn>: the first differing key decides the outcome, like comparing words character by character.</p>
+<table class="ref"><thead><tr><th scope="col">Pair</th><th scope="col">Mark decision</th><th scope="col">Roll decision</th><th scope="col">First</th></tr></thead><tbody>
+<tr><td>(4,80), (1,90)</td><td>90 before 80</td><td>Not needed</td><td>Roll 1</td></tr>
+<tr><td>(4,80), (2,80)</td><td>Tied</td><td>2 before 4</td><td>Roll 2</td></tr>
+<tr><td>(2,80), (2,80)</td><td>Tied</td><td>Tied</td><td>Equivalent</td></tr>
+</tbody></table>
+<p>Comparator.comparingInt extracts an integer key and compares it without unnecessary boxing. reversed changes that comparator’s direction. thenComparingInt adds another key only for ties. Where you place reversed therefore matters.</p>
+<p>Reversing the mark comparator before adding roll order means marks descend and rolls ascend. Reversing the complete chain means both decisions reverse. Read the chain from left to right and test a tied pair to confirm the intended rule.</p>
+<p>Natural ordering is useful when one default is broadly meaningful, such as ascending roll for a student identity. Avoid forcing every report into that default. A comparator allows the same objects to be ranked by mark today and displayed alphabetically tomorrow.</p>
+<h2 id="examples">Check a default, an alternative and an extreme</h2>
+<h3>Natural order by roll</h3>
+<p>The Student record is a compact data holder with a generated roll accessor. Records are explained in <a href="topic:oop-enums-records">enums and records</a>. Its compareTo supplies ascending roll order. Passing null as the comparator to List.sort selects natural ordering, producing 2 before 7.</p>
+<div data-example="ex-1"></div>
+<h3>A ranking with a tie-breaker</h3>
+<p>The highest mark, 90, appears first. The remaining two students share 80, so roll 2 precedes roll 4. The comparison is external to Result: the record does not need to declare that every use should follow exam ranking.</p>
+<div data-example="ex-2"></div>
+<h3>Avoid subtraction overflow</h3>
+<p>Integer.MIN_VALUE is less than one. Subtracting one from it overflows and can produce a positive result, contradicting the desired ordering. Integer.compare evaluates the relationship safely. The example also confirms that comparing equal values returns zero.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison-contract">Keep the ordering coherent</h2>
+<p>Sign antisymmetry means compare(a,b) and compare(b,a) have opposite signs, or both are zero. Transitivity means if a precedes b and b precedes c, then a precedes c. These properties let sorting reason about a large sequence using local comparisons.</p>
+<p>If a and b compare as zero, each must compare against a third value with the same sign. Otherwise the comparator has grouped values that disagree about where they belong. Do not base comparisons on changing external counters, current time or random choices.</p>
+<p>Consistency with equals means compare(a,b)==0 exactly when a.equals(b). Comparable strongly recommends it, but some library types document a difference. If your type uses a different rule, explain the effect on sorted sets and maps. Their element uniqueness follows comparison, not a separate equals check.</p>
+<p>List sorting is stable. When the comparator returns zero, their original relative order is preserved. A tie-breaker gives an explicit order instead, which can differ from the input. Stable sorting does not magically choose ascending rolls unless the original input already had that order.</p>
+<h2 id="edge-cases">Define absent and equal keys</h2>
+<p>A comparator may reject null elements. If null belongs to the domain, wrap the base comparator with nullsFirst or nullsLast. That controls null elements themselves. A nullable extracted field can require a separate null policy in the field comparator.</p>
+<p>For strings, natural order follows lexicographic UTF-16 comparison. It is not automatically a human-language dictionary order. ASCII-only practice words keep the exercise precise. A multilingual application may need a Collator and a documented locale policy.</p>
+<p>Do not mutate comparison keys while values are stored in a TreeSet or TreeMap. The tree was arranged using earlier comparisons. Changing a mark or roll can invalidate lookup assumptions. Prefer immutable entries or remove, update and reinsert under controlled rules.</p>
+<h2 id="ranking-walkthrough">Test a chain with a boundary and a tie</h2>
+<p>Start with rolls 7, 2, 1 and 4 having marks 60, 80, 80 and 100. Descending mark order places roll 4 first and roll 7 last. The tie between rolls 2 and 1 is resolved by ascending roll, so the complete order is 4, 1, 2, 7.</p>
+<p>Now reverse the entire chained comparator. Roll 7 comes first, roll 4 last, and the tied group reverses too: roll 2 precedes roll 1. This changed tie order is a useful sign that reversed was applied too late for the original requirement.</p>
+<p>The word-order exercise uses a different chain: increasing length, then natural string order. Repeated words remain because the destination is a List. The comparator returning zero does not remove values during a list sort. Uniqueness is a collection rule, not an automatic consequence of sorting.</p>
+<h2 id="common-mistakes">Make equal keys a deliberate case</h2>
+<h3>Returning one for equal objects</h3>
+<p>A comparator that returns one whenever left is not smaller never returns zero. Even compare(a,a) becomes positive, violating the contract. Use a comparison helper and handle equality naturally.</p>
+<h3>Using only marks in a unique-student tree</h3>
+<p>TreeSet treats tied marks as the same element under a mark-only comparator. Use a unique roll tie-breaker when both students must remain. A list is often the clearer container for a ranking that permits equal comparison keys.</p>
+<h3>Subtracting to reverse a comparison</h3>
+<p>Writing right-left still risks overflow. Use reversed or swap arguments to a safe comparison helper. With floating-point fields, use Double.compare or comparingDouble and define a NaN policy if such values can occur.</p>
+<h2 id="best-practices">Review comparisons with targeted pairs</h2>
+<ul><li>Check one differing primary key and one tied primary key.</li><li>Include equal values and integer extremes when the domain permits them.</li><li>Choose the point at which reversed applies.</li><li>State whether comparison equality matches object equality.</li></ul>
+<h2 id="version-notes">Ordering helpers in Java 17</h2>
+<div class="callout version"><p>Comparator factory and chaining methods arrived in Java 8. The small record holders require Java 16 or later. Everything here runs on Java 17 without preview options. Ordinary classes with accessors can replace the records without changing the ordering rules.</p></div>
+<h2 id="summary">An ordering is a contract</h2>
+<p>Comparable supplies a natural order; Comparator supplies task-specific alternatives. Preserve the comparison contract and make ties visible. Continue to <a href="topic:oop-inner-classes">nested classes</a> to organize helper implementations by their scope and state needs.</p>

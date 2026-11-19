@@ -1,0 +1,420 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-exceptions",
+  "module": "advanced-java",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Exception Handling",
+    "bn": "এক্সেপশন সামলানো"
+  },
+  "summary": {
+    "en": "Recover from expected failures while keeping resource cleanup reliable.",
+    "bn": "ভুল ইনপুট বা ফাইলের সমস্যা সামলাও, আর কাজ শেষে রিসোর্স বন্ধ করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 55,
+  "prerequisites": [
+    "oop-inheritance",
+    "oop-java-input-output"
+  ],
+  "related": [],
+  "keywords": [
+    "exceptions",
+    "try catch",
+    "throw throws",
+    "resources"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "All examples use Java 17; try-with-resources has been available since Java 7."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give failure a separate path"
+    },
+    {
+      "id": "syntax",
+      "title": "Separate trying, handling and cleanup"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow a failure back to its handler"
+    },
+    {
+      "id": "examples",
+      "title": "Observe recovery and resource ownership"
+    },
+    {
+      "id": "recovery-policy",
+      "title": "Choose a useful recovery boundary"
+    },
+    {
+      "id": "failure-state",
+      "title": "Trace the rejected request as carefully as success"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not let cleanup hide the result"
+    },
+    {
+      "id": "best-practices",
+      "title": "Make failure paths reviewable"
+    },
+    {
+      "id": "version-notes",
+      "title": "Resource management in Java 17"
+    },
+    {
+      "id": "summary",
+      "title": "Recover without corrupting state"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Recover from a bad mark",
+      "level": "basic",
+      "language": "java",
+      "file": "examples/ex-1.java",
+      "tryNow": true,
+      "explanationHtml": "<p>The failed conversion skips the print in try. The matching catch recovers; finally runs before the next student.</p>",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Throw a checked domain exception",
+      "level": "intermediate",
+      "language": "java",
+      "file": "examples/ex-2.java",
+      "tryNow": true,
+      "explanationHtml": "<p>The method declares a checked failure with throws and creates one with throw. The caller catches the specific domain type.</p>",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Close resources in reverse order",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-3.java",
+      "tryNow": true,
+      "explanationHtml": "<p>Both resources close despite the failure. B closes before A because construction order is reversed during cleanup.</p>",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Keep the primary failure",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-4.java",
+      "tryNow": true,
+      "explanationHtml": "<p>A cleanup failure becomes suppressed when the body already failed. The work failure remains the primary exception.</p>",
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "title": "Validate numeric tokens",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read n (0..20), then n whitespace-separated tokens. Each token is a mark. Print ACCEPT x for an integer x in 0..100, RANGE for another integer, or FORMAT for a token that parseInt rejects. Print one result per token.</p>",
+      "hints": [
+        "Consume the token before converting it so the next iteration makes progress."
+      ],
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "title": "Checked withdrawal failure",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read balance (0..10000) and requested amount (0..10000). Implement withdraw with a checked FundsException. Print the remaining balance, or DENIED if amount exceeds balance; a rejection must preserve the original balance.</p>",
+      "hints": [
+        "Check the rule before computing the accepted result."
+      ],
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "title": "Catch ordering",
+      "difficulty": "medium",
+      "statementHtml": "<p>Why must a catch for NumberFormatException precede a catch for RuntimeException?</p>",
+      "answerHtml": "<p>NumberFormatException is a RuntimeException subclass. A preceding parent catch would already handle it, making the later child catch unreachable and illegal. Put specific catches first.</p>",
+      "hints": [
+        "Draw the exception inheritance path."
+      ]
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "title": "A return inside finally",
+      "difficulty": "hard",
+      "statementHtml": "<p>A method returns 10 inside try, then returns 20 inside finally. Explain the result and repair the design.</p>",
+      "answerHtml": "<p>The finally return replaces the pending return, so the method returns 20. Remove the finally return. Keep finally for cleanup so it cannot hide values or failures.</p>",
+      "hints": [
+        "Follow the pending result until cleanup ends."
+      ]
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "title": "Propagate with a cause",
+      "difficulty": "hard",
+      "statementHtml": "<p>A report layer translates IOException into ReportException. Explain what its constructor and call should preserve.</p>",
+      "answerHtml": "<p>Give ReportException a constructor receiving a message and Throwable cause, passing both to super. Throw new ReportException(\"Cannot read marks\", failure). This keeps report-level context and the underlying I/O cause available for diagnosis.</p>",
+      "hints": [
+        "Do not replace the useful original failure with only a new message."
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After a conversion failure, which cleanup and continuation messages appear?",
+      "options": [
+        "Enter a whole number\nAttempt finished\nNext student",
+        "Attempt finished",
+        "Next student",
+        "Enter a whole number\nNext student"
+      ],
+      "answer": 0,
+      "explanation": "Control enters catch, runs finally, then continues after the statement.",
+      "code": "class Main {\n    public static void main(String[] args) throws Exception {\n        try {\n            int mark = Integer.parseInt(\"absent\");\n            System.out.println(mark);\n        } catch (NumberFormatException failure) {\n            System.out.println(\"Enter a whole number\");\n        } finally {\n            System.out.println(\"Attempt finished\");\n        }\n        System.out.println(\"Next student\");\n    }\n}\n"
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which message reaches the caller of checkMark(105)?",
+      "options": [
+        "105",
+        "Mark outside 0..100",
+        "InvalidMarkException",
+        "No output"
+      ],
+      "answer": 1,
+      "explanation": "The custom exception message is printed by the caller.",
+      "code": "class InvalidMarkException extends Exception {\n    private static final long serialVersionUID = 1L;\n    InvalidMarkException(String message) { super(message); }\n}\n\nclass Main {\n    static void checkMark(int mark) throws InvalidMarkException {\n        if (mark < 0 || mark > 100) {\n            throw new InvalidMarkException(\"Mark outside 0..100\");\n        }\n    }\n    public static void main(String[] args) throws Exception {\n        try {\n            checkMark(105);\n        } catch (InvalidMarkException failure) {\n            System.out.println(failure.getMessage());\n        }\n    }\n}\n"
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "In what order are desks closed after work fails?",
+      "options": [
+        "use A\nuse B\nclose A\nclose B\nwork failed",
+        "work failed",
+        "use A\nuse B\nclose B\nclose A\nwork failed",
+        "use A\nuse B"
+      ],
+      "answer": 2,
+      "explanation": "Try-with-resources closes in reverse order before the outer catch.",
+      "code": "class Desk implements AutoCloseable {\n    private final String name;\n    Desk(String name) { this.name = name; }\n    void use() { System.out.println(\"use \" + name); }\n    @Override\n    public void close() { System.out.println(\"close \" + name); }\n}\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        try (Desk first = new Desk(\"A\"); Desk second = new Desk(\"B\")) {\n            first.use();\n            second.use();\n            throw new IllegalStateException(\"work failed\");\n        } catch (IllegalStateException failure) {\n            System.out.println(failure.getMessage());\n        }\n    }\n}\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which family can be propagated without a catch or throws declaration?",
+      "options": [
+        "Every Exception subclass",
+        "Only IOException",
+        "Only Throwable itself",
+        "RuntimeException subclasses"
+      ],
+      "answer": 3,
+      "explanation": "Unchecked exceptions do not impose the checked-exception declaration rule."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does a throws clause do at a method boundary?",
+      "options": [
+        "Declares possible checked failures",
+        "Creates an exception object",
+        "Runs cleanup immediately",
+        "Prevents every runtime failure"
+      ],
+      "answer": 0,
+      "explanation": "A throws clause describes propagation; throw performs it."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What must an automatic resource implement?",
+      "options": [
+        "Runnable",
+        "AutoCloseable",
+        "Comparable",
+        "Serializable only"
+      ],
+      "answer": 1,
+      "explanation": "Try-with-resources invokes close through AutoCloseable."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What should you do before retrying Scanner.nextInt after a bad token?",
+      "options": [
+        "Retry forever without reading",
+        "Close System.out",
+        "Consume or replace the rejected token",
+        "Catch Error"
+      ],
+      "answer": 2,
+      "explanation": "Otherwise the same token can cause the same failure repeatedly."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "If a resource body and close both fail, where is the close failure kept?",
+      "options": [
+        "It replaces every body failure",
+        "In the return value",
+        "It becomes a checked success",
+        "In the primary exception’s suppressed list"
+      ],
+      "answer": 3,
+      "explanation": "Resource cleanup preserves the body failure and attaches the close failure."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why avoid a catch that silently ignores IOException?",
+      "options": [
+        "It hides whether the operation completed",
+        "It makes IOException unchecked",
+        "It prevents finally",
+        "It closes all files automatically"
+      ],
+      "answer": 0,
+      "explanation": "The caller needs a meaningful failure result or propagation path."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does finally run after every possible JVM termination?",
+      "options": [
+        "Yes, even after process termination",
+        "No; forced termination can bypass it",
+        "Only if no catch exists",
+        "Only for checked failures"
+      ],
+      "answer": 1,
+      "explanation": "Normal control exits run finally, but process termination is outside that guarantee."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What should a translated exception retain for diagnosis?",
+      "options": [
+        "Only a shorter message",
+        "Only the current loop index",
+        "The original cause",
+        "No link to the earlier failure"
+      ],
+      "answer": 2,
+      "explanation": "A wrapper should add context while preserving the original failure chain."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Catch specific failures where recovery is possible.",
+      "bn": "যেখানে সমস্যা সামলাতে পারবে, সেখানে নির্দিষ্ট এক্সেপশন ধরো।"
+    },
+    {
+      "en": "throw raises a failure and throws declares propagation.",
+      "bn": "throw দিয়ে এক্সেপশন ছোড়ো, throws দিয়ে জানাও কোন এক্সেপশন বাইরে যেতে পারে।"
+    },
+    {
+      "en": "Checked exceptions require handling or declaration.",
+      "bn": "চেকড এক্সেপশন catch করো, অথবা throws দিয়ে বাইরে পাঠাও।"
+    },
+    {
+      "en": "Try-with-resources closes resources in reverse order.",
+      "bn": "try-with-resources রিসোর্সগুলো খোলার উল্টো ক্রমে বন্ধ করে।"
+    },
+    {
+      "en": "Cleanup should preserve the original failure.",
+      "bn": "ক্লিনআপ করতে গিয়ে আসল সমস্যাটা আড়াল কোরো না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Differentiate throw and throws with a checked mark-validation example.",
+      "marks": 5,
+      "answerHtml": "<p>throw new InvalidMarkException creates a failure path inside validation. The method declares throws InvalidMarkException. The caller either catches that exception or declares it too. Validation must happen before changing stored marks.</p>"
+    },
+    {
+      "type": "output",
+      "question": "Trace body failure and two resource closures in a try-with-resources statement.",
+      "marks": 5,
+      "answerHtml": "<p>With resources A then B, the body runs first, followed by B.close and A.close. If the body throws, that failure stays primary. Close failures are added as suppressed exceptions in closing order. An outer catch then receives the primary exception.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design an exception policy for reading a marks file.",
+      "marks": 5,
+      "answerHtml": "<p>Catch IOException at a boundary that can report the path and offer a retry. Catch NumberFormatException per record if skipping invalid records is permitted. Preserve causes when wrapping. Use try-with-resources and state whether partial data may be accepted.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Exceptions tutorial",
+      "url": "https://dev.java/learn/exceptions/"
+    },
+    {
+      "title": "Throwable",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

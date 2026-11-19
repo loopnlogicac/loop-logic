@@ -1,0 +1,62 @@
+<h2 id="introduction">Separate fixed choices from data values</h2>
+<p class="lead">A loan can be REGULAR or SHORT, while an exam mark pairs a roll number with a score. The first problem needs a fixed set of choices. The second needs a small data value. Java provides <dfn>enums</dfn> for named choices and <dfn>records</dfn> for transparent groups of components.</p>
+<p>An enum is more than a collection of integer constants. Each constant is a typed instance, so a loan category cannot accidentally be replaced with an unrelated day code. A record is more than a shorter field declaration. Its components define a public data contract and generated value-oriented operations.</p>
+<p>Choose the meaning first. If callers should see the complete data shape, a record may fit. If the representation should change independently of the public interface, an ordinary class may fit better. If the allowed alternatives are known and fixed by the model, an enum expresses that limit directly.</p>
+<h2 id="syntax">Give names and components a type</h2>
+<pre><code class="language-java">enum LoanKind {
+    REGULAR(2), SHORT(5);
+    private final int dailyRate;
+    LoanKind(int dailyRate) { this.dailyRate = dailyRate; }
+    int fee(int days) { return dailyRate * days; }
+}
+record Mark(int roll, int score) { }</code></pre>
+<p>Enum constants appear before other members, separated by commas. A semicolon separates the constants from fields and methods. The constructor initializes each constant’s state; callers cannot create additional LoanKind instances with new.</p>
+<p>The record header declares components. A Mark has private final component fields, roll() and score() accessors, a canonical constructor and generated equals, hashCode and toString methods. The accessor names match the components; Java does not automatically name them getRoll or getScore.</p>
+<p>Records may declare extra methods and static members. They cannot add arbitrary extra instance fields outside the component state. A record is implicitly final and extends java.lang.Record, so it cannot extend a user-defined superclass. It can implement interfaces, including Comparable when a natural ordering is useful.</p>
+<h2 id="how-it-works">Follow construction and validation</h2>
+<p>Enum construction creates the named constants as part of class initialization. LoanKind.REGULAR and LoanKind.SHORT then identify those constants. Enum equality can use == because each constant represents one instance of that enum type in its loaded class context.</p>
+<p>A record constructor receives its component values. A compact constructor omits the explicit parameter list and can validate or normalize those parameters. After its body completes normally, the compiler assigns the parameters to the component fields. If validation throws, construction does not return a valid record.</p>
+<table class="ref"><thead><tr><th scope="col">Operation</th><th scope="col">Example meaning</th></tr></thead><tbody>
+<tr><td>LoanKind.values()</td><td>A new array of constants in declaration order</td></tr>
+<tr><td>LoanKind.valueOf("SHORT")</td><td>The constant with that exact name</td></tr>
+<tr><td>new Mark(7,80)</td><td>A value with roll 7 and score 80</td></tr>
+<tr><td>mark.score()</td><td>Read the score component</td></tr>
+</tbody></table>
+<p>valueOf is case-sensitive and throws IllegalArgumentException for an unknown name. A null name is also invalid. At an input boundary, decide whether to reject, normalize case or map a stable external code. Do not silently change an unknown category into the first constant.</p>
+<h2 id="examples">Model rates, branches and values</h2>
+<h3>Put category behavior with the category</h3>
+<p>The daily rates are stored once in the enum constants. Three days produce fees of 6 and 15. The loop follows declaration order. The example accepts nonnegative days by its stated use; a public library API should validate that domain rather than relying on a caller’s memory.</p>
+<div data-example="ex-1"></div>
+<h3>Use a typed switch expression</h3>
+<p>The DayType enum has LECTURE and LAB. The switch expression covers both and returns the associated hours. Arrow cases do not fall through. An expression must yield a value for every accepted alternative, unlike a statement whose branches may perform unrelated actions.</p>
+<div data-example="ex-2"></div>
+<h3>Validate a record at construction</h3>
+<p>The Mark compact constructor rejects nonpositive rolls and scores outside 0..100. Two separate valid records with the same components compare equal. Their references can differ while their generated value equality returns true. The accessor output confirms the component order.</p>
+<div data-example="ex-3"></div>
+<h3>Protect a collection component</h3>
+<p>The Plan constructor replaces the incoming list reference with List.copyOf. Adding MAT to the original list afterward does not alter the plan. The accessor returns the copied unmodifiable list. This is a shallow copy, which is sufficient here because String elements are immutable.</p>
+<div data-example="ex-4"></div>
+<h2 id="record-contract">Generated behavior still needs design choices</h2>
+<p>Generated record equality compares matching record types and their component values. Reference components use their equality semantics. Arrays ordinarily use identity equality, so two separate arrays containing the same entries do not automatically make their enclosing records equal.</p>
+<p>Generated hashCode follows component values consistently with equality. The exact numeric formula is not an application storage format. Generated toString is useful for diagnostics, but do not parse it as a durable file format. Define a separate format whose version and escaping rules you control.</p>
+<p>A record with a List component is not deeply immutable by default. Final fixes the stored reference, yet callers may mutate the list through another alias or the accessor. A constructor copy protects against the original alias. An unmodifiable copy also prevents direct structural changes through the returned list.</p>
+<p>If list elements themselves are mutable, List.copyOf does not freeze them. Decide whether to copy each element, use immutable element types or document shared ownership. A record declaration cannot replace that design decision with a keyword.</p>
+<p>You can override generated Object methods, but doing so changes the transparent value contract readers expect. Prefer component types with appropriate value behavior. When custom methods are necessary, preserve the equals/hashCode contract and explain why ordinary component equality does not fit.</p>
+<h2 id="storage-and-evolution">Store meanings rather than declaration positions</h2>
+<p>Enum.ordinal returns a zero-based declaration position. Inserting a new constant before an existing one changes later ordinals. A file containing only those numbers can silently change meaning after an update. Store stable explicit codes, or documented names with a migration policy.</p>
+<p>A saved enum name can also become invalid if a constant is renamed. Define what an importer does with unknown names and whether old aliases remain supported. Small demonstrations may assume valid names; production storage needs deliberate evolution rules.</p>
+<p>An exhaustive enum switch makes new constants visible when code is recompiled: a missing alternative in an expression needs attention. A default branch can hide that signal by accepting future constants automatically. Use default only when one fallback really is the desired policy.</p>
+<p>Enums can implement interfaces and define methods with constant-specific bodies. That can replace a switch when behavior naturally belongs to each constant. Keep the simpler field-and-method form when the only difference is a numeric rate.</p>
+<h2 id="common-mistakes">Do not confuse compact syntax with stronger guarantees</h2>
+<h3>Expecting record setters</h3>
+<p>Records describe component values after construction. They do not generate setters. Create a new record for a changed value, or choose a regular mutable class when ongoing state transitions are the central model.</p>
+<h3>Assuming enum fields are always immutable</h3>
+<p>An enum can declare mutable fields, but every caller shares the same constant instance. A mutable per-user loan balance therefore does not belong on LoanKind.REGULAR. Keep category configuration separate from each borrower’s state.</p>
+<h3>Using a record only to reduce typing</h3>
+<p>A record exposes its components as its model. If the public interface should hide those details, a normal class gives you more freedom. Shorter syntax is helpful when it matches the intended contract.</p>
+<h2 id="best-practices">Keep choices and values honest</h2>
+<ul><li>Use enum constants in method parameters instead of unexplained category integers.</li><li>Validate record components at the construction boundary.</li><li>Copy mutable components according to a stated ownership rule.</li><li>Use stable external codes for durable storage.</li><li>Keep generated diagnostic strings separate from interchange formats.</li></ul>
+<h2 id="version-notes">Enums, switch expressions and records</h2>
+<div class="callout version"><p>Enums arrived in Java 5. Switch expressions became permanent in Java 14. Records became permanent in Java 16. These examples target Java 17 without preview features. Record patterns belong to later Java versions and are not used here.</p></div>
+<h2 id="summary">Choose the declaration that matches the meaning</h2>
+<p>Enums represent fixed named alternatives with behavior. Records represent transparent component values with generated operations. Both still need validation and ownership rules. Continue with <a href="topic:oop-file-io">file input and output</a> to preserve application data outside memory.</p>

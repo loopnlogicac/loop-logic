@@ -1,0 +1,56 @@
+<h2 id="introduction">Give data a life beyond one run</h2>
+<p class="lead">An in-memory marks list disappears when the program ends. A text file can preserve those marks for another run or another tool. <dfn>File input and output</dfn> converts between bytes stored at a filesystem location and values your application can use.</p>
+<p>Text I/O needs three decisions: where the file is, how bytes represent characters, and what each line means. A correct read operation can still produce incorrect application data if the encoding or record format is wrong. Make all three choices explicit.</p>
+<p>Files also fail for reasons outside the program’s control. A path may be missing, permissions may deny access, or storage may fill while writing. Use the <a href="topic:oop-exceptions">exception-handling rules</a> to distinguish a failed operation from a successful empty file.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A Java reader manages characters rather than exposing a FILE pointer. You still own the lifetime of an open resource. Try-with-resources replaces many manual close paths, while a charset controls conversion between stored bytes and Java text.</p></div>
+<h2 id="syntax">Combine a path, charset and operation</h2>
+<pre><code class="language-java">Path path = Path.of("marks.txt");
+String text = Files.readString(path, StandardCharsets.UTF_8);
+Files.writeString(path, text, StandardCharsets.UTF_8);</code></pre>
+<p>Path describes a location; it does not open or create the file by itself. Files provides operations on that location. StandardCharsets.UTF_8 names a fixed encoding, avoiding dependence on a machine’s default charset. Use the same encoding when writing and reading a defined text format.</p>
+<p>A relative path is resolved against the process working directory. That directory can differ between an IDE and a terminal launch. It is not automatically the folder containing the source file. Accept a deliberate path argument or document the launch directory for a real application.</p>
+<p>The default writeString and newBufferedWriter behavior creates a missing file or truncates an existing file. Truncation removes previous contents. Appending requires explicit open options, such as CREATE and APPEND, and a format that makes appended records unambiguous.</p>
+<h2 id="how-it-works">Open, use, close and interpret</h2>
+<pre class="diagram">Path + UTF-8 bytes -- reader --&gt; String lines -- parse --&gt; marks
+marks -- format --&gt; String lines -- writer --&gt; UTF-8 bytes at Path</pre>
+<p>A BufferedReader fetches characters in chunks and offers readLine. Each returned line excludes its line terminator. A real blank line produces an empty String. End of file produces null. Mixing those two cases can stop reading too soon or try to parse data that is not present.</p>
+<p>A BufferedWriter collects small writes before passing them to the underlying destination. newLine writes the platform line separator. flush passes buffered characters onward, while close also releases the resource. A reader opened before buffered output is flushed may not see the latest text.</p>
+<p>Close the writer before reopening its file for reading. Nested try-with-resources blocks make this order visible. If the body throws, closing still occurs during ordinary exception propagation. Cleanup can also fail, so preserve causes and suppressed exceptions when diagnosing I/O problems.</p>
+<p>Reading and parsing are separate operations. IOException describes I/O failure. NumberFormatException describes a token that does not fit the numeric conversion rule. A valid integer can still violate a mark range. Handle each at the layer that owns that rule.</p>
+<h2 id="examples">Use self-contained files before opening your own</h2>
+<h3>Round-trip a small text value</h3>
+<p>The first program creates a private temporary file, writes two mark lines, then reads and prints them. It never prints the temporary filename, whose value varies between runs. Finally deletes the demonstration file so repeated runs do not accumulate stored data.</p>
+<div data-example="ex-1"></div>
+<h3>Read and write through buffers</h3>
+<p>The writer stores CSE 80 and MAT 75 on separate lines. Only after that writer closes does the reader open. The loop tests readLine against null, so every real line is printed once. This pattern works when records arrive one line at a time.</p>
+<div data-example="ex-2"></div>
+<h3>Recover from an absent path</h3>
+<p>A fresh temporary directory guarantees that absent.txt does not exist. The specific catch prints a stable message, then the menu-continuation line appears. The example avoids printing platform-dependent exception details while still distinguishing failure from an empty successful read.</p>
+<div data-example="ex-3"></div>
+<h2 id="formats">Define what one record means</h2>
+<p>A file format is a contract between a writer and a later reader. If one mark appears per line, state whether blank lines are allowed, whether spaces are trimmed and which numeric range is valid. Without that contract, a reader cannot decide whether to skip or reject an unexpected line.</p>
+<p>Delimited records need escaping rules when fields can contain the delimiter or a newline. A small project can forbid those characters explicitly. A larger application should choose a well-defined format or implement matching escape and unescape operations. Splitting on a delimiter without considering the data is not a general parser.</p>
+<p>Preserve trailing empty fields when they matter. String.split takes a regular expression, and its default behavior discards trailing empty results. A negative limit retains them. Validate the expected field count before indexing the resulting array.</p>
+<p>String length is measured in UTF-16 code units. UTF-8 file byte length is a different quantity. Do not use a character count to assume a file’s byte size, especially for Bangla text. The same explicit UTF-8 policy handles both ASCII and Bangla content.</p>
+<h2 id="failure-boundaries">Protect live data during an import</h2>
+<p>Suppose an importer reads ninety valid marks and fails on the next line. If it already cleared and replaced the current list, the application may now expose partial state. Decide whether partial acceptance is intended. For an all-or-nothing import, build and validate a temporary collection first.</p>
+<p>Only after the entire read succeeds should the application replace its current collection. This commit point is a design decision, independent of whether resources closed correctly. Closing a reader does not undo earlier mutations.</p>
+<p>Saving has a related risk. Opening the destination for overwrite can erase old contents before all new data is written. Writing a sibling staging file and moving it into place can reduce exposure to partial writes. A normal move is not automatically crash-safe or atomic across all filesystems.</p>
+<p>An exists check cannot guarantee that the following open will succeed. Another process may change the path or permissions between the check and operation. Attempt the real operation and handle its exception. Prechecks can improve a user message, but they are not a substitute for handling failure.</p>
+<h2 id="size-and-resources">Choose whole-file or incremental reading</h2>
+<p>readString is convenient for a small configuration or message. It loads the complete text into memory. A BufferedReader loop is better when you can process records incrementally or the file may be large. Keeping every parsed record still requires memory for those records.</p>
+<p>Files.lines returns a lazy stream backed by an open file. Its concise appearance does not remove the closing obligation. Use it in try-with-resources and remember that failures can occur while traversing, not only while creating the stream.</p>
+<p>Passing an open reader into a helper also raises ownership questions. A helper should not unexpectedly close a reader that its caller still needs. State who opens and closes each resource. In these complete examples, the code that opens the resource also closes it.</p>
+<h2 id="common-mistakes">Keep data absence distinct from failure</h2>
+<h3>Using an empty line as EOF</h3>
+<p>An empty line is still data. Test for null to detect EOF, then apply the format’s blank-line policy. Calling trim before a null check would dereference null at the end.</p>
+<h3>Ignoring a failed save</h3>
+<p>A success message must follow successful completion and close. If writing or closing throws, report a failed save. Silent recovery can make a user believe data is durable when it is not.</p>
+<h3>Assuming an extension defines the encoding</h3>
+<p>A .txt suffix does not tell Java which charset was used. Specify and document the actual format. If you read a file written by another tool, confirm its encoding rather than guessing from the filename.</p>
+<h2 id="best-practices">Make file boundaries explicit</h2>
+<ul><li>State the charset and per-record grammar together.</li><li>Finish buffered writes before consuming their output.</li><li>Stage imports before changing live collections.</li><li>Use temporary paths for demonstrations that create their own data.</li><li>Keep diagnostic path information separate from a stable user-facing message.</li></ul>
+<h2 id="version-notes">Text APIs used by Java 17</h2>
+<div class="callout version"><p>Files.readString and writeString arrived in Java 11. The buffered reader and writer factories are available in the Java 17 baseline. These examples explicitly select UTF-8 and need no platform-default encoding assumption. They use no object serialization.</p></div>
+<h2 id="summary">A successful open is only the beginning</h2>
+<p>Define paths, encodings, record rules and cleanup ownership. Preserve valid state when reading or parsing fails. Continue to <a href="topic:oop-multithreading">multithreading</a> to coordinate work that may run independently.</p>

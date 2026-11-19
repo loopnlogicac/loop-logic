@@ -1,0 +1,434 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-generics",
+  "module": "advanced-java",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Generics",
+    "bn": "জেনেরিকস"
+  },
+  "summary": {
+    "en": "Use type parameters to reuse code without losing compile-time type checks.",
+    "bn": "টাইপ প্যারামিটার দিয়ে একই কোড নানা টাইপে ব্যবহার করো, ভুল টাইপ কম্পাইলের সময় ধরো।"
+  },
+  "level": "advanced",
+  "estMinutes": 80,
+  "prerequisites": [
+    "oop-interfaces",
+    "oop-wrapper-classes"
+  ],
+  "related": [],
+  "keywords": [
+    "generics",
+    "bounded types",
+    "wildcards",
+    "type erasure"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "Generics date from Java 5; these examples use no raw types or unchecked casts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Reuse a shape while preserving its type"
+    },
+    {
+      "id": "syntax",
+      "title": "Declare a class parameter or a method parameter"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow one parameter through its uses"
+    },
+    {
+      "id": "examples",
+      "title": "Read types through complete calls"
+    },
+    {
+      "id": "wildcard-direction",
+      "title": "Unknown types need different read and write rules"
+    },
+    {
+      "id": "erasure",
+      "title": "Understand what remains at runtime"
+    },
+    {
+      "id": "api-design",
+      "title": "Choose between a named parameter and a wildcard"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep the type promise intact"
+    },
+    {
+      "id": "best-practices",
+      "title": "Describe relationships with the smallest useful promise"
+    },
+    {
+      "id": "version-notes",
+      "title": "Generics on Java 17"
+    },
+    {
+      "id": "summary",
+      "title": "Make reusable code say which types belong together"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "A reusable typed box",
+      "level": "basic",
+      "language": "java",
+      "file": "examples/ex-1.java",
+      "tryNow": true,
+      "explanationHtml": "<p>T follows each box declaration. Reading the value needs no cast, and primitive arithmetic unboxes Integer.</p>",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "A bounded numeric method",
+      "level": "intermediate",
+      "language": "java",
+      "file": "examples/ex-2.java",
+      "tryNow": true,
+      "explanationHtml": "<p>The Number bound makes doubleValue available. Each call infers a different T; the result is always double.</p>",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Copy from a producer to a consumer",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-3.java",
+      "tryNow": true,
+      "explanationHtml": "<p>The source produces T values, while the destination accepts them. Number can safely hold every copied Integer.</p>",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Retain a comparable relationship",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-4.java",
+      "tryNow": true,
+      "explanationHtml": "<p>The bound permits comparisons to T or a supertype. The method returns an existing argument without changing its type.</p>",
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "title": "Last value with a generic method",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read n (1..20), then n integers in -100..100. Store boxed values in a List and use a generic last(List&lt;T&gt;) method to return and print the last value.</p>",
+      "hints": [
+        "Keep T in both the list parameter and return type."
+      ],
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "title": "Numeric producer sum",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (0..20), followed by n integers in -100..100. Implement sum(List&lt;? extends Number&gt;) returning double, call it with List&lt;Integer&gt;, and print the sum using println.</p>",
+      "hints": [
+        "An extends wildcard is enough when you only read numbers."
+      ],
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "title": "Why List<Integer> is not List<Number>",
+      "difficulty": "medium",
+      "statementHtml": "<p>Explain why assigning a List&lt;Integer&gt; to List&lt;Number&gt; is forbidden.</p>",
+      "answerHtml": "<p>If the assignment were allowed, a caller could add a Double through the Number reference. The original list would no longer contain only Integer values. Use List&lt;? extends Number&gt; for a read-oriented view.</p>",
+      "hints": [
+        "Imagine adding 1.5 through the wider reference."
+      ]
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "title": "Erasure and overloaded methods",
+      "difficulty": "hard",
+      "statementHtml": "<p>Can one class overload inspect(List&lt;String&gt;) and inspect(List&lt;Integer&gt;)? Explain a repair.</p>",
+      "answerHtml": "<p>No. Both parameter types erase to List, leaving identical method signatures. Rename the operations or add a genuinely different parameter type. Do not use a raw List to bypass the type system.</p>",
+      "hints": [
+        "Compare the signatures after removing type arguments."
+      ]
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "title": "A factory for a generic value",
+      "difficulty": "hard",
+      "statementHtml": "<p>A generic Registry&lt;T&gt; needs to create fresh T instances. Explain why new T() is unavailable and design an alternative.</p>",
+      "answerHtml": "<p>Accept a Supplier&lt;T&gt; in the Registry constructor and call get when a new value is needed. The supplier explicitly provides construction behavior, while T keeps the return relationship. A bound does not guarantee a particular constructor. Define whether null results are accepted.</p>",
+      "hints": [
+        "Which dependency describes creation?"
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What values are read from the String and Integer boxes?",
+      "options": [
+        "3\n32",
+        "Lab\n30",
+        "3\n302",
+        "30\n2"
+      ],
+      "answer": 0,
+      "explanation": "The String has three characters; the Integer is unboxed before adding two.",
+      "code": "class Box<T> {\n    private final T value;\n    Box(T value) { this.value = value; }\n    T get() { return value; }\n}\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Box<String> room = new Box<>(\"Lab\");\n        Box<Integer> seats = new Box<>(30);\n        System.out.println(room.get().length());\n        System.out.println(seats.get() + 2);\n    }\n}\n"
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How does a Number bound handle integer and decimal lists?",
+      "options": [
+        "5\n4",
+        "5.0\n4.0",
+        "2.0\n1.5",
+        "9.0"
+      ],
+      "answer": 1,
+      "explanation": "doubleValue converts each input into the double accumulator.",
+      "code": "import java.util.List;\n\n\n\nclass Main {\n    static <T extends Number> double total(List<T> values) {\n        double sum = 0;\n        for (T value : values) { sum += value.doubleValue(); }\n        return sum;\n    }\n    public static void main(String[] args) throws Exception {\n        System.out.println(total(List.of(2, 3)));\n        System.out.println(total(List.of(1.5, 2.5)));\n    }\n}\n"
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which values reach List<Number> through the wildcard copy?",
+      "options": [
+        "[]",
+        "[7, 4]",
+        "[4, 7]",
+        "[4.0, 7.0]"
+      ],
+      "answer": 2,
+      "explanation": "Copy preserves both encounter order and the original Integer objects.",
+      "code": "import java.util.List;\nimport java.util.ArrayList;\n\n\n\nclass Main {\n    static <T> void copy(List<? extends T> source, List<? super T> target) {\n        for (T value : source) { target.add(value); }\n    }\n    public static void main(String[] args) throws Exception {\n        List<Integer> source = List.of(4, 7);\n        List<Number> target = new ArrayList<>();\n        copy(source, target);\n        System.out.println(target);\n    }\n}\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which generic argument can represent primitive int values?",
+      "options": [
+        "int",
+        "void",
+        "boolean",
+        "Integer"
+      ],
+      "answer": 3,
+      "explanation": "Type arguments must be reference types, so use wrappers."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What can a List<? extends Number> safely produce?",
+      "options": [
+        "Number values",
+        "Only Integer values",
+        "Arbitrary writable Number slots",
+        "A guarantee of Double values"
+      ],
+      "answer": 0,
+      "explanation": "The unknown element type is some subtype of Number."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which operation fits List<? super Integer>?",
+      "options": [
+        "Reading every element as Integer without a cast",
+        "Adding an Integer",
+        "Adding a Double",
+        "Constructing its unknown element type"
+      ],
+      "answer": 1,
+      "explanation": "The list element type is Integer or a supertype, so Integer writes are safe."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is type erasure’s central idea?",
+      "options": [
+        "A new JVM class is created for each T",
+        "Every value loses its class",
+        "Type parameters are replaced by bounds in compiled signatures",
+        "Generic checks happen only at runtime"
+      ],
+      "answer": 2,
+      "explanation": "Erasure preserves compatibility while source checks enforce parameter relationships."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why is new T() unavailable in an ordinary generic class?",
+      "options": [
+        "All type parameters are abstract",
+        "T must be a primitive",
+        "Every T constructor is private",
+        "The runtime constructor for T is not specified"
+      ],
+      "answer": 3,
+      "explanation": "Supply a factory when construction is required."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does List<?> let you read without a cast?",
+      "options": [
+        "Object",
+        "Any selected type T",
+        "Only String",
+        "Only Number"
+      ],
+      "answer": 0,
+      "explanation": "An unbounded unknown reference type has Object as its safe read type."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which method header declares its own type parameter?",
+      "options": [
+        "static T first<T>(List<T> items)",
+        "static <T> T first(List<T> items)",
+        "static T<T> first(List items)",
+        "static <int> int first(List<int> items)"
+      ],
+      "answer": 1,
+      "explanation": "The method type parameter precedes the return type."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which declaration preserves a first-element return type for callers?",
+      "options": [
+        "Object first(List<?> values) preserves T",
+        "void first(List<String> values)",
+        "<T> T first(List<T> values)",
+        "<T> Number first(List<T> values) always"
+      ],
+      "answer": 2,
+      "explanation": "A named type parameter ties the result to the input element type."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does a List<? extends Number> parameter make its underlying list immutable?",
+      "options": [
+        "Yes, it freezes every alias",
+        "Yes, it performs a defensive copy",
+        "Only if the list contains Integer",
+        "No; it restricts writes through that view"
+      ],
+      "answer": 3,
+      "explanation": "A wildcard controls source-level operations through a reference; it does not define ownership."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A type parameter preserves relationships between inputs and results.",
+      "bn": "টাইপ প্যারামিটার ইনপুট আর ফলাফলের টাইপের সম্পর্ক ধরে রাখে।"
+    },
+    {
+      "en": "Generic arguments use reference types, including wrappers.",
+      "bn": "জেনেরিকের টাইপ আর্গুমেন্টে রেফারেন্স টাইপ লাগে, তাই int-এর জন্য Integer নাও।"
+    },
+    {
+      "en": "An extends wildcard reads from a producer.",
+      "bn": "extends wildcard দিয়ে সোর্স থেকে নিরাপদে মান পড়তে পারো।"
+    },
+    {
+      "en": "A super wildcard accepts values into a consumer.",
+      "bn": "super wildcard দিয়ে মান নেওয়ার মতো ডেস্টিনেশন বানাতে পারো।"
+    },
+    {
+      "en": "Erasure does not create a new runtime class for every argument.",
+      "bn": "টাইপ আর্গুমেন্ট বদলালেই রানটাইমে নতুন ক্লাস তৈরি হয় না।"
+    },
+    {
+      "en": "Bounds expose only operations promised by the bound.",
+      "bn": "বাউন্ড যে মেথডের নিশ্চয়তা দেয়, জেনেরিক কোডে সেটাই ব্যবহার করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "design",
+      "question": "Design a generic Cell<T> that stores and returns one non-null value.",
+      "marks": 5,
+      "answerHtml": "<p>Use a private final T value, a constructor Cell(T value), and T get(). Validate with Objects.requireNonNull in the constructor. A Cell&lt;String&gt; returns String without a caller cast; Cell&lt;Integer&gt; returns Integer.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain producer extends and consumer super using copying.",
+      "marks": 5,
+      "answerHtml": "<p>A source List&lt;? extends T&gt; supplies values readable as T. A destination List&lt;? super T&gt; accepts each T. The destination may actually be a list of a supertype; its reads are only guaranteed as Object. Neither wildcard means that arbitrary subtype values may be inserted everywhere.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Name two consequences of erasure for source design.",
+      "marks": 4,
+      "answerHtml": "<p>You cannot overload methods solely by List&lt;String&gt; versus List&lt;Integer&gt;, because both erase to List. You cannot test instanceof List&lt;String&gt;; List&lt;?&gt; is the reifiable form. Parameterized collections still receive compile-time checks.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Generics",
+      "url": "https://dev.java/learn/generics/"
+    },
+    {
+      "title": "JLS type variables",
+      "url": "https://docs.oracle.com/javase/specs/jls/se17/html/jls-4.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

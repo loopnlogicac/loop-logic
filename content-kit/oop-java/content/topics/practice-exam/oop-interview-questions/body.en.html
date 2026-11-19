@@ -1,0 +1,74 @@
+<h2 id="introduction">Answer with a rule, an example and a boundary</h2>
+<p class="lead">A strong interview answer is short enough to follow and precise enough to defend. Start with the central rule, give one concrete example, then name a limitation when it matters. These fifty questions cover the four pillars, Java-specific behavior and design choices.</p>
+<p>Try saying each answer aloud before reading it. When a follow-up asks why, draw a small object diagram or write a two-line trace. Avoid broad claims such as every final object is immutable or every stream runs in parallel. A qualified answer is clearer than a confident overstatement.</p>
+<p>The output quiz adds five small executable checks. Use those to distinguish a definition you remember from a behavior you can predict. The written bank also keeps the fifty short answers together for revision.</p>
+<h2 id="pillars">Objects and design foundations</h2>
+<ol start="1"><li><p><strong>What is encapsulation?</strong></p><p>It keeps representation behind operations that maintain a contract. Private fields help, but validation and controlled access preserve the object’s rules.</p></li>
+<li><p><strong>What is abstraction?</strong></p><p>It exposes the operations a caller needs while hiding irrelevant implementation choices. An interface can describe a fee calculation without exposing its formula.</p></li>
+<li><p><strong>What does inheritance promise beyond code reuse?</strong></p><p>A subtype should satisfy the behavioural expectations of its supertype. Reusing code through extends is a poor choice when that substitution promise is false.</p></li>
+<li><p><strong>What is runtime polymorphism?</strong></p><p>An overridden instance method is chosen from the receiver’s runtime class after a compatible signature is selected at compile time.</p></li>
+<li><p><strong>How does a class differ from an object?</strong></p><p>A class defines a type and its implementation. An object is one runtime instance with identity and state.</p></li>
+<li><p><strong>How do identity and equality differ?</strong></p><p>Reference == checks whether two references designate the same object. equals follows the class’s equality contract, which may compare values.</p></li>
+<li><p><strong>How does Java pass object arguments?</strong></p><p>Java copies the reference value into the parameter. The callee can mutate a shared target, but reassigning its parameter does not replace the caller’s variable.</p></li>
+<li><p><strong>What does null represent?</strong></p><p>It is a reference value designating no object. Dereferencing it usually throws NullPointerException; it is not an empty instance.</p></li>
+<li><p><strong>When is composition preferable to inheritance?</strong></p><p>Use composition when an object has a collaborator whose behaviour may vary independently. Delegation exposes that relationship without promising a false is-a contract.</p></li>
+<li><p><strong>Why does Java allow multiple interfaces but one class superclass?</strong></p><p>Interfaces can express several capabilities without inheriting several independent class-state implementations. Conflicting default methods still need explicit resolution.</p></li>
+</ol>
+
+<h2 id="language-rules">Construction, methods and access</h2>
+<ol start="11"><li><p><strong>Are constructors inherited or overridden?</strong></p><p>No. A constructor initializes a new instance of its declaring class. Subclass construction invokes a superclass constructor rather than overriding it.</p></li>
+<li><p><strong>When does the compiler provide a default constructor?</strong></p><p>Only when the class declares no constructor. Its implicit superclass call must still be legal and accessible.</p></li>
+<li><p><strong>What does this(...) do?</strong></p><p>It delegates to another constructor of the same class. In Java 17 it must be the first constructor statement and cannot create a constructor cycle.</p></li>
+<li><p><strong>What does super.method() select?</strong></p><p>It invokes the accessible superclass implementation for that operation, bypassing the current class override for that explicit call.</p></li>
+<li><p><strong>How do overloading and overriding differ?</strong></p><p>Overloading offers different parameter lists selected at compile time. Overriding supplies a subtype implementation for an inherited instance-method signature.</p></li>
+<li><p><strong>Can an override reduce access?</strong></p><p>No. It must remain at least as accessible as the overridden method, so a public interface method needs a public implementation.</p></li>
+<li><p><strong>What is a covariant return?</strong></p><p>An override may return a narrower reference type than the parent method. This does not allow unrelated or arbitrarily changed primitive return types.</p></li>
+<li><p><strong>Can static methods be overridden?</strong></p><p>No. A same-signature subclass static method hides an inherited static method. Selection uses compile-time information rather than receiver dispatch.</p></li>
+<li><p><strong>What does final mean on a variable?</strong></p><p>That binding can be assigned only once. If it holds a mutable object reference, operations may still change the object.</p></li>
+<li><p><strong>What does final mean on methods and classes?</strong></p><p>A final method cannot be overridden. A final class cannot be extended. Neither declaration alone makes every field immutable.</p></li>
+<li><p><strong>What is an effectively final local?</strong></p><p>It is a local variable that is not reassigned after its permitted initialization. Lambdas and local classes can capture such bindings.</p></li>
+<li><p><strong>What is the main abstract-class versus interface choice?</strong></p><p>An abstract class can share instance state and construction. An interface defines a capability that unrelated classes can implement, with default and static helpers where useful.</p></li>
+<li><p><strong>What does protected mean across packages?</strong></p><p>Subclass access is allowed under protected receiver restrictions. A subclass cannot use that permission to access the member through an arbitrary superclass instance.</p></li>
+<li><p><strong>Does importing a package import its subpackages?</strong></p><p>No. Imports resolve type names; subpackages are separate packages. Imports do not copy code into the program.</p></li>
+</ol>
+
+<h2 id="values-and-errors">Equality, wrappers and failures</h2>
+<ol start="25"><li><p><strong>What are equals requirements?</strong></p><p>Reflexivity, symmetry, transitivity and consistency, with false for null. The chosen equality fields must also support a matching hashCode implementation.</p></li>
+<li><p><strong>Does equal hashCode prove equals?</strong></p><p>No. Different values may collide. Equal objects require equal hashes, but equal hashes do not require equal objects.</p></li>
+<li><p><strong>Why are mutable hash keys risky?</strong></p><p>Changing fields used by hashing or equality after insertion can make later lookup use a different bucket or equality relation. Prefer stable keys.</p></li>
+<li><p><strong>Why compare String content with equals?</strong></p><p>String == checks reference identity, which interning can make misleading. equals checks the character sequence; handle null according to the caller’s contract.</p></li>
+<li><p><strong>What is autoboxing’s null pitfall?</strong></p><p>Unboxing a null wrapper throws NullPointerException. A nullable Integer is not interchangeable with an always-present int.</p></li>
+<li><p><strong>Are all equal Integer objects identical?</strong></p><p>No. Some small boxed constants share required cached objects, but general value equality does not imply identity. Use equals for wrapper values.</p></li>
+<li><p><strong>What is a checked exception?</strong></p><p>It is an exception subject to the catch-or-declare rule. RuntimeException and Error families are unchecked; IOException is a common checked example.</p></li>
+<li><p><strong>How do throw and throws differ?</strong></p><p>throw transfers control by raising a Throwable value. A throws clause declares possible propagated failures on a method or constructor.</p></li>
+<li><p><strong>Why prefer try-with-resources for readers?</strong></p><p>It closes AutoCloseable resources even on normal exceptional exits, in reverse acquisition order, and preserves cleanup failures as suppressed exceptions when needed.</p></li>
+</ol>
+
+<h2 id="modern-java">Generics, collections and functions</h2>
+<ol start="34"><li><p><strong>What does a generic type parameter buy you?</strong></p><p>It expresses relationships between types across fields, parameters and results so incompatible uses can be rejected before execution.</p></li>
+<li><p><strong>Why is List&lt;Integer&gt; not a List&lt;Number&gt;?</strong></p><p>A writable Number list can accept a Double, which would violate an Integer list’s element promise. Use an extends wildcard when reading numbers.</p></li>
+<li><p><strong>What does producer extends, consumer super mean?</strong></p><p>Read T values from a source declared with ? extends T. Write T values into a destination declared with ? super T. Choose the direction per parameter.</p></li>
+<li><p><strong>What is type erasure?</strong></p><p>Generic source types are checked then translated using bounds and casts for JVM compatibility. A separate runtime class is not created for every type argument.</p></li>
+<li><p><strong>How do List, Set and Map differ?</strong></p><p>A List models positions and permits duplicates. A Set models uniqueness. A Map associates a value with each unique key; Map is not a subtype of Collection.</p></li>
+<li><p><strong>When choose a tree collection over a hash collection?</strong></p><p>Choose TreeSet or TreeMap when sorted iteration or navigational queries matter. Hash variants usually provide expected constant-time basic lookup without sorted order.</p></li>
+<li><p><strong>What does Comparable define?</strong></p><p>The implementing type’s natural order through compareTo. A Comparator supplies a separate ordering, useful for alternative reports and tie-breaking.</p></li>
+<li><p><strong>What is a functional interface?</strong></p><p>It has one abstract operation after excluding Object-equivalent methods. Default and static methods may coexist without adding abstract operations.</p></li>
+<li><p><strong>How does a lambda differ from an anonymous class?</strong></p><p>A lambda targets a functional interface and keeps the enclosing this. An anonymous class introduces a new class body and its own this and state.</p></li>
+<li><p><strong>When does a stream pipeline execute?</strong></p><p>Intermediate operations such as map and filter describe work lazily. A terminal operation triggers traversal; the stream cannot then be reused.</p></li>
+<li><p><strong>Why must a reduction use a suitable identity?</strong></p><p>The identity must leave values unchanged under the combiner, which must be associative. Parallel regrouping can expose an invalid identity or order-dependent operation.</p></li>
+</ol>
+
+<h2 id="integration">Values, threads, interfaces and design</h2>
+<ol start="45"><li><p><strong>What does a record generate?</strong></p><p>Component fields, accessors, a canonical constructor and value-oriented equals, hashCode and toString. Mutable referenced components still need a copying policy.</p></li>
+<li><p><strong>Why store enum names or codes instead of ordinals?</strong></p><p>Ordinal values change when declaration order changes. Durable storage needs a stable code policy and a plan for unknown future values.</p></li>
+<li><p><strong>Why is count++ unsafe across unsynchronized workers?</strong></p><p>It reads, adds and writes in separate steps. Interleaving can lose updates. Use a shared lock or an appropriate atomic operation.</p></li>
+<li><p><strong>Does sleep replace join?</strong></p><p>No. sleep delays the current thread without proving another task has finished. join waits for a particular thread’s termination.</p></li>
+<li><p><strong>Which Swing code belongs on the event thread?</strong></p><p>Ordinary component creation, reads and updates belong there unless an API explicitly permits otherwise. Long work should use a worker and return results to the event thread.</p></li>
+<li><p><strong>How do SOLID and patterns help design discussions?</strong></p><p>They name pressures and solution roles, such as substitutability, injected policies and event subscribers. Explain the concrete problem and cost instead of adding abstractions by habit.</p></li>
+</ol>
+<h2 id="follow-up-practice">Make the explanation survive a changed example</h2>
+<p>After an inheritance answer, change the declared reference type and ask whether overload selection changes. After an equality answer, change one identity field and check both equals and hashCode. After a collection answer, add empty input, a duplicate or an ordering requirement.</p>
+<p>For a design discussion, name the change pressure before proposing a pattern. An injected strategy addresses varying algorithms. A factory addresses construction choices. Observer introduces subscription lifetimes. Explain the cost as well as the benefit, including retained listeners or hidden global state.</p>
+<p>If a question depends on a version, say so. Records are permanent from Java 16, and the code here targets Java 17. Executor cleanup examples from a newer release may rely on an interface contract that Java 17 does not have.</p>
+<h2 id="summary">Keep your answer testable</h2>
+<p>A useful answer predicts what a caller can do and what happens at a boundary. Return to the <a href="topic:oop-exam-questions">exam questions</a> for longer reasoning or explain the <a href="topic:oop-mini-project-library">library project</a> using the same contracts. That completes the Java OOP track.</p>

@@ -1,0 +1,443 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-lambdas-streams",
+  "module": "advanced-java",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Lambdas and Streams",
+    "bn": "ল্যাম্বডা আর স্ট্রিম"
+  },
+  "summary": {
+    "en": "Describe transformations as typed functions and ordered stream pipelines.",
+    "bn": "ল্যাম্বডা দিয়ে কাজের নিয়ম লেখো, স্ট্রিমে ধাপে ধাপে ডেটা বদলাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 80,
+  "prerequisites": [
+    "oop-generics",
+    "oop-comparable-comparator",
+    "oop-inner-classes"
+  ],
+  "related": [],
+  "keywords": [
+    "lambda",
+    "functional interface",
+    "method reference",
+    "stream reduce collect"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "Lambdas and streams arrived in Java 8; Stream.toList arrived in Java 16 and returns an unmodifiable list."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Pass an operation as a value"
+    },
+    {
+      "id": "syntax",
+      "title": "Let the target interface define the shape"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace a lazy pipeline"
+    },
+    {
+      "id": "examples",
+      "title": "Use functions for adjustment, selection and aggregation"
+    },
+    {
+      "id": "method-references",
+      "title": "Recognize four reference forms"
+    },
+    {
+      "id": "reduction-and-collection",
+      "title": "Choose a result contract"
+    },
+    {
+      "id": "side-effects",
+      "title": "Keep pipelines independent of changing external state"
+    },
+    {
+      "id": "pipeline-boundaries",
+      "title": "Inspect an empty report and a threshold value"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid chains that hide a different rule"
+    },
+    {
+      "id": "best-practices",
+      "title": "Make the data flow easy to read"
+    },
+    {
+      "id": "version-notes",
+      "title": "Lambdas and modern stream results"
+    },
+    {
+      "id": "summary",
+      "title": "Describe the transformation and its result"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Supply a functional-interface operation",
+      "level": "basic",
+      "language": "java",
+      "file": "examples/ex-1.java",
+      "tryNow": true,
+      "explanationHtml": "<p>The target interface defines one abstract operation. bonus is captured without reassignment; results are capped at 100.</p>",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Filter and transform passing marks",
+      "level": "intermediate",
+      "language": "java",
+      "file": "examples/ex-2.java",
+      "tryNow": true,
+      "explanationHtml": "<p>Filtering happens before mapping, so 35 never reaches the adjustment. collect gathers the remaining values in encounter order.</p>",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Reduce an empty and a nonempty stream",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-3.java",
+      "tryNow": true,
+      "explanationHtml": "<p>Zero is the identity for addition, so an empty reduction is well defined. Integer::sum refers to a static method.</p>",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Method references and a fresh result list",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-4.java",
+      "tryNow": true,
+      "explanationHtml": "<p>String::toUpperCase calls an instance method on each element. The source strings remain unchanged; toList returns an unmodifiable result.</p>",
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "title": "Total passing marks",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read n (0..30), then n marks in 0..100. Using a stream, keep marks at least 40 and sum them. Print the integer total; use zero when none pass.</p>",
+      "hints": [
+        "Use filter before mapToInt and sum."
+      ],
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "title": "Sorted room labels",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (0..20), then n lowercase ASCII room labels of 1..12 letters. Use a stream to keep distinct labels, sort them lexicographically and print one per line.</p>",
+      "hints": [
+        "Choose sorted before the terminal print operation."
+      ],
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "title": "A stream is single-use",
+      "difficulty": "medium",
+      "statementHtml": "<p>A program calls count on a Stream, then calls collect on that same Stream. Explain the failure and repair.</p>",
+      "answerHtml": "<p>A terminal operation consumes the pipeline. Reusing the same Stream can throw IllegalStateException. Keep the source collection and create a new stream for each independent traversal, or collect once and work from that result.</p>",
+      "hints": [
+        "Separate the reusable source from the one-use traversal."
+      ]
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "title": "Invalid reduction identity",
+      "difficulty": "hard",
+      "statementHtml": "<p>Why is reduce(10, Integer::sum) unsuitable for a general parallel sum?</p>",
+      "answerHtml": "<p>Ten is not an identity for addition. A parallel reduction may apply the identity to multiple partitions, adding it more than once. Reduce from zero, then add ten once to the final result. The operator must also be associative.</p>",
+      "hints": [
+        "Check combine(0,x) versus combine(10,x)."
+      ]
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "title": "A mutable list result",
+      "difficulty": "medium",
+      "statementHtml": "<p>A caller needs to append a summary value after collecting a stream. Choose a collection expression with an explicit mutable result.</p>",
+      "answerHtml": "<p>Use collect(Collectors.toCollection(ArrayList::new)). Stream.toList returns an unmodifiable list. Collectors.toList does not guarantee mutability or implementation type, so an explicit collection supplier makes the caller’s requirement clear.</p>",
+      "hints": [
+        "Choose the destination contract, not an observed implementation."
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which adjusted marks does the captured bonus produce?",
+      "options": [
+        "74\n100",
+        "70\n99",
+        "74\n103",
+        "4\n4"
+      ],
+      "answer": 0,
+      "explanation": "The lambda adds four and clamps at one hundred.",
+      "code": "import java.util.function.IntUnaryOperator;\n\n\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        int bonus = 4;\n        IntUnaryOperator adjust = mark -> Math.min(100, mark + bonus);\n        System.out.println(adjust.applyAsInt(70));\n        System.out.println(adjust.applyAsInt(99));\n    }\n}\n"
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which marks survive filter before the map adds two?",
+      "options": [
+        "[37, 42, 77]",
+        "[42, 77]",
+        "[40, 75]",
+        "[77, 42]"
+      ],
+      "answer": 1,
+      "explanation": "Only 40 and 75 pass; the map then adds two to those values.",
+      "code": "import java.util.List;\nimport java.util.stream.Collectors;\n\n\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        List<Integer> adjusted = List.of(35, 40, 75).stream()\n            .filter(mark -> mark >= 40)\n            .map(mark -> mark + 2)\n            .collect(Collectors.toList());\n        System.out.println(adjusted);\n    }\n}\n"
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How does the sum identity handle an empty stream?",
+      "options": [
+        "No output",
+        "10\n25",
+        "0\n15",
+        "0\n0"
+      ],
+      "answer": 2,
+      "explanation": "Addition starts from zero and combines the nonempty values to fifteen.",
+      "code": "import java.util.List;\n\n\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        System.out.println(List.<Integer>of().stream().reduce(0, Integer::sum));\n        System.out.println(List.of(3, 5, 7).stream().reduce(0, Integer::sum));\n    }\n}\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What makes an interface functional?",
+      "options": [
+        "Exactly one method of any kind",
+        "No default methods",
+        "At least two abstract methods",
+        "One abstract method, excluding Object-equivalent methods"
+      ],
+      "answer": 3,
+      "explanation": "Default and static methods do not add abstract operations."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which operation is terminal in filter(...).map(...).collect(...)?",
+      "options": [
+        "collect",
+        "filter",
+        "map",
+        "stream creation"
+      ],
+      "answer": 0,
+      "explanation": "collect triggers traversal and produces the result container."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "When do ordinary lazy filter and map operations run?",
+      "options": [
+        "At lambda declaration",
+        "When a terminal operation requests results",
+        "Always at stream creation",
+        "Only after the JVM exits"
+      ],
+      "answer": 1,
+      "explanation": "Intermediate operations describe a pipeline until traversal is needed."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does String::length represent in a map operation?",
+      "options": [
+        "A constructor call",
+        "A call on one preselected String object",
+        "An instance method applied to each input string",
+        "A static length field"
+      ],
+      "answer": 2,
+      "explanation": "The element becomes the receiver of length."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which rule makes reductions safe to regroup?",
+      "options": [
+        "A mutable global accumulator",
+        "Subtraction of arbitrary values",
+        "Depending on thread timing",
+        "An associative combining operation"
+      ],
+      "answer": 3,
+      "explanation": "Grouping changes must not change the mathematical result."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is promised about Stream.toList in Java 17?",
+      "options": [
+        "The returned list is unmodifiable",
+        "It is always mutable",
+        "It always returns ArrayList",
+        "It accepts later add calls"
+      ],
+      "answer": 0,
+      "explanation": "Use an explicit mutable collection supplier if later mutation is required."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why avoid updating an external ArrayList inside parallel forEach?",
+      "options": [
+        "Lambdas cannot call add",
+        "Concurrent writes can race and corrupt results",
+        "Streams never execute concurrently",
+        "ArrayList is immutable"
+      ],
+      "answer": 1,
+      "explanation": "Prefer collect with a suitable collector rather than shared side effects."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the result type of reduce without an identity on a Stream<Integer>?",
+      "options": [
+        "Integer always",
+        "int always",
+        "Optional<Integer>",
+        "List<Integer>"
+      ],
+      "answer": 2,
+      "explanation": "The empty stream has no element result, so Optional represents absence."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which collection expression explicitly requests a resizable result?",
+      "options": [
+        "toList() guarantees resizing",
+        "collect(Collectors.toList()) guarantees ArrayList",
+        "count()",
+        "collect(Collectors.toCollection(ArrayList::new))"
+      ],
+      "answer": 3,
+      "explanation": "An explicit supplier defines the mutable destination class."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A lambda receives its type from a functional interface.",
+      "bn": "ল্যাম্বডার টাইপ আসে যে ফাংশনাল ইন্টারফেসে সেটি রাখা হচ্ছে সেখান থেকে।"
+    },
+    {
+      "en": "Method references name compatible existing operations.",
+      "bn": "মেথড রেফারেন্স দিয়ে মিল থাকা পুরোনো মেথড ব্যবহার করতে পারো।"
+    },
+    {
+      "en": "Intermediate stream operations are usually lazy.",
+      "bn": "স্ট্রিমের মাঝের ধাপগুলো সাধারণত টার্মিনাল অপারেশন না আসা পর্যন্ত চলে না।"
+    },
+    {
+      "en": "An empty sum uses zero as its identity.",
+      "bn": "যোগের স্ট্রিম খালি হলে শুরুর মান শূন্যই ফল হিসেবে পাও।"
+    },
+    {
+      "en": "A terminal operation consumes its stream.",
+      "bn": "টার্মিনাল অপারেশনের পর একই স্ট্রিম আবার ব্যবহার কোরো না।"
+    },
+    {
+      "en": "Prefer transformations and collectors over shared mutation.",
+      "bn": "শেয়ার করা ডেটা বদলানোর বদলে map আর collector দিয়ে ফল বানাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "output",
+      "question": "Explain the stages of a passing-mark pipeline with input 20,40,60.",
+      "marks": 5,
+      "answerHtml": "<p>The source emits 20,40,60. filter(x -&gt; x &gt;= 40) keeps 40 and 60. map(x -&gt; x+5) makes 45 and 65. collect gathers [45,65] in source order. The original list is unchanged.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare a lambda and an anonymous class for Runnable.",
+      "marks": 5,
+      "answerHtml": "<p>Both can implement run. A lambda is an expression targeting a functional interface and uses the enclosing this. An anonymous class has its own instance identity, this and class body. Neither form alone starts a thread; a caller must execute the Runnable.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Write a reduction for the total of squared bounded integers.",
+      "marks": 5,
+      "answerHtml": "<p>For small integers whose squared sum fits int, use values.stream().map(x -&gt; x*x).reduce(0,Integer::sum). Zero handles empty input. For larger domains, convert to long before multiplication and use a long sum.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Lambdas",
+      "url": "https://dev.java/learn/lambdas/"
+    },
+    {
+      "title": "Stream",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/stream/Stream.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

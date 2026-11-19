@@ -1,0 +1,420 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-exam-questions",
+  "module": "practice-exam",
+  "order": 1,
+  "kind": "question-bank",
+  "title": {
+    "en": "OOP Exam Questions",
+    "bn": "ওওপি পরীক্ষার প্রশ্ন"
+  },
+  "summary": {
+    "en": "Practise midterm and final questions with worked dispatch traces and code designs.",
+    "bn": "মিডটার্ম আর ফাইনালের মতো প্রশ্নে মেথডের ট্রেস, কোড লেখা আর ডিজাইন অনুশীলন করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 100,
+  "prerequisites": [
+    "oop-polymorphism",
+    "oop-object-class",
+    "oop-exceptions",
+    "oop-collections"
+  ],
+  "related": [],
+  "keywords": [
+    "OOP exam",
+    "dynamic dispatch",
+    "midterm",
+    "final questions"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "All executable traces use Java 17 semantics, including overload selection before runtime dispatch."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Practise reasoning under a time limit"
+    },
+    {
+      "id": "trace-method",
+      "title": "Resolve a call in a fixed order"
+    },
+    {
+      "id": "midterm-practice",
+      "title": "Build a complete explanation"
+    },
+    {
+      "id": "final-practice",
+      "title": "Explain the contract behind the mechanism"
+    },
+    {
+      "id": "design-rubric",
+      "title": "Show a request moving through the design"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Give evidence for each conclusion"
+    },
+    {
+      "id": "summary",
+      "title": "Review the decision that caused the mistake"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "title": "Write a timed midterm answer",
+      "difficulty": "medium",
+      "statementHtml": "<p>Spend ten minutes answering: explain encapsulation and implement a safe mark update for 0..100.</p>",
+      "answerHtml": "<p>Keep mark private. A setter checks the proposed value before assignment and either rejects it or returns failure without changing state. Explain one valid update and one rejected update. Private storage alone is insufficient if a public operation can violate the range.</p>",
+      "hints": [
+        "Reserve time for the rejection path."
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "title": "Trace before running",
+      "difficulty": "medium",
+      "statementHtml": "<p>For each inheritance trace above, record declared types, runtime types, selected signatures and print order.</p>",
+      "answerHtml": "<p>For the field/method trace: declared receiver Parent, runtime Child; field Parent.value gives 1, instance method Child.read gives 2. For the overload trace: Parent argument chooses show(Parent), regardless of its Child object. Constructor trace is Parent body, Child fields, Child body.</p>",
+      "hints": [
+        "Use one row per expression."
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "With a Parent reference to Child, whose instance method runs?",
+      "options": [
+        "C",
+        "P",
+        "PC",
+        "Parent"
+      ],
+      "answer": 0,
+      "explanation": "The selected instance method is overridden, so the receiver’s runtime class chooses Child.name.",
+      "code": "class Parent { String name() { return \"P\"; } }\nclass Child extends Parent { @Override String name() { return \"C\"; } }\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Parent item = new Child();\n        System.out.println(item.name());\n    }\n}\n"
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which declaration chooses a field while the method dispatches dynamically?",
+      "options": [
+        "2 2",
+        "1 2",
+        "1 1",
+        "2 1"
+      ],
+      "answer": 1,
+      "explanation": "Field lookup uses the reference type; the overridden method uses the runtime receiver.",
+      "code": "class Parent { int value = 1; int read() { return value; } }\nclass Child extends Parent { int value = 2; @Override int read() { return value; } }\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Parent item = new Child();\n        System.out.println(item.value + \" \" + item.read());\n    }\n}\n"
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which overloaded signature is chosen for a Parent-typed argument?",
+      "options": [
+        "Child",
+        "Object",
+        "Parent",
+        "No output"
+      ],
+      "answer": 2,
+      "explanation": "Overload resolution sees the argument’s declared Parent type.",
+      "code": "class Parent { }\nclass Child extends Parent { }\n\nclass Main {\n    static void show(Parent value) { System.out.println(\"Parent\"); }\n    static void show(Child value) { System.out.println(\"Child\"); }\n    public static void main(String[] args) throws Exception {\n        Parent value = new Child();\n        show(value);\n    }\n}\n"
+    },
+    {
+      "id": "q-4",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "In what order do superclass and subclass initialization messages appear?",
+      "options": [
+        "FPC1",
+        "CPF1",
+        "PC1F",
+        "PFC1"
+      ],
+      "answer": 3,
+      "explanation": "The superclass constructor finishes before Child field initialization and constructor body.",
+      "code": "class Parent { Parent() { System.out.print(\"P\"); } }\nclass Child extends Parent {\n    private int value = setup();\n    int setup() { System.out.print(\"F\"); return 1; }\n    Child() { System.out.println(\"C\" + value); }\n}\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        new Child();\n    }\n}\n"
+    },
+    {
+      "id": "q-5",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does reassigning a parameter change the caller’s reference?",
+      "options": [
+        "8",
+        "3",
+        "10",
+        "0"
+      ],
+      "answer": 0,
+      "explanation": "Mutation reaches the shared object; parameter reassignment changes only the local copy.",
+      "code": "class Box { int value; Box(int value) { this.value = value; } }\n\nclass Main {\n    static void change(Box box) { box.value = 8; box = new Box(10); }\n    public static void main(String[] args) throws Exception {\n        Box original = new Box(3);\n        change(original);\n        System.out.println(original.value);\n    }\n}\n"
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What should you determine first in a method-invocation trace?",
+      "options": [
+        "The address of the receiver",
+        "Whether the code compiles and which signature is selected",
+        "The hash code of every object",
+        "The last printed line only"
+      ],
+      "answer": 1,
+      "explanation": "Compilation and overload selection precede runtime method dispatch."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which member is selected without runtime overriding?",
+      "options": [
+        "An overridden instance method",
+        "An interface instance operation",
+        "A static method",
+        "An abstract implementation call"
+      ],
+      "answer": 2,
+      "explanation": "Static methods are hidden and selected from compile-time type information."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How should a correct equals override be declared?",
+      "options": [
+        "boolean equals(Student other) only",
+        "static boolean equals(Object other)",
+        "public int equals(Object other)",
+        "public boolean equals(Object other)"
+      ],
+      "answer": 3,
+      "explanation": "A narrower parameter overload does not override Object.equals."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why does a final array field still allow element changes?",
+      "options": [
+        "final fixes the reference binding",
+        "final freezes only odd indexes",
+        "Arrays ignore all modifiers",
+        "Elements are always static"
+      ],
+      "answer": 0,
+      "explanation": "Object mutability and binding reassignment are separate questions."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does a safe downcast require for a non-null reference?",
+      "options": [
+        "Only a matching variable name",
+        "A compatible runtime object",
+        "Only a larger heap",
+        "Only an explicit cast written in source"
+      ],
+      "answer": 1,
+      "explanation": "A cast can compile yet fail at runtime if the object has an incompatible class."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Where should validation occur in a bank-account operation?",
+      "options": [
+        "After printing success",
+        "Only in toString",
+        "Before committing the state change",
+        "Only in a subclass constructor"
+      ],
+      "answer": 2,
+      "explanation": "Reject invalid requests without corrupting the object invariant."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What distinguishes overriding from overloading?",
+      "options": [
+        "Overriding changes parameter types only",
+        "Overloading requires inheritance",
+        "Overloading is selected only at runtime",
+        "Overriding replaces an inherited instance implementation with a matching signature"
+      ],
+      "answer": 3,
+      "explanation": "Parameter lists distinguish overloads; matching inherited methods can be overridden."
+    },
+    {
+      "id": "q-13",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which relation suits a service holding a pricing policy?",
+      "options": [
+        "Composition and delegation",
+        "Class inheritance because both have methods",
+        "An array cast",
+        "Static hiding"
+      ],
+      "answer": 0,
+      "explanation": "A service has a policy and delegates the variable calculation."
+    },
+    {
+      "id": "q-14",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does a good written design answer include besides a diagram?",
+      "options": [
+        "Only more class names",
+        "Responsibilities, constraints and a worked interaction",
+        "Only getters for every field",
+        "Only the definition of UML"
+      ],
+      "answer": 1,
+      "explanation": "A design must show how objects preserve rules during use."
+    },
+    {
+      "id": "q-15",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How should output answers represent a compile error?",
+      "options": [
+        "Guess the last possible print",
+        "Assume the compiler repairs it",
+        "Explain the invalid rule instead of inventing runtime output",
+        "Call it nondeterministic"
+      ],
+      "answer": 2,
+      "explanation": "A program that does not compile has no normal execution trace."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Resolve the selected signature before following dynamic dispatch.",
+      "bn": "আগে কোন সিগনেচার নেওয়া হয়েছে দেখো, তারপর রানটাইমে কোন মেথড চলে তা ধরো।"
+    },
+    {
+      "en": "Trace object fields separately from reference variables.",
+      "bn": "অবজেক্টের ফিল্ড আর রেফারেন্স ভেরিয়েবলের মান আলাদা করে লেখো।"
+    },
+    {
+      "en": "A design answer must explain how invariants survive operations.",
+      "bn": "ডিজাইনের উত্তরে অপারেশনের পরও নিয়মগুলো ঠিক থাকে কীভাবে, তা বোঝাও।"
+    },
+    {
+      "en": "Compile-time failures have no normal output trace.",
+      "bn": "কম্পাইল না হলে স্বাভাবিক আউটপুটের ট্রেস বানিও না।"
+    },
+    {
+      "en": "Use precise contracts when comparing Java mechanisms.",
+      "bn": "জাভার ফিচার তুলনা করার সময় প্রতিটির নিয়ম স্পষ্ট করে লেখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Define class, object, state and behaviour using a course registration.",
+      "marks": 4,
+      "answerHtml": "<p>A class defines the fields and operations of a type. Each registration object has identity and its own state, such as roll and course. Its behaviour includes enrol or cancel operations. Two equal-looking objects may still have different identities.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare procedural and object-oriented designs for marks validation.",
+      "marks": 5,
+      "answerHtml": "<p>A procedural design passes marks data into separate functions. An object-oriented design can keep marks private and expose operations that preserve the 0..100 invariant. Both use functions and data; OOP places responsibility with the object that owns the state.</p>"
+    },
+    {
+      "type": "output",
+      "question": "Predict the output of the field-versus-method trace in quiz question 2 and justify both values.",
+      "marks": 5,
+      "answerHtml": "<p>The output is 1 2. item.value resolves to Parent.value because the expression has declared type Parent. item.read invokes Child.read at runtime, and that body reads Child.value.</p>"
+    },
+    {
+      "type": "output",
+      "question": "Predict the initialization trace in quiz question 4.",
+      "marks": 5,
+      "answerHtml": "<p>PFC1 is printed. Parent constructor prints P. Child field initializer calls setup, printing F and storing 1. Child constructor body prints C1 with a newline. The call does not invoke an overridable Child method from Parent construction.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Write a validated immutable Course value with code and credits.",
+      "marks": 8,
+      "answerHtml": "<pre><code class=\"language-java\">final class Course {\n    private final String code;\n    private final int credits;\n    Course(String code, int credits) {\n        if (code == null || code.isBlank() || credits &lt; 1 || credits &gt; 4) {\n            throw new IllegalArgumentException();\n        }\n        this.code = code;\n        this.credits = credits;\n    }\n    String code() { return code; }\n    int credits() { return credits; }\n}</code></pre><p>Private final fields and no mutators preserve these values after validation. String is already immutable.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design student and staff membership without making all members borrow identically.",
+      "marks": 8,
+      "answerHtml": "<p>Give common identity to Member. Define a borrowing-limit operation with a documented nonnegative result, overridden by concrete member types or delegated to a policy. Keep Library responsible for enforcing outstanding-loan limits. Show the association from Library to members and loans.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain equals and hashCode requirements for an immutable roll key.",
+      "marks": 6,
+      "answerHtml": "<p>Equality must be reflexive, symmetric, transitive, consistent and false for null. Equal keys must have equal hash codes. Compare the same immutable identity fields in both methods. Hash collisions do not imply equality. A final key class avoids subclass equality asymmetry.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Give an example where composition is clearer than inheritance.",
+      "marks": 6,
+      "answerHtml": "<p>Checkout holds a DiscountPolicy interface and calls its discount method. A new policy can be supplied without subclassing Checkout. The relationship is has-a, and construction makes the dependency visible. Define what happens for invalid prices and ensure every policy obeys the same contract.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain checked exception propagation through three methods.",
+      "marks": 5,
+      "answerHtml": "<p>If read throws IOException, its caller must catch that checked exception or declare it. If the middle method declares it, the outer caller has the same obligation. Place recovery at the boundary that can report or retry; preserve the original cause if translating the failure.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Design a sorted report of distinct roll numbers with code-level operations.",
+      "marks": 6,
+      "answerHtml": "<p>Read valid rolls into TreeSet&lt;Integer&gt;. add rejects comparison-equal duplicates. Iterate the set to print ascending rolls. With n inputs, insertion costs O(log n) each and storage is O(u) for u distinct rolls. Zero inputs produce an empty report.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why a generic copy uses extends for its source and super for its destination.",
+      "marks": 6,
+      "answerHtml": "<p>Read each source element as T from List&lt;? extends T&gt;. Write that T into List&lt;? super T&gt;. A source may contain a narrower subtype; a destination may hold a wider supertype. Neither declaration permits arbitrary Number objects to be inserted into an unknown Integer list.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Identify and repair a two-thread shared-counter race.",
+      "marks": 6,
+      "answerHtml": "<p>Each unsynchronized increment reads, adds and writes. Two workers can overwrite the same previous value. Synchronize the complete update on the shared counter, use the same locking policy for reads, and join both workers before printing. Volatile alone does not make ++ atomic.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "JLS method invocation",
+      "url": "https://docs.oracle.com/javase/specs/jls/se17/html/jls-15.html"
+    },
+    {
+      "title": "Object",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

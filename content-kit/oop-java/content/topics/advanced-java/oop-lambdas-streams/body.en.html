@@ -1,0 +1,68 @@
+<h2 id="introduction">Pass an operation as a value</h2>
+<p class="lead">One result report adds bonus marks, another keeps passing marks, and a third totals them. You can describe each operation without writing a new named class. A <dfn>lambda</dfn> is a function-shaped expression that implements the operation of a functional interface.</p>
+<p>A <dfn>stream</dfn> describes a traversal pipeline over values. You can filter unwanted values, map each remaining value to another form, then collect or reduce the result. Think of a report passing through several workstations, each with one clear task.</p>
+<p>Lambdas and streams are related but separate. A lambda can be used in a button listener or comparator without any stream. A stream can use existing method references instead of inline lambdas. Learn the operation’s type and contract before trying to make a chain shorter.</p>
+<p>The examples use bounded exam data. They preserve the input collections and build results through transformations. That makes the relationship between source values and final output easier to trace than updating an external accumulator from several callbacks.</p>
+<h2 id="syntax">Let the target interface define the shape</h2>
+<pre><code class="language-java">IntUnaryOperator bonus = mark -&gt; mark + 2;
+Predicate&lt;Integer&gt; passing = mark -&gt; mark &gt;= 40;
+Function&lt;String, Integer&gt; length = String::length;
+Consumer&lt;String&gt; display = System.out::println;</code></pre>
+<p>A <dfn>functional interface</dfn> has one abstract operation, ignoring declarations equivalent to public Object methods. It can still contain default and static methods. The target type tells the compiler how many parameters the lambda accepts and what it returns.</p>
+<p>IntUnaryOperator accepts one primitive int and returns int. Predicate&lt;T&gt; accepts T and returns boolean. Function&lt;T,R&gt; converts T to R. Consumer&lt;T&gt; accepts T without returning a value. Supplier&lt;T&gt; produces T without an argument. Primitive-specialized interfaces avoid boxing when that matters.</p>
+<p>A one-expression lambda returns that expression’s value when the contract needs a result. A block lambda uses braces and explicit return statements. Parameters can be inferred; parentheses are required for multiple parameters or explicit types. Keep the body short enough that its purpose remains visible.</p>
+<h2 id="how-it-works">Trace a lazy pipeline</h2>
+<table class="ref"><thead><tr><th scope="col">Input mark</th><th scope="col">filter mark at least 40</th><th scope="col">map plus 2</th><th scope="col">Collected</th></tr></thead><tbody>
+<tr><td>35</td><td>Rejected</td><td>Not reached</td><td>No</td></tr>
+<tr><td>40</td><td>Kept</td><td>42</td><td>Yes</td></tr>
+<tr><td>75</td><td>Kept</td><td>77</td><td>Yes</td></tr>
+</tbody></table>
+<p>stream creates a source traversal. filter and map are intermediate operations: they describe work but normally do not traverse until a terminal operation needs results. collect, reduce, count and forEach are terminal operations. A short-circuiting terminal operation may not visit every source element.</p>
+<p>A pipeline can process one element through several stages before moving to the next. Do not imagine that every intermediate stage necessarily builds a separate list. Some operations, such as sorted, must retain values before they can produce the ordered result.</p>
+<p>A collection is reusable storage. A stream is a single-use traversal description. After a terminal operation, create a new stream from the source for another independent calculation. Reusing the consumed stream can raise IllegalStateException.</p>
+<h2 id="examples">Use functions for adjustment, selection and aggregation</h2>
+<h3>Capture a stable bonus</h3>
+<p>The adjustment lambda adds four and caps the result at 100. It produces 74 and 100 from 70 and 99. The local bonus is effectively final. The lambda may read it, but the enclosing code cannot reassign that binding after initialization.</p>
+<div data-example="ex-1"></div>
+<h3>Filter before transforming</h3>
+<p>The marks pipeline removes 35 before adding two to accepted marks. The result is [42, 77]. Reversing those stages would be a different rule: a mark of 39 could become passing after adjustment. Stage order is part of the business contract.</p>
+<div data-example="ex-2"></div>
+<h3>Reduce with an identity</h3>
+<p>Addition uses zero as an identity. An empty stream therefore totals zero, while 3, 5 and 7 total 15. Integer::sum names the static addition method without writing a two-parameter lambda. This is safe for the small bounded values shown.</p>
+<div data-example="ex-3"></div>
+<h3>Reuse existing instance methods</h3>
+<p>String::toUpperCase invokes the method on each encountered string. System.out::println invokes a method on a particular existing receiver. The uppercase result is a separate unmodifiable list; printing the source afterward confirms that its original strings remain unchanged.</p>
+<div data-example="ex-4"></div>
+<h2 id="method-references">Recognize four reference forms</h2>
+<p>A static reference such as Integer::sum points to a class method. A bound instance reference such as System.out::println carries a specific receiver. An unbound instance reference such as String::length uses an incoming argument as the receiver. A constructor reference such as ArrayList::new creates an object when invoked.</p>
+<p>The target interface checks compatibility, including parameter and result types. The same written method name can be overloaded, so surrounding type information still matters. A method reference does not mean that the method runs immediately when the reference is created.</p>
+<p>Use a reference when the existing method’s name explains the action. Use a lambda when you need extra conditions or combine operations. Avoid replacing a readable lambda with a cryptic reference merely to remove characters.</p>
+<p>Lambdas preserve the enclosing this rather than creating the anonymous-class this. Captured local bindings must be final or effectively final. Captured objects may still be mutable, so this restriction alone does not make callbacks thread-safe.</p>
+<h2 id="reduction-and-collection">Choose a result contract</h2>
+<p>reduce combines values into one result using an associative operator. Associative means regrouping does not change the result. Integer addition is suitable within the stated bounds. Subtraction is not: grouping 10-3-2 differently can change the answer.</p>
+<p>The identity must leave a value unchanged when combined with it. Zero works for addition; ten does not. A sequential sum starting at ten may look useful, but parallel partitions can each receive that invalid identity. Sum from zero, then add a one-time adjustment afterward.</p>
+<p>An identity-free reduce returns Optional because an empty stream has no element to return. Optional is a container representing a present or absent value. Handle absence with an explicit fallback or branch rather than assuming every source has a first result.</p>
+<p>collect builds a container using a collection protocol. Collectors.toList does not promise a particular concrete list class or mutability contract. Stream.toList explicitly returns an unmodifiable list. If later mutation is required, request a container with Collectors.toCollection(ArrayList::new).</p>
+<p>mapToInt converts boxed numeric elements into an IntStream. Its sum operation naturally returns zero on empty input. For larger domains, use mapToLong before multiplication or accumulation so intermediate arithmetic does not overflow int first.</p>
+<h2 id="side-effects">Keep pipelines independent of changing external state</h2>
+<p>A stream function should normally be stateless and not interfere with its source. Removing elements from the source list inside filter can invalidate traversal. Updating an external counter makes the result depend on callback execution details rather than a visible reduction.</p>
+<p>Parallel streams introduce additional requirements. Updating one ordinary ArrayList from parallel forEach can race. A suitable collector coordinates partial results through its protocol. Parallel execution is not automatically faster; splitting, synchronization and merging have costs.</p>
+<p>Encounter order comes from the source when the source defines one. A list stream has sequence order. HashSet does not supply a sorted report order. Use sorted for a deterministic ordering, and remember that parallel forEach may invoke actions in a different order; forEachOrdered has an explicit encounter-order contract.</p>
+<p>Streams created from I/O resources, such as Files.lines, need closing even though many collection streams do not. Put resource-backed streams in try-with-resources. A tidy pipeline does not eliminate resource ownership or checked-failure decisions.</p>
+<h2 id="pipeline-boundaries">Inspect an empty report and a threshold value</h2>
+<p>The passing-total exercise accepts an empty list. filter then sees no elements, mapToInt sees no elements and sum returns zero. The same result occurs when all marks are below 40, but the reasoning is different: those elements were visited and rejected.</p>
+<p>A mark of exactly 40 must survive the filter. Writing greater than 40 would silently exclude it. A mark of 39 must not survive merely because a later adjustment could raise it. Check these boundary values whenever you change pipeline order or a predicate.</p>
+<p>For distinct room labels, repeated lab becomes one value before sorting. The sorted terminal print gives gate, hall and lab in order for the demonstrated labels. Equality decides duplicates; ordering decides presentation. Those are separate stages with separate purposes.</p>
+<h2 id="common-mistakes">Avoid chains that hide a different rule</h2>
+<h3>Expecting a discarded pipeline to do work</h3>
+<p>Calling map without a terminal operation normally performs no traversal. Do not put required business side effects inside a lazy transformation. Return or consume a meaningful result.</p>
+<h3>Reusing a stream</h3>
+<p>count consumes its stream. A later collect on the same object is invalid. Keep the source list or create a supplier that makes a fresh stream when several independent reports are required.</p>
+<h3>Mutating an unmodifiable result</h3>
+<p>Calling add on a toList result throws UnsupportedOperationException. Choose an explicit mutable destination at collection time when editing is part of the next operation.</p>
+<h2 id="best-practices">Make the data flow easy to read</h2>
+<ul><li>Name complex predicates instead of nesting several conditions inline.</li><li>Check stage order with a value close to the acceptance boundary.</li><li>Use an identity that matches the combining operation.</li><li>Prefer loops when early exits or stateful workflows are clearer.</li><li>Define locale rules for text transformations in real multilingual data.</li></ul>
+<h2 id="version-notes">Lambdas and modern stream results</h2>
+<div class="callout version"><p>Lambdas, method references and streams arrived in Java 8. Stream.toList arrived in Java 16. This lesson targets Java 17 and distinguishes that unmodifiable result from the weaker guarantees of Collectors.toList. No parallel execution is needed for the examples.</p></div>
+<h2 id="summary">Describe the transformation and its result</h2>
+<p>Lambdas implement functional contracts. Streams compose selection, transformation and aggregation into one traversal plan. Keep state and resource lifetimes explicit. Next, model fixed choices and transparent values with <a href="topic:oop-enums-records">enums and records</a>.</p>

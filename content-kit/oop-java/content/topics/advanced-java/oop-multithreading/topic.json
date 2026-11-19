@@ -1,0 +1,447 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-multithreading",
+  "module": "advanced-java",
+  "order": 9,
+  "kind": "lesson",
+  "title": {
+    "en": "Multithreading Basics",
+    "bn": "মাল্টিথ্রেডিংয়ের শুরু"
+  },
+  "summary": {
+    "en": "Coordinate independent tasks with joins, locks and managed executors.",
+    "bn": "join, লক আর এক্সিকিউটর দিয়ে একাধিক থ্রেডের কাজ মিলিয়ে নাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 80,
+  "prerequisites": [
+    "oop-exceptions",
+    "oop-lambdas-streams"
+  ],
+  "related": [],
+  "keywords": [
+    "Thread",
+    "Runnable",
+    "synchronized",
+    "ExecutorService"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "Java 17 ExecutorService is not AutoCloseable; examples explicitly shut it down and use no virtual-thread APIs."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Separate work from its execution schedule"
+    },
+    {
+      "id": "syntax",
+      "title": "Describe a task and start a thread"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Separate completion, visibility and atomicity"
+    },
+    {
+      "id": "examples",
+      "title": "Make the reported results independent of timing"
+    },
+    {
+      "id": "sleep-and-interruption",
+      "title": "Treat cancellation as cooperation"
+    },
+    {
+      "id": "executors",
+      "title": "Separate task submission from worker management"
+    },
+    {
+      "id": "locking-design",
+      "title": "Protect rules rather than individual lines"
+    },
+    {
+      "id": "zero-work",
+      "title": "Coordinate even an empty task"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Replace schedule guesses with protocols"
+    },
+    {
+      "id": "best-practices",
+      "title": "Keep coordination small"
+    },
+    {
+      "id": "version-notes",
+      "title": "Concurrency within the Java 17 baseline"
+    },
+    {
+      "id": "summary",
+      "title": "Correctness must survive a different schedule"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Start a Runnable and wait for completion",
+      "level": "basic",
+      "language": "java",
+      "file": "examples/ex-1.java",
+      "tryNow": true,
+      "explanationHtml": "<p>The worker prints before it terminates. join waits for termination, making the main message follow deterministically.</p>",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Protect a shared counter",
+      "level": "intermediate",
+      "language": "java",
+      "file": "examples/ex-2.java",
+      "tryNow": true,
+      "explanationHtml": "<p>Both threads lock the same counter for each read-modify-write. The final print happens after both joins and always reports 2000.</p>",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Get a result from an executor",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-3.java",
+      "tryNow": true,
+      "explanationHtml": "<p>submit returns a Future. get waits for that task’s result; shutdown stops accepting new work and allows accepted tasks to finish.</p>",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Restore interruption after a cancelled sleep",
+      "level": "advanced",
+      "language": "java",
+      "file": "examples/ex-4.java",
+      "tryNow": false,
+      "explanationHtml": "<p>Sleep is a cancellation point. The displayed message depends on scheduling; do not use the one-second delay as an ordering guarantee.</p>",
+      "runMode": "compile-only",
+      "outputNote": "Console timing demonstration: normally prints Rest cancelled; if the worker completes before interruption, it prints Rest completed. It is compiled without assuming a schedule."
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "title": "Two workers count safely",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read n (0..1000). Start two threads sharing one Counter; each calls its synchronized increment n times. Join both, then print the final count.</p>",
+      "hints": [
+        "One shared monitor must cover the complete increment."
+      ],
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "title": "Executor square sum",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (0..100). Submit a Callable to a single-thread executor to compute 1 squared through n squared. Print Future.get() as an integer and shut down the executor.</p>",
+      "hints": [
+        "Capture n once and retrieve the task result instead of polling a shared field."
+      ],
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "title": "Lost increments",
+      "difficulty": "hard",
+      "statementHtml": "<p>Explain how two count++ operations can lose an update even when count is volatile.</p>",
+      "answerHtml": "<p>Both threads can read 5, compute 6 and write 6. Volatile improves visibility but does not combine read, addition and write into one atomic step. Use synchronization around the whole update or an AtomicInteger.</p>",
+      "hints": [
+        "Write the two read-modify-write sequences side by side."
+      ]
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "title": "Sleeping while holding a monitor",
+      "difficulty": "medium",
+      "statementHtml": "<p>A synchronized method sleeps for five seconds. Can another thread enter a synchronized method on the same object during that sleep?</p>",
+      "answerHtml": "<p>No. sleep does not release the monitor. Move waiting outside the critical section when the invariant allows it. Object.wait has different monitor-release rules and is not interchangeable with sleep.</p>",
+      "hints": [
+        "Blocking a thread and unlocking an object are different operations."
+      ]
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "title": "A failed Callable",
+      "difficulty": "hard",
+      "statementHtml": "<p>A submitted Callable throws IOException. Explain what Future.get reports and how cleanup should still happen.</p>",
+      "answerHtml": "<p>Future.get throws ExecutionException whose cause is the IOException. The waiting thread can also receive InterruptedException independently. Preserve the task cause when reporting failure, handle interruption according to policy and shut down the executor in finally.</p>",
+      "hints": [
+        "The task failure and the waiter’s interruption are different events."
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which main-thread message must follow the joined worker?",
+      "options": [
+        "Worker finished\nMain continues",
+        "Main continues\nWorker finished",
+        "Main continues",
+        "Worker finished"
+      ],
+      "answer": 0,
+      "explanation": "join waits until the worker has finished printing and terminated.",
+      "code": "class Main {\n    public static void main(String[] args) throws Exception {\n        Runnable task = () -> System.out.println(\"Worker finished\");\n        Thread worker = new Thread(task);\n        worker.start();\n        worker.join();\n        System.out.println(\"Main continues\");\n    }\n}\n"
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What count remains after both synchronized workers are joined?",
+      "options": [
+        "1000",
+        "2000",
+        "0",
+        "An arbitrary value from 0 to 2000"
+      ],
+      "answer": 1,
+      "explanation": "All two thousand increments occur under the same monitor.",
+      "code": "class Counter {\n    private int count;\n    synchronized void increment() { count++; }\n    synchronized int value() { return count; }\n}\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Counter counter = new Counter();\n        Runnable task = () -> {\n            for (int i = 0; i < 1000; i++) { counter.increment(); }\n        };\n        Thread first = new Thread(task);\n        Thread second = new Thread(task);\n        first.start();\n        second.start();\n        first.join();\n        second.join();\n        System.out.println(counter.value());\n    }\n}\n"
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What result does Future.get retrieve from the executor?",
+      "options": [
+        "12",
+        "18",
+        "30",
+        "0"
+      ],
+      "answer": 2,
+      "explanation": "The submitted Callable returns the sum, and get waits for it.",
+      "code": "import java.util.concurrent.ExecutorService;\nimport java.util.concurrent.Executors;\nimport java.util.concurrent.Future;\n\n\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        ExecutorService pool = Executors.newSingleThreadExecutor();\n        try {\n            Future<Integer> total = pool.submit(() -> 12 + 18);\n            System.out.println(total.get());\n        } finally {\n            pool.shutdown();\n        }\n    }\n}\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the difference between start and directly calling run?",
+      "options": [
+        "Both always create a new thread",
+        "run cannot be called",
+        "start waits for termination",
+        "start schedules another thread; run is an ordinary call"
+      ],
+      "answer": 3,
+      "explanation": "A Runnable describes work; starting a Thread introduces concurrent execution."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does Thread.sleep establish that another task has completed?",
+      "options": [
+        "No",
+        "Yes, after one millisecond",
+        "Only for daemon threads",
+        "Only for synchronized tasks"
+      ],
+      "answer": 0,
+      "explanation": "Elapsed time is not a completion protocol; use join or a Future."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which lock does a synchronized instance method acquire?",
+      "options": [
+        "Every object’s monitor",
+        "The receiver object’s monitor",
+        "The calling thread’s monitor",
+        "No monitor"
+      ],
+      "answer": 1,
+      "explanation": "Two methods synchronize together only when they use the same monitor."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What should a task usually do when it catches interruption and cannot propagate it?",
+      "options": [
+        "Ignore it and retry forever",
+        "Clear every other thread’s flag",
+        "Restore the interrupt flag and stop appropriately",
+        "Restart the JVM"
+      ],
+      "answer": 2,
+      "explanation": "Interruption is cooperative cancellation; preserve it for outer code."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does ExecutorService.shutdown do?",
+      "options": [
+        "Immediately kills all threads",
+        "Waits until every task finishes before returning",
+        "Cancels every completed Future",
+        "Rejects new tasks while accepted tasks may finish"
+      ],
+      "answer": 3,
+      "explanation": "Use awaitTermination when the caller must wait for all accepted work."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why is count++ not atomic?",
+      "options": [
+        "It combines a read, arithmetic and a write",
+        "Because int reads always tear",
+        "Because every increment throws",
+        "Because joins remove locks"
+      ],
+      "answer": 0,
+      "explanation": "Those steps can interleave between workers."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which Java 17 executor cleanup form is valid?",
+      "options": [
+        "try(pool) for any ExecutorService",
+        "A finally block calling shutdown",
+        "Automatic close at block exit",
+        "Calling deprecated Thread.stop"
+      ],
+      "answer": 1,
+      "explanation": "ExecutorService did not implement AutoCloseable in Java 17."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How does Future.get report a Callable’s failure?",
+      "options": [
+        "By always returning null",
+        "By throwing the exact checked type directly",
+        "ExecutionException wrapping the task cause",
+        "By clearing the task source code"
+      ],
+      "answer": 2,
+      "explanation": "The Future communicates task failure through ExecutionException; waiting interruption is separate."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Do two synchronized instance methods on different objects use the same monitor?",
+      "options": [
+        "Yes, synchronized creates one JVM-wide lock",
+        "Only if their method names match",
+        "Only if both receivers have equal hash codes",
+        "No, each receiver has its own monitor"
+      ],
+      "answer": 3,
+      "explanation": "Coordination requires sharing the same lock object, not only the same method declaration."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Runnable describes work while Thread.start schedules it.",
+      "bn": "Runnable-এ কাজের কোড থাকে, Thread.start সেই কাজ নতুন থ্রেডে চালায়।"
+    },
+    {
+      "en": "join waits for a particular thread to terminate.",
+      "bn": "join নির্দিষ্ট থ্রেডের কাজ শেষ হওয়া পর্যন্ত অপেক্ষা করে।"
+    },
+    {
+      "en": "sleep neither proves completion nor releases monitors.",
+      "bn": "sleep দিয়ে অন্য কাজ শেষ হয়েছে ধরে নিও না, এতে মনিটর লকও ছাড়ে না।"
+    },
+    {
+      "en": "Protect an entire shared update with one lock.",
+      "bn": "শেয়ার করা মান বদলানোর পুরো ধাপ একই লকের মধ্যে রাখো।"
+    },
+    {
+      "en": "Executors need explicit shutdown in Java 17.",
+      "bn": "জাভা ১৭-তে এক্সিকিউটরের কাজ শেষে shutdown কল করো।"
+    },
+    {
+      "en": "Handle interruption as a cancellation request.",
+      "bn": "ইন্টারাপ্টকে কাজ থামানোর অনুরোধ হিসেবে সামলাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Show a lost-update interleaving and repair it.",
+      "marks": 5,
+      "answerHtml": "<p>Starting from 0: A reads 0, B reads 0, A writes 1, B writes 1. Two increments leave 1. Synchronize the complete increment on one shared monitor; join both threads before reading the final result. Volatile alone is insufficient.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare join, sleep and Future.get.",
+      "marks": 5,
+      "answerHtml": "<p>join waits for a specific Thread to terminate. sleep pauses the current thread for scheduling-dependent time without releasing monitors. Future.get waits for one submitted result and reports task failures through ExecutionException. None should be replaced with an arbitrary busy loop.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design cleanup for a Java 17 executor used by a console application.",
+      "marks": 5,
+      "answerHtml": "<p>Create the pool once, submit bounded tasks, retrieve required results, and call shutdown in finally. If all accepted work must finish before a later action, use awaitTermination with a timeout and an interruption policy. shutdownNow requests cancellation but cannot forcibly guarantee task termination.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Thread",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Thread.html"
+    },
+    {
+      "title": "ExecutorService",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/ExecutorService.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
