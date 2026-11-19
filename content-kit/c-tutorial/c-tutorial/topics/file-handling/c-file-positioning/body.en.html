@@ -1,0 +1,71 @@
+<h2 id="introduction">Return to a record without reading every earlier one</h2>
+<p class="lead">A club file contains many fixed-width results. You want to correct the second result, then read it again. Reading from the beginning each time is possible, but the file format may let you calculate its location directly. <dfn>File positioning</dfn> controls where the next supported stream operation begins.</p>
+<p>Think of placing a bookmark in a notebook. You can continue reading and later return to the mark. A text stream’s ftell value is useful in that way. It is not necessarily a ruler measurement that you may add to or subtract from freely.</p>
+<p>Binary fixed-width records offer another kind of navigation. If the format assigns exactly four octets to each record, record boundaries follow a defined arithmetic pattern. The calculation is useful only when the stream supports the seek, the arithmetic is valid and the complete record really exists.</p>
+<p>Keep navigation separate from validation. Reaching a location does not prove that its bytes describe a valid mark. Nor does changing the position make append-mode output overwrite an earlier record. The format, stream mode and positioning call all contribute different rules.</p>
+
+<h2 id="syntax">Use the correct origin and return convention</h2>
+<pre><code class="language-c">long saved = ftell(file);
+if (saved == -1L) {
+    return 1;
+}
+if (fseek(file, saved, SEEK_SET) != 0) {
+    return 1;
+}
+rewind(file);</code></pre>
+<table class="ref"><thead><tr><th scope="col">Interface</th><th scope="col">Meaning</th><th scope="col">Result to check</th></tr></thead><tbody><tr><td>ftell</td><td>Obtain the current file position</td><td>-1L indicates failure</td></tr><tr><td>fseek</td><td>Request an offset relative to an origin</td><td>Zero indicates success</td></tr><tr><td>rewind</td><td>Return to the beginning and clear indicators</td><td>No return value</td></tr></tbody></table>
+<p>SEEK_SET chooses the beginning, SEEK_CUR the current position and SEEK_END the end as the reference. The offset argument has type long. Do not confuse fseek’s integer success status with a newly returned position. Ask ftell separately when you need a position value.</p>
+<p>These interfaces do not promise that every stream is seekable. A regular teaching file usually supports the requests here. Input from a pipe or another external source may not. A failed position request must stop any operation whose correctness depends on having reached the requested location.</p>
+
+<h2 id="how-it-works">Use text bookmarks and binary offsets differently</h2>
+<h3>Save a text position as an opaque bookmark</h3>
+<p>For a text stream, use a position returned by ftell unchanged with SEEK_SET. Do not add one to skip a supposed character, and do not subtract two saved positions to claim a portable length. Text translations and position state can make that arithmetic meaningless across implementations.</p>
+<p>The first example reads first, then saves the stream position. It reads second, returns to the saved position and reads second again. The output demonstrates the navigation without exposing a platform-dependent numeric token. That is the useful guarantee the application needs.</p>
+<p>A saved position belongs to the relevant file contents and stream context. If the underlying file changes, blindly reusing an old bookmark can identify different data or become invalid. A long-lived index needs a format and update policy, not only a collection of numbers observed during one run.</p>
+<h3>Calculate a defined binary record location</h3>
+<p>For a binary format with a header H and record width R, record index i begins at H+iR. Indices here are zero-based. A field at displacement d inside the record begins at H+iR+d. State the units and format assumptions before writing the multiplication.</p>
+<p>The patch example has no header and four eight-bit bytes per record. Record index one starts at four. Its mark occupies the next two bytes after the two-byte roll, so its field begins at six. The code writes the two encoded mark bytes there, then seeks back to four to read the whole record.</p>
+<p>That seek after output also permits the next input operation on the update stream. Positioning is doing two useful jobs: selecting the intended location and satisfying the direction-change rule. rb+ retains existing content, unlike reopening the file with wb, which would discard it before the patch.</p>
+<h3>Keep offset arithmetic within its type</h3>
+<p>A valid index can still overflow an unsuitable calculation when the file is large. Check multiplication before adding the header or field displacement. Converting a result to long after overflowing a smaller signed type is too late. Choose an offset representation that the required file size actually fits.</p>
+<p>The examples bound record indices to a few small values, so their long calculations are safe. General large-file applications may need platform-specific interfaces beyond portable fseek and ftell. Document those requirements rather than assuming that a 64-bit processor makes every C long wide enough.</p>
+
+<h2 id="examples">Navigate without losing the stream contract</h2>
+<h3>Save and restore a text position without interpreting its number</h3>
+<p>The saved ftell value is reused unchanged with SEEK_SET. Both reads produce second. The program never assumes that subtracting text bookmarks measures a portable byte length.</p>
+<div data-example="ex-1"></div>
+<h3>Patch the mark field of the second four-octet record</h3>
+<p>Record index one begins at 1×4 = 4. Its two-byte mark begins two bytes later, at offset 6. The patch changes only that field, then a positioning call permits the later read through the update stream.</p>
+<div data-example="ex-2"></div>
+<h3>Rewind clears the end indicator before another pass</h3>
+<p>The first pass reaches EOF. rewind returns to the beginning and clears the EOF and error indicators. It has no return value, so later read success still matters.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Position and indicators are separate state</h2>
+<p>A read that tries to go beyond available input sets the EOF indicator. Being positioned at the last returned character is not itself that failed read. The rewind example consumes all characters, performs the final unsuccessful read and observes EOF. It then returns to the beginning and observes that the indicator has cleared.</p>
+<p>A successful fseek clears EOF. It does not generally clear the error indicator. rewind clears both indicators as it requests the beginning. clearerr clears those indicators without moving the stream. These operations overlap in some effects but are not interchangeable.</p>
+<p>rewind returns void, so it supplies no direct success status. When explicit positioning diagnostics matter, a checked fseek to the beginning can be more useful, with deliberate error handling as needed. After rewind, still check the next read before treating its destination as valid data.</p>
+<p>Seeking to the end and asking ftell is a familiar size technique on supported regular binary files. It is not a universal stream-length function. Some binary streams need not meaningfully support SEEK_END, text position values are not portable byte lengths, and a file may change while you inspect it. Match a size technique to documented environment guarantees.</p>
+<p>Do not turn a failed ftell result into an unsigned length. The -1L failure value could become an enormous positive number. Preserve and test the signed result before any conversion. Likewise, a successful seek does not guarantee that a later full record read will succeed.</p>
+
+<h2 id="variations">Random access still needs a file-format policy</h2>
+<p>Fixed widths make direct record access convenient. Variable-length text records require another plan: scan sequentially, maintain validated bookmarks for one stable snapshot, or build a documented index. Do not pretend that every line has the length of the first line.</p>
+<p>A fixed field can be patched only when its encoded width remains the same. Replacing a two-byte mark with another two-byte mark preserves later offsets. Inserting a longer name into the middle of a compact file would move later data and invalidate a simple index. Decide whether to rewrite the file or use a format designed for variable lengths.</p>
+<p>Files opened for append still force their writes to the current end. A successful seek to an old record does not change that promise. Choose a suitable update mode for supported overwriting, and keep a backup or replacement policy when partial external changes would be harmful.</p>
+<p>Concurrent writers add another issue. A location you validated can change before you use it. ISO C stream positioning is not a multi-process locking or transaction protocol. The single-process examples make their ownership and input stability assumptions explicit.</p>
+
+<h2 id="common-mistakes">Check the boundary before trusting the bytes</h2>
+<h3>Using one-based record numbers as zero-based indices</h3>
+<p>For a human’s second record, the zero-based index is one. Multiplying two by the width would reach the third. Write a tiny table of record labels and offsets before implementing the calculation. A three-record test with distinct rolls reveals the error immediately.</p>
+<h3>Guessing positions inside translated text</h3>
+<p>A displayed newline need not correspond to one external byte. Use an unchanged text bookmark to return to a previously observed position. If the application genuinely requires byte arithmetic, define a binary representation and the implementation assumptions that make its units precise.</p>
+<h3>Ignoring incomplete reads after a successful seek</h3>
+<p>The requested record may be missing or truncated. Read the complete encoded width into a suitable buffer, check the result and validate fields before using them. Never combine a short new prefix with old buffer bytes and present it as a record.</p>
+<h3>Expecting a position change to repair every error</h3>
+<p>Moving a file position does not explain a device failure or make malformed data valid. Preserve the reason for failure and choose a recovery action deliberately. The next topic examines EOF, error indicators and return values in more detail.</p>
+
+<h2 id="version-notes">Portable C offsets have limits</h2>
+<div class="callout version"><p>fseek, ftell and rewind are available in C17. Portable fseek uses a long offset, whose range is implementation-dependent. Wider platform interfaces are not automatically ISO C features. The binary patch format here requires eight-bit bytes; the text bookmark example avoids assuming numeric byte positions.</p></div>
+
+<h2 id="summary">Navigate only with an established meaning</h2>
+<p>Use text positions as unchanged bookmarks and defined binary widths for supported offset arithmetic. Check ftell and fseek, keep indicator changes distinct, and require complete records after navigation. Continue with <a href="topic:c-file-error-handling">file error handling</a> to make failure paths as clear as successful reads.</p>

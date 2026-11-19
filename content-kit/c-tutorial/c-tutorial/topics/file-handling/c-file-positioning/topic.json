@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-file-positioning",
+  "module": "file-handling",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "File Positioning",
+    "bn": "ফাইলে position ও random access"
+  },
+  "summary": {
+    "en": "Use text bookmarks legally, seek to defined binary record offsets, and distinguish position changes from EOF and error indicators.",
+    "bn": "Text bookmark সঠিকভাবে ফেরাও, নির্দিষ্ট binary record খোঁজো এবং position ও error indicator আলাদা রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "c-file-binary"
+  ],
+  "related": [
+    "c-file-error-handling"
+  ],
+  "keywords": [
+    "fseek",
+    "ftell",
+    "rewind",
+    "random access records",
+    "SEEK_SET"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "Text ftell values are bookmarks rather than portable byte counts.",
+      "Fixed binary offsets in these examples use four eight-bit bytes per record."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Return to a record without reading every earlier one"
+    },
+    {
+      "id": "syntax",
+      "title": "Use the correct origin and return convention"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Use text bookmarks and binary offsets differently"
+    },
+    {
+      "id": "examples",
+      "title": "Navigate without losing the stream contract"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Position and indicators are separate state"
+    },
+    {
+      "id": "variations",
+      "title": "Random access still needs a file-format policy"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Check the boundary before trusting the bytes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Portable C offsets have limits"
+    },
+    {
+      "id": "summary",
+      "title": "Navigate only with an established meaning"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Save and restore a text position without interpreting its number",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The saved ftell value is reused unchanged with SEEK_SET. Both reads produce second. The program never assumes that subtracting text bookmarks measures a portable byte length.</p>",
+      "standard": "c17",
+      "workdirFiles": [
+        "examples/list.txt"
+      ],
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Patch the mark field of the second four-octet record",
+      "level": "advanced",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>Record index one begins at 1×4 = 4. Its two-byte mark begins two bytes later, at offset 6. The patch changes only that field, then a positioning call permits the later read through the update stream.</p>",
+      "standard": "c17",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Rewind clears the end indicator before another pass",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The first pass reaches EOF. rewind returns to the beginning and clears the EOF and error indicators. It has no return value, so later read success still matters.</p>",
+      "standard": "c17",
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Seek to a bounded fixed-width record",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read an index from 0 through 2. Create rows.bin with three four-byte records for rolls 101, 102, 103 and marks 40, 72, 90. Each field uses two bytes with a zero high byte. Seek to index×4 and print Roll: and Mark: for that record. Other indices print invalid.</p>",
+      "hints": [
+        "Validate the index before multiplying.",
+        "Require a full four-byte read before inspecting fields."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Replay a short first token with a bookmark",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read two whitespace-separated words of at most ten English letters each. Write them as separate lines in replay.txt. Open it for reading, save its initial ftell bookmark, read the first word, restore that bookmark, and read it again. Print First: and Replayed: on separate lines.</p>",
+      "hints": [
+        "Save and reuse the returned text position unchanged.",
+        "A nonzero fseek result means the position was not established."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Calculate offsets without confusing fields and records",
+      "difficulty": "medium",
+      "statementHtml": "<p>A specified binary format has a 12-byte header and records of eight bytes. Find the start of record index 3 and a two-byte field beginning four bytes into it. State the arithmetic range checks needed for a much larger index.</p>",
+      "hints": [
+        "Use zero-based record indices."
+      ],
+      "type": "written",
+      "answerHtml": "<p>The record starts at 12+3×8 = 36. Its field starts at 40. Check that multiplication index×width fits the chosen offset type, then that adding the header and field displacement also fits. Validate that the record index belongs to the file and that the complete field lies within its declared record before seeking or decoding.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Distinguish a text bookmark from a byte distance",
+      "difficulty": "hard",
+      "statementHtml": "<p>Two ftell calls on a text stream return p and q. Explain why q-p is not a portable record byte length. Describe a legal way to revisit p and a format choice that supports fixed-width offset arithmetic.</p>",
+      "hints": [
+        "Text stream positions may include implementation-specific state."
+      ],
+      "type": "written",
+      "answerHtml": "<p>A text ftell value is meaningful as a saved position, not a universal character count that supports arbitrary arithmetic. Use the unchanged p with SEEK_SET on the same file when the position remains applicable. For fixed offsets, define binary records with a documented width and validate supported offset ranges. Text newline translations can make guessed offsets invalid.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is ftell failure represented by?",
+      "options": [
+        "NULL",
+        "EOF as a FILE pointer",
+        "Always zero",
+        "-1L"
+      ],
+      "answer": 3,
+      "explanation": "ftell returns long; -1L is its failure value and must be checked before use."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which fseek return indicates success?",
+      "options": [
+        "A FILE pointer",
+        "Always EOF",
+        "Zero",
+        "A positive new offset"
+      ],
+      "answer": 2,
+      "explanation": "fseek returns zero on success and a nonzero value on failure; the returned value is not the new position."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does SEEK_SET use as the reference?",
+      "options": [
+        "The most recent newline",
+        "The beginning of the file",
+        "The current position",
+        "The current end only"
+      ],
+      "answer": 1,
+      "explanation": "SEEK_SET measures the requested offset from the beginning for supported positioning."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which text seek is portable for a saved nonzero ftell value p?",
+      "options": [
+        "fseek(file, p, SEEK_SET)",
+        "fseek(file, p, SEEK_CUR)",
+        "fseek(file, p + 1, SEEK_SET)",
+        "fseek(file, -p, SEEK_END)"
+      ],
+      "answer": 0,
+      "explanation": "Use a returned text position unchanged with SEEK_SET rather than inventing arithmetic on it."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does rewind do to stream indicators?",
+      "options": [
+        "Leaves both permanently set",
+        "Clears only the file name",
+        "Deletes the file contents",
+        "Clears both EOF and error indicators"
+      ],
+      "answer": 3,
+      "explanation": "rewind returns to the beginning and clears indicators; it does not truncate the file."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A successful fseek reaches a former text bookmark. What happens to EOF?",
+      "options": [
+        "The error indicator is guaranteed cleared too",
+        "The stream is closed",
+        "The EOF indicator is cleared",
+        "The file becomes empty"
+      ],
+      "answer": 2,
+      "explanation": "Successful fseek clears EOF. It is not the general way to clear the error indicator."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why validate an index before computing header + index×width?",
+      "options": [
+        "Multiplication always wraps safely as a signed long",
+        "The arithmetic itself can overflow",
+        "fseek requires an array of pointers",
+        "All indices must be ASCII"
+      ],
+      "answer": 1,
+      "explanation": "A later seek check cannot repair an offset already computed with invalid arithmetic."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A file is opened in append mode and positioned at an old record. What will its next write do?",
+      "options": [
+        "Append at the current end",
+        "Patch that old record",
+        "Shift the old record right automatically",
+        "Truncate just the chosen record"
+      ],
+      "answer": 0,
+      "explanation": "Append output remains forced to the end. Use an appropriate update mode for a supported in-place patch."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Assuming successful binary positioning, which byte lies at offset two?",
+      "options": [
+        "B",
+        "D",
+        "A",
+        "C"
+      ],
+      "answer": 3,
+      "explanation": "The first byte is offset zero, so offset two selects C.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"ABCDE\", f);\n    fseek(f, 2L, SEEK_SET);\n    printf(\"%c\\n\", fgetc(f));\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What EOF flag values surround this rewind?",
+      "options": [
+        "1 1",
+        "0 1",
+        "1 0",
+        "0 0"
+      ],
+      "answer": 2,
+      "explanation": "The failed final read sets EOF; rewind clears it before the next flag check.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    fputc('A', f);\n    rewind(f);\n    while (fgetc(f) != EOF) {\n    }\n    printf(\"%d \", feof(f) != 0);\n    rewind(f);\n    printf(\"%d\\n\", feof(f) != 0);\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which fixed-width offset follows a twelve-byte header and three prior records?",
+      "options": [
+        "28",
+        "36",
+        "24",
+        "40"
+      ],
+      "answer": 1,
+      "explanation": "A zero-based index of three skips three eight-byte records after the twelve-byte header, giving 36.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    long header = 12;\n    long width = 8;\n    long index = 3;\n    printf(\"%ld\\n\", header + index * width);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Check ftell for -1L and fseek for a nonzero failure result.",
+      "bn": "ftell-এ -1L এবং fseek-এ nonzero failure পরীক্ষা করো।"
+    },
+    {
+      "en": "Reuse text bookmarks unchanged with SEEK_SET.",
+      "bn": "Text bookmark বদল না করে SEEK_SET-এর সঙ্গে ফেরাও।"
+    },
+    {
+      "en": "Fixed record offsets require a defined binary width.",
+      "bn": "Fixed record-এর offset পেতে binary width আগে নির্দিষ্ট করো।"
+    },
+    {
+      "en": "rewind moves to the beginning and clears both stream indicators.",
+      "bn": "rewind শুরুতে ফেরায় এবং EOF/error indicator দুটোই সরায়।"
+    },
+    {
+      "en": "Validate indices, offset arithmetic and complete record reads.",
+      "bn": "Index, offset-এর হিসাব ও সম্পূর্ণ record read—সব যাচাই করো।"
+    },
+    {
+      "en": "Positioning does not override append-mode output placement.",
+      "bn": "Position বদলালেও append mode-এর write শেষে যাওয়ার নিয়ম বদলায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Find record index 5 in a format with a 16-byte header and six-byte records. A field starts two bytes into the record.",
+      "marks": 5,
+      "answerHtml": "<p>The record offset is 16+5×6 = 46. The field offset is 48. Validate the index and arithmetic before passing an offset to a supported binary seek. Require the complete field length before decoding.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare successful fseek, rewind and clearerr for stream state.",
+      "marks": 6,
+      "answerHtml": "<p>A successful fseek establishes a requested position and clears EOF, but does not generally clear the error indicator. rewind returns to the beginning and clears both indicators, without returning a status. clearerr clears the indicators without moving the position. Choose the operation matching both the desired position and state policy.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why seeking to a guessed byte count inside a text file is not a portable random-record design.",
+      "marks": 6,
+      "answerHtml": "<p>Text stream positions can encode implementation-specific translation state. Arithmetic on ftell bookmarks is not a portable byte-count model. Variable-length records also lack a fixed index×width mapping. Use saved positions for revisiting text or define a binary indexed format with explicit widths and validated offsets.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C input/output library reference",
+      "url": "https://en.cppreference.com/w/c/io"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
