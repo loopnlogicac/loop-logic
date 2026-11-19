@@ -1,8 +1,10 @@
+import { savedStrings, savedList } from './saved.js';
 // Learner dashboard: continue reading, progress, practice, focus areas, receipts.
 import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn, currentUser, showSignIn, toast } from './common.js';
 
 const T = {
   en: {
+    ...savedStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · answers come only from reviewed notes and approved websites',
     hello: 'Your learning', helloSub: 'Pick up where you left off. Everything here comes from what you did on Loop & Logic.',
     welcome: 'Welcome to Loop & Logic', welcomeSub: 'Start with a five-minute lesson. Select any line you don’t understand — you’ll get a short answer with its source.',
@@ -17,6 +19,7 @@ const T = {
     receipts: 'Evidence receipts', shown: 'Shown alone', notYet: 'Not yet shown', withHelp: 'With help', noReceipts: 'Finish a sealed check to get your first receipt.',
   },
   bn: {
+    ...savedStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
     hello: 'তোমার শেখা', helloSub: 'যেখানে থেমেছিলে সেখান থেকে শুরু করো। এখানের সবকিছু লুপ অ্যান্ড লজিকে তোমার কাজ থেকে।',
     welcome: 'লুপ অ্যান্ড লজিকে স্বাগতম', welcomeSub: 'পাঁচ মিনিটের একটা পাঠ দিয়ে শুরু করো। যে লাইন বোঝোনি তা সিলেক্ট করো — উৎসসহ ছোট উত্তর পাবে।',
@@ -48,7 +51,7 @@ function render(d) {
   const L = t();
   applyI18n(L);
   document.title = `${L.hello} · Loop & Logic`;
-  const nodes = [el('div', { class: 'page-head' }, el('h1', { text: L.hello }), el('p', { text: L.helloSub })), purchasesBox(), classesBox()];
+  const nodes = [el('div', { class: 'page-head' }, el('h1', { text: L.hello }), el('p', { text: L.helloSub })), purchasesBox(), classesBox(), savedList(L)];
 
   if (d.isNew) nodes.push(welcome(L));
 

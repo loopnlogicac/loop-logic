@@ -20,6 +20,7 @@ import { LiveSearch } from '../library/live.ts';
 import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
 import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
+import { NoteService } from '../app/notes.ts';
 import { ClassService } from '../app/classes.ts';
 import { OrderService } from '../app/orders.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
@@ -83,6 +84,7 @@ const server = createApp({
   watch,
   extras,
   tutorials,
+  notes: new NoteService(store, tutorials),
   admin,
   classes,
   orders,
