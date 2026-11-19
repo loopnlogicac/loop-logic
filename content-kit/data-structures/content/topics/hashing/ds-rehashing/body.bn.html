@@ -1,0 +1,53 @@
+<h2 id="introduction">Probe খরচ বাড়ার আগেই জায়গা করো</h2>
+<p class="lead">ক্লাসের register ছোট পাতায় শুরু করে শিক্ষার্থী বাড়লে বড় পাতায় নেওয়া যায়। Hash table-ও বাড়ার জায়গা চায়। <dfn>Load factor</dfn> হলো live key count ভাগ capacity। Load বাড়লে free slot খুঁজতে সাধারণত বেশি কাজ হয়।</p>
+<p>আমাদের set পাঁচ cell-এ শুরু; নতুন distinct key-তে load 0.6 ছাড়ানোর আগেই বাড়ে। নতুন capacity পুরোনোর দ্বিগুণ যোগ এক: পাঁচ, এগারো, তেইশ, সাতচল্লিশ। এতে geometric growth আর linear probing-এর যথেষ্ট empty slot থাকে। Linear probing-এ এই capacity চলে, প্রতিটি prime হওয়া লাগে না।</p>
+<p>Capacity বদলালে home bucket বদলায়। <dfn>Rehashing</dfn> মানে replacement array allocate করে নতুন formula-তে সব live key আবার বসানো। পুরোনো layout হুবহু byte copy করে বড় করা নয়। Lookup নতুন home থেকে শুরু করে empty cell আসার আগে key পাবে, এই নিয়ম ফেরাতে হবে।</p>
+<h2 id="syntax">Live count আর capacity আলাদা</h2>
+<p>Table record cells, capacity আর count রাখে। প্রতি Cell-এ key আর used flag। এখানে শুধু insertion, deletion নেই বলে tombstone লাগে না। Count distinct occupied cell মাপে; capacity-তে সব empty-ও আছে। Duplicate count বাড়ায় না।</p>
+<p>যোগের আগে position linear probe করে key বা unused cell পায়। সর্বোচ্চ load 0.6 বলে empty cell সবসময় আছে। এই invariant loop থামায়। যেকোনো damaged বা full table গ্রহণ করা production helper-এ explicit attempt bound-ও লাগবে।</p>
+<p>Threshold হলো (count+1)*10 &gt; capacity*6। Integer হিসাব rounded decimal display-এর অমিল এড়ায়। Input সর্বোচ্চ বারো key, capacity সর্বোচ্চ তেইশ, তাই product size_t overflow করে না। Unbounded container-এ allocation-এর আগে capacity growth, byte multiplication আর count arithmetic সীমা যাচাই করতে হবে।</p>
+<p>Hash helper int key long long arithmetic-এ reduce করে, যার range int ধরে। ছোট capacity long long-এ ধরে। size_t conversion-এর আগে negative remainder ঠিক করে। তাই INT_MIN negate বা negative remainder সরাসরি unsigned index না করেও চলে।</p>
+<h2 id="how-it-works">Replacement তৈরি করে তবেই প্রকাশ</h2>
+<p>0,5,10 থাকলে capacity-পাঁচ table-এর load তিন-পঞ্চমাংশ। 15 দিলে চার-পঞ্চমাংশ হবে, তাই আগে growth। এগারো initialized cell allocate করে পুরোনো পাঁচ cell scan, প্রতিটি used key reinsert, তারপর নতুন modulus-এ 15 insert করে।</p>
+<pre class="diagram">চতুর্থ distinct insertion-এর আগে capacity 5:
+[0] [5] [10] [empty] [empty]
+          replacement capacity 11 allocate
+পুরোনো key rehash: 0 -&gt; slot 0; 5 -&gt; slot 5; 10 -&gt; slot 10
+15 insert: home 4 -&gt; slot 4
+নতুন: [0] [ ] [ ] [ ] [15] [5] [ ] [ ] [ ] [ ] [10]
+নতুন pointer আর capacity প্রকাশ; পুরোনো allocation ছাড়ো।</pre>
+<p>Replacement প্রস্তুত না হওয়া পর্যন্ত পুরোনো cell table-এর নিজের। Allocation ব্যর্থ হলে add minus one ফেরায়, ownership বদলায় না। Caller তখন মূল array ছাড়তে বা অন্য সিদ্ধান্ত নিতে পারে। বড় allocation না পাওয়ায় সব key হারায় না।</p>
+<p>এখানে integer cell বলে live key নতুন cell-এ copy ব্যর্থ হয় না। আলাদা allocated string বা record-এর dictionary-তে rehash record pointer সরায় নাকি owned data copy করে বলতে হবে। Pointer সরালে প্রতিটি record আবার allocate লাগে না; তবে পুরোনো cell array-র external pointer অবৈধ হবে।</p>
+<p>Rebuild-এর পরে আগের empty-cell অবস্থান অর্থহীন। কোড incoming key-র position নতুন capacity-তে আবার হিসাব করে। নতুন record লিখে count একবার বাড়ায়। পুরোনো key replacement layout-এর অংশ হলেও নতুন insertion নয়, logical count আবার বাড়াবে না।</p>
+<h2 id="examples">Growth ঘটিয়ে নতুন অবস্থান দেখো</h2>
+<h3>Linear-probing set নিরাপদে বড় করো</h3>
+<p>চতুর্থ distinct key capacity এগারো, সপ্তমটি তেইশ করে। আগের key নতুন modulus-এ আবার বসে।</p>
+<div data-example="ex-1"></div>
+<h3>Duplicate growth ঘটায় না</h3>
+<p>তিন distinct key load 0.6-এ ধরে। আগে membership দেখে বলে repeated key threshold পেরোয় না।</p>
+<div data-example="ex-2"></div>
+<h3>Rebuild-এ negative key-র অবস্থানও বদলায়</h3>
+<p>Capacity-তে normalized remainder বদলায়। পুরোনো cell হুবহু copy করলে প্রথম empty অবস্থানের পরে lookup ভাঙবে।</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Amortized rebuild আর expected probing</h2>
+<p>Expected bounded probe cost ধরে growth-এর এক insertion-এ old cell scan আর n live key reinsert মিলিয়ে O(m+n)। Fixed load threshold-এর কাছে m আর n সমানুপাতে, তাই O(n)। উপযুক্ত distribution আর spare capacity-তে অন্য insertion expected O(1) হতে পারে।</p>
+<p>Sequence বিশ্লেষণে rebuild size যোগ করো। দ্বিগুণ capacity geometric sum দেয়: আট যোগ ষোলো যোগ বত্রিশ চৌষট্টির কম। শেষ size পর্যন্ত যথেষ্ট insertion-এ মোট rebuild O(n)। Sequence জুড়ে ভাগ করলে প্রতি distinct insertion-এ O(1) amortized rebuild overhead।</p>
+<p>Amortized আর expected ভিন্ন কথা। Amortized মাঝে মাঝে growth-এর খরচ অনেক কাজে ভাগ করে, random query ধরে না। Expected probe key distribution আর hashing model-এর ওপর। Geometric resizing ঠিক হলেও খারাপ fixed hash collision-এর খরচ অনেক বাড়াতে পারে।</p>
+<p>ক্লাসের উত্তরে দুটোই বলো: উপযুক্ত hashing-এ expected O(1) amortized insertion, নির্দিষ্ট rebuild-এ O(n) কাজ, দুই array একসঙ্গে থাকলে O(m+n) temporary storage। শেষ table O(m) cell। Loop-এ rebuild বলে extra recursive stack নেই।</p>
+<p>প্রতিবার এক cell বাড়ালে 1+2+...+n copy, অর্থাৎ O(n squared)। Geometric growth তা এড়ায়। Expected key count জানা থাকলে আগেই উপযুক্ত capacity reserve করেও rebuild এড়ানো যায়। শুধু শেষ key count নয়, spare cell-ও ধরো।</p>
+<h2 id="edge-cases">কখন rebuild লাগে না ঠিক করো</h2>
+<p>ফাঁকা set পাঁচ initialized cell-এর মালিক, key নেই। প্রথম insert-এ growth লাগে না। তিন distinct key ঠিক 0.6 threshold ছুঁয়ে capacity পাঁচেই থাকে। Threshold-এর আগে membership দেখে বলে তৃতীয় key আবার দিলে growth হয় না।</p>
+<p>Negative key-ও positive-এর মতো rehash। -1-এর home capacity পাঁচে চার থেকে এগারোতে দশ হয়। পুরোনো index copy করলে নতুন empty home-এর পরে পড়ে থাকবে, lookup absent বলবে। ছোট case-টাই reinsertion-এর দরকার দেখায়।</p>
+<p>Deletion-সহ open-address table tombstone সরাতে না বাড়িয়েও rebuild করতে পারে। Chaining bucket header বাড়িয়ে পুরোনো node relink করতে পারে। দুটোতেই বাছা capacity-তে placement আবার হিসাব। বর্তমান প্রোগ্রামে ownership সহজ রাখতে শুধু insertion-এর set।</p>
+<p>Shrink করতে আলাদা নিচের threshold চাই। একই boundary-তে growth আর shrink হলে পালা করে insert-delete-এ বারবার rebuild। Threshold-এর বড় ফাঁক দোলাচল ঠেকায়। Predictable response time লাগলে একবারে পুরো rebuild না করে পরের operation-গুলোতে migration ভাগ করা যায়।</p>
+<h2 id="common-mistakes">অচল অবস্থান রেখে দিও না</h2>
+<h3>Rehash ছাড়া reallocate</h3>
+<p>বড় block পেলেই home ঠিক হয় না। Empty replacement বানিয়ে নতুন modulus-এ প্রতিটি live key insert করো।</p>
+<h3>নতুন allocation সফল হওয়ার আগে মূলটি free</h3>
+<p>malloc ব্যর্থ হলে set-এর একমাত্র copy হারাবে। Replacement বানানো শেষ না হওয়া পর্যন্ত পুরোনো table রাখো।</p>
+<h3>সব insertion-কে worst-case constant বলা</h3>
+<p>Growth insertion অনেক key ছোঁয়। Sequence-এর amortized দাবি আর expected probing-এর hashing শর্ত বলো।</p>
+<h2 id="version-notes">C17 allocation size-এর হিসাব</h2>
+<div class="callout version"><p>Growth উদাহরণ capacity আর allocation count-এ size_t নেয়। বারো-key সীমায় সব multiplication ধরে। Unrestricted C17 container-এ malloc-এর আগে size growth আর byte-count overflow যাচাই করতে হবে।</p></div>
+<h2 id="summary">Capacity বদলালে নতুন layout লাগে</h2>
+<p>নির্ভরযোগ্য rebuild ownership পরিষ্কার রেখে প্রতিটি key-র অবস্থান আবার হিসাব করে। Geometric capacity growth মোট migration কাজ নিয়ন্ত্রণ করে, load policy spare space রাখে। এরপর <a href="topic:ds-graph-terminology">graph</a>-এ record dictionary bucket নয়, সংযোগ দেখাবে।</p>
