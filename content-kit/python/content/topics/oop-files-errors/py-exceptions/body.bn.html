@@ -1,0 +1,75 @@
+<h2 id="introduction">ব্যর্থতার খবর caller-এ ফেরাও</h2>
+<p class="lead">Integer-এর জায়গায় শিক্ষার্থী seventy লিখলে int পারে না, অন্য সংখ্যা না দিয়ে ValueError তোলে। <dfn>Exception</dfn> ব্যর্থতা বোঝানো অবজেক্ট, যা বর্তমান execution path থামায়। উপযুক্ত handler recovery বা ব্যাখ্যা দেয়।</p>
+<p>Exception সফল ফল আর failure আলাদা রাখে। Zero mark বৈধ, ভুল ইনপুটেও zero দিলে তথ্য হারায়। Caller আবার চাইবে, record বাদ দেবে নাকি থামবে বাছতে পারে।</p>
+<p>সব জায়গায় সব exception ধরতে হবে না। যথেষ্ট তথ্য দিয়ে কাজে লাগে এমন response যেখানে সম্ভব সেখানে ধরো। Calculation invalid argument বাদ দেয়, UI ব্যাখ্যা করে। Development-এ অপ্রত্যাশিত programming ভুল দৃশ্যমান রাখো।</p>
+
+<h2 id="syntax">নির্দিষ্ট exception type মেলাও</h2>
+<p>ঝুঁকির কাজ try-তে, প্রত্যাশিত type-এর except পরে। as-এর নাম exception object পায়। Message ব্যবহারকারীকে সাহায্য করে, কিন্তু interpreter-এর exact wording-এ logic নির্ভর নয়।</p>
+<pre><code class="language-python">try:
+    marks = int(text)
+except ValueError:
+    print("Enter a whole number")
+else:
+    print(f"Read {marks}")
+finally:
+    print("Input attempt finished")</code></pre>
+<p>Exception, return, break বা continue ছাড়া try স্বাভাবিক শেষ হলে else। একই except-এ পরের কাজের error না ধরতে successful কাজ সেখানে। Normal Python mechanism-এ statement ছাড়লে finally, handled বা unhandled exception-সহ।</p>
+<p>Except ক্রমে দেখা হয়। Specific subclass broad parent-এর আগে। except (ValueError, TypeError) tuple-এ কয়েক type এক response। except ValueError or TypeError ওই tuple নয়।</p>
+
+<h2 id="how-it-works">Handler না মেলা পর্যন্ত stack ধরো</h2>
+<p>Raise হলে ওই try path-এর বাকি statement থামে। কাছে handler, না মিললে caller-এ propagate, কয়েক কল পার হতে পারে। কোথাও না মিললে traceback-সহ error report-এ প্রোগ্রাম শেষ।</p>
+<p><dfn>Traceback</dfn> error পর্যন্ত active call দেখায়। শেষে type-message পড়ে প্রাসঙ্গিক ওপরের line দেখো। গভীর line কোথায় failed, আগের frame মান কীভাবে এল বোঝায়।</p>
+<p>Except named class আর subclass ধরে। ZeroDivisionError, ValueError, TypeError, KeyError আলাদা। Broad Exception input failure-এর সঙ্গে wrong variable বা missing attribute bug-ও লুকাতে পারে।</p>
+<table class="ref"><thead><tr><th scope="col">Type</th><th scope="col">সাধারণ কারণ</th><th scope="col">কাজের response</th></tr></thead><tbody><tr><td>ValueError</td><td>int("seventy")</td><td>Text reject</td></tr><tr><td>TypeError</td><td>String-integer যোগ</td><td>Interface দেখো</td></tr><tr><td>KeyError</td><td>Dictionary key নেই</td><td>Missing-key policy</td></tr><tr><td>IndexError</td><td>Range-এর বাইরে index</td><td>Length বা index দেখো</td></tr><tr><td>FileNotFoundError</td><td>না থাকা ফাইল read</td><td>অন্য path বা ব্যাখ্যা</td></tr></tbody></table>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>C library প্রায়ই return code আর errno-তে ব্যর্থতা বলে। Python exception matching handler পর্যন্ত call boundary পার হয়। সফল ফল সুবিধা বলে failure path ভুলো না, recovery কোথায় ঠিক করো।</p></div>
+
+<h2 id="examples">Success, recovery আর propagation</h2>
+<p>Conversion উদাহরণ interpreter-specific message ছাড়া success-failure তুলনা। পরে domain error, higher-level cause chain আর cleanup। Print order-এ branch বোঝো।</p>
+
+<h3>সফল আর ব্যর্থ conversion</h3>
+<p>75 else-এ, seventy except-এ। দুটো path শেষে finally message।</p>
+<div data-example="ex-1"></div>
+
+<h3>Withdrawal error raise আর catch</h3>
+<p>Rejected withdrawal balance ফেরায় না। Handler controlled message, valid withdrawal 60 দেয়।</p>
+<div data-example="ex-2"></div>
+
+<h3>Invalid input-এর cause রাখো</h3>
+<p>Outer ValueError domain বলে, __cause__ original ValueError রাখে। বদলানো traceback নয়, type প্রিন্ট।</p>
+<div data-example="ex-3"></div>
+
+<h3>Pending return-এর আগে cleanup</h3>
+<p>Return value প্রস্তুত, finally cleanup প্রিন্ট। শেষ হলে caller 42 পেয়ে প্রিন্ট।</p>
+<div data-example="ex-4"></div>
+
+<h3>পরিচিত built-in error আলাদা</h3>
+<p>Lambda ব্যর্থ operation loop-এ কল হওয়া পর্যন্ত পিছিয়ে দেয়। Named tuple handler তিন আলাদা category বলে।</p>
+<div data-example="ex-5"></div>
+
+<h2 id="raising-and-custom-errors">Domain failure-এর স্পষ্ট নাম</h2>
+<p>Supported type-এর invalid value-তে raise ValueError("marks must be from 0 to 100")। Type-ই unsupported হলে TypeError। Caller যেন message search ছাড়া category আলাদা করে।</p>
+<p>Custom exception domain-specific category: InsufficientFunds(Exception) rejected withdrawal। Empty body-তে pass যথেষ্ট। Requested-available amount-এর মতো structured detail লাগলেই attribute।</p>
+<p>যেখানে rule ভাঙে সেখানে raise, অন্য action বাছার জায়গায় catch। Error print করে normal-looking success ফেরিও না, caller সফল ভেবে এগোতে পারে।</p>
+<p>Handler-এর bare raise বর্তমান error traceback context-সহ আবার তোলে। Layer log/cleanup করেও recover না পারলে নাও। Low-level থেকে domain-এ raise NewError(...) from original explicit cause রাখে।</p>
+<p>সাধারণ domain error সরাসরি BaseException নয়, Exception থেকে। KeyboardInterrupt আর SystemExit বড় control category, routine recovery ভুলে গিলবে না। Bare except সেগুলোও ধরে।</p>
+
+<h2 id="cleanup">Cleanup ফল থেকে আলাদা</h2>
+<p>আগে নেওয়া resource ছাড়ার মতো exit-এ দরকারি কাজে finally। Try-র return-ও এর মধ্য দিয়ে যায়। Normal control flow-এ নির্ভরযোগ্য, abrupt process termination বা power failure-এ নিশ্চয়তা নয়।</p>
+<p>Finally থেকে return দিও না; pending result বদলায় বা active error চাপা দেয়। Cleanup সেরে আসল ফল-error যেতে দাও। Cleanup-ও ব্যর্থ হতে পারে, সহজ রাখো আর API জানো।</p>
+<p>ফাইলে manual close-এর চেয়ে with পরিষ্কার। <a href="topic:py-file-handling">ফাইল পাঠে</a> ব্যবহার, পরে <a href="topic:py-context-managers">context manager</a>-এ protocol। Suitable context manager না থাকলে try/finally কাজে লাগে।</p>
+
+<h2 id="common-mistakes">Recovery করো, defect লুকিও না</h2>
+<h3>লম্বা ফাংশন ঘিরে সব error ধরা</h3>
+<p>Broad try bad input আর পরের arithmetic-display bug মেশায়। শুধু recovery-র conversion/operation ঘেরো, সফল stage else-এ।</p>
+<h3>Missing variable নিয়ে চালানো</h3>
+<p>marks assign-এর আগে conversion failed হলে পরে marks আছে ধরবে না। Handler থেকে return, deliberate retry বা dependent কাজ else-এ।</p>
+<h3>pass-এ error চুপ</h3>
+<p>Empty handler ব্যাখ্যা ছাড়া partial state রাখে। স্পষ্ট harmless case-ই উপেক্ষা, নইলে report বা propagate।</p>
+<h3>ইনপুট reject-এ assert</h3>
+<p>Optimized execution assertion সরাতে পারে। Required validation-এ condition আর raise। <a href="topic:py-testing">টেস্টিং পাঠে</a> assertion-এর জায়গা আসবে।</p>
+
+<h2 id="version-notes">আগে সাধারণ exception handling</h2>
+<p>Class আর try/except/else/finally Python 3.10–3.12-তে চলে। Exception group আর except* 3.11-এ, পাঠের বাইরে। User-facing stable ব্যাখ্যা নিজের দাও, সব release-এ wording একই ধরো না।</p>
+
+<h2 id="summary">অর্থপূর্ণ boundary-তে recovery</h2>
+<p>Expected named failure ধরো, rule ভাঙলে clear error, result না বদলে cleanup। পরের <a href="topic:py-file-handling">ফাইল handling</a> structured input, cleanup আর explicit format মেলায়।</p>
