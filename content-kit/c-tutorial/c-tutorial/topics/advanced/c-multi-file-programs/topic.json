@@ -1,0 +1,429 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-multi-file-programs",
+  "module": "advanced",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Multi-File Programs",
+    "bn": "একাধিক সোর্স ফাইলে প্রোগ্রাম সাজানো"
+  },
+  "summary": {
+    "en": "Separate public declarations from private definitions, build several translation units, and express rebuild rules with make.",
+    "bn": "হেডারে declaration রাখো, সোর্স ফাইলে implementation লেখো এবং make দিয়ে দরকারি অংশ আবার build করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 65,
+  "prerequisites": [
+    "c-command-line-arguments"
+  ],
+  "related": [
+    "c-storage-classes"
+  ],
+  "keywords": [
+    "header",
+    "translation unit",
+    "linker",
+    "static",
+    "Makefile"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give each part of a growing program a clear home"
+    },
+    {
+      "id": "syntax",
+      "title": "Declare an interface once and implement it once"
+    },
+    {
+      "id": "how-it-works",
+      "title": "From translation units to one executable"
+    },
+    {
+      "id": "examples",
+      "title": "Build clients with small, explicit interfaces"
+    },
+    {
+      "id": "build-rules",
+      "title": "Let make remember prerequisites"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Repair the boundary that actually failed"
+    },
+    {
+      "id": "interface-design",
+      "title": "Choose an interface that callers can trust"
+    },
+    {
+      "id": "version-notes",
+      "title": "C interfaces and a separate build tool"
+    },
+    {
+      "id": "summary",
+      "title": "Keep the public promise small"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Compile a client and marks module as separate sources",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The header declares passed_count. marks.c defines it and keeps is_pass private with static. The four marks contain two passes. The project directory also contains a Makefile for separate compilation.</p>",
+      "standard": "c17",
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project/marks.c"
+      ],
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Include a guarded declaration twice without redefining it",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The include guard makes the second inclusion harmless. Guarding a header does not make arbitrary function definitions safe across different source files; this header contains a declaration only.</p>",
+      "standard": "c17",
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project/marks.c"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Keep same-named helper functions private to their source files",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>Both source files define adjustment, but each definition has internal linkage. Their public wrappers call their own helper. Removing static from both helpers would create competing external definitions rather than a shared choice at runtime.</p>",
+      "standard": "c17",
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project/left.c",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project/right.c"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Reuse the public pass-count interface",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n from 0 to 10 followed by n marks from 0 to 100. Print the number at least 40. Use the supplied marks module, check all input and print invalid on invalid data.</p>",
+      "hints": [
+        "Include the public header.",
+        "Validate before calling the counting function."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ],
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project/marks.c"
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Build a client around a range predicate",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read value, low and high as integers from -1000 to 1000. Print inside if low ≤ high and value is in the inclusive interval; otherwise print outside. Print invalid for missing input. Keep the predicate in range.c.</p>",
+      "hints": [
+        "The header must match the function definition.",
+        "Check an inverted interval explicitly."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ],
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project",
+        "c-tutorial/c-tutorial/topics/advanced/c-multi-file-programs/project/range.c"
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Explain which objects rebuild after a header edit",
+      "difficulty": "medium",
+      "statementHtml": "<p>For the included Makefile, identify the commands needed after changing only main.c, only marks.c, or marks.h.</p>",
+      "hints": [
+        "Read prerequisites rather than guessing from executable output."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Changing main.c rebuilds main.o and relinks marks-demo. Changing marks.c rebuilds marks.o and relinks. Changing marks.h makes both object targets out of date, so both compile again before linking. This works because both rules list the header explicitly. A later make with no changed prerequisite runs no recipe.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Repair an accidental shared definition",
+      "difficulty": "medium",
+      "statementHtml": "<p>A header contains int total = 0; and is included by two source files. Propose a single-definition repair and a design with no shared mutable global.</p>",
+      "hints": [
+        "An include guard applies separately in each translation unit."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Put extern int total; in the guarded header and exactly one int total = 0; definition in a source file. Both clients then refer to that object. Prefer an explicit state structure passed to functions when possible: it makes ownership visible and supports independent instances. Do not assume a header guard prevents definitions in different translation units.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is a translation unit?",
+      "options": [
+        "An executable directory",
+        "One function at runtime",
+        "A Makefile target only",
+        "A source file after preprocessing its includes"
+      ],
+      "answer": 3,
+      "explanation": "Each .c file is compiled with its included declarations before linking."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why should marks.c include its own public header?",
+      "options": [
+        "To share its static helpers",
+        "To avoid all linker errors",
+        "To compare its definition with its promised declaration",
+        "To compile the client twice"
+      ],
+      "answer": 2,
+      "explanation": "A conflicting signature can then be diagnosed in the implementation translation unit."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does gcc -c marks.c produce?",
+      "options": [
+        "A shared state instance",
+        "An object file without linking an executable",
+        "A header",
+        "A running process"
+      ],
+      "answer": 1,
+      "explanation": "Separate compilation creates marks.o; linking combines object files."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does file-scope static do to adjustment?",
+      "options": [
+        "Gives it internal linkage",
+        "Makes it callable from every file",
+        "Makes every local variable persistent",
+        "Runs it before main"
+      ],
+      "answer": 0,
+      "explanation": "Other translation units cannot name this function as an external definition."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why are ordinary function definitions usually excluded from public headers?",
+      "options": [
+        "Headers cannot contain declarations",
+        "Function calls would become random",
+        "The compiler ignores headers",
+        "Each including translation unit could define the same external function"
+      ],
+      "answer": 3,
+      "explanation": "Put the declaration in the header and one definition in a .c file."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which Makefile character normally starts a recipe line?",
+      "options": [
+        "A colon alone",
+        "An arbitrary number of spaces",
+        "A tab",
+        "A comma"
+      ],
+      "answer": 2,
+      "explanation": "The provided Makefile uses real tabs before compiler recipes."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does an undefined-reference linker error commonly mean?",
+      "options": [
+        "The function ran and returned zero",
+        "A declared function has no linked definition",
+        "The source has too many comments",
+        "Every header needs main"
+      ],
+      "answer": 1,
+      "explanation": "Check missing object files and spelling before changing runtime logic."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a header guard coordinate definitions between separate .c files?",
+      "options": [
+        "No, preprocessing starts independently for each translation unit",
+        "Yes, it shares macros between compiler processes",
+        "Only when using printf",
+        "Only when the header is empty"
+      ],
+      "answer": 0,
+      "explanation": "It prevents repeated content within one translation unit."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What does a block-scope shadow change in this private-helper example?",
+      "options": [
+        "3 3",
+        "7 7",
+        "3 7",
+        "7 3"
+      ],
+      "answer": 3,
+      "explanation": "The inner block has its own object; the outer value remains three.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int count = 3;\n    {\n        int count = 7;\n        printf(\"%d \", count);\n    }\n    printf(\"%d\\n\", count);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How does one static local counter behave across calls in a single module?",
+      "options": [
+        "0 1",
+        "2 1",
+        "1 2",
+        "1 1"
+      ],
+      "answer": 2,
+      "explanation": "The local object persists, while function-level static controls linkage; these are distinct uses.",
+      "code": "#include <stdio.h>\n\nstatic int next_value(void)\n{\n    static int count;\n    return ++count;\n}\n\nint main(void)\n{\n    int first = next_value();\n    int second = next_value();\n    printf(\"%d %d\\n\", first, second);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What happens when a guarded macro block is encountered twice?",
+      "options": [
+        "13",
+        "4",
+        "9",
+        "0"
+      ],
+      "answer": 1,
+      "explanation": "The second conditional block is skipped because the guard macro is already defined.",
+      "code": "#include <stdio.h>\n#ifndef DEMO_LIMIT_H\n#define DEMO_LIMIT_H\n#define LIMIT 4\n#endif\n#ifndef DEMO_LIMIT_H\n#define DEMO_LIMIT_H\n#define LIMIT 9\n#endif\n\nint main(void)\n{\n    printf(\"%d\\n\", LIMIT);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Headers describe public interfaces; source files provide their definitions.",
+      "bn": "হেডারে public interface জানাও, সোর্স ফাইলে তার definition রাখো।"
+    },
+    {
+      "en": "Include the public header in the implementation to check agreement.",
+      "bn": "Implementation-এ নিজের হেডার include করো, যাতে declaration-এর মিল যাচাই হয়।"
+    },
+    {
+      "en": "File-scope static hides implementation helpers from other translation units.",
+      "bn": "ফাইলের বাইরে helper দরকার না হলে static দিয়ে সেটি private রাখো।"
+    },
+    {
+      "en": "Compile each translation unit, then link all required objects.",
+      "bn": "প্রতিটি সোর্স compile করার পর দরকারি object একসঙ্গে link করো।"
+    },
+    {
+      "en": "Header dependencies are necessary for reliable incremental builds.",
+      "bn": "হেডার বদলালে সঠিক অংশ rebuild করতে dependency লিখে রাখো।"
+    },
+    {
+      "en": "A header guard does not solve multiple external definitions across files.",
+      "bn": "আলাদা সোর্স ফাইলে একই external definition থাকলে header guard তা সারায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Explain the compiler and linker stages for main.c and marks.c.",
+      "marks": 7,
+      "answerHtml": "<p>Preprocess and compile each .c file into its own object with gcc -c. Declarations let the compiler check calls within each translation unit. Link main.o and marks.o to resolve passed_count and produce the executable. Syntax/type errors arise during compilation; a missing marks.o can leave an undefined reference during linking.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Why can two files safely use the same static helper name?",
+      "marks": 6,
+      "answerHtml": "<p>At file scope, static gives each function internal linkage. Each name identifies its own translation-unit-local function, so their external symbol definitions do not compete. The public wrapper declarations still need one matching external definition each. This use differs from the persistent storage duration of a block-scope static object.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Write rebuild dependencies for a shared header and explain the cost of omitting them.",
+      "marks": 7,
+      "answerHtml": "<p>List main.o: main.c marks.h and marks.o: marks.c marks.h, then list the executable as depending on both objects. Without header prerequisites, make may keep an old object after the interface changes. A successful incremental command can then combine inconsistent code. A clean rebuild can expose the problem but does not replace correct dependency rules.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "GCC overall compilation options",
+      "url": "https://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html"
+    },
+    {
+      "title": "GNU Make manual",
+      "url": "https://www.gnu.org/software/make/manual/make.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

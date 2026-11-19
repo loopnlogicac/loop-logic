@@ -1,0 +1,396 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-error-handling",
+  "module": "advanced",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Error Handling in C",
+    "bn": "ব্যর্থতা জানানো ও সামলানোর নকশা"
+  },
+  "summary": {
+    "en": "Design explicit status results, preserve useful diagnostics and keep reusable helpers separate from process termination.",
+    "bn": "Status result স্পষ্ট করো, দরকারি error তথ্য ধরে রাখো এবং helper-এর কাজ থেকে প্রোগ্রাম বন্ধ করা আলাদা রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "c-standard-library-tour"
+  ],
+  "related": [],
+  "keywords": [
+    "return code",
+    "errno",
+    "perror",
+    "EXIT_FAILURE",
+    "defensive programming"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Failure is a result the caller needs to understand"
+    },
+    {
+      "id": "syntax",
+      "title": "Give status and data separate meanings"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Validate, commit and then report"
+    },
+    {
+      "id": "examples",
+      "title": "Return useful reasons and preserve valid state"
+    },
+    {
+      "id": "diagnostic-design",
+      "title": "Use errno only for a documented purpose"
+    },
+    {
+      "id": "cleanup",
+      "title": "Keep responsibility visible on every path"
+    },
+    {
+      "id": "recovery",
+      "title": "Let the application boundary choose the policy"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Errors should remain specific and actionable"
+    },
+    {
+      "id": "version-notes",
+      "title": "Explicit conventions in C17"
+    },
+    {
+      "id": "summary",
+      "title": "A good failure result preserves choices"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Return a reason without reserving a valid mark as an error",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": true,
+      "explanationHtml": "<p>Zero remains a valid mark because status travels separately from data. The helper assigns its output only on success. This policy classifies a string with trailing junk as syntax failure before considering the numeric application range.</p>",
+      "standard": "c17",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Save a documented conversion error before diagnostic work",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The deliberately huge value exceeds the long range on the documented GCC host. The program saves errno before printf and restores it for perror, whose host-supplied message goes to standard error. The process returns failure; the message spelling is not used as program data.</p>",
+      "standard": "c17",
+      "exitCode": 1,
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Fail without partially mutating an account balance",
+      "level": "basic",
+      "file": "examples/ex-3.c",
+      "tryNow": true,
+      "explanationHtml": "<p>Validation finishes before the state change. Rejecting the first request leaves the balance at 500. This tiny single-process account uses integer taka; it is not a production payment protocol or a concurrent transaction system.</p>",
+      "standard": "c17",
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Classify a mark without changing the caller result on failure",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read one whitespace-free token of at most 80 characters. Use parse_mark to print ok VALUE, syntax, or range. A missing token prints syntax. The helper must store the mark only for PARSE_OK.</p>",
+      "hints": [
+        "Keep the status enum separate from the mark.",
+        "Reject trailing characters before application range checks."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Reject a withdrawal before changing state",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read balance and amount, each an int from -10000 through 10000. A negative starting balance or nonpositive amount prints invalid. An amount above a valid balance prints insufficient. Otherwise print the remaining balance. A rejected operation must not subtract first.</p>",
+      "hints": [
+        "Validate all preconditions.",
+        "Only the success branch changes the balance."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        },
+        {
+          "stdin": "practice/p-2.t5.in",
+          "output": "practice/p-2.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Choose a failure convention for a library helper",
+      "difficulty": "medium",
+      "statementHtml": "<p>A search can legitimately return index zero. Design a result convention that distinguishes found-at-zero, missing and invalid input.</p>",
+      "hints": [
+        "Do not overload a valid index as the error code."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Return a status enum such as FOUND, NOT_FOUND and INVALID_ARGUMENT, and write an index output only on FOUND. Alternatively return a documented structure containing status and index. State valid pointer/count assumptions. The caller handles a normal absence differently from an invalid request, and no valid index must be sacrificed.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Order cleanup after three resource acquisitions",
+      "difficulty": "medium",
+      "statementHtml": "<p>A function opens an input, allocates a buffer and opens an output. The final acquisition fails. Describe cleanup and diagnostic preservation.</p>",
+      "hints": [
+        "Only release successfully acquired resources."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Capture the documented failure information immediately. Free the allocated buffer and close the owned input, recording any secondary failures without losing the first cause. Do not close a null output. State whether a partial output can exist. Return a status so the caller decides whether to retry, report or terminate.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why return status separately from a parsed mark?",
+      "options": [
+        "Enums are faster on every CPU",
+        "Pointers cannot return data",
+        "All failures must exit",
+        "Zero is valid data and must not mean failure"
+      ],
+      "answer": 3,
+      "explanation": "Separate channels avoid overloading a legitimate value."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When should an output parameter be assigned under the stated contract?",
+      "options": [
+        "On every failure with arbitrary data",
+        "Only after exit",
+        "Only after validation succeeds",
+        "Before reading input"
+      ],
+      "answer": 2,
+      "explanation": "The caller retains its previous value on rejection."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does errno after an unrelated successful call prove about an earlier failure?",
+      "options": [
+        "That the result is zero",
+        "Nothing reliable without preserving the original documented value",
+        "That the earlier call succeeded",
+        "That every failure is gone"
+      ],
+      "answer": 1,
+      "explanation": "Success need not clear errno and intervening calls may change it."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where should a reusable helper usually decide process termination?",
+      "options": [
+        "Leave that decision to its caller",
+        "Always call exit immediately",
+        "Inside every comparator",
+        "Inside a header guard"
+      ],
+      "answer": 0,
+      "explanation": "A caller may recover, test or report differently."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is defensive validation intended to do?",
+      "options": [
+        "Silently ignore every error",
+        "Replace all contracts with guesses",
+        "Guarantee hardware cannot fail",
+        "Check explicit preconditions before unsafe or unwanted state changes"
+      ],
+      "answer": 3,
+      "explanation": "Validation makes the accepted domain and failure result visible."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which operation does perror perform?",
+      "options": [
+        "Clears every stream error",
+        "Closes the process",
+        "Formats current errno to standard error with a prefix",
+        "Returns the last function status automatically"
+      ],
+      "answer": 2,
+      "explanation": "Its text is host-supplied and should not be parsed as a stable error protocol."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Should a failed cleanup erase an earlier read failure?",
+      "options": [
+        "Only if errno is zero",
+        "No; preserve the first cause and record secondary cleanup failures",
+        "Always",
+        "Only if printf works"
+      ],
+      "answer": 1,
+      "explanation": "Cleanup still runs, while reporting retains the most useful original stage."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What remains when validation returns before assigning the output?",
+      "options": [
+        "0 7",
+        "0 -2",
+        "1 7",
+        "1 -2"
+      ],
+      "answer": 0,
+      "explanation": "The rejected path returns zero without changing answer.",
+      "code": "#include <stdio.h>\n\nstatic int accept(int value, int *out)\n{\n    if (value < 0) {\n        return 0;\n    }\n    *out = value;\n    return 1;\n}\n\nint main(void)\n{\n    int answer = 7;\n    int ok = accept(-2, &answer);\n    printf(\"%d %d\\n\", ok, answer);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which cleanup operand runs under short-circuit OR?",
+      "options": [
+        "1 1",
+        "0 1",
+        "0 0",
+        "1 0"
+      ],
+      "answer": 3,
+      "explanation": "A true first operand skips the second, explaining why closes need independent attempts.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int first = 1;\n    int second = 0;\n    int failed = first || ++second;\n    printf(\"%d %d\\n\", failed, second);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Can a saved diagnostic value survive changing errno?",
+      "options": [
+        "1 0",
+        "0 0",
+        "1 1",
+        "0 1"
+      ],
+      "answer": 2,
+      "explanation": "The ordinary saved int retains the earlier value independently of errno.",
+      "code": "#include <stdio.h>\n#include <errno.h>\n\nint main(void)\n{\n    errno = ERANGE;\n    int saved = errno;\n    errno = 0;\n    printf(\"%d %d\\n\", saved == ERANGE, errno == 0);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Separate status from legitimate result values.",
+      "bn": "বৈধ result-এর মান থেকে status আলাদা রাখো।"
+    },
+    {
+      "en": "Validate before mutating shared application state.",
+      "bn": "অ্যাপ্লিকেশনের state বদলানোর আগেই শর্ত যাচাই করো।"
+    },
+    {
+      "en": "Preserve documented diagnostics before reporting or cleanup.",
+      "bn": "বার্তা লেখা বা cleanup-এর আগে দরকারি error তথ্য ধরে রাখো।"
+    },
+    {
+      "en": "Reusable helpers report failure; callers choose recovery or termination.",
+      "bn": "পুনর্ব্যবহারযোগ্য helper ব্যর্থতা জানাবে; caller ঠিক করবে পরের কাজ।"
+    },
+    {
+      "en": "Release every acquired resource without hiding the first failure.",
+      "bn": "প্রথম ব্যর্থতা না হারিয়ে পাওয়া প্রতিটি resource ছেড়ে দাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Design a parser contract with success, syntax failure and range failure.",
+      "marks": 7,
+      "answerHtml": "<p>Return an enum status and accept a result pointer that must be valid. Check digits and trailing text, then conversion and application range. Assign the result only on success. Document which failure wins if a string both overflows and contains trailing junk. The caller handles statuses without confusing valid zero with failure.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare return from a helper, return from main and exit.",
+      "marks": 6,
+      "answerHtml": "<p>Returning from an ordinary helper resumes its caller, which can recover or propagate the status. Returning from the initial main invocation terminates the program with its status. exit terminates the process from wherever it is called, performing its documented termination actions; it does not return to the helper caller. Avoid forcing that policy inside reusable operations.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain a strong failure guarantee for a small withdrawal helper.",
+      "marks": 7,
+      "answerHtml": "<p>Require a valid balance pointer and nonnegative starting balance. Reject nonpositive amounts and amounts above the balance before subtraction. Change the balance only after all checks succeed. On rejected operations, leave it unchanged and return an explicit reason. Persistence and concurrency require additional protocols beyond this in-memory guarantee.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Error handling facilities",
+      "url": "https://en.cppreference.com/w/c/error"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
