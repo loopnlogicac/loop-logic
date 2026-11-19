@@ -1,10 +1,10 @@
 <h2 id="introduction">প্রতি bucket-এর নিজের list রাখো</h2>
 <p class="lead">নম্বর দেওয়া ডেস্কের tray-তে কয়েকটি ID card রাখা ভাবো। Tray বাছলে কাছে আসো, তবু ভেতরের ID পড়তে হয়। <dfn>Separate chaining</dfn>-ও তাই: প্রতিটি hash bucket একই bucket ভাগ করা record-এর linked list দেখায়।</p>
-<p>Singly linked list দিয়ে record জোড়া তুমি জানো। Hashing শুরু করার pointer-এর ছোট array যোগ করে, তাই সাধারণত এক ছোট list দেখলেই হয়। টেবিলে সাত bucket header, শুরুতে NULL। নোডে integer key আর next pointer। Key একবার থাকে; সমান key insert করলে set বদলায় না।</p>
-<p>Record header array-র বাইরে থাকে বলে bucket-এর চেয়ে বেশি key chaining-এ চলে। Bucket লম্বা হতে পারে, তাই insertion-এর মেমরি থাকলেও speed-এর জন্য capacity গুরুত্বপূর্ণ। Load factor bucket-প্রতি গড় key বলে, actual distribution দৈর্ঘ্যের অসমতা বলে।</p>
+<p>Singly linked list দিয়ে record জোড়া তুমি জানো। Hashing শুরু করার পয়েন্টার-এর ছোট অ্যারে যোগ করে, তাই সাধারণত এক ছোট list দেখলেই হয়। টেবিলে সাত bucket header, শুরুতে NULL। নোডে integer key আর next পয়েন্টার। Key একবার থাকে; সমান key insert করলে set বদলায় না।</p>
+<p>Record header অ্যারের বাইরে থাকে বলে bucket-এর চেয়ে বেশি key chaining-এ চলে। Bucket লম্বা হতে পারে, তাই insertion-এর মেমরি থাকলেও speed-এর জন্য capacity গুরুত্বপূর্ণ। Load factor bucket-প্রতি গড় key বলে, actual distribution দৈর্ঘ্যের অসমতা বলে।</p>
 <h2 id="syntax">Ownership আর duplicate নিয়ম বলো</h2>
-<p>Insert helper bucket head array আর key পেয়ে bucket(key,7) হিসাব করে, পুরো key মিলিয়ে list ধরে। সমান থাকলে শূন্য ফেরায়। না হলে এক নোড allocate করে শেষ NULL link-এ append করে। এক মানে যোগ হয়েছে, minus one মানে allocation failure।</p>
-<p>Link-এর pointer append আর deletion ছোট করে। শুরুতে link bucket header দেখায়, প্রতি অগ্রগতিতে existing node-এর next field দেখায়। তাই link দিয়ে assignment ঠিক দরকারি incoming pointer বদলায়। Local variable pointer; node-এর owner টেবিল।</p>
+<p>Insert helper bucket head অ্যারে আর key পেয়ে bucket(key,7) হিসাব করে, পুরো key মিলিয়ে list ধরে। সমান থাকলে শূন্য ফেরায়। না হলে এক নোড allocate করে শেষ NULL link-এ append করে। এক মানে যোগ হয়েছে, minus one মানে allocation failure।</p>
+<p>Link-এর পয়েন্টার append আর deletion ছোট করে। শুরুতে link bucket header দেখায়, প্রতি অগ্রগতিতে existing node-এর next field দেখায়। তাই link দিয়ে assignment ঠিক দরকারি incoming পয়েন্টার বদলায়। Local ভেরিয়েবল পয়েন্টার; node-এর owner টেবিল।</p>
 <table class="ref"><thead><tr><th scope="col">কাজ</th><th scope="col">Expected সময়</th><th scope="col">Worst সময়</th><th scope="col">বাড়তি কাজের জায়গা</th></tr></thead><tbody><tr><td>Append-এ unique insert</td><td>O(1+alpha)</td><td>O(n)</td><td>O(1), আর এক নতুন node</td></tr><tr><td>Key দিয়ে search বা delete</td><td>O(1+alpha)</td><td>O(n)</td><td>O(1)</td></tr><tr><td>পুরো table ছাড়া</td><td>O(m+n)</td><td>O(m+n)</td><td>O(1)</td></tr></tbody></table>
 <p>Expected খরচ ভালো distribution ধরে। এখানে alpha=n/m, n distinct রাখা key আর m bucket। জানা link-এ node জোড়া constant time হলেও equality দেখার জন্য unique insertion বাছা chain-এর দৈর্ঘ্য অনুযায়ী linear। Header আর record-সহ table-এর জায়গা O(m+n)।</p>
 <h2 id="how-it-works">একবারে এক incoming link ঠিক করো</h2>
@@ -19,7 +19,7 @@ link -&gt; node 1 next -&gt; [8|next] -&gt; [15|NULL]
 bucket[1] -&gt; [1|next] ----------------&gt; [15|NULL]
 Incoming link বদলানোর পরেই node 8 ছাড়া হয়।</pre>
 <p>15 search আগে bucket এক বাছে, তারপর 1 আর 15 তুলনা করে। দ্বিতীয় নোডে success। 22 search একই list-এ NULL পেয়ে absence প্রমাণ করে। Index সমান বলে search থামবে না, একই bucket-এ ভিন্ন key থাকে।</p>
-<p>Deletion link matching node না দেখানো বা pointed link NULL না হওয়া পর্যন্ত হাঁটে। মিললে node pointer রেখে incoming link-এ old next বসায়, তারপর old free করে। Free-এর আগে next রাখায় dead memory পড়ে না। পরে old ব্যবহার হয় না, তাই released record ভুল করে traversal step হয় না।</p>
+<p>Deletion link matching node না দেখানো বা pointed link NULL না হওয়া পর্যন্ত হাঁটে। মিললে node পয়েন্টার রেখে incoming link-এ old next বসায়, তারপর old free করে। Free-এর আগে next রাখায় dead মেমরি পড়ে না। পরে old ব্যবহার হয় না, তাই released record ভুল করে traversal step হয় না।</p>
 <p>Animation প্রথম উদাহরণের append order আর duplicate rule মানে। [1,8,15] থেকে 8 সরিয়ে 15 খোঁজো। তারপর 1 সরিয়ে header case দেখো। Table player bucket value list হিসেবে আঁকে; box diagram C-তে মেরামত হওয়া owner link দেখায়।</p>
 <div data-lab="hash-chaining"></div>
 <h2 id="examples">সাধারণ আর ভিড় করা bucket পরীক্ষা</h2>
@@ -33,23 +33,23 @@ Incoming link বদলানোর পরেই node 8 ছাড়া হয�
 <p>মাঝারি গড় load পাঁচ-node chain লুকিয়ে রাখে। সবচেয়ে লম্বা bucket এই ভিড় দেখায়।</p>
 <div data-example="ex-3"></div>
 <h2 id="comparison">Load factor বুঝে পড়ো</h2>
-<p>নব্বই key আর ত্রিশ bucket-এ alpha তিন। Uniform-distribution model-এ failed search bucket বেছে প্রায় তিন record দেখে। Successful search মাঝেই থামতে পারে; expected comparison placement আর query-র শর্তে নির্ভর করে। দুটিই O(1+alpha), সর্বজনীন constant নয়।</p>
-<p>Bucket count allocated record-এর সীমা নয় বলে alpha এক ছাড়াতে পারে। Open addressing-এ কিন্তু প্রতি slot-এ সর্বোচ্চ এক live key। বেশি node মানে বেশি allocation, pointer chase আর key comparison। Chained table বড় করলে নতুন modulus-এ node ছড়ায়, bucket-প্রতি list-এর ধারণা বদলায় না।</p>
+<p>নব্বই key আর ত্রিশ bucket-এ alpha তিন। Uniform-distribution মডেল-এ failed search bucket বেছে প্রায় তিন record দেখে। Successful search মাঝেই থামতে পারে; expected comparison placement আর query-র শর্তে নির্ভর করে। দুটিই O(1+alpha), সর্বজনীন constant নয়।</p>
+<p>Bucket count allocated record-এর সীমা নয় বলে alpha এক ছাড়াতে পারে। Open addressing-এ কিন্তু প্রতি slot-এ সর্বোচ্চ এক live key। বেশি node মানে বেশি allocation, পয়েন্টার chase আর key comparison। Chained table বড় করলে নতুন modulus-এ node ছড়ায়, bucket-প্রতি list-এর ধারণা বদলায় না।</p>
 <p>ছোট গড় এক খারাপ bucket লুকাতে পারে। তৃতীয় উদাহরণ ইচ্ছা করে পাঁচ key এক chain-এ দেয়। Alpha একের কম হলেও longest পাঁচ। Alpha-র সঙ্গে সর্বোচ্চ length দিলে দুর্বল hash-এ regular key pattern না ছড়ানো ধরা পড়ে।</p>
 <p>Uniqueness না দেখা front-insert dictionary O(1)-এ record জোড়ে। আমাদের নিয়ম আলাদা: সমান key duplicate হয় না। কোন প্রান্তে নতুন node বসুক, আগে বাছা chain দেখতেই হবে। পরীক্ষায় insertion খরচ বলার আগে contract বলো।</p>
 <h2 id="edge-cases">Missing node আর failed allocation</h2>
 <p>ফাঁকা table-এ search সরাসরি NULL, deletion শূন্য দেয়। এক-node bucket header NULL করে ফাঁকা হয়। Tail মুছলে আগের next NULL। Absent key link বা মেমরি বদলায় না, তাই repeated deletion নিরাপদ, দ্বিতীয়বার শূন্য।</p>
-<p>Allocation failure আগের node নষ্ট করবে না। Insert incoming link লেখার আগে allocate করে। malloc NULL দিলে পুরোনো list অক্ষত। প্রথম উদাহরণের caller failure ফেরার আগে সব existing record ছাড়ে। আংশিক তৈরির পরে ভুল input-ও একই cleanup path নেয়।</p>
-<p>মেমরি বা app limit ছাড়া chaining-এর fixed full নেই। Trace ছোট রাখতে প্রোগ্রামে সর্বোচ্চ বারো initial key, সেটি input bound, structure capacity নয়। Cleanup সব সাত bucket scan করে successor রেখে প্রতি node একবার free করে।</p>
+<p>Allocation failure আগের node নষ্ট করবে না। Insert incoming link লেখার আগে allocate করে। malloc NULL দিলে পুরোনো list অক্ষত। প্রথম উদাহরণের caller failure ফেরার আগে সব existing record ছাড়ে। আংশিক তৈরির পরে ভুল ইনপুট-ও একই cleanup path নেয়।</p>
+<p>মেমরি বা app limit ছাড়া chaining-এর fixed full নেই। Trace ছোট রাখতে প্রোগ্রামে সর্বোচ্চ বারো initial key, সেটি ইনপুট bound, structure capacity নয়। Cleanup সব সাত bucket scan করে successor রেখে প্রতি node একবার free করে।</p>
 <p>Negative integer-ও key range-এ। Normalized remainder -1-কে bucket ছয়ে পাঠায়। ফাঁকা list NULL বলে শূন্য সাধারণ stored key। Duplicate allocate করে না, key count বা alpha বাড়ায় না।</p>
 <h2 id="common-mistakes">Equality আর lifetime আলাদা রাখো</h2>
 <h3>Next মেরামতের আগে node free</h3>
 <p>Free-এর পরে node-এর next পড়া অবৈধ। আগে successor রেখে owner link মেরামত করো, তারপর old ছাড়ো।</p>
 <h3>সব deletion-এ bucket header বদলানো</h3>
-<p>শুধু head মিললে তা চলে। মাঝের node মুছতে আগের next field বদলাবে। Pointer-to-pointer walk দুই case-এই সঠিক জায়গা খুঁজে দেয়।</p>
+<p>শুধু head মিললে তা চলে। মাঝের node মুছতে আগের next field বদলাবে। পয়েন্টার-to-পয়েন্টার walk দুই case-এই সঠিক জায়গা খুঁজে দেয়।</p>
 <h3>চেষ্টার সংখ্যাকে distinct key ধরা</h3>
 <p>প্রথম উদাহরণের repeated 1 আগেই আছে। সফল allocation আর attachment-ই শুধু load factor-এর set size বাড়ায়।</p>
 <h2 id="version-notes">C17 allocation আর node lifetime</h2>
-<div class="callout version"><p>Bucket list standard library-র malloc আর free ব্যবহার করে। C17-এ free-এর পরে record পড়া চলে না। Bucket pointer NULL দিয়ে initialize করে incoming link-এ বসানোর আগে node তৈরি করো।</p></div>
+<div class="callout version"><p>Bucket list standard library-র malloc আর free ব্যবহার করে। C17-এ free-এর পরে record পড়া চলে না। Bucket পয়েন্টার NULL দিয়ে initialize করে incoming link-এ বসানোর আগে node তৈরি করো।</p></div>
 <h2 id="summary">Bucket linked-list search ছোট করে</h2>
-<p>Separate chaining collide করা প্রতিটি key পৌঁছানো যায় এমন record-এ রাখে। Hash list বাছে, key comparison record খোঁজে, deletion-এর link repair ownership রাখে। এরপর <a href="topic:ds-open-addressing">open addressing</a> record array-র ভেতরেই রাখবে।</p>
+<p>Separate chaining collide করা প্রতিটি key পৌঁছানো যায় এমন record-এ রাখে। Hash list বাছে, key comparison record খোঁজে, deletion-এর link repair ownership রাখে। এরপর <a href="topic:ds-open-addressing">open addressing</a> record অ্যারের ভেতরেই রাখবে।</p>

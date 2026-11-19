@@ -1,8 +1,8 @@
 <h2 id="introduction">Search-এ কম page পড়ো</h2>
-<p class="lead">Disk index-এ লাখ লাখ roll-number record থাকতে পারে। আগে মেমরিতে থাকা কয়েকটি key তুলনার চেয়ে storage থেকে page আনার খরচ অনেক বেশি। <dfn>B-tree</dfn> প্রতিটি চওড়া নোডে বেশ কয়েক key আর child link রেখে search path-এর page সংখ্যা কমায়।</p>
-<p>কয়েকটি interval লেখা directory page ভাবো। এক page-ই বলে দিতে পারে অনেক ছোট directory-র কোনটি খুলবে। Binary tree প্রতি নোডে শুধু দুই child interval বাছে। বড় storage page-এ শুধু এক key রাখলে height কমানোর সুযোগ নষ্ট হয়।</p>
-<p>B-tree সব leaf একই depth-এ রাখে আর নোড কতটা ফাঁকা হতে পারে সীমা দেয়। এতে কাজে লাগার মতো fan-out নিশ্চিত। <dfn>B+ tree</dfn> record রাখার জায়গা বদলে range scan-এর জন্য leaf জোড়ে। দুটোই চওড়া নোড ব্যবহার করে, তবে separator-এর আচরণ আলাদা।</p>
-<p>এই পরিচয়ে দুই নকশা ব্যাখ্যা আর ছোট সম্পূর্ণ B-tree insertion প্রোগ্রাম আছে। Production disk pager বা B+ insertion বানানো হয়নি। শেষ উদাহরণে range scan আলাদা বোঝাতে fixed B+ leaf layout। তুলনার সময় এই পরিসর মনে রাখো।</p>
+<p class="lead">Disk index-এ লাখ লাখ roll-number record থাকতে পারে। আগে মেমরিতে থাকা কয়েকটি key তুলনার চেয়ে storage থেকে page আনার খরচ অনেক বেশি। <dfn>B-ট্রি</dfn> প্রতিটি চওড়া নোডে বেশ কয়েক key আর child link রেখে search path-এর page সংখ্যা কমায়।</p>
+<p>কয়েকটি interval লেখা directory page ভাবো। এক page-ই বলে দিতে পারে অনেক ছোট directory-র কোনটি খুলবে। Binary ট্রি প্রতি নোডে শুধু দুই child interval বাছে। বড় storage page-এ শুধু এক key রাখলে height কমানোর সুযোগ নষ্ট হয়।</p>
+<p>B-ট্রি সব leaf একই depth-এ রাখে আর নোড কতটা ফাঁকা হতে পারে সীমা দেয়। এতে কাজে লাগার মতো fan-out নিশ্চিত। <dfn>B+ ট্রি</dfn> record রাখার জায়গা বদলে range scan-এর জন্য leaf জোড়ে। দুটোই চওড়া নোড ব্যবহার করে, তবে separator-এর আচরণ আলাদা।</p>
+<p>এই পরিচয়ে দুই নকশা ব্যাখ্যা আর ছোট সম্পূর্ণ B-ট্রি insertion প্রোগ্রাম আছে। Production disk pager বা B+ insertion বানানো হয়নি। শেষ উদাহরণে range scan আলাদা বোঝাতে fixed B+ leaf layout। তুলনার সময় এই পরিসর মনে রাখো।</p>
 
 <h2 id="syntax">সূত্রের আগে order-এর অর্থ বলো</h2>
 <p>বইয়ে order-এর অর্থ আলাদা হতে পারে। এখানে <dfn>order m</dfn> মানে এক নোডের সর্বোচ্চ child সংখ্যা। Internal node-এ k sorted key থাকলে k+1 child interval। তাই সর্বোচ্চ key m-1।</p>
@@ -19,7 +19,7 @@ Child 2: keys &gt; 20
 <p>C-র BNode-এ count, leaf flag, তিন key আর চার child index-এর জায়গা। Fixed arena-তে বত্রিশ এমন record। সর্বোচ্চ বারো distinct insertion বলে এই ছোট উদাহরণের চেয়ে arena-তে বেশি জায়গা আছে। Page index-এর আড়ালে dynamic allocation নেই।</p>
 
 <h2 id="how-it-works">Interval খোঁজো আর ভরা page ভাগ করো</h2>
-<p>Page search-এ sorted key scan করো যতক্ষণ query পরের key-র বড়। সমান হলে ওই page-এ B-tree key পাওয়া যায়। সমান না হলে থামার অবস্থান child interval বলে। Leaf-এ সমান না পেলে key absent।</p>
+<p>Page search-এ sorted key scan করো যতক্ষণ query পরের key-র বড়। সমান হলে ওই page-এ B-ট্রি key পাওয়া যায়। সমান না হলে থামার অবস্থান child interval বলে। Leaf-এ সমান না পেলে key absent।</p>
 <p>10 আর 20 key-র page query 17-কে child interval একে, 25-কে দুইয়ে পাঠায়। শেখানোর কোড ছোট page-এর key linear scan করে। বড় page-এ CPU comparison কমাতে ভেতরে binary search করা যায়।</p>
 <p>Insertion page-এর সাজানো key আর সমান leaf depth রাখবে। t=2 implementation ভরা তিন-key node-এ নামার আগেই split করে। [5,10,20] হয় left [5], ওপরে ওঠা key 10 আর right [20]। Promoted key parent-এ দুই নতুন child link-এর মাঝে যায়।</p>
 <pre class="diagram">Root split-এর আগে: root ---&gt; [5 | 10 | 20]
@@ -53,9 +53,9 @@ Root split-এর পরে: root ---&gt; [10]
 <p>Separator 10 আর 20 শুরুর leaf বাছে। তারপর root-এ না ফিরে next link ধরে 7, 10, 12, 17 আর 20 দেয়।</p>
 <div data-example="ex-3"></div>
 
-<h2 id="comparison">B-tree record আর B+ leaf record</h2>
-<p>এখানকার B-tree-তে leaf-এর মতো internal page-এর key-ও record বোঝাতে পারে। Internal page-এ সমান পেলেই search শেষ হতে পারে। তাই পুরো ordered traversal-এ child traversal-এর মাঝে internal key প্রিন্ট করতে হবে। শুধু leaf দেখলে promoted record বাদ যাবে।</p>
-<p>এখানকার B+ নিয়মে পুরো data record leaf-এ থাকে। Internal key routing separator, সাধারণত নিচের boundary key-র copy। Internal separator সমান হলেও lookup leaf পর্যন্ত যায়। Exact separator rule বদলাতে পারে, তাই বাস্তব implementation-এ equality কোন interval-এ যায় বলতে হবে।</p>
+<h2 id="comparison">B-ট্রি record আর B+ leaf record</h2>
+<p>এখানকার B-ট্রি-তে leaf-এর মতো internal page-এর key-ও record বোঝাতে পারে। Internal page-এ সমান পেলেই search শেষ হতে পারে। তাই পুরো ordered traversal-এ child traversal-এর মাঝে internal key প্রিন্ট করতে হবে। শুধু leaf দেখলে promoted record বাদ যাবে।</p>
+<p>এখানকার B+ নিয়মে পুরো ডেটা record leaf-এ থাকে। Internal key routing separator, সাধারণত নিচের boundary key-র copy। Internal separator সমান হলেও lookup leaf পর্যন্ত যায়। Exact separator rule বদলাতে পারে, তাই বাস্তব implementation-এ equality কোন interval-এ যায় বলতে হবে।</p>
 <pre class="diagram">আগে বানানো B+ routing page: [10 | 20]
         /                    |                    \
 [5,6,7] --next--&gt; [10,12,17] --next--&gt; [20,30] --next--&gt; NULL
@@ -64,24 +64,24 @@ Scan-এর পরে: output=[7,10,12,17,20], key 30-এর আগে থাম
 কোনো page key বা leaf link বদলায়নি।</pre>
 <p>B+ scan উদাহরণে separator পরের leaf-এর minimum key। 10-এর ছোট query প্রথম leaf-এ, 10 থেকে 20-এর নিচে দ্বিতীয়তে, অন্তত 20 হলে তৃতীয়তে শুরু করে।</p>
 <p>দুই সীমা-সহ inclusive range scan-এ আগে lower-bound leaf খোঁজো। নিচের সীমার ছোট key বাদ দিয়ে মেলা record দাও, তারপর next ধরো। ওপরের সীমা ছাড়ালেই থামো। পরপর প্রতিটি record-এর জন্য root-এ ফিরতে হয় না।</p>
-<p>B+ leaf split সাধারণত record key leaf-এ রেখে separator ওপরে copy করে। আগের B-tree split middle key child page থেকে সরিয়ে parent-এ নেয়। দুই কাজ মেশালে record হারাতে বা duplicate হতে পারে। Page-এর ছবি কাছাকাছি হলেও এই পার্থক্য বেশি জরুরি।</p>
+<p>B+ leaf split সাধারণত record key leaf-এ রেখে separator ওপরে copy করে। আগের B-ট্রি split middle key child page থেকে সরিয়ে parent-এ নেয়। দুই কাজ মেশালে record হারাতে বা duplicate হতে পারে। Page-এর ছবি কাছাকাছি হলেও এই পার্থক্য বেশি জরুরি।</p>
 
 <h2 id="edge-cases">Height, কতটা ভরা আর resource সীমা</h2>
 <p>Minimum fan-out t অন্তত দুই হলে height O(log<sub>t</sub> n)। Search-এ তত page level লাগে। CPU কাজ page-এর ভেতরের search পদ্ধতিতেও নির্ভর করে। Linear scan-এ O(t log<sub>t</sub> n); fixed page capacity constant ধরলে n-এর হিসাবে logarithmic।</p>
-<p>Insertion এক নিচের পথ ধরে, পথে page split হতে পারে। Split-এ O(t) key আর link সরে, তাই CPU খরচে একই capacity factor। Recursive call space tree height-এর সমানুপাতে। Fixed minimum degree আর occupancy নিশ্চয়তায় রাখা page-এর মোট key capacity O(n)।</p>
+<p>Insertion এক নিচের পথ ধরে, পথে page split হতে পারে। Split-এ O(t) key আর link সরে, তাই CPU খরচে একই capacity factor। রিকার্সিভ call space ট্রি height-এর সমানুপাতে। Fixed minimum degree আর occupancy নিশ্চয়তায় রাখা page-এর মোট key capacity O(n)।</p>
 <p>ফাঁকা উদাহরণে count শূন্যের এক leaf root। প্রথম key তাতে ঢোকে, child page বানায় না। Insertion-এর আগে full root বৈধ; পরের distinct key এলে split হয়। Root-এর occupancy ব্যতিক্রম ছোট বৈধ ট্রিকে non-root নিয়ম ভাঙা থেকে বাঁচায়।</p>
-<p>Production page allocator-এ storage ভরলে failure policy লাগে। Fixed arena উদাহরণ বারো insertion থেকে ছোট capacity bound প্রমাণ করে, file I/O করে না। Key range বড় হলে page count বদলায় না; insertion সীমা বড় করলে arena bound আবার দেখতে হবে। Demonstration capacity-কে সাধারণ B-tree সীমা বলবে না।</p>
+<p>Production page allocator-এ storage ভরলে failure policy লাগে। Fixed arena উদাহরণ বারো insertion থেকে ছোট capacity bound প্রমাণ করে, ফাইল I/O করে না। Key range বড় হলে page count বদলায় না; insertion সীমা বড় করলে arena bound আবার দেখতে হবে। Demonstration capacity-কে সাধারণ B-ট্রি সীমা বলবে না।</p>
 <p>Deletion minimum occupancy ফেরাতে sibling থেকে key ধার বা page merge করতে পারে। সেগুলো এই insertion পরিচয়ের বাইরে। সাধারণ BST deletion wide-page occupancy রাখে না। একইভাবে leaf split বা merge হলে B+ leaf chain মেরামত লাগে।</p>
 
-<p>B+ range query-তে শুরুর নামার পরে qটি leaf page scan হলে page read O(h+q)। Result stream করলে cursor storage O(1)। CPU খরচে দেখা আর দেওয়া key-ও ধরতে হবে। B-tree range practice বরং সব page ক্রমে হাঁটে: O(n) সময় আর O(h+1) recursive space, B+ leaf link ব্যবহার করে না।</p>
+<p>B+ range query-তে শুরুর নামার পরে qটি leaf page scan হলে page read O(h+q)। Result stream করলে cursor storage O(1)। CPU খরচে দেখা আর দেওয়া key-ও ধরতে হবে। B-ট্রি range practice বরং সব page ক্রমে হাঁটে: O(n) সময় আর O(h+1) রিকার্সিভ space, B+ leaf link ব্যবহার করে না।</p>
 
 <h2 id="common-mistakes">Page-এর নিয়ম পরিষ্কার রাখো</h2>
 <h3>Order আর minimum degree একইভাবে ব্যবহার</h3><p>এখানে order চার আর minimum degree দুই একই সর্বোচ্চ capacity বোঝালেও সংখ্যার অর্থ আলাদা। সংজ্ঞার পাশে max children আর max keys লেখো। অন্য বইয়ে শব্দ আলাদা হলেও পরীক্ষার উত্তর বোঝা যাবে।</p>
-<h3>B+ record leaf থেকে সরানো</h3><p>বেছে নেওয়া B+ নিয়মে সব record leaf layer-এ চাই। Internal separator routing copy। B-tree-র middle-key move অপরিবর্তিত B+ leaf split-এ চলে না।</p>
-<h3>আগেই full parent-এ split করা</h3><p>split_child parent-এ এক key আর এক child link ঢোকায়। Top-down algorithm parent non-full রাখে। এই invariant না থাকলে shift-এ page capacity ছাড়িয়ে লেখা হবে।</p>
+<h3>B+ record leaf থেকে সরানো</h3><p>বেছে নেওয়া B+ নিয়মে সব record leaf layer-এ চাই। Internal separator routing copy। B-ট্রির middle-key move অপরিবর্তিত B+ leaf split-এ চলে না।</p>
+<h3>আগেই full parent-এ split করা</h3><p>split_child parent-এ এক key আর এক child link ঢোকায়। Top-down অ্যালগরিদম parent non-full রাখে। এই invariant না থাকলে shift-এ page capacity ছাড়িয়ে লেখা হবে।</p>
 
 <h2 id="version-notes">C17 page index</h2>
-<div class="callout version"><p>B-tree model C17 array আর integer child index ব্যবহার করে। Index মেমরি page-এর সম্পর্কের অনুকরণ, আসল disk address নয়। Fixed arena-র lifetime process-এর সঙ্গে; free লাগে এমন heap record নেই, filesystem page size ধরেও নেয় না।</p></div>
+<div class="callout version"><p>B-ট্রি মডেল C17 অ্যারে আর integer child index ব্যবহার করে। Index মেমরি page-এর সম্পর্কের অনুকরণ, আসল disk address নয়। Fixed arena-র lifetime process-এর সঙ্গে; free লাগে এমন হিপ record নেই, filesystem page size ধরেও নেয় না।</p></div>
 
 <h2 id="summary">চওড়া নোড storage-level depth কমায়</h2>
-<p>B-tree page occupancy আর split দিয়ে সব leaf একই depth-এ রাখে। B+ tree linked leaf-এ record রেখে range-কে পরপর এগোতে দেয়। পরের <a href="topic:ds-trie">trie</a> সংখ্যার key তুলনার বদলে character দিয়ে search path সাজায়।</p>
+<p>B-ট্রি page occupancy আর split দিয়ে সব leaf একই depth-এ রাখে। B+ ট্রি linked leaf-এ record রেখে range-কে পরপর এগোতে দেয়। পরের <a href="topic:ds-trie">trie</a> সংখ্যার key তুলনার বদলে character দিয়ে search path সাজায়।</p>

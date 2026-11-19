@@ -1,6 +1,6 @@
 <h2 id="introduction">কাজ অনুযায়ী প্রতিটি নোডে যাও</h2>
 <p class="lead">বিভাগের ট্রি থেকে কোর্সের তালিকা করতে, গঠন copy করতে বা মেমরি ছাড়তে চাও ধরো। তিন কাজেই নোডে যেতে হয়, কিন্তু ক্রম আলাদা। <dfn>Traversal</dfn> নির্দিষ্ট করে child-গুলোর তুলনায় কখন একটা নোডের কাজ হবে।</p>
-<p>ক্রম তুলনা করার সময় ট্রি বদলাবে না। প্রিন্টের key সরানো আর মেমরির নোড সরানো এক নয়। উদাহরণগুলো <a href="topic:ds-binary-tree">বাইনারি ট্রির representation</a> পাঠের complete গঠন বানায়। Lab-এও একই level-order input নিয়ম।</p>
+<p>ক্রম তুলনা করার সময় ট্রি বদলাবে না। প্রিন্টের key সরানো আর মেমরির নোড সরানো এক নয়। উদাহরণগুলো <a href="topic:ds-binary-tree">বাইনারি ট্রির representation</a> পাঠের complete গঠন বানায়। Lab-এও একই level-order ইনপুট নিয়ম।</p>
 <p>Left আর right subtree-সহ root-এর কাজ করার তিনটি স্বাভাবিক জায়গা আছে: দুই child-এর আগে, মাঝখানে বা পরে। এগুলো preorder, inorder আর postorder। Level order এক depth-এর সব নোড শেষ করে তবেই আরও নিচে যায়।</p>
 
 <h2 id="syntax">Visit সঠিক জায়গায় রাখো</h2>
@@ -21,8 +21,8 @@ Postorder-এর পরে:order=[1,6,3,9,14,10,8]; একই link
 Level order শেষে:order=[8,3,10,1,6,9,14]; একই link</pre>
 <p>এই নির্দিষ্ট ট্রি BST-র ক্রমও মানে, তাই inorder ফল সাজানো। Link না বদলে root key -5 করলে inorder আর সাজানো থাকবে না। Traversal গঠন ধরে চলে; key-র অবস্থান ঠিক করে না, মানও তুলনা করে না।</p>
 
-<h2 id="how-it-works">Recursive call, কিউ আর নিজের রাখা স্ট্যাক</h2>
-<p>Preorder শুরুতেই 8 visit করে। তার left call 3, তারপর 1 visit করে, ফিরে এসে 6 visit করে। পুরো left subtree শেষ হলেই 10-এর call শুরু। প্রতিটি recursive call-এর নিজস্ব current root pointer আছে, কিন্তু ট্রির record সবার জন্য একই।</p>
+<h2 id="how-it-works">রিকার্সিভ call, কিউ আর নিজের রাখা স্ট্যাক</h2>
+<p>Preorder শুরুতেই 8 visit করে। তার left call 3, তারপর 1 visit করে, ফিরে এসে 6 visit করে। পুরো left subtree শেষ হলেই 10-এর call শুরু। প্রতিটি রিকার্সিভ call-এর নিজস্ব current root পয়েন্টার আছে, কিন্তু ট্রির record সবার জন্য একই।</p>
 <p>Inorder-এ left call ফিরে না আসা পর্যন্ত 8-এর visit অপেক্ষা করে। সেই left call-ও 1-এর call না ফেরা পর্যন্ত 3-কে অপেক্ষায় রাখে। তাই প্রথম প্রিন্ট হয় 1। Postorder-এ সব descendant-এর কাজ শেষ না হওয়া পর্যন্ত 3 আর 8 দুটোই অপেক্ষা করে।</p>
 <table class="ref"><caption>Root 3 কখন visit হয়</caption><thead><tr><th scope="col">ক্রম</th><th scope="col">3 visit-এর আগে</th><th scope="col">3 visit-এর পরে</th></tr></thead><tbody><tr><td>Preorder</td><td>কোনো child traversal নয়</td><td>1, তারপর 6 visit</td></tr><tr><td>Inorder</td><td>1 visit</td><td>6 visit</td></tr><tr><td>Postorder</td><td>1 আর 6 visit</td><td>8-এ ফেরা</td></tr></tbody></table>
 <p>Level order পয়েন্টারের কিউ ব্যবহার করে। Root থাকলে enqueue করো। বারবার cur dequeue করে visit করো, তারপর cur.left আর cur.right থাকলে enqueue করো। FIFO নিয়মে আগে আসা সবাই পরের level-এর child-গুলোর আগে থাকে।</p>
@@ -30,21 +30,21 @@ Level order শেষে:order=[8,3,10,1,6,9,14]; একই link</pre>
 8-এর কাজের পরে: queue=[3,10], order=[8]
 3-এর কাজের পরে: queue=[10,1,6], order=[8,3]
 10-এর কাজের পরে: queue=[1,6,9,14], order=[8,3,10]</pre>
-<p>উদাহরণে সর্বোচ্চ বারো নোডের input বলে কিউতে বারোটি pointer slot রাখা হয়েছে। বড় অ্যাপে বাড়তে পারে এমন কিউ বা width-এর প্রমাণিত সীমা লাগবে। একসঙ্গে কিউতে সর্বোচ্চ কত থাকে তা height নয়, ট্রির width-এর সঙ্গে সম্পর্কিত। তাই চওড়া খাটো ট্রিতে recursive depth-first traversal-এর চেয়ে কিউতে বেশি জায়গা লাগতে পারে।</p>
-<p>Iterative inorder call stack-এর বদলে নিজের স্ট্যাক রাখে। cur push করে বামে যাও, যতক্ষণ না cur NULL হয়। সর্বশেষ অপেক্ষার ancestor pop করে visit করো, তারপর তার right subtree-তে যাও। cur NULL আর স্ট্যাক ফাঁকা দুটো একসঙ্গে না হওয়া পর্যন্ত চালাও।</p>
+<p>উদাহরণে সর্বোচ্চ বারো নোডের ইনপুট বলে কিউতে বারোটি পয়েন্টার slot রাখা হয়েছে। বড় অ্যাপে বাড়তে পারে এমন কিউ বা width-এর প্রমাণিত সীমা লাগবে। একসঙ্গে কিউতে সর্বোচ্চ কত থাকে তা height নয়, ট্রির width-এর সঙ্গে সম্পর্কিত। তাই চওড়া খাটো ট্রিতে রিকার্সিভ depth-first traversal-এর চেয়ে কিউতে বেশি জায়গা লাগতে পারে।</p>
+<p>ইটারেটিভ inorder call স্ট্যাকের বদলে নিজের স্ট্যাক রাখে। cur push করে বামে যাও, যতক্ষণ না cur NULL হয়। সর্বশেষ অপেক্ষার ancestor pop করে visit করো, তারপর তার right subtree-তে যাও। cur NULL আর স্ট্যাক ফাঁকা দুটো একসঙ্গে না হওয়া পর্যন্ত চালাও।</p>
 <p>স্ট্যাকের invariant থেকে পদ্ধতি বোঝা যায়: রাখা প্রতিটি ancestor বামে নামার পরে নিজের visit-এর অপেক্ষায়। Pop হওয়া নোডের left subtree শেষ, তাই সে প্রস্তুত। ডানে গেলে সেই subtree-তে একই কাজ শুরু। প্রতিটি পয়েন্টার একবার স্ট্যাকে ঢোকে আর বের হয়।</p>
 <div data-lab="tree-traversals"></div>
 <p>Lab-এ mode শূন্যে preorder, একে inorder, দুইয়ে postorder আর তিনে level order বেছে নেওয়া হয়। প্রথম উদাহরণে একই count, key আর mode দাও। তাহলে order panel আর C-র order line মিলবে। এখানে একই মান একাধিকবার চলবে, কারণ unique key নয়, অবস্থান দিয়ে নোড চেনা হয়।</p>
-<p>প্রতিটি নোড একবার visit হয়, তাই চার traversal-ই O(n) সময় নেয়। Recursive depth-first traversal আর iterative inorder-এর কাজের জায়গা O(h+1)। সর্বোচ্চ width w হলে level order-এর live queue space O(w)। পুরো output জমালে traversal-এর ব্যবস্থার বাইরে আলাদা O(n) storage লাগে।</p>
+<p>প্রতিটি নোড একবার visit হয়, তাই চার traversal-ই O(n) সময় নেয়। রিকার্সিভ depth-first traversal আর ইটারেটিভ inorder-এর কাজের জায়গা O(h+1)। সর্বোচ্চ width w হলে level order-এর live কিউ space O(w)। পুরো আউটপুট জমালে traversal-এর ব্যবস্থার বাইরে আলাদা O(n) storage লাগে।</p>
 
 <h2 id="examples">চারটি visit নিয়ম চালাও</h2>
-<p>একই positional input-এ recursive আর iterative inorder একই key sequence প্রিন্ট করার কথা। Reconstruction প্রোগ্রামে শুধু আলাদা key দাও। সেটি ভিন্ন কাজ করে: level-order অবস্থান নেওয়ার বদলে visit sequence থেকে link উদ্ধার করে।</p>
+<p>একই positional ইনপুট-এ রিকার্সিভ আর ইটারেটিভ inorder একই key sequence প্রিন্ট করার কথা। Reconstruction প্রোগ্রামে শুধু আলাদা key দাও। সেটি ভিন্ন কাজ করে: level-order অবস্থান নেওয়ার বদলে visit sequence থেকে link উদ্ধার করে।</p>
 
-<h3>Complete input tree-র traversal বেছে নাও</h3>
+<h3>Complete ইনপুট ট্রির traversal বেছে নাও</h3>
 <p>সাজানো ছাড়াই ট্রি তৈরি হয়। Mode 1 প্রথমে left subtree, তারপর root, শেষে right subtree visit করে।</p>
 <div data-example="ex-1"></div>
 
-<h3>Recursive call ছাড়া inorder হাঁটো</h3>
+<h3>রিকার্সিভ call ছাড়া inorder হাঁটো</h3>
 <p>নিজের স্ট্যাক visit-এর অপেক্ষার ancestor মনে রাখে। প্রতিটি পয়েন্টার একবার push আর pop হয়।</p>
 <div data-example="ex-2"></div>
 
@@ -59,19 +59,19 @@ Level order শেষে:order=[8,3,10,1,6,9,14]; একই link</pre>
 Root দিয়ে ভাগ: left interval=[1,3,6], root=[8], right interval=[10]
 Allocate-এর পরে: root ---&gt; [8 | left ---&gt; 3 | right ---&gt; 10]
                                        3.left ---&gt; 1; 3.right ---&gt; 6</pre>
-<p>উদাহরণে প্রতিটি inorder ভাগের স্থান linear search-এ খোঁজা হয়। Worst case-এ reconstruction O(n squared) সময় নেয়। আলাদা key থেকে অবস্থান দক্ষভাবে পাওয়া গেলে index map দিয়ে মোট lookup O(n) করা যায়। Recursion-এ তখনও O(h+1) জায়গা আর তৈরি ট্রিতে O(n) record লাগে।</p>
+<p>উদাহরণে প্রতিটি inorder ভাগের স্থান linear search-এ খোঁজা হয়। Worst case-এ reconstruction O(n squared) সময় নেয়। আলাদা key থেকে অবস্থান দক্ষভাবে পাওয়া গেলে index map দিয়ে মোট lookup O(n) করা যায়। রিকার্শন-এ তখনও O(h+1) জায়গা আর তৈরি ট্রিতে O(n) record লাগে।</p>
 <p>Inorder-এ duplicate key বাদ দাও, কারণ root-এর অবস্থান অস্পষ্ট হয়। বর্তমান interval-এ preorder key না থাকলেও বাদ দাও। ok flag আংশিক তৈরি subtree দিয়ে ব্যর্থতার খবর ফেরায়। Sequence না মিলুক বা allocation ব্যর্থ হোক, cleanup record-গুলো ছেড়ে দেয়।</p>
-<p>ফাঁকা sequence থেকে ফাঁকা ট্রি ফেরে আর ফাঁকা postorder line প্রিন্ট হয়। এক key-তে leaf হয়। পুরো traversal pair দিয়ে যেকোনো distinct-key binary tree নির্দিষ্ট হয়, কিন্তু শুধু preorder দিয়ে সাধারণত হয় না। অস্পষ্টতা সরাতে গঠন নিয়ে বাড়তি শর্ত লাগবে।</p>
+<p>ফাঁকা sequence থেকে ফাঁকা ট্রি ফেরে আর ফাঁকা postorder line প্রিন্ট হয়। এক key-তে leaf হয়। পুরো traversal pair দিয়ে যেকোনো distinct-key binary ট্রি নির্দিষ্ট হয়, কিন্তু শুধু preorder দিয়ে সাধারণত হয় না। অস্পষ্টতা সরাতে গঠন নিয়ে বাড়তি শর্ত লাগবে।</p>
 
-<p>Reconstruction-এ সব preorder key ব্যবহৃত হয়েছে কি না-ও যাচাই করতে হবে। Inorder ভাগ বৈধ হলেই বাড়তি input মাফ হয় না। Implementation-এ শুধু ফাঁকা নয় এমন interval root তৈরি করলেই pos বাড়ে। শেষে pos অবশ্যই n হবে এবং প্রতিটি recursive interval নিজের root খুঁজে পাবে।</p><p>ছোট অবৈধ pair হলো preorder 2,3,1 আর inorder 1,2,3। Root 2-এর পরের preorder key left interval [1]-এর হওয়া চাই, কিন্তু 3 বাইরে। ভুল subtree-তে 3 বসানোর বদলে সঙ্গে সঙ্গে pair বাদ দাও।</p>
+<p>Reconstruction-এ সব preorder key ব্যবহৃত হয়েছে কি না-ও যাচাই করতে হবে। Inorder ভাগ বৈধ হলেই বাড়তি ইনপুট মাফ হয় না। Implementation-এ শুধু ফাঁকা নয় এমন interval root তৈরি করলেই pos বাড়ে। শেষে pos অবশ্যই n হবে এবং প্রতিটি রিকার্সিভ interval নিজের root খুঁজে পাবে।</p><p>ছোট অবৈধ pair হলো preorder 2,3,1 আর inorder 1,2,3। Root 2-এর পরের preorder key left interval [1]-এর হওয়া চাই, কিন্তু 3 বাইরে। ভুল subtree-তে 3 বসানোর বদলে সঙ্গে সঙ্গে pair বাদ দাও।</p>
 
 <h2 id="common-mistakes">Visit আর return আলাদা রাখো</h2>
-<h3>Inorder loop-এ শুধু স্ট্যাক ফাঁকা কি না দেখা</h3><p>শুরুতে cur root দেখালেও স্ট্যাক ফাঁকা। cur থাকলে অথবা আগের ancestor থাকলে চালাও। কোনো দিক থেকেই আর নোড না পেলেই থামো।</p>
-<h3>NULL child enqueue করা</h3><p>NULL ফাঁকা অবস্থান, প্রিন্টের অপেক্ষার নোড নয়। Enqueue করার আগে দুই child pointer পরীক্ষা করো। না হলে পরে dequeue করে অবৈধ পয়েন্টার dereference হতে পারে।</p>
+<h3>Inorder লুপ-এ শুধু স্ট্যাক ফাঁকা কি না দেখা</h3><p>শুরুতে cur root দেখালেও স্ট্যাক ফাঁকা। cur থাকলে অথবা আগের ancestor থাকলে চালাও। কোনো দিক থেকেই আর নোড না পেলেই থামো।</p>
+<h3>NULL child enqueue করা</h3><p>NULL ফাঁকা অবস্থান, প্রিন্টের অপেক্ষার নোড নয়। Enqueue করার আগে দুই child পয়েন্টার পরীক্ষা করো। না হলে পরে dequeue করে অবৈধ পয়েন্টার dereference হতে পারে।</p>
 <h3>Preorder-এ নোড free করা</h3><p>Root free করার পরে তার child field পড়া যায় না। নিজের subtree আগে destroy করতে postorder ব্যবহার করো। Preorder প্রিন্ট নিরাপদ, কারণ প্রিন্ট করলে বর্তমান record ছাড়া হয় না।</p>
 
 <h2 id="version-notes">C17 traversal-এর নিয়ম</h2>
-<div class="callout version"><p>এখানের function call আর pointer access C17-এ নির্ধারিত, কিন্তু recursion কত গভীর হতে পারবে তার নির্দিষ্ট নিশ্চয়তা নেই। বারো নোডের input সীমা উদাহরণগুলো বেঁধে রাখে। বড় skewed tree-তে execution stack শেষ হওয়া ঠেকাতে নিজের স্ট্যাক লাগতে পারে।</p></div>
+<div class="callout version"><p>এখানের ফাংশন call আর পয়েন্টার access C17-এ নির্ধারিত, কিন্তু রিকার্শন কত গভীর হতে পারবে তার নির্দিষ্ট নিশ্চয়তা নেই। বারো নোডের ইনপুট সীমা উদাহরণগুলো বেঁধে রাখে। বড় skewed ট্রি-তে execution স্ট্যাক শেষ হওয়া ঠেকাতে নিজের স্ট্যাক লাগতে পারে।</p></div>
 
 <h2 id="summary">কাজ দেখে ক্রম বেছে নাও</h2>
 <p>আগে root দেখাতে child-এর আগে visit করো, inorder-এর জন্য মাঝে, আর নির্ভরশীল কাজ শেষে করতে child-এর পরে। Level দরকার হলে কিউ ব্যবহার করো। পরের <a href="topic:ds-binary-search-tree">বাইনারি সার্চ ট্রি</a> key-র সীমা যোগ করে এক পথ ধরে search সম্ভব করে।</p>

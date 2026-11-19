@@ -1,6 +1,6 @@
 <h2 id="introduction">পাশের নোড না হারিয়ে record সরাও</h2>
 <p class="lead">Registry থেকে roll number বাদ দিতে হতে পারে, অথচ তার ট্রি নোডের নিচে অন্য record আছে। সঙ্গে সঙ্গে ঘর মুছলে child link হারাবে। BST deletion আগে ঠিক করে ঘরটার জায়গা কে নেবে, তারপর incoming link ঠিক করে, শেষে অদরকারি record ছাড়ে।</p>
-<p>মূল প্রশ্ন ownership। Parent বা caller-এর root variable একটা subtree-তে ঢোকার pointer-এর মালিক। Deletion routine-কে subtree-র নতুন root ফেরাতে হবে। সেই পয়েন্টার আগের root, বেঁচে থাকা child বা NULL হতে পারে।</p>
+<p>মূল প্রশ্ন ownership। Parent বা caller-এর root ভেরিয়েবল একটা subtree-তে ঢোকার পয়েন্টার-এর মালিক। Deletion routine-কে subtree-র নতুন root ফেরাতে হবে। সেই পয়েন্টার আগের root, বেঁচে থাকা child বা NULL হতে পারে।</p>
 <p>তুমি <a href="topic:ds-binary-search-tree">BST-র ক্রম, search আর minimum</a> জানো। Deletion একই তুলনা দিয়ে target-এ পৌঁছায়, তারপর শূন্য, এক আর দুই child আলাদা সামলায়। এখানেও unique key-র নিয়ম, তাই প্রতিটি সফল অনুরোধে ঠিক একটা রাখা key সরে।</p>
 <p>free-এর আগে link ভাবো। মেমরি ছাড়লে অন্য পয়েন্টার নিজে ঠিক হয় না। Parent পুরোনো address দেখালে বিপদ। নিচের ছবিতে প্রতিটি deletion case-এর আগে আর পরে কাঙ্ক্ষিত অবস্থা দেখানো আছে।</p>
 
@@ -24,14 +24,14 @@
 পরে: parent.left ---&gt; NULL
 ছাড়া হলো: 3 রাখা record</pre>
 <p>Leaf-এর নিজের কোনো child subtree নেই। বদলি হিসেবে NULL রেখে leaf record ছাড়ো, NULL ফেরাও। Parent-এর assignment incoming link সরায়। Leaf-ই পুরো ট্রি হলে caller NULL পায়, ট্রি ফাঁকা হয়।</p>
-<p>সরানোর স্থানীয় pointer কাজ O(1)। কিন্তু leaf খুঁজতে root থেকে leaf পর্যন্ত পুরো search লাগতে পারে। স্থানীয় edit আর পুরো কাজের খরচ এক কোরো না। Target না থাকলে search হয়, কিন্তু এই release case আসে না।</p>
+<p>সরানোর স্থানীয় পয়েন্টার কাজ O(1)। কিন্তু leaf খুঁজতে root থেকে leaf পর্যন্ত পুরো search লাগতে পারে। স্থানীয় edit আর পুরো কাজের খরচ এক কোরো না। Target না থাকলে search হয়, কিন্তু এই release case আসে না।</p>
 <h3>দ্বিতীয় case: ঠিক এক child</h3>
 <pre class="diagram">আগে: root ---&gt; [8 | left ---&gt; 3 | right=NULL]
                      [3 | left ---&gt; 1 | right ---&gt; 6]
 রাখা হলো: child ---&gt; 3
 পরে: root ---&gt; [3 | left ---&gt; 1 | right ---&gt; 6]
 ছাড়া হলো: শুধু পুরোনো 8 record; subtree 3 বেঁচে আছে</pre>
-<p>free-এর আগে non-NULL child pointer রাখো। Child আগেই deleted node-এর ancestor-দের সব সীমা মানে। তাই তাকে ওপরে তুললেও BST-র নিয়ম থাকে। রাখা pointer ফেরাও, যাতে আসল owner মুছে ফেলা record পাশ কাটাতে পারে।</p>
+<p>free-এর আগে non-NULL child পয়েন্টার রাখো। Child আগেই deleted node-এর ancestor-দের সব সীমা মানে। তাই তাকে ওপরে তুললেও BST-র নিয়ম থাকে। রাখা পয়েন্টার ফেরাও, যাতে আসল owner মুছে ফেলা record পাশ কাটাতে পারে।</p>
 <p>এখানে মুছতে যাওয়া নোডে destroy চালানো ভুল। Destroy পুরো নিজের subtree ছাড়ে, যে child বাঁচাতে হবে তাকেও। শুধু আলাদা করা record-এ free চালাও। বদলি link দায় নেওয়ার পরে তার আগের child field আর record-গুলোর মালিক নয়।</p>
 <h3>তৃতীয় case: দুই child</h3>
 <pre class="diagram">আগে:             [8]
@@ -47,21 +47,21 @@ Successor copy: record 8-এর key হয় 9
                          \
                          [14]</pre>
 <p>Right subtree-র minimum নোড বেছে নাও। তার key left subtree-র সব key-র বড় এবং right subtree-র অন্য কোনো key-র বড় নয়। সেই key target-এ copy করে পুরোনো successor record সরালে ক্রম থাকে।</p>
-<p>Successor-এর left child থাকতে পারে না, থাকলে right subtree-তেই আরও ছোট key পাওয়া যেত। Right child থাকতে পারে। তাই তাকে সরানো শূন্য বা এক child-এর case-এ নামে। এই successor-এর recursive erase-এ আর দুই child বদলাতে হবে না।</p>
+<p>Successor-এর left child থাকতে পারে না, থাকলে right subtree-তেই আরও ছোট key পাওয়া যেত। Right child থাকতে পারে। তাই তাকে সরানো শূন্য বা এক child-এর case-এ নামে। এই successor-এর রিকার্সিভ erase-এ আর দুই child বদলাতে হবে না।</p>
 <p>Copy-র পরে সাময়িকভাবে দুই record-এ একই key থাকে। এটা কাজের মাঝের অবস্থা। সেখানে থামবে না বা সম্পূর্ণ বৈধ set হিসেবে দেখাবে না। পরের erase পুরোনো successor সরায়।</p>
 <div data-lab="bst-delete"></div>
 <p>Lab প্রথম উদাহরণের একই insertion-order BST থেকে শুরু। তুলনা, successor ধরে হাঁটা, key বদল, owner-link মেরামত আর আসল deletion আলাদা action দেখায়। কোনো root বা child link record-টি না দেখালেই delete হয়। ফলে dangling reference-কে সরাসরি link-এর সমস্যা হিসেবে বোঝা যায়।</p>
-<p>Successor নিজেই right child হলে recursive removal সরাসরি target-এর right link বদলায়। Successor আরও কয়েক level বামে হলে আর তার right child থাকলে তার parent left link দিয়ে সেই child নেয়; বাকি right subtree অক্ষত থাকে।</p>
+<p>Successor নিজেই right child হলে রিকার্সিভ removal সরাসরি target-এর right link বদলায়। Successor আরও কয়েক level বামে হলে আর তার right child থাকলে তার parent left link দিয়ে সেই child নেয়; বাকি right subtree অক্ষত থাকে।</p>
 
 <h2 id="examples">কোন record সরল trace করো</h2>
-<p>প্রথম উদাহরণ দুই child-এর root সরায়, দ্বিতীয়টি root-এর একমাত্র child ওপরে তোলে। Drain উদাহরণ root না থাকা পর্যন্ত বারবার minimum সরায়। চালানোর আগে ভাবো কোন আসল record free হবে, তার বদলি কোন pointer পাবে।</p>
+<p>প্রথম উদাহরণ দুই child-এর root সরায়, দ্বিতীয়টি root-এর একমাত্র child ওপরে তোলে। Drain উদাহরণ root না থাকা পর্যন্ত বারবার minimum সরায়। চালানোর আগে ভাবো কোন আসল record free হবে, তার বদলি কোন পয়েন্টার পাবে।</p>
 
 <h3>Key সরিয়ে root link ঠিক করো</h3>
 <p>Root-এর দুই child। তার key 9 হয়, তারপর আগের 9 রাখা নোডের link কেটে free করা হয়।</p>
 <div data-example="ex-1"></div>
 
 <h3>এক child-সহ root মুছো</h3>
-<p>Root link আগে রাখা child pointer পায়। নোড 8 free হলেও নোড 3 বেঁচে থাকে।</p>
+<p>Root link আগে রাখা child পয়েন্টার পায়। নোড 8 free হলেও নোড 3 বেঁচে থাকে।</p>
 <div data-example="ex-2"></div>
 
 <h3>বারবার minimum সরিয়ে ট্রি ফাঁকা করো</h3>
@@ -69,29 +69,29 @@ Successor copy: record 8-এর key হয় 9
 <div data-example="ex-3"></div>
 
 <h2 id="edge-cases">খরচ, ব্যর্থতা আর একই অনুরোধ বারবার</h2>
-<p>Deletion search সর্বোচ্চ h+1 দৈর্ঘ্যের এক পথ ধরে। Successor search right subtree-র মধ্যে থাকে, পুরো ট্রি ঘাঁটে না। মোট সময় O(h+1), recursive call space-ও O(h+1); deletion নতুন node record allocate করে না।</p>
-<p>Balanced tree-তে সীমা O(log n), কিন্তু সাধারণ BST-র height n-1 হতে পারে। চেইনে তাই O(n) deletion সময় আর call depth হতে পারে। নোড সরালেই ancestor-রা rebalanced হয় না। পরের AVL পাঠে সেই আলাদা কাজ আসবে।</p>
+<p>Deletion search সর্বোচ্চ h+1 দৈর্ঘ্যের এক পথ ধরে। Successor search right subtree-র মধ্যে থাকে, পুরো ট্রি ঘাঁটে না। মোট সময় O(h+1), রিকার্সিভ call space-ও O(h+1); deletion নতুন node record allocate করে না।</p>
+<p>Balanced ট্রি-তে সীমা O(log n), কিন্তু সাধারণ BST-র height n-1 হতে পারে। চেইনে তাই O(n) deletion সময় আর call depth হতে পারে। নোড সরালেই ancestor-রা rebalanced হয় না। পরের AVL পাঠে সেই আলাদা কাজ আসবে।</p>
 <p>ফাঁকা ট্রি থেকে মুছলে free ছাড়াই NULL ফেরে। একমাত্র নোড মুছলেও NULL ফেরে, তবে আগে একটা record free হয়। না থাকা key মুছলে সব নোড আর link আগের মতো। তাই সফল deletion আবার চাইলে দ্বিতীয়বার আর কিছু সরে না।</p>
-<p>Linked BST deletion-এ capacity-full case নেই; এখানে storage নেওয়া নয়, ছাড়া হয়। Trace ছোট রাখতে input প্রোগ্রামে তবু বারো key-র সীমা। পরের query পড়া না গেলে failure path বাকি ট্রি destroy করে।</p>
-<p>বাইরের কোডের রাখা পয়েন্টার deletion-এ অবৈধ হতে পারে। Target record-এর pointer রাখলে দুই child deletion-এ address টিকে গেলেও key বদলাতে পারে। Successor record-এর pointer release-এর পরে অবৈধ। এই পাঠে key দিয়ে query করা হয়, record identity স্থির থাকার প্রতিশ্রুতি নেই।</p>
-<p>আসল নোডে integer key ছাড়া আরও data থাকলে replacement নিয়ে ভাবতে হবে। পুরো logical record copy করো বা তার payload-এর ownership বুঝে সরাও। শুধু key copy করে অন্য data রেখে দিলে এক roll number-এ অন্য শিক্ষার্থীর marks জুড়ে যেতে পারে। Shared বা heap-owned payload-এরও স্পষ্ট ownership rule দরকার।</p>
+<p>Linked BST deletion-এ capacity-full case নেই; এখানে storage নেওয়া নয়, ছাড়া হয়। Trace ছোট রাখতে ইনপুট প্রোগ্রামে তবু বারো key-র সীমা। পরের query পড়া না গেলে failure path বাকি ট্রি destroy করে।</p>
+<p>বাইরের কোডের রাখা পয়েন্টার deletion-এ অবৈধ হতে পারে। Target record-এর পয়েন্টার রাখলে দুই child deletion-এ address টিকে গেলেও key বদলাতে পারে। Successor record-এর পয়েন্টার release-এর পরে অবৈধ। এই পাঠে key দিয়ে query করা হয়, record identity স্থির থাকার প্রতিশ্রুতি নেই।</p>
+<p>আসল নোডে integer key ছাড়া আরও ডেটা থাকলে replacement নিয়ে ভাবতে হবে। পুরো logical record copy করো বা তার payload-এর ownership বুঝে সরাও। শুধু key copy করে অন্য ডেটা রেখে দিলে এক roll number-এ অন্য শিক্ষার্থীর marks জুড়ে যেতে পারে। Shared বা হিপ-owned payload-এরও স্পষ্ট ownership rule দরকার।</p>
 <p>পুরো ট্রি cleanup এখনও postorder: আগে left destroy, তারপর right, শেষে current free। সাধারণ deletion-এ ওপরে তোলা child-এর ওপর সেই cleanup চলবে না। উদাহরণে শেষে বেঁচে থাকা root-এই শুধু destroy চলে। এক record সরানো আর প্রোগ্রাম শেষে সব ownership ছাড়া আলাদা থাকে।</p>
-<p>Practice-এর pruning সমস্যা শুধু আগের গঠনের leaf সরায়। Recursion-এর আগে leaf পরীক্ষা করে বলে নতুন প্রকাশিত leaf টিকে যায়। Trimming সমস্যা child trim করার পরে interval-এর বাইরের সব key সরায়। শুধু function-এর নাম চেনার মতোই এই নিয়ম পড়া জরুরি।</p>
+<p>Practice-এর pruning সমস্যা শুধু আগের গঠনের leaf সরায়। রিকার্শন-এর আগে leaf পরীক্ষা করে বলে নতুন প্রকাশিত leaf টিকে যায়। Trimming সমস্যা child trim করার পরে interval-এর বাইরের সব key সরায়। শুধু ফাংশন-এর নাম চেনার মতোই এই নিয়ম পড়া জরুরি।</p>
 
-<h2 id="common-mistakes">Subtree-র owner pointer ঠিক করো</h2>
-<h3>ফেরত পাওয়া root না নেওয়া</h3><p>Assignment ছাড়া erase(root,key) লিখলে ওপরে ওঠা root হারাবে বা free হওয়া address রেখে দেবে। বর্তমান owner-এ ফেরত pointer জুড়ো। Recursively দুই child field-এও একই নিয়ম।</p>
-<h3>free-এর পরে child পড়া</h3><p>free(root) record-এর lifetime শেষ করে। পুরোনো bit একই দেখালেও পরে root.left পড়া undefined behavior। আগে live child pointer রাখো, তারপর record ছেড়ে রাখা মান ফেরাও।</p>
+<h2 id="common-mistakes">Subtree-র owner পয়েন্টার ঠিক করো</h2>
+<h3>ফেরত পাওয়া root না নেওয়া</h3><p>Assignment ছাড়া erase(root,key) লিখলে ওপরে ওঠা root হারাবে বা free হওয়া address রেখে দেবে। বর্তমান owner-এ ফেরত পয়েন্টার জুড়ো। Recursively দুই child field-এও একই নিয়ম।</p>
+<h3>free-এর পরে child পড়া</h3><p>free(root) record-এর lifetime শেষ করে। পুরোনো bit একই দেখালেও পরে root.left পড়া undefined behavior। আগে live child পয়েন্টার রাখো, তারপর record ছেড়ে রাখা মান ফেরাও।</p>
 <h3>যেকোনো বড় key দিয়ে বদলানো</h3><p>Right subtree-র maximum বসালে নতুন root-এর ডানে ছোট key থেকে যেতে পারে। Right minimum বিশেষ, কারণ বাকি right key সব তার বড়। এলোমেলো right descendant নয়, minimum(root.right) নাও।</p>
 <h3>পুরোনো successor ভুলে যাওয়া</h3><p>Key copy deletion নয়। দ্বিতীয় erase না হলে node count বদলায় না, duplicate থেকে যায়। সঠিক দুই child অনুরোধে size ঠিক এক কমবে।</p>
 
 <h2 id="best-practices">হাতে erase যাচাই করো</h2>
-<p>প্রতিটি allocated record-এর child field-সহ ঘর আঁকো। Free হবে যেটি, গোল করো। সেটি কাটার আগে বদলি owner link আঁকো। তারপর দেখো root ছাড়া প্রতিটি বেঁচে থাকা record-এর ঠিক একটা incoming tree link আছে কি না।</p>
+<p>প্রতিটি allocated record-এর child field-সহ ঘর আঁকো। Free হবে যেটি, গোল করো। সেটি কাটার আগে বদলি owner link আঁকো। তারপর দেখো root ছাড়া প্রতিটি বেঁচে থাকা record-এর ঠিক একটা incoming ট্রি link আছে কি না।</p>
 <p>Right child-সহ গভীর successor পরীক্ষা করো; যেমন key 8,3,12,10,14,9,11 নিয়ে 8 মুছো। সরাসরি right successor, এক নোড আর না থাকা key-ও পরীক্ষা করো। প্রতিবার record গুনে inorder-কে আগের set থেকে target বাদ দেওয়া ফলের সঙ্গে মেলাও। পরীক্ষাগুলো আলাদা ভুল ধরে।</p>
 
 <p>Successor-এর right child পরীক্ষা করতে 8,3,15,10,20,12 insert করে 8 মুছো। Successor 10-এর right child 12 আছে। পুরোনো root-এ 10 copy করো, 15.left-কে 12 দেখাও, তারপর পুরোনো 10 record ছাড়ো। Inorder হবে 3,10,12,15,20। আগের leaf-successor উদাহরণ থেকে এটা আলাদা: এখানে পুরোনো successor-এর জায়গায় NULL দিলে দরকারি নোড 12 হারাবে।</p>
 
 <h2 id="version-notes">C17 lifetime-এর নিয়ম</h2>
-<div class="callout version"><p>C17-এ free(NULL) চলে, কিন্তু free হওয়া non-NULL pointer পড়া বা আবার free করা নিরাপদ হয় না। উদাহরণে প্রতিটি আসল record একবার ছাড়া হয়। আগের address আর পরের কোনো allocation-এর সম্পর্ক থাকার বাধ্যবাধকতা নেই।</p></div>
+<div class="callout version"><p>C17-এ free(NULL) চলে, কিন্তু free হওয়া non-NULL পয়েন্টার পড়া বা আবার free করা নিরাপদ হয় না। উদাহরণে প্রতিটি আসল record একবার ছাড়া হয়। আগের address আর পরের কোনো allocation-এর সম্পর্ক থাকার বাধ্যবাধকতা নেই।</p></div>
 
 <h2 id="summary">বদলি বসানো আর ছাড়া আলাদা রাখো</h2>
 <p>শূন্য আর এক child case সরাসরি owner link বদলায়। দুই child deletion বেছে নেওয়া successor copy করে তার পুরোনো record সরায়। পরের <a href="topic:ds-avl-tree">AVL ট্রি</a> height পরীক্ষা আর rotation দিয়ে search-এর পথ ছোট রাখে।</p>
