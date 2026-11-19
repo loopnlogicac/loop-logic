@@ -178,10 +178,11 @@ async function renderTopic() {
           el('div', { class: 'tut-title-top' }, meta, el('div', { class: 'tut-mini-pager' },
             d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
             d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
-          el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary }), savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L)),
+          el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
         langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, quiz, practice, exam, videos, refs, pager)));
   fillAdSlots();
   api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
+  main.querySelector('.tut-title').after(savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L));
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 }
 
