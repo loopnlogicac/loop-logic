@@ -1,0 +1,426 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-topological-sort",
+  "module": "graph-algorithms",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Topological Sort",
+    "bn": "টপোলজিক্যাল সর্ট"
+  },
+  "summary": {
+    "en": "u থেকে v এজ থাকলে u আগে থাকবে।",
+    "bn": "আগের কাজ শেষ করে পরের কাজ নেওয়ার জন্য গ্রাফের নোড সাজাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "algo-dfs"
+  ],
+  "related": [
+    "algo-strongly-connected"
+  ],
+  "keywords": [
+    "Topological Sort",
+    "C17",
+    "graph",
+    "correctness",
+    "trace"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Topological Sort programs use C17 with fixed six-vertex scenarios; integer limits and representation costs are explained in the lesson."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Put prerequisites before their tasks"
+    },
+    {
+      "id": "syntax",
+      "title": "Count what still enters each vertex"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Remove a ready task, then its outgoing obligations"
+    },
+    {
+      "id": "examples",
+      "title": "Queue order and reverse finish order"
+    },
+    {
+      "id": "trace",
+      "title": "Track indegrees on the directed example"
+    },
+    {
+      "id": "correctness",
+      "title": "Ready means safe to place next"
+    },
+    {
+      "id": "complexity",
+      "title": "Account for arcs once"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Disconnected tasks and blocked tails"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not change the meaning of indegree"
+    },
+    {
+      "id": "best-practices",
+      "title": "Check an order by positions"
+    },
+    {
+      "id": "version-notes",
+      "title": "Bounded queues in C17"
+    },
+    {
+      "id": "summary",
+      "title": "Dependencies choose what is ready"
+    }
+  ],
+  "labs": [
+    "topological-sort"
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Shared input from A",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Kahn removes A,B,C,D,E,F while every prerequisite has already been removed.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "A chain or cycle variant",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The directed ring has no zero-indegree vertex and therefore produces a cycle result.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "F has no connection",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>F has no prerequisites and joins the initial queue alongside A.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "A complementary implementation",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Reverse DFS finish order gives 0,2,1,3 on this diamond DAG.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "medium",
+      "title": "Implement Topological Sort",
+      "statementHtml": "<p>The Kahn exercise accepts graph (0–3) followed by start (0–5); start does not choose a root because every task must be ordered. Select the directed dependencies from the lesson. Print the complete FIFO Kahn order as space-separated letters, or cycle when fewer than six vertices can be removed. The start field is ignored. For this Topological Sort solution, the first output line is <code>Enter graph (0-3) and start (0-5):</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "u নেওয়া হলে v-এর বাকি ইনডিগ্রি এক কমে।"
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "hard",
+      "title": "Assign task positions",
+      "statementHtml": "<p>For the task-rank exercise, read one directed scenario number from 0 through 3. Use Kahn&#x27;s FIFO order and print each vertex letter with its zero-based position, in A-to-F letter order. Print cycle alone if the graph has no full order. Initialise the ready queue by ascending letter. The position output is the inverse of the removal order. Begin the Assign task positions output with <code>Enter graph (0-3):</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "সাইকেল না থাকলে DFS শেষ হওয়ার উল্টো ক্রমে টপোলজিক্যাল অর্ডার মেলে।"
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Track indegrees on the directed example by hand",
+      "statementHtml": "<p>Apply Kahn to graph 0. Write initial indegrees, each queue removal and every newly ready task. Verify all directed arcs respect the resulting positions.</p>",
+      "hints": [
+        "বাকি নোডে পেছনের এজ ধরে গেলে একসময় কোনো নোড আবার আসবে।"
+      ],
+      "answerHtml": "<p>The initial indegrees of A through F are 0,1,2,1,2,2. Only A is initially ready. Processing A makes B ready but leaves C with one predecessor. Processing B then makes both C and D ready, in ascending neighbour order.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Remove</th><th scope=\"col\">Indegrees A,B,C,D,E,F afterward</th><th scope=\"col\">Queue</th></tr></thead><tbody><tr><td>A</td><td>0,0,1,1,2,2</td><td>B</td></tr><tr><td>B</td><td>0,0,0,0,2,2</td><td>C,D</td></tr><tr><td>C</td><td>0,0,0,0,1,2</td><td>D</td></tr><tr><td>D</td><td>0,0,0,0,0,1</td><td>E</td></tr><tr><td>E</td><td>0,0,0,0,0,0</td><td>F</td></tr><tr><td>F</td><td>0,0,0,0,0,0</td><td>empty</td></tr></tbody></table>\n<p>After removing C, E still waits for D. After removing D, E is ready while F still waits for E. The final order A, B, C, D, E, F respects all eight arcs. The table should show the queue as well as indegrees, because a ready vertex can wait behind another ready vertex.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Ready means safe to place next by hand",
+      "statementHtml": "<p>Establish Kahn&#x27;s remaining-indegree invariant and prove both safe removals and cycle detection. Also explain why reverse finish order works after a successful DAG check.</p>",
+      "hints": [
+        "বাকি নোডে পেছনের এজ ধরে গেলে একসময় কোনো নোড আবার আসবে।"
+      ],
+      "answerHtml": "<p>Kahn&#x27;s invariant says indegree[v] equals the number of incoming arcs from vertices not yet removed. Initially the count comes directly from the edge list. Removing u subtracts exactly its outgoing arcs, so the invariant stays true. Each vertex is enqueued when this remaining count first reaches zero.</p>\n<p>When u is appended, it has no incoming edge from a remaining vertex. Therefore every predecessor is already earlier in order. Induction over removals proves that the produced prefix respects every dependency whose destination has been placed. If all vertices are placed, the whole sequence is a valid topological order.</p>\n<p>Why does failure imply a cycle? If a nonempty remaining directed graph has no zero-indegree vertex, every remaining vertex has a remaining predecessor. Follow predecessor choices backward. Because the graph is finite, some vertex repeats, yielding a directed cycle. Conversely, vertices on a directed cycle can never lose their final incoming cycle edge through this removal rule.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does an edge u -> v require in a topological order?",
+      "options": [
+        "v appears before u",
+        "Their weights are equal",
+        "u appears before v",
+        "They occupy adjacent positions"
+      ],
+      "answer": 2,
+      "explanation": "The edge expresses a prerequisite, without requiring adjacency."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which indegree does Kahn decrement after removing u along u -> v?",
+      "options": [
+        "indegree[u] twice",
+        "Every vertex indegree",
+        "Only the first root indegree",
+        "indegree[v]"
+      ],
+      "answer": 3,
+      "explanation": "Removing u satisfies one incoming dependency of v."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does a nonempty remainder with no zero-indegree vertex contain a cycle?",
+      "options": [
+        "Following remaining predecessors must eventually repeat a vertex",
+        "Every remaining vertex is isolated",
+        "The edge weights become negative",
+        "The queue is too small"
+      ],
+      "answer": 0,
+      "explanation": "A finite chain of predecessor choices cannot stay distinct forever."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which DFS order gives a topological order after cycle checks pass?",
+      "options": [
+        "Discovery order for every graph",
+        "Reverse finish order",
+        "Increasing finish order",
+        "Alphabetical vertex order"
+      ],
+      "answer": 1,
+      "explanation": "For every DAG edge, the source finishes after its destination."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should an isolated vertex do in Kahn's algorithm?",
+      "options": [
+        "Stay outside every order",
+        "Cause a cycle result",
+        "Enter the initial ready queue",
+        "Wait until its outdegree is positive"
+      ],
+      "answer": 2,
+      "explanation": "No incoming dependency prevents it from being placed."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does FIFO Kahn always choose the alphabetically smallest ready task?",
+      "options": [
+        "Yes, without any extra structure",
+        "Only for cyclic graphs",
+        "Only when all weights are zero",
+        "No, earlier queue arrivals keep priority"
+      ],
+      "answer": 3,
+      "explanation": "A min-heap is needed for a globally smallest-ready rule."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does count < V prove when the ready queue empties?",
+      "options": [
+        "A directed cycle exists somewhere in the remaining graph",
+        "Every remaining vertex lies on a cycle",
+        "Every removed vertex was invalid",
+        "The original graph had no sources"
+      ],
+      "answer": 0,
+      "explanation": "Vertices downstream from a cycle may also remain blocked."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many tasks does Kahn remove from this three-task DAG?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int a[3][3]={{0,1,1},{0,0,1},{0,0,0}}, indegree[3]={0},q[3],h=0,t=0,order[3]={0},count=0;\n    for(int u=0;u<3;u++) {\n        for(int v=0;v<3;v++) { indegree[v]+=a[u][v]; }\n    }\n    for(int u=0;u<3;u++) { if(!indegree[u]) { q[t++]=u; } }\n    while(h<t) {\n        int u=q[h++];order[count++]=u;\n        for(int v=0;v<3;v++) {\n            if(a[u][v] && --indegree[v]==0) { q[t++]=v; }\n        }\n    }\n    (void)order;\n    printf(\"%d\\n\",count);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4",
+        "2",
+        "3",
+        "5"
+      ],
+      "answer": 2,
+      "explanation": "All three dependencies admit the order 0,1,2."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many tasks leave Kahn's queue on this directed triangle?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int a[3][3]={{0,1,0},{0,0,1},{1,0,0}}, indegree[3]={0},q[3],h=0,t=0,order[3]={0},count=0;\n    for(int u=0;u<3;u++) {\n        for(int v=0;v<3;v++) { indegree[v]+=a[u][v]; }\n    }\n    for(int u=0;u<3;u++) { if(!indegree[u]) { q[t++]=u; } }\n    while(h<t) {\n        int u=q[h++];order[count++]=u;\n        for(int v=0;v<3;v++) {\n            if(a[u][v] && --indegree[v]==0) { q[t++]=v; }\n        }\n    }\n    (void)order;\n    printf(\"%d\\n\",count);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "-1",
+        "2",
+        "0"
+      ],
+      "answer": 3,
+      "explanation": "Every vertex has one incoming arc, so the initial queue is empty."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which task is second with an ascending initial zero-indegree queue?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int a[3][3]={{0,0,1},{0,0,0},{0,0,0}}, indegree[3]={0},q[3],h=0,t=0,order[3]={0},count=0;\n    for(int u=0;u<3;u++) {\n        for(int v=0;v<3;v++) { indegree[v]+=a[u][v]; }\n    }\n    for(int u=0;u<3;u++) { if(!indegree[u]) { q[t++]=u; } }\n    while(h<t) {\n        int u=q[h++];order[count++]=u;\n        for(int v=0;v<3;v++) {\n            if(a[u][v] && --indegree[v]==0) { q[t++]=v; }\n        }\n    }\n    (void)order;\n    printf(\"%d\\n\",order[1]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "2",
+        "0",
+        "3"
+      ],
+      "answer": 0,
+      "explanation": "Vertices 0 and 1 start ready; processing 0 appends 2 after the already waiting 1."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "The edge expresses a prerequisite, without requiring adjacency.",
+      "bn": "u থেকে v এজ থাকলে u আগে থাকবে।"
+    },
+    {
+      "en": "Removing u satisfies one incoming dependency of v.",
+      "bn": "u নেওয়া হলে v-এর বাকি ইনডিগ্রি এক কমে।"
+    },
+    {
+      "en": "A finite chain of predecessor choices cannot stay distinct forever.",
+      "bn": "বাকি নোডে পেছনের এজ ধরে গেলে একসময় কোনো নোড আবার আসবে।"
+    },
+    {
+      "en": "For every DAG edge, the source finishes after its destination.",
+      "bn": "সাইকেল না থাকলে DFS শেষ হওয়ার উল্টো ক্রমে টপোলজিক্যাল অর্ডার মেলে।"
+    },
+    {
+      "en": "No incoming dependency prevents it from being placed.",
+      "bn": "আলাদা নোডের কোনো আগের কাজ নেই, তাই শুরুতেই কিউতে যায়।"
+    },
+    {
+      "en": "A min-heap is needed for a globally smallest-ready rule.",
+      "bn": "FIFO কিউতে আগে ঢোকা নোড আগে বের হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 8,
+      "question": "Show every step of Topological Sort for the lesson's graph 0 from A. Include the table and final result.",
+      "answerHtml": "<p>The initial indegrees of A through F are 0,1,2,1,2,2. Only A is initially ready. Processing A makes B ready but leaves C with one predecessor. Processing B then makes both C and D ready, in ascending neighbour order.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Remove</th><th scope=\"col\">Indegrees A,B,C,D,E,F afterward</th><th scope=\"col\">Queue</th></tr></thead><tbody><tr><td>A</td><td>0,0,1,1,2,2</td><td>B</td></tr><tr><td>B</td><td>0,0,0,0,2,2</td><td>C,D</td></tr><tr><td>C</td><td>0,0,0,0,1,2</td><td>D</td></tr><tr><td>D</td><td>0,0,0,0,0,1</td><td>E</td></tr><tr><td>E</td><td>0,0,0,0,0,0</td><td>F</td></tr><tr><td>F</td><td>0,0,0,0,0,0</td><td>empty</td></tr></tbody></table>\n<p>After removing C, E still waits for D. After removing D, E is ready while F still waits for E. The final order A, B, C, D, E, F respects all eight arcs. The table should show the queue as well as indegrees, because a ready vertex can wait behind another ready vertex.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Give a correctness proof for Topological Sort. Explain the assumptions and termination.",
+      "answerHtml": "<p>Kahn&#x27;s invariant says indegree[v] equals the number of incoming arcs from vertices not yet removed. Initially the count comes directly from the edge list. Removing u subtracts exactly its outgoing arcs, so the invariant stays true. Each vertex is enqueued when this remaining count first reaches zero.</p>\n<p>When u is appended, it has no incoming edge from a remaining vertex. Therefore every predecessor is already earlier in order. Induction over removals proves that the produced prefix respects every dependency whose destination has been placed. If all vertices are placed, the whole sequence is a valid topological order.</p>\n<p>Why does failure imply a cycle? If a nonempty remaining directed graph has no zero-indegree vertex, every remaining vertex has a remaining predecessor. Follow predecessor choices backward. Because the graph is finite, some vertex repeats, yielding a directed cycle. Conversely, vertices on a directed cycle can never lose their final incoming cycle edge through this removal rule.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and auxiliary-space bounds of Topological Sort, distinguishing representation and working storage.",
+      "answerHtml": "<p>Kahn&#x27;s indegree construction scans E arcs. Each vertex enters and leaves the queue once, and each outgoing arc is processed when its source leaves. Total time is O(V+E), with O(V) auxiliary space for indegree, queue and order. Adjacency-list graph storage is O(V+E) separately.</p>\n<p>DFS-based sorting also costs O(V+E) with lists. Its colour array, finish list and recursive stack together need O(V) additional space. The small DFS example scans a four-by-four matrix, so that particular representation generalises to O(V²) time. The graph algorithm&#x27;s list bound does not automatically apply to a matrix implementation.</p>\n<p>If you need the smallest available task at every step, replace Kahn&#x27;s FIFO queue with a min-priority queue. Queue operations then add O(V log V) work. Sorting the final output alphabetically would be wrong because that can destroy dependencies that were already respected.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms: graph algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

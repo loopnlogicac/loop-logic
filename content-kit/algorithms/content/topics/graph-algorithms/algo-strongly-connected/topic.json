@@ -1,0 +1,449 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-strongly-connected",
+  "module": "graph-algorithms",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Strongly Connected Components",
+    "bn": "স্ট্রংলি কানেক্টেড কম্পোনেন্ট"
+  },
+  "summary": {
+    "en": "একই কম্পোনেন্টের নোডের মধ্যে দুই দিকেই পথ থাকে।",
+    "bn": "দুই দিকেই যাওয়া যায় এমন নোডগুলোকে Kosaraju দিয়ে এক গ্রুপে রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "algo-topological-sort"
+  ],
+  "related": [
+    "algo-dijkstra"
+  ],
+  "keywords": [
+    "Strongly Connected Components",
+    "C17",
+    "graph",
+    "correctness",
+    "trace"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Strongly Connected Components programs use C17 with fixed six-vertex scenarios; integer limits and representation costs are explained in the lesson."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "When directed routes work both ways"
+    },
+    {
+      "id": "syntax",
+      "title": "Finish on the original, search on the transpose"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Build reversed neighbour lists once"
+    },
+    {
+      "id": "examples",
+      "title": "See reversal and condensation in C"
+    },
+    {
+      "id": "trace",
+      "title": "Six singletons, then two larger groups"
+    },
+    {
+      "id": "correctness",
+      "title": "Choose a component the reversed search cannot escape"
+    },
+    {
+      "id": "complexity",
+      "title": "Two searches and one reversal"
+    },
+    {
+      "id": "edge-cases",
+      "title": "One-way bridges do not merge components"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep the two passes different"
+    },
+    {
+      "id": "best-practices",
+      "title": "Verify mutual reachability on small groups"
+    },
+    {
+      "id": "version-notes",
+      "title": "Two graph values in C17"
+    },
+    {
+      "id": "summary",
+      "title": "Compress cycles into a DAG"
+    }
+  ],
+  "labs": [],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Shared input from A",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>All six shared directed vertices are singleton components, with traversal-dependent ids.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "A chain or cycle variant",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The directed ring makes all six vertices mutually reachable, giving one component.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "F has no connection",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>F is a singleton; the remaining acyclic vertices are also singleton components.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "A complementary implementation",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The two mutual pairs contract to groups 0 and 1, followed by singleton groups 2 and 3.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "medium",
+      "title": "Implement Strongly Connected Components",
+      "statementHtml": "<p>For Kosaraju, input graph between 0 and 3, then a start index between 0 and 5. Ignore start and run complete DFS forests on the directed lesson scenario. Print each letter with its component id, then components followed by the count. The start field is ignored. Use ascending first-pass neighbours and decreasing finish order for transpose searches. For this Strongly Connected Components solution, the first output line is <code>Enter graph (0-3) and start (0-5):</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "Transpose বানাতে প্রতিটি এজের দিক উল্টাও।"
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "hard",
+      "title": "Build the component DAG",
+      "statementHtml": "<p>Choose the condensation input with one scenario index graph in the range 0–3. Print each letter with its Kosaraju component id, then components and the count. Print each distinct crossing component arc as a -&gt; b in ascending numeric pair order. Use the original graph&#x27;s ascending DFS neighbour order and decreasing finish order on its transpose. Begin the Build the component DAG output with <code>Enter graph (0-3):</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "দ্বিতীয় DFS উল্টো এজের গ্রাফে চলে।"
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Six singletons, then two larger groups by hand",
+      "statementHtml": "<p>Perform both Kosaraju passes on graph 0. Give increasing original finish order, transpose root order, component membership and the resulting component arcs.</p>",
+      "hints": [
+        "প্রথম DFS-এর সবচেয়ে পরে শেষ হওয়া নোড আগে নাও।"
+      ],
+      "answerHtml": "<p>On the directed shared graph, the first-pass finish sequence is F, E, C, D, B, A. The second-pass root order is its reverse: A, B, D, C, E, F. Because this original graph is a DAG, each transpose search reaches only its own still-unassigned vertex.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Second-pass root</th><th scope=\"col\">New transpose members</th><th scope=\"col\">Component id</th></tr></thead><tbody><tr><td>A</td><td>A</td><td>0</td></tr><tr><td>B</td><td>B</td><td>1</td></tr><tr><td>D</td><td>D</td><td>2</td></tr><tr><td>C</td><td>C</td><td>3</td></tr><tr><td>E</td><td>E</td><td>4</td></tr><tr><td>F</td><td>F</td><td>5</td></tr></tbody></table>\n<p>The component ids are labels, not minimum vertex numbers or sizes. Here D receives id 2 before C receives id 3. A different legitimate DFS neighbour order can change the ids. Membership and reachability are the mathematical result; the numeric spelling of an id is a presentation choice.</p>\n<p>The fourth example uses mutual pairs A with B and C with D, followed by singletons E and F. Its arcs between groups form AB-group to CD-group to E to F. This case shows why a component may contain several vertices while still having one-way connections to other components.</p>\n<p>For graph 0, the distinct component arcs are 0→1, 0→3, 1→2, 1→3, 2→4, 2→5, 3→4 and 4→5. Each follows directly from an original crossing edge under A=0, B=1, D=2, C=3, E=4, F=5 component labels.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Choose a component the reversed search cannot escape by hand",
+      "statementHtml": "<p>Prove Kosaraju using the component DAG: explain component finish-time ordering, transpose reachability and why each second-pass search stays within one unassigned group.</p>",
+      "hints": [
+        "প্রথম DFS-এর সবচেয়ে পরে শেষ হওয়া নোড আগে নাও।"
+      ],
+      "answerHtml": "<p>Contract each strongly connected component into one node. Keep an edge between distinct groups whenever an original edge crosses between them. This component graph cannot contain a directed cycle: groups around such a cycle would all reach each other and should have been one larger group.</p>\n<p>Consider an edge from component X to a different component Y. The largest DFS finish time in X exceeds the largest finish time in Y. If DFS reaches X first and Y is unvisited, it can explore Y from X, so Y finishes before X&#x27;s relevant ancestor. If DFS reaches Y first, Y cannot reach X; otherwise the groups would be mutually reachable. Thus Y&#x27;s search finishes before X is discovered.</p>\n<p>This finish-time ordering means the largest unassigned finish time belongs to a source component among the unassigned original components. A source component has no incoming edge from another remaining component. In the transpose, it therefore has no outgoing edge to another remaining component.</p>\n<p>Starting the second pass there cannot escape into a different unassigned component. It can still reach every vertex inside its own component because reversing paths preserves strong connectivity. Thus that search assigns exactly one component. Removing it conceptually and repeating proves every later assignment correct.</p>\n<p>Vertices already assigned by an earlier second-pass search are ignored. Reversed edges may point toward those earlier groups, but they cannot cause merging because comp is no longer -1. This is why the root order and the unassigned test must work together.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Derive Strongly Connected Components resource bounds",
+      "statementHtml": "<p>Count both DFS forests, construction of reversed adjacency lists, recursion depth and component-DAG storage. Compare the list implementation with the matrix-based fourth example.</p>",
+      "hints": [
+        "Count repeated scans separately from the one-time initialisation."
+      ],
+      "answerHtml": "<p>With adjacency lists, the first DFS forest visits V vertices and E arcs. Building the transpose also takes O(V+E), including list initialisation. The second forest again visits each vertex and reversed arc once. Adding three linear phases gives O(V+E) time, rather than multiplying their costs.</p>\n<p>Seen, comp and order each store V entries. Recursive depth can reach V on a long path. These working structures need O(V) space beyond the two graph orientations. Storing the transpose adds O(V+E) graph space. You should mention that additional graph when reporting total memory.</p>\n<p>The bounded main program reserves six entries in each neighbour row. For scalable lists, allocate capacities from reversed degrees or use an offset array. The fourth example scans V possible neighbours per call because it uses a matrix; its traversal is O(V²). Its Boolean component matrix also reserves O(V²) space, while a deduplicated list representation can be smaller.</p>\n<p>Component-graph construction scans E original arcs before duplicate handling. A matrix can insert a Boolean arc in constant time, but printing every possible component pair costs O(K²) for K components. Keeping a set of distinct component arcs supports output proportional to the number of distinct pairs instead.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What defines membership in one strongly connected component?",
+      "options": [
+        "One direct edge in either direction",
+        "Equal indegree",
+        "The same DFS parent",
+        "Reachability in both directions"
+      ],
+      "answer": 3,
+      "explanation": "Paths may be longer than one edge, but each direction must exist."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What changes when building the transpose graph?",
+      "options": [
+        "Every directed edge reverses",
+        "Vertex ids reverse",
+        "Only the finish list reverses",
+        "All edge weights change sign"
+      ],
+      "answer": 0,
+      "explanation": "Path directions reverse while strong component membership stays unchanged."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which vertex order starts Kosaraju's second pass?",
+      "options": [
+        "Increasing discovery times",
+        "Decreasing original DFS finish times",
+        "Increasing original finish times",
+        "Sorted edge weights"
+      ],
+      "answer": 1,
+      "explanation": "Largest unassigned finish time selects a safe source component."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which graph is searched during Kosaraju's second pass?",
+      "options": [
+        "The original graph again",
+        "An undirected copy",
+        "The transpose graph",
+        "Only the selected DFS tree"
+      ],
+      "answer": 2,
+      "explanation": "Reversal prevents the chosen component from escaping to another unassigned group."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is the component graph acyclic?",
+      "options": [
+        "All internal edges have zero weight",
+        "Every component has exactly one vertex",
+        "The original graph must be acyclic",
+        "A cycle of groups would make them mutually reachable and merge them"
+      ],
+      "answer": 3,
+      "explanation": "A directed cycle contradicts maximal separation of strong components."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does one edge from component X to component Y merge them?",
+      "options": [
+        "No, a return path is also required",
+        "Yes, every crossing edge merges groups",
+        "Only if the edge weight is positive",
+        "Only when X has two vertices"
+      ],
+      "answer": 0,
+      "explanation": "One-way reachability is insufficient for mutual reachability."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many SCCs does a six-vertex edgeless graph have?",
+      "options": [
+        "Zero",
+        "Six",
+        "One",
+        "Twelve"
+      ],
+      "answer": 1,
+      "explanation": "Each vertex reaches itself by the empty path and no other vertex."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Do vertices 0 and 1 pass both reachability tests in this closure?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int r[3][3]={{1,1,0},{1,1,1},{0,0,1}};\n    for(int k=0;k<3;k++) {\n        for(int i=0;i<3;i++) {\n            for(int j=0;j<3;j++) { r[i][j]=r[i][j] || (r[i][k] && r[k][j]); }\n        }\n    }\n    printf(\"%d\\n\",r[0][1] && r[1][0]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "0",
+        "3",
+        "1"
+      ],
+      "answer": 3,
+      "explanation": "The mutual direct edges establish both required directions."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Do vertices 0 and 2 belong to one strong component after closure?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int r[3][3]={{1,1,0},{1,1,1},{0,0,1}};\n    for(int k=0;k<3;k++) {\n        for(int i=0;i<3;i++) {\n            for(int j=0;j<3;j++) { r[i][j]=r[i][j] || (r[i][k] && r[k][j]); }\n        }\n    }\n    printf(\"%d\\n\",r[0][2] && r[2][0]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "0",
+        "1",
+        "-1",
+        "2"
+      ],
+      "answer": 0,
+      "explanation": "Vertex 0 can reach 2, but 2 cannot return to 0."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Can vertex 1 reach vertex 0 after taking the directed cycle closure?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int r[3][3]={{1,1,0},{0,1,1},{1,0,1}};\n    for(int k=0;k<3;k++) {\n        for(int i=0;i<3;i++) {\n            for(int j=0;j<3;j++) { r[i][j]=r[i][j] || (r[i][k] && r[k][j]); }\n        }\n    }\n    printf(\"%d\\n\",r[1][0]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "1",
+        "0",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "The path 1,2,0 gives the missing direction."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which component arcs should condensation omit?",
+      "options": [
+        "Every edge leaving a singleton",
+        "Every edge with positive weight",
+        "All edges between two distinct groups",
+        "Edges whose endpoints have the same component id"
+      ],
+      "answer": 3,
+      "explanation": "Internal arcs vanish when the whole strong component is contracted to one node."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Paths may be longer than one edge, but each direction must exist.",
+      "bn": "একই কম্পোনেন্টের নোডের মধ্যে দুই দিকেই পথ থাকে।"
+    },
+    {
+      "en": "Path directions reverse while strong component membership stays unchanged.",
+      "bn": "Transpose বানাতে প্রতিটি এজের দিক উল্টাও।"
+    },
+    {
+      "en": "Largest unassigned finish time selects a safe source component.",
+      "bn": "প্রথম DFS-এর সবচেয়ে পরে শেষ হওয়া নোড আগে নাও।"
+    },
+    {
+      "en": "Reversal prevents the chosen component from escaping to another unassigned group.",
+      "bn": "দ্বিতীয় DFS উল্টো এজের গ্রাফে চলে।"
+    },
+    {
+      "en": "A directed cycle contradicts maximal separation of strong components.",
+      "bn": "কম্পোনেন্টগুলোর মধ্যে সাইকেল থাকলে তারা আসলে একই গ্রুপ হতো।"
+    },
+    {
+      "en": "One-way reachability is insufficient for mutual reachability.",
+      "bn": "একদিকে এজ থাকলেই দুই কম্পোনেন্ট এক হয়ে যায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 8,
+      "question": "Show every step of Strongly Connected Components for the lesson's graph 0 from A. Include the table and final result.",
+      "answerHtml": "<p>On the directed shared graph, the first-pass finish sequence is F, E, C, D, B, A. The second-pass root order is its reverse: A, B, D, C, E, F. Because this original graph is a DAG, each transpose search reaches only its own still-unassigned vertex.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Second-pass root</th><th scope=\"col\">New transpose members</th><th scope=\"col\">Component id</th></tr></thead><tbody><tr><td>A</td><td>A</td><td>0</td></tr><tr><td>B</td><td>B</td><td>1</td></tr><tr><td>D</td><td>D</td><td>2</td></tr><tr><td>C</td><td>C</td><td>3</td></tr><tr><td>E</td><td>E</td><td>4</td></tr><tr><td>F</td><td>F</td><td>5</td></tr></tbody></table>\n<p>The component ids are labels, not minimum vertex numbers or sizes. Here D receives id 2 before C receives id 3. A different legitimate DFS neighbour order can change the ids. Membership and reachability are the mathematical result; the numeric spelling of an id is a presentation choice.</p>\n<p>The fourth example uses mutual pairs A with B and C with D, followed by singletons E and F. Its arcs between groups form AB-group to CD-group to E to F. This case shows why a component may contain several vertices while still having one-way connections to other components.</p>\n<p>For graph 0, the distinct component arcs are 0→1, 0→3, 1→2, 1→3, 2→4, 2→5, 3→4 and 4→5. Each follows directly from an original crossing edge under A=0, B=1, D=2, C=3, E=4, F=5 component labels.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Give a correctness proof for Strongly Connected Components. Explain the assumptions and termination.",
+      "answerHtml": "<p>Contract each strongly connected component into one node. Keep an edge between distinct groups whenever an original edge crosses between them. This component graph cannot contain a directed cycle: groups around such a cycle would all reach each other and should have been one larger group.</p>\n<p>Consider an edge from component X to a different component Y. The largest DFS finish time in X exceeds the largest finish time in Y. If DFS reaches X first and Y is unvisited, it can explore Y from X, so Y finishes before X&#x27;s relevant ancestor. If DFS reaches Y first, Y cannot reach X; otherwise the groups would be mutually reachable. Thus Y&#x27;s search finishes before X is discovered.</p>\n<p>This finish-time ordering means the largest unassigned finish time belongs to a source component among the unassigned original components. A source component has no incoming edge from another remaining component. In the transpose, it therefore has no outgoing edge to another remaining component.</p>\n<p>Starting the second pass there cannot escape into a different unassigned component. It can still reach every vertex inside its own component because reversing paths preserves strong connectivity. Thus that search assigns exactly one component. Removing it conceptually and repeating proves every later assignment correct.</p>\n<p>Vertices already assigned by an earlier second-pass search are ignored. Reversed edges may point toward those earlier groups, but they cannot cause merging because comp is no longer -1. This is why the root order and the unassigned test must work together.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and auxiliary-space bounds of Strongly Connected Components, distinguishing representation and working storage.",
+      "answerHtml": "<p>With adjacency lists, the first DFS forest visits V vertices and E arcs. Building the transpose also takes O(V+E), including list initialisation. The second forest again visits each vertex and reversed arc once. Adding three linear phases gives O(V+E) time, rather than multiplying their costs.</p>\n<p>Seen, comp and order each store V entries. Recursive depth can reach V on a long path. These working structures need O(V) space beyond the two graph orientations. Storing the transpose adds O(V+E) graph space. You should mention that additional graph when reporting total memory.</p>\n<p>The bounded main program reserves six entries in each neighbour row. For scalable lists, allocate capacities from reversed degrees or use an offset array. The fourth example scans V possible neighbours per call because it uses a matrix; its traversal is O(V²). Its Boolean component matrix also reserves O(V²) space, while a deduplicated list representation can be smaller.</p>\n<p>Component-graph construction scans E original arcs before duplicate handling. A matrix can insert a Boolean arc in constant time, but printing every possible component pair costs O(K²) for K components. Keeping a set of distinct component arcs supports output proportional to the number of distinct pairs instead.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms: graph algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,55 @@
+<h2 id="introduction">Find the nearest stop first</h2>
+<p class="lead">A message starts in one classroom and moves through direct student contacts. Who receives it after one handoff? Who needs two? Breadth-first search, or BFS, answers these questions by exploring one distance layer at a time. You can use the same idea for road junctions, network links and moves through a maze.</p>
+<p>A graph contains nodes and edges. A node represents an object; an edge records a connection. We also say vertex for node. In an undirected graph, either endpoint can use an edge. A directed edge permits travel only in its arrow direction. BFS works with either convention, provided the neighbour lists describe the permitted moves.</p>
+<p>BFS measures the number of edges in a path. It does not minimise arbitrary travel costs. If every road takes one minute, counting edges also counts minutes. If road times differ, compare with Dijkstra&#x27;s algorithm later. Knowing what a distance measures matters more than recognising the algorithm&#x27;s name.</p>
+<h2 id="syntax">Queue and adjacency lists</h2>
+<p>The BFS procedure keeps dist, parent and queue arrays. Distance -1 means undiscovered. Parent -1 means no predecessor is assigned. The source starts with distance zero because reaching yourself requires no edge. A queue removes the oldest waiting vertex, so newly discovered vertices wait behind the current layer.</p>
+<p>Each adjacency list stores the actual neighbours of one vertex. In the C examples, adj[u][k] is the kth Arc and degree[u] gives the list length. Arrays reserve six slots per list because the demonstration has six vertices. The search loops over degree[u], never over nonexistent neighbours. A dynamically sized implementation would store only the actual arcs.</p>
+<p>The graph selector accepts 0 through 3, and start accepts 0 through 5. Letters A through F correspond to those indices. Scenario 0 is the shared weighted drawing, but BFS deliberately ignores weight. Scenario 1 is a six-node chain. Scenario 2 removes every edge incident to F. Scenario 3 keeps six isolated nodes with no edges.</p>
+<pre><code class="language-text">dist[*] = -1; parent[*] = -1; dist[start] = 0; enqueue start
+while queue has vertices: u = dequeue; append u to order
+    for each neighbour v of u, in ascending order
+        if dist[v] == -1: dist[v] = dist[u] + 1; parent[v] = u
+            enqueue v
+report distances and parents; unreachable distances stay -1</code></pre>
+<h2 id="how-it-works">Mark before joining the queue</h2>
+<p>BFS first writes dist[start]=0 and enqueues start. Removing u from the front means you are ready to inspect its neighbours. A neighbour v with distance -1 has never entered the queue. Set dist[v]=dist[u]+1, save parent[v]=u, and then enqueue v. Saving the distance before enqueueing prevents duplicate entries.</p>
+<p>The shared undirected graph has AB, AC, BC, BD, CE, DE, DF and EF. The drawing places A at the left, B above C, D above E, and F at the right. Neighbours are examined by ascending letter. This fixes a reproducible visit order without making that order part of BFS correctness.</p>
+<p>Two routes may reach a vertex using the same number of edges. The earlier discovery wins because later equal candidates are ignored. From A, F receives parent D, although the route through E also uses three edges. Both routes are shortest in this unweighted sense. A different neighbour order could choose the other parent.</p>
+<h2 id="examples">Try contacts and a small maze</h2>
+<h3>The shared graph</h3><p>The A-source search gives distances 0,1,1,2,2,3 and a predecessor for each reached non-source vertex.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>On the unit chain, F needs five edges from A.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>With F isolated, its distance remains -1 while the other five vertices are reached.</p><div data-example="ex-3"></div>
+<h3>A second representation</h3><p>The fixed maze permits four orthogonal moves; its destination is five moves away.</p><div data-example="ex-4"></div>
+<p>The grid example uses three rows and four columns. A zero cell is open and a one cell is blocked. A queue entry stores r*C+c, so division and remainder recover the cell coordinates. Moving up, right, down or left costs one step; diagonals are unavailable.</p>
+<p>Before reading a grid neighbour, check both row and column bounds. Then reject blocked or previously discovered cells. The shortest open route from the top-left cell to the bottom-right cell takes five moves. A blocked start would need explicit rejection before the initial enqueue; this particular start is open.</p>
+<h2 id="trace">Follow layers from A</h2>
+<p>The trace table lists the queue after each removal and its newly discovered neighbours. Initially only A waits. Every vertex joins once, even though an undirected edge appears in two adjacency lists. Read parent indices as letters when you reconstruct a route.</p>
+<table class="ref"><thead><tr><th scope="col">Remove</th><th scope="col">Discover</th><th scope="col">Queue afterward</th><th scope="col">New distances</th></tr></thead><tbody><tr><td>A</td><td>B,C</td><td>B,C</td><td>B=1,C=1</td></tr><tr><td>B</td><td>D</td><td>C,D</td><td>D=2</td></tr><tr><td>C</td><td>E</td><td>D,E</td><td>E=2</td></tr><tr><td>D</td><td>F</td><td>E,F</td><td>F=3</td></tr><tr><td>E</td><td>none</td><td>F</td><td>unchanged</td></tr><tr><td>F</td><td>none</td><td>empty</td><td>unchanged</td></tr></tbody></table>
+<p>The route to F is recovered backward as F, D, B, A. Reverse it before presenting A, B, D, F. A parent chain is a compact record of one route, not every shortest route. To count shortest routes, you would need additional state for equal-distance arrivals.</p>
+<div data-lab="bfs"></div>
+<p>The numeric parent array in A-to-F order is -1,0,0,1,2,3. These links give F←D←B←A, which reverses to a three-edge route.</p>
+<h2 id="correctness">Why first discovery is shortest</h2>
+<p>The BFS invariant is that queued vertices appear in nondecreasing distance order. More precisely, the queue contains the unfinished part of one layer, followed by vertices of the next layer. Removing a vertex at distance d can append only vertices at distance d+1. It cannot place a smaller distance behind a larger one.</p>
+<p>Suppose v is first discovered from u at distance d+1. The parent chain proves that a path of that length exists. If a shorter path reached v, its predecessor would lie in an earlier layer. That predecessor would have been processed before u and discovered v earlier. This contradiction proves that the first assigned distance is minimal.</p>
+<p>Every reachable vertex has some finite path from the source. Induction along that path shows that BFS eventually discovers it. When the queue empties, all reachable vertices have been processed. A vertex still labelled -1 has no path from the source under the chosen edge directions.</p>
+<h2 id="complexity">Count vertices and stored arcs</h2>
+<p>BFS visits each reachable vertex once because its distance changes from -1 only once. For every removed vertex, it scans that vertex&#x27;s adjacency list once. Summing those list lengths counts each directed edge once, or each undirected edge twice. Therefore the traversal takes O(V+E) time over the whole graph, including initialisation.</p>
+<p>The distance and parent arrays each need V entries. At most V vertices enter the queue, so its capacity V is enough. Auxiliary storage is O(V), while adjacency-list input occupies O(V+E). The fixed C graph builder searches the small edge list when constructing neighbours; that preparation cost is separate from the BFS traversal bound.</p>
+<p>For a grid with R rows and C columns, each open cell has at most four neighbours. The same argument gives O(RC) time and O(RC) auxiliary space. Stopping when a target is discovered can save work, but it does not change the worst-case bound.</p>
+<h2 id="edge-cases">Distance zero and missing routes</h2>
+<p>If start is F in scenario 2, BFS finds only F. Its distance is zero and every other distance remains -1. That is a successful search on an isolated source. It does not mean the graph itself has no other connected vertices.</p>
+<p>If you need every connected component, restart BFS from each undiscovered vertex and assign a component number. Those restarts do not give distances from the original source. Keep the two questions separate: reachability from one source and a partition of the whole undirected graph.</p>
+<h2 id="common-mistakes">Keep the queue discipline</h2>
+<h3>Marking only after removal</h3>
+<p>Two current-layer vertices may both enqueue the same undiscovered neighbour. Mark at discovery, before enqueueing, so the bounded queue remains safe.</p>
+<h3>Using a stack for shortest layers</h3>
+<p>A stack follows the latest discovered branch and can reach a vertex along a long route first. Use FIFO order for the first-discovery shortest-path argument.</p>
+<h3>Adding displayed edge weights</h3>
+<p>BFS adds exactly one per move. Adding a weight while still using an ordinary FIFO queue does not implement Dijkstra and need not find minimum costs.</p>
+<h2 id="best-practices">Name the distance unit</h2>
+<p>Write whether a distance counts roads, moves or handoffs. Keep a parent only when an actual route is needed. For large graphs, allocate the queue according to the number of vertices and validate every endpoint while reading edges.</p>
+<h2 id="version-notes">Queue arrays in C17</h2>
+<p>The BFS examples use C17, bounded arrays and integer indices. Loop-local declarations require C99 or later; no special C17 library feature is needed. All six vertices fit in the queue because discovery happens before insertion.</p>
+<h2 id="summary">One wave after another</h2>
+<p>BFS turns an unweighted shortest-path problem into orderly queue processing. Its first-discovery rule provides both distances and parent paths. Continue with <a href="topic:algo-dfs">Depth-First Search</a> to see what changes when exploration follows one branch deeply.</p>

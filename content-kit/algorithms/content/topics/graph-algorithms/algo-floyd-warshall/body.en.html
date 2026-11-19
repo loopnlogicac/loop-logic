@@ -1,0 +1,62 @@
+<h2 id="introduction">Plan routes between every pair</h2>
+<p class="lead">Suppose you need a campus travel table, with one row per starting location and one column per destination. Running a single-source search repeatedly is one option. Floyd-Warshall instead updates the whole table through a carefully ordered dynamic program.</p>
+<p>The algorithm asks which intermediate vertices a route may use. At first, routes may use a direct edge or stay at their starting vertex. It then permits A as an intermediate, then B, and so on. Each newly permitted vertex may join two known subpaths into a cheaper route.</p>
+<p>Floyd-Warshall works with directed edges and can handle negative weights when relevant shortest paths remain finite. Its usual distance table needs special interpretation if a negative cycle is reachable between a pair. The runnable examples here use nonnegative edges, so every reachable pair has a finite answer.</p>
+<h2 id="syntax">Define the state before the loops</h2>
+<p>Let D(k,i,j) be the shortest cost from i to j using only vertices numbered below k as intermediates. Endpoints i and j are unrestricted. D(0,i,i)=0, direct edges initialise other reachable pairs, and absent routes start at INF. For parallel edges, choose the minimum direct weight.</p>
+<p>The recurrence is D(k+1,i,j)=min(D(k,i,j), D(k,i,k)+D(k,k,j)). A best route either avoids intermediate k or uses it. In the second case, split the route at k. Both parts may use only earlier intermediate vertices. This gives the two candidate values.</p>
+<p>The implementation stores one two-dimensional dist table and keeps k as the outermost loop. It tries every source i and destination j for that k. Before adding two entries, it checks that both are finite. This is the table-filling order required by the recurrence, rather than an arbitrary arrangement of three loops.</p>
+<pre><code class="language-text">initialise dist[i][i]=0; absent arcs=INF; next[i][j]=j for arcs
+for k = 0 to V-1
+    for i = 0 to V-1, for j = 0 to V-1
+        if both subpaths exist and dist[i][k]+dist[k][j] &lt; dist[i][j]
+            dist[i][j] = dist[i][k]+dist[k][j]; next[i][j]=next[i][k]
+report matrix; follow next[current][F] to recover a route</code></pre>
+<h2 id="how-it-works">Distances and next hops change together</h2>
+<p>Alongside distances, next[i][j] stores the first vertex after i on a chosen route to j. A direct i to j edge sets next[i][j]=j. An absent route keeps -1. If a cheaper route goes through k, its first hop is the first hop on the existing route from i to k.</p>
+<p>Therefore an improving update assigns next[i][j]=next[i][k]. The destination j is not necessarily that first hop, and k is not necessarily adjacent to i. Saving either of those blindly would skip edges when recovering a multi-step route.</p>
+<p>The Floyd-Warshall demonstration uses six directed vertices and the weighted arcs AB=4, AC=2, BC=1, BD=5, CE=8, DE=2, DF=6, EF=3. Scenario 1 is a positive directed ring; scenario 2 isolates F. Scenario 3 has only diagonal zero distances and INF between different vertices.</p>
+<h2 id="examples">Print the matrix and recover one route</h2>
+<h3>The shared graph</h3><p>The directed A row is 0,4,2,9,10,13, and next hops recover A,C,E,F.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>A positive directed ring reaches every ordered pair with a finite distance.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>The isolated F retains only its diagonal zero, and no A-to-F route exists.</p><div data-example="ex-3"></div>
+<p>Example 1 prints six matrix rows, using -1 for INF because valid numeric costs are nonnegative here. It then prints a route from the selected source to F, or a no-path message. The animation writes INF directly in unreachable cells, so its display marker differs while the underlying meaning agrees.</p>
+<p>To recover a path, start with u=source and print it. While u differs from the target, replace u with next[u][target] and append that vertex. Test reachability before the first step. Source equal to target is a one-vertex route and does not require a next-hop entry.</p>
+<p>From A to F, the retained next hops produce A,C,E,F of total cost 13. The alternative A,B,D,E,F costs 14, so it is longer by one. Every next hop must follow an existing directed arc. Ties in other graphs keep the earlier saved route because the update requires strict improvement.</p>
+<h2 id="trace">Allow B, then D, then E</h2>
+<p>There is no useful update through A in the shared DAG because no arc enters A. Allowing B connects A to D at cost 9. Allowing C adds routes into E. Allowing D improves B to E, and allowing E improves routes into F.</p>
+<table class="ref"><thead><tr><th scope="col">Allowed new intermediate</th><th scope="col">Strictly improved pairs and new distances</th></tr></thead><tbody><tr><td>A</td><td>none</td></tr><tr><td>B</td><td>A-&gt;D=9</td></tr><tr><td>C</td><td>A-&gt;E=10; B-&gt;E=9</td></tr><tr><td>D</td><td>A-&gt;F=15; B-&gt;E=7; B-&gt;F=11</td></tr><tr><td>E</td><td>A-&gt;F=13; B-&gt;F=10; C-&gt;F=11; D-&gt;F=5</td></tr><tr><td>F</td><td>none</td></tr></tbody></table>
+<p>The final row for A is 0,4,2,9,10,13. These differ from the undirected Dijkstra distances because Floyd-Warshall follows the selected directed arcs. In particular, A cannot use C to B because only B to C exists. Comparing algorithms requires comparing graph direction as well as weights.</p>
+<p>The animation shows the full matrix and the current allowed intermediate k. It highlights the two subpath cells before a finite candidate comparison. INF pairs are skipped because no joined route exists. A successful update changes one matrix cell and the hidden next-hop information together.</p>
+<div data-lab="floyd-warshall"></div>
+<p>The recovered next hops for A to F are next[A][F]=C, next[C][F]=E and next[E][F]=F. Their edge weights are 2,8,3, giving the final cost 13.</p>
+<h2 id="correctness">Partition routes by their newest allowed intermediate</h2>
+<p>Assume the table before outer iteration k contains shortest costs with only earlier intermediates. An optimal route with the enlarged allowed set either omits k or contains k. If it omits k, the existing entry already covers it. If it contains k, choose a shortest simple representative and split it at k.</p>
+<p>The two subpaths use only previously allowed intermediate vertices, so their best costs are already available. Taking the smaller candidate yields an attainable route no more expensive than any valid route. This proves the recurrence by induction from the direct-edge base.</p>
+<p>Why can the two-dimensional table be updated in place? Without negative cycles, dist[k][k] is zero. During iteration k, routes from i to k and from k to j cannot strictly improve merely by adding a zero-length visit through k. Those boundary entries remain stable, so candidate subpaths retain the meanings needed throughout the iteration.</p>
+<p>Interchanging i and j inside a fixed k iteration is safe. Moving k inward breaks the phase invariant because some cells may consume paths with intermediates that other cells have not yet allowed. Certain graphs still produce correct answers under an incorrect loop order; that accidental success is not a proof.</p>
+<h2 id="edge-cases">Negative cycles change pairwise meaning</h2>
+<p>After Floyd-Warshall, a negative diagonal dist[k][k] indicates a negative cycle reachable from k and back. A pair i,j has no finite shortest cost when i can reach such a k and k can reach j. Repeating that cycle reduces the i-to-j cost without bound.</p>
+<p>This affected-pair test requires both reachability conditions. A negative cycle elsewhere in the graph does not invalidate every matrix entry. Never follow next hops indefinitely for an affected pair; first classify the pair and suppress ordinary path reconstruction when no finite minimum exists.</p>
+<p>The provided graphs contain no negative edge and no negative cycle. Their reconstruction loop therefore follows a valid finite route. Extending the code to signed inputs requires the diagonal test and affected-pair handling as well as a larger arithmetic range. Merely allowing a negative integer in the input would be incomplete.</p>
+<p>An isolated vertex retains a diagonal zero and INF elsewhere. For scenario 2, F can reach itself but no other vertex can reach F. That distinguishes an empty route from an absent route. A zero-weight self-loop does not lower the already-zero diagonal.</p>
+<h2 id="complexity">Three dimensions of work, two dimensions of storage</h2>
+<p>The outer loop takes V choices of k. Each phase visits V possible sources and V possible destinations. That is exactly V³ candidate positions, so the time is Theta(V³), even when most routes are absent. Finite guards reduce arithmetic work inside a position but do not skip the loops themselves.</p>
+<p>The distance and next-hop tables each store V² entries. Their combined space is Theta(V²); the temporary loop variables need constant additional memory. If you retained a separate matrix for every k phase, space would grow to Theta(V³), which is unnecessary when in-place updates satisfy the phase invariant.</p>
+<p>Recovering one finite route takes O(L) time for L printed vertices, at most O(V) for a simple route. Printing the entire matrix costs Theta(V²). Those output costs fit below the cubic computation but still matter when comparing an all-pairs table with a single-source query.</p>
+<h2 id="comparison">Choose all-pairs work deliberately</h2>
+<p>For a small dense graph with many source-destination queries, Floyd-Warshall gives a compact implementation and constant-time distance lookup afterward. For one source in a sparse nonnegative graph, Dijkstra generally does less work. Bellman-Ford answers a single-source question while detecting reachable negative cycles.</p>
+<p>Floyd-Warshall is dynamic programming over allowed intermediates. It is not repeated greedy finalisation and does not need a priority queue. The order of the outer phases is part of the state definition, much like the table-filling order in earlier DP lessons.</p>
+<h2 id="common-mistakes">Keep the phase and the first hop correct</h2>
+<h3>Placing k in the innermost loop</h3>
+<p>The update then mixes incompatible intermediate sets. Keep one complete matrix phase for each allowed k before moving to the next vertex.</p>
+<h3>Adding an INF marker</h3>
+<p>Do not treat the sentinel as a real road cost. Verify both subpaths exist before computing their sum.</p>
+<h3>Saving k as the next vertex</h3>
+<p>The route from i to k may contain several edges. Save next[i][k], which names its actual first hop.</p>
+<h2 id="best-practices">Label rows and columns</h2>
+<p>Write vertex names beside the distance table and clearly mark unreachable cells. For an exam, show every phase that changes the matrix and list unchanged phases too. Verify a recovered route using actual directed edges and its total weight.</p>
+<h2 id="version-notes">Two-dimensional arrays in C17</h2>
+<p>The Floyd-Warshall examples use fixed six-by-six C17 arrays. Finite simple paths cost at most forty, far below INF and int limits. The loops use C99-style local declarations and require no feature newer than the selected C17 baseline.</p>
+<h2 id="summary">One intermediate at a time</h2>
+<p>Floyd-Warshall computes every pair&#x27;s distance by enlarging the allowed intermediate set and updating first hops alongside costs. The outer k loop protects that meaning. Continue with <a href="topic:algo-prim">Prim's Algorithm</a> for a different objective: connecting all vertices with minimum total edge weight.</p>

@@ -1,0 +1,61 @@
+<h2 id="introduction">When directed routes work both ways</h2>
+<p class="lead">Two campus locations may have a one-way route between them without having a return route. Strongly connected components group vertices that can reach each other in both directions. Within one such group, every vertex can travel to every other vertex along directed paths.</p>
+<p>Mutual reachability is an equivalence relation. Every vertex reaches itself with a zero-edge path. If u and v reach each other, the relationship is symmetric. If u connects both ways with v and v connects both ways with w, concatenating paths connects u with w. Therefore the groups form a genuine partition.</p>
+<p>A single directed DFS does not find this partition. It may follow a one-way edge out of a group and continue into another. Kosaraju&#x27;s algorithm solves the problem with two DFS passes and a reversed copy of the graph. The order between those passes is the key idea.</p>
+<h2 id="syntax">Finish on the original, search on the transpose</h2>
+<p>The transpose graph reverses every directed arc. An original u to v becomes v to u, with the same vertex set. Paths also reverse: a path from u to v becomes a path from v to u. Mutual reachability is unchanged, so the transpose has exactly the same strongly connected groups.</p>
+<p>Kosaraju first runs DFS on the original graph and appends each vertex when its call finishes. This list is in increasing finish order. The second pass takes vertices from the end of that list and explores the transpose. Every second-pass DFS assigns one component id to its newly reached vertices.</p>
+<p>The first three C examples use six vertices A through F. Scenario 0 is the shared graph with arcs pointing according to the listed pairs AB, AC, BC, BD, CE, DE, DF and EF. Scenario 1 is a directed six-cycle. Scenario 2 isolates F; scenario 3 is an edgeless graph. The fourth example adds smaller mutually reachable groups and constructs their component graph.</p>
+<pre><code class="language-text">run DFS on original outgoing lists; append u when its call finishes
+build transpose by reversing every directed edge
+comp[*] = -1; components = 0
+for u in decreasing first-pass finish order
+    if comp[u] == -1: DFS on transpose assigning components
+        components++
+contract groups; keep only arcs between different component ids</code></pre>
+<h2 id="how-it-works">Build reversed neighbour lists once</h2>
+<p>The C first function sets seen[u], follows original outgoing neighbours, then appends u to order. Its outer loop starts a call at every unseen vertex. A complete first-pass forest matters because an unreachable component still needs a finish position in the second pass.</p>
+<p>The program builds transpose adjacency lists by scanning original edges. For e.from to e.to, it appends e.from to the reversed list of e.to. Each edge is reversed exactly once. You do not need to reverse individual lists, and you do not reverse the finish list&#x27;s vertex names.</p>
+<p>Before the second pass, every comp entry is -1. Iterate the finish list backward. If a vertex still has comp -1, call second on the transpose and assign the next component number. Do not reuse seen from the first pass as the second-pass visited state; those entries are already set.</p>
+<h2 id="examples">See reversal and condensation in C</h2>
+<h3>The shared graph</h3><p>All six shared directed vertices are singleton components, with traversal-dependent ids.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>The directed ring makes all six vertices mutually reachable, giving one component.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>F is a singleton; the remaining acyclic vertices are also singleton components.</p><div data-example="ex-3"></div>
+<h3>A second representation</h3><p>The two mutual pairs contract to groups 0 and 1, followed by singleton groups 2 and 3.</p><div data-example="ex-4"></div>
+<p>The main implementation stores outgoing lists for both orientations, so both search passes follow actual neighbours. The fourth example uses a fixed adjacency matrix to make its two mutual pairs easy to inspect. Its second DFS reads a[v][u] rather than a[u][v], which is an implicit transpose access.</p>
+<p>To construct the component graph, scan every original edge u to v. If comp[u] differs from comp[v], add an arc from comp[u] to comp[v]. Edges with both endpoints in one component disappear. Multiple original edges can induce the same component arc, so the example uses a Boolean matrix to suppress duplicates.</p>
+<p>A topological order of the component graph gives a useful order for whole groups. However, it does not produce a topological order of all original vertices when a group contains a cycle. The contracted graph is acyclic because the cycles are contained inside its group nodes.</p>
+<h2 id="trace">Six singletons, then two larger groups</h2>
+<p>On the directed shared graph, the first-pass finish sequence is F, E, C, D, B, A. The second-pass root order is its reverse: A, B, D, C, E, F. Because this original graph is a DAG, each transpose search reaches only its own still-unassigned vertex.</p>
+<table class="ref"><thead><tr><th scope="col">Second-pass root</th><th scope="col">New transpose members</th><th scope="col">Component id</th></tr></thead><tbody><tr><td>A</td><td>A</td><td>0</td></tr><tr><td>B</td><td>B</td><td>1</td></tr><tr><td>D</td><td>D</td><td>2</td></tr><tr><td>C</td><td>C</td><td>3</td></tr><tr><td>E</td><td>E</td><td>4</td></tr><tr><td>F</td><td>F</td><td>5</td></tr></tbody></table>
+<p>The component ids are labels, not minimum vertex numbers or sizes. Here D receives id 2 before C receives id 3. A different legitimate DFS neighbour order can change the ids. Membership and reachability are the mathematical result; the numeric spelling of an id is a presentation choice.</p>
+<p>The fourth example uses mutual pairs A with B and C with D, followed by singletons E and F. Its arcs between groups form AB-group to CD-group to E to F. This case shows why a component may contain several vertices while still having one-way connections to other components.</p>
+<p>For graph 0, the distinct component arcs are 0→1, 0→3, 1→2, 1→3, 2→4, 2→5, 3→4 and 4→5. Each follows directly from an original crossing edge under A=0, B=1, D=2, C=3, E=4, F=5 component labels.</p>
+<h2 id="correctness">Choose a component the reversed search cannot escape</h2>
+<p>Contract each strongly connected component into one node. Keep an edge between distinct groups whenever an original edge crosses between them. This component graph cannot contain a directed cycle: groups around such a cycle would all reach each other and should have been one larger group.</p>
+<p>Consider an edge from component X to a different component Y. The largest DFS finish time in X exceeds the largest finish time in Y. If DFS reaches X first and Y is unvisited, it can explore Y from X, so Y finishes before X&#x27;s relevant ancestor. If DFS reaches Y first, Y cannot reach X; otherwise the groups would be mutually reachable. Thus Y&#x27;s search finishes before X is discovered.</p>
+<p>This finish-time ordering means the largest unassigned finish time belongs to a source component among the unassigned original components. A source component has no incoming edge from another remaining component. In the transpose, it therefore has no outgoing edge to another remaining component.</p>
+<p>Starting the second pass there cannot escape into a different unassigned component. It can still reach every vertex inside its own component because reversing paths preserves strong connectivity. Thus that search assigns exactly one component. Removing it conceptually and repeating proves every later assignment correct.</p>
+<p>Vertices already assigned by an earlier second-pass search are ignored. Reversed edges may point toward those earlier groups, but they cannot cause merging because comp is no longer -1. This is why the root order and the unassigned test must work together.</p>
+<h2 id="complexity">Two searches and one reversal</h2>
+<p>With adjacency lists, the first DFS forest visits V vertices and E arcs. Building the transpose also takes O(V+E), including list initialisation. The second forest again visits each vertex and reversed arc once. Adding three linear phases gives O(V+E) time, rather than multiplying their costs.</p>
+<p>Seen, comp and order each store V entries. Recursive depth can reach V on a long path. These working structures need O(V) space beyond the two graph orientations. Storing the transpose adds O(V+E) graph space. You should mention that additional graph when reporting total memory.</p>
+<p>The bounded main program reserves six entries in each neighbour row. For scalable lists, allocate capacities from reversed degrees or use an offset array. The fourth example scans V possible neighbours per call because it uses a matrix; its traversal is O(V²). Its Boolean component matrix also reserves O(V²) space, while a deduplicated list representation can be smaller.</p>
+<p>Component-graph construction scans E original arcs before duplicate handling. A matrix can insert a Boolean arc in constant time, but printing every possible component pair costs O(K²) for K components. Keeping a set of distinct component arcs supports output proportional to the number of distinct pairs instead.</p>
+<h2 id="edge-cases">One-way bridges do not merge components</h2>
+<p>One edge from X to Y proves only reachability in that direction. Even many parallel routes from X to Y cannot merge the groups without a return path. When drawing a solution, mark both required directions before deciding that vertices belong together.</p>
+<p>A directed cycle containing all six vertices is one component. An edgeless six-node graph has six singleton components, even though no vertex has an incident edge. A singleton component does not require a self-loop because a zero-edge path establishes self-reachability.</p>
+<p>Disconnected directed pieces are handled by the first-pass outer loop. If you start only at A and omit unseen vertices, the finish list may miss an entire region. The second pass cannot recover vertices that were never added to that list.</p>
+<h2 id="common-mistakes">Keep the two passes different</h2>
+<h3>Taking increasing finish order</h3>
+<p>Searching the transpose from the smallest finish time can leave one group and absorb another. Process the stored finish list from its last entry toward its first.</p>
+<h3>Searching the original graph twice</h3>
+<p>The finish ordering alone is insufficient. The second search must use reversed arcs so the selected original source component becomes a transpose sink.</p>
+<h3>Treating component ids as a sorted answer</h3>
+<p>Ids depend on traversal choices. Compare sets of vertices and component arcs when checking two solutions, rather than requiring the same arbitrary numbers.</p>
+<h2 id="best-practices">Verify mutual reachability on small groups</h2>
+<p>For a small hand trace, choose one representative per claimed component. Check a route from the representative to every member and a return route from every member. Then draw the contracted graph and verify that it has no directed cycle. These checks catch both accidental splitting and accidental merging.</p>
+<h2 id="version-notes">Two graph values in C17</h2>
+<p>The main Kosaraju program uses C17 structures and fixed arrays for original and reversed lists. No dynamic allocation is needed for its six vertices. The maximum recursion depth is six; larger applications must budget stack space or use explicit DFS frames.</p>
+<h2 id="summary">Compress cycles into a DAG</h2>
+<p>Kosaraju combines original finish order with transpose reachability to find maximal mutually reachable groups. Contracting those groups produces a DAG suitable for further dependency analysis. Next, <a href="topic:algo-dijkstra">Dijkstra's Algorithm</a> introduces weighted shortest paths when every edge weight is nonnegative.</p>

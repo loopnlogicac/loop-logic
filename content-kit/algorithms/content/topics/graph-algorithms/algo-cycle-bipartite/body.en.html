@@ -1,0 +1,60 @@
+<h2 id="introduction">Can every connection join opposite teams?</h2>
+<p class="lead">Suppose students must be divided into two lab groups, and every listed pair must belong to opposite groups. Model each student as a vertex and each restriction as an undirected edge. A bipartite graph permits exactly such a division into two sets.</p>
+<p>You can test the condition by colouring adjacent vertices differently. Begin one vertex with colour 0. Give every newly reached neighbour colour 1, then alternate as the search spreads. If an edge joins equal colours, the proposed two-group assignment is impossible for that component.</p>
+<p>Cycle detection asks a related but different question. A tree has no cycle and is always bipartite. An even cycle can also be bipartite. An odd cycle cannot. Therefore finding a cycle alone does not decide whether two colours suffice; its parity matters.</p>
+<h2 id="syntax">Track colours, parents and active calls</h2>
+<p>The BFS colouring program uses colour -1 for undiscovered, 0 for one side and 1 for the other. Parent records the edge that first discovered a vertex. A queue explores the component while assigning each newly discovered vertex the opposite colour to its parent.</p>
+<p>The same undirected traversal can detect cycles in a simple graph. If an already discovered neighbour is not the current vertex&#x27;s parent, the search forest already contains another route between them. That edge closes a cycle. The parent exception skips the reverse view of the same undirected tree edge.</p>
+<p>Directed cycle detection needs another rule. A DFS edge to a grey, currently active vertex closes a directed cycle. An edge to a black, finished vertex does not by itself prove one. The fourth C example uses colours 0,1,2 for white, grey and black in that directed DFS context; those values describe call state, not a bipartition.</p>
+<pre><code class="language-text">colour[*] = -1; parent[*] = -1; bipartite = true; cycle = false
+for roots in cyclic order from start: if uncoloured, colour 0; enqueue
+    while queue is nonempty: u = dequeue
+        for each neighbour v
+            if uncoloured: colour[v] = 1-colour[u]; parent[v] = u; enqueue
+            else: if v != parent[u], cycle = true
+                  if colour[v] == colour[u], bipartite = false
+report colours, bipartite and cycle flags</code></pre>
+<h2 id="how-it-works">Colour every connected component</h2>
+<p>The combined undirected program tries roots in cyclic order from start. At every still-uncoloured root, it assigns colour 0 and starts a fresh queue. Components are independent, so choosing colour 0 for every new root is harmless. You may swap both colours throughout one component without changing validity.</p>
+<p>For each edge u to v in an adjacency list, a new v receives 1-colour[u], parent u and one queue insertion. A previously coloured v is checked for two conditions. If v differs from parent[u], set the cycle flag. If colour[v] equals colour[u], set bipartite false.</p>
+<p>The implementation continues after a conflict so the final labels cover every vertex. A false bipartite result means those labels are an attempted colouring with contradictions. They must not be presented as a valid partition. The highlighted equal-colour edge is the reason the attempt failed.</p>
+<p>The shared graph contains triangles A,B,C and D,E,F. Starting at A colours both B and C as 1. The BC edge then connects equal colours, proving failure. Scenario 1 is a six-node chain and succeeds. Scenario 2 isolates F but still contains the A,B,C triangle. Scenario 3 has no constraints and succeeds with all roots coloured 0.</p>
+<h2 id="examples">Compare undirected and directed evidence</h2>
+<h3>The shared graph</h3><p>The shared triangles cause same-colour conflicts; cycle is true and bipartite is false.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>The chain is acyclic and two-colourable.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>The A,B,C triangle still prevents bipartiteness even though F is isolated.</p><div data-example="ex-3"></div>
+<h3>A second representation</h3><p>The directed diamond has a finished-neighbour edge but no active-ancestor edge, so it has no directed cycle.</p><div data-example="ex-4"></div>
+<p>Example 1 prints each attempted colour and the two result flags. The following fixed scenarios expose a successful chain and a disconnected graph that still fails. The directed fourth example has two routes from 0 toward 3 and no return edge. Its black-neighbour encounter does not prove a cycle, so it prints zero.</p>
+<p>For an undirected simple graph, a visited non-parent edge plus the search-tree route gives a cycle. A directed graph lacks the reverse travel that this argument assumes. Use the active-call test for directed edges instead of importing the undirected parent test.</p>
+<p>To recover an actual odd-cycle witness, retain parents and depths at the first same-colour edge. Walk both endpoints upward until they meet, combining the two branches with that conflicting edge. The provided program reports the Boolean result and attempted labels; it does not print a full witness cycle.</p>
+<h2 id="trace">One conflict is enough to reject two groups</h2>
+<p>The first BFS removal from A discovers B and C. Their equal colours are correct relative to A, but incompatible with their mutual edge. No different initial colour for A can repair a triangle, because swapping colours preserves equality at B and C.</p>
+<table class="ref"><thead><tr><th scope="col">Removed vertex</th><th scope="col">New colours</th><th scope="col">Conflict or other cycle evidence</th></tr></thead><tbody><tr><td>A</td><td>B=1,C=1</td><td>none</td></tr><tr><td>B</td><td>D=0</td><td>BC has equal colours</td></tr><tr><td>C</td><td>E=0</td><td>CB repeats the conflict</td></tr><tr><td>D</td><td>F=1</td><td>DE has equal colours</td></tr><tr><td>E</td><td>none</td><td>ED repeats conflict; EF is non-parent</td></tr><tr><td>F</td><td>none</td><td>FE is non-parent</td></tr></tbody></table>
+<p>The final flags for scenario 0 are bipartite 0 and cycle 1. For the chain, they are bipartite 1 and cycle 0. An even ring would instead have bipartite 1 and cycle 1. Use these three combinations to remember why the two questions need separate answers.</p>
+<div data-lab="bipartite-check"></div>
+<h2 id="correctness">Parity explains colouring success and failure</h2>
+<p>BFS assigns a colour equal to the parity of the tree-path length from its component root. Each tree edge flips colour, so all tree edges satisfy the opposite-colour rule. If every other edge also joins opposite colours, those colour classes are directly a valid bipartition. This proves success without needing any extra graph theorem.</p>
+<p>If an edge u,v joins equal colours, their root-path depths have equal parity. Remove their common path prefix up to their lowest common ancestor in the BFS tree. The two remaining branches have an even combined length. Adding edge u,v creates a cycle of odd length.</p>
+<p>An odd cycle cannot be two-coloured because every edge flips colour. After an odd number of flips, returning to the starting vertex demands the opposite of its original colour. This contradiction proves that one same-colour conflict makes every two-colouring impossible, rather than merely showing a poor root choice.</p>
+<p>Conversely, if a graph has no odd cycle, the BFS process cannot find a same-colour edge, because such an edge would construct an odd cycle as above. Therefore a graph is bipartite exactly when it contains no odd cycle. The outer root loop applies the argument separately to every component.</p>
+<h2 id="complexity">Each component is explored once</h2>
+<p>Every undirected vertex changes from colour -1 only once. It enters one queue and has its adjacency list scanned once. The total work is O(V+E), including all component roots. The outer loop adds only O(V); it does not multiply a full traversal by V because already coloured roots are skipped.</p>
+<p>Colour, parent and queue arrays use O(V) auxiliary space. Input adjacency lists use O(V+E) in a scalable representation. The directed grey-state DFS also costs O(V+E) with lists and may need O(V) recursive stack space. Its small matrix example generalises to O(V²) neighbour scanning.</p>
+<p>A cycle test using union-find is another option for undirected edges processed once. If find(u) equals find(v), adding that physical edge closes a cycle. Do not feed both adjacency-list directions of one undirected edge into that test as separate physical edges, or every tree edge will appear cyclic.</p>
+<h2 id="edge-cases">Disconnected constraints and repeated edges</h2>
+<p>An odd cycle hidden in a component unreachable from A still makes the entire graph non-bipartite. That is why the colouring routine must restart at uncoloured vertices. One-source BFS alone can certify only its reached component.</p>
+<p>An isolated vertex can belong to either colour class. A graph with zero edges is bipartite even if one class is empty. A self-loop immediately violates the opposite-colour condition and is a directed or undirected cycle according to the graph model.</p>
+<p>Parallel undirected edges need care in cycle detection. Two distinct physical edges between the same pair form a length-two cycle in a multigraph. Skipping every edge to a parent vertex would miss it. Store parent edge ids when parallel edges are permitted; the shorter parent-vertex rule here assumes a simple graph.</p>
+<h2 id="common-mistakes">Do not confuse cycles with odd cycles</h2>
+<h3>Rejecting a square as non-bipartite</h3>
+<p>A four-edge cycle alternates 0,1,0,1 and closes consistently. Only odd-cycle evidence rules out a bipartition.</p>
+<h3>Using visited alone for a directed cycle</h3>
+<p>A directed edge may point to a finished vertex from another branch. A cycle is proved by reaching a grey ancestor, not merely any previously visited vertex.</p>
+<h3>Stopping after the first component succeeds</h3>
+<p>A successful colouring near the chosen source says nothing about disconnected components. Continue the root loop until every vertex is checked or a global failure is established.</p>
+<h2 id="best-practices">State graph assumptions before tracing</h2>
+<p>Say whether edges are directed, whether parallel edges exist and what the colour values mean. Keep a separate cycle flag and bipartite flag. When failure occurs, name the conflicting edge so a reader can verify the reason directly.</p>
+<h2 id="version-notes">Two different colour arrays in C17</h2>
+<p>Both examples use C17 integer arrays and bounded recursion or queues. The undirected BFS uses -1,0,1 for assignment state. The directed DFS uses 0,1,2 for call state. Reusing the word colour does not make those meanings interchangeable.</p>
+<h2 id="summary">Colouring needs parity, cycles need direction</h2>
+<p>BFS two-colouring succeeds exactly when no component contains an odd cycle. Undirected parent checks and directed active-call checks detect different forms of cycle evidence. Return to <a href="topic:algo-bfs">Breadth-First Search</a> to review queue discovery, or compare <a href="topic:algo-dfs">Depth-First Search</a> for recursive call states.</p>

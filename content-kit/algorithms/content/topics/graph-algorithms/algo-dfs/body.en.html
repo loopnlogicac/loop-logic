@@ -1,0 +1,60 @@
+<h2 id="introduction">Walk a corridor before returning</h2>
+<p class="lead">Imagine inspecting a campus building. You enter a room, follow an unexplored door, and keep going until no new room remains. Then you return to the last unfinished room. Depth-first search, or DFS, uses this branch-first rule. It helps reveal components, cycles and the order in which dependencies finish.</p>
+<p>A recursive DFS call represents one unfinished visit. Calls below it explore descendants before control returns. The program stack therefore records the active path. DFS does not promise a shortest route by edge count. Its strength is the structure of the exploration, especially which visits are still active.</p>
+<p>DFS uses three conceptual colours. White means undiscovered, grey means the call is active, and black means the call has finished. The examples encode these stages with discovery and finish arrays. A zero discovery time means white; a positive discovery time with zero finish time means grey.</p>
+<h2 id="syntax">Record entry and exit separately</h2>
+<p>The DFS function receives a graph, a current vertex u, a component id and arrays for discover, finish and comp. A shared clock increases before assigning each discovery or finish time. Every vertex gets two distinct timestamps. Those numbers show nested calls without depending on elapsed wall-clock time.</p>
+<p>Neighbour lists are visited in ascending vertex order. The outer loop tries roots in cyclic order beginning at start. For example, start 4 tries E, F, A, B, C, D. It starts a recursive call only for a still-white root. Changing the root order changes timestamps but preserves which undirected vertices share a component.</p>
+<p>For DFS, scenario 0 has six vertices with undirected connections AB, AC, BC, BD, CE, DE, DF and EF. Their weights are displayed for comparison with later algorithms, but DFS ignores them. Scenario 1 is a chain. Scenario 2 isolates F; scenario 3 contains no connections at all.</p>
+<pre><code class="language-text">discover[*] = 0; clock = 0; components = 0
+for roots in cyclic order beginning at start
+    if root is white: dfs(root, components); components++
+dfs(u,c): discover[u] = ++clock; comp[u] = c; push u
+    for each neighbour v in ascending order
+        if v is white: dfs(v,c); otherwise inspect its colour
+    finish[u] = ++clock; pop u
+report discovery/finish times and components</code></pre>
+<h2 id="how-it-works">Pause the caller while a child runs</h2>
+<p>At entry, dfs assigns discover[u]=++clock and stores the component id. It then scans u&#x27;s adjacency list. Whenever v is white, dfs calls itself on v immediately. The caller pauses at that edge and resumes only after v and all its descendants finish.</p>
+<p>After the last neighbour, dfs assigns finish[u]=++clock and returns. The finish event differs from discovering the last new neighbour. A call may still wait for several descendants to return. Both events matter when you later build a topological order or classify directed edges.</p>
+<p>The outer loop is necessary for a disconnected graph. A search from A cannot enter an isolated F through an edge. After A&#x27;s component finishes, the loop finds F white and starts another root. Every new root increases the undirected component count by one.</p>
+<h2 id="examples">Watch recursive calls and edge states</h2>
+<h3>The shared graph</h3><p>The clock assigns twelve distinct entry/exit events within one connected component.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>The chain nests all six calls before returning.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>The isolated F begins a second component after the five-node component finishes.</p><div data-example="ex-3"></div>
+<h3>A second representation</h3><p>The directed trace distinguishes white, grey and finished destinations; finished includes forward and cross cases.</p><div data-example="ex-4"></div>
+<p>The classification example uses a directed four-vertex graph. It prints tree for a white destination, back for a grey destination, and finished for a black destination. The last category deliberately groups forward and cross edges. Distinguishing those two requires ancestor information, such as discovery/finish intervals.</p>
+<p>For a directed edge u to v, a tree edge first discovers v. A back edge points to an active ancestor, including a self-loop. A forward edge points to an already completed proper descendant. A cross edge connects vertices without an ancestor relation in that DFS forest. The graph&#x27;s direction is essential to these definitions.</p>
+<h2 id="trace">Nested times on the common graph</h2>
+<p>Starting at A produces the recursive path A, B, C, E, D, F before any return. The first completed call is F. Then D returns to E, E returns to C, and the remaining callers finish in reverse nesting order.</p>
+<table class="ref"><thead><tr><th scope="col">Vertex</th><th scope="col">Discovery</th><th scope="col">Finish</th><th scope="col">Component</th></tr></thead><tbody><tr><td>A</td><td>1</td><td>12</td><td>0</td></tr><tr><td>B</td><td>2</td><td>11</td><td>0</td></tr><tr><td>C</td><td>3</td><td>10</td><td>0</td></tr><tr><td>D</td><td>5</td><td>8</td><td>0</td></tr><tr><td>E</td><td>4</td><td>9</td><td>0</td></tr><tr><td>F</td><td>6</td><td>7</td><td>0</td></tr></tbody></table>
+<p>The interval for C is [3,10], and the interval for E is [4,9]. One contains the other because E is a descendant of C. Intervals belonging to separate DFS trees are disjoint. Discovery order alone would not tell you when a vertex stopped being active.</p>
+<div data-lab="dfs"></div>
+<h2 id="correctness">Every call completes its reachable white region</h2>
+<p>During a DFS call, every active vertex is on the current recursion path. A newly called vertex was white, so a vertex cannot create a second active call for itself. This discovery rule prevents infinite recursion around cycles. Each call has a finite neighbour list and eventually returns.</p>
+<p>If an edge leaves a discovered vertex toward a white neighbour, DFS follows it before that vertex finishes. Suppose some reachable vertex stayed white after the root returned. Along a path from the root, take the first white vertex. Its predecessor was explored and should have followed that edge, which is a contradiction.</p>
+<p>In an undirected graph, one root therefore visits exactly one connected component. No edge can lead into another component by definition. Restarting at a white vertex selects a different component, so the outer loop partitions all vertices correctly. This argument does not establish strongly connected components for directed graphs.</p>
+<h2 id="comparison">Undirected edges need a parent exception</h2>
+<p>An undirected tree edge appears twice in adjacency lists. From child v, the reverse arc to parent u reaches a grey vertex, but it is the same physical tree edge. Do not call it a separate cycle. A visited non-parent neighbour does reveal a cycle in a simple undirected graph.</p>
+<p>With parallel undirected edges, comparing only parent vertices is insufficient. Track the parent edge id so that only the exact reverse tree edge is skipped. The lessons here use simple graphs, with neither parallel edges nor self-loops. State that assumption when using the shorter parent-vertex test in an exam.</p>
+<p>DFS intervals provide a useful check on directed classification. If v&#x27;s interval lies inside u&#x27;s interval, v is a descendant of u. If u&#x27;s interval lies inside v&#x27;s, v is an ancestor. Disjoint intervals can support a cross edge, but they cannot describe a tree ancestor relation.</p>
+<h2 id="complexity">One entry, one exit, each adjacency once</h2>
+<p>DFS gives each vertex one discovery event and one finish event. Its neighbour loop runs once per stored arc. Across a full forest, the work is O(V+E). Reading the graph, assigning zero times and trying all outer roots also fits this bound for adjacency-list storage.</p>
+<p>The discover, finish and comp arrays use O(V) space. In the worst case, a chain puts V calls on the recursion stack before any returns. That stack must be included, even though the source code contains no explicit stack array. Graph storage adds O(V+E) when lists reserve only used arcs.</p>
+<p>The six-node C demonstration reserves six neighbours per vertex and builds those lists from a bounded edge set. Its traversal still scans only actual degrees. If you replace lists with a full V by V matrix, scanning every possible neighbour makes DFS O(V²), even on a sparse graph.</p>
+<h2 id="edge-cases">Long paths and empty edge sets</h2>
+<p>Scenario 3 starts six separate DFS trees. Starting at A gives timestamps A 1/2, B 3/4, through F 11/12. This is a helpful check that the outer loop was not omitted. Scenario 2 instead produces five connected vertices and one isolated vertex.</p>
+<p>On a large input, recursive DFS may exceed the system&#x27;s stack capacity. An explicit stack can avoid that limit. To preserve recursive finish times, each frame must remember the next neighbour to inspect. Pushing all neighbours at once and marking them later may produce a different forest and cannot directly mimic return events.</p>
+<h2 id="common-mistakes">Separate active from previously seen</h2>
+<h3>One visited flag for directed cycles</h3>
+<p>A visited black vertex is not necessarily an ancestor. Directed cycle detection needs to know whether the destination is grey, so retain an active-state distinction.</p>
+<h3>Resetting the clock inside recursion</h3>
+<p>A local clock restarted at each call makes timestamps incomparable. Pass one clock by address or keep one shared search clock.</p>
+<h3>Counting components in a directed forest</h3>
+<p>A directed DFS forest depends on edge direction and root order. Its roots do not define mutual reachability. Use strongly connected components for that question.</p>
+<h2 id="best-practices">Draw calls as nested intervals</h2>
+<p>Write discovery times on entry and finish times on return. Keep a small call-stack column beside a trace. Check that every descendant finishes before its ancestor and that a complete six-node forest uses times 1 through 12 exactly once.</p>
+<h2 id="version-notes">Recursive state in C17</h2>
+<p>C17 supports these recursive functions and fixed arrays without extensions. The clock pointer lets child calls update the caller&#x27;s counter. The bounded examples need at most six recursive frames, so their stack use is small and predictable.</p>
+<h2 id="summary">Depth gives structure</h2>
+<p>DFS reveals the nested shape of graph exploration and partitions an undirected graph into components. Its finish events also support dependency ordering. Continue with <a href="topic:algo-topological-sort">Topological Sort</a> to turn those events into an order of tasks.</p>

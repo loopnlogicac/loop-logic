@@ -1,0 +1,444 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-bellman-ford",
+  "module": "graph-algorithms",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Bellman-Ford Algorithm",
+    "bn": "Bellman–Ford অ্যালগরিদম"
+  },
+  "summary": {
+    "en": "নেগেটিভ সাইকেল না থাকলে শর্টেস্ট পথ V-1 এজের মধ্যেই পাওয়া যায়।",
+    "bn": "নেগেটিভ এজ থাকলে বারবার দূরত্ব কমিয়ে দেখো, আর নেগেটিভ সাইকেলের প্রভাব খুঁজে বের করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "algo-dijkstra"
+  ],
+  "related": [
+    "algo-floyd-warshall"
+  ],
+  "keywords": [
+    "Bellman-Ford Algorithm",
+    "C17",
+    "graph",
+    "correctness",
+    "trace"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Bellman-Ford Algorithm programs use C17 with fixed six-vertex scenarios; integer limits and representation costs are explained in the lesson."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Allow negative edges without guessing a final vertex"
+    },
+    {
+      "id": "syntax",
+      "title": "Repeat a complete edge scan"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Use a directed variant with one negative arc"
+    },
+    {
+      "id": "examples",
+      "title": "Try rebates, a cycle and an isolated destination"
+    },
+    {
+      "id": "trace",
+      "title": "Immediate updates and the extra scan"
+    },
+    {
+      "id": "correctness",
+      "title": "Bound the number of edges in an optimal simple path"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Separate affected, finite and unreachable vertices"
+    },
+    {
+      "id": "complexity",
+      "title": "Full scans multiply vertices by edges"
+    },
+    {
+      "id": "comparison",
+      "title": "Undirected negative roads have a different consequence"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep the source reachability guard"
+    },
+    {
+      "id": "best-practices",
+      "title": "Explain the pass convention"
+    },
+    {
+      "id": "version-notes",
+      "title": "Finite arithmetic in C17"
+    },
+    {
+      "id": "summary",
+      "title": "Repeated relaxation reveals unstable costs"
+    }
+  ],
+  "labs": [
+    "bellman-ford"
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Shared input from A",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The acyclic negative-edge graph has finite distances 0,4,1,9,9,12.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "A chain or cycle variant",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The reachable negative cycle makes B through F unbounded below, while A stays zero.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "F has no connection",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>F remains unreachable, distinct from destinations affected by a negative cycle.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "medium",
+      "title": "Implement Bellman-Ford Algorithm",
+      "statementHtml": "<p>Choose a Bellman-Ford directed scenario with graph=0–3 and its source with start=0–5. Read those two integers in that order and keep the negative-edge weights defined in this lesson. Print each letter followed by its distance, INF for unreachable, or -INF when a reachable negative cycle can lead to it. For this Bellman-Ford Algorithm solution, the first output line is <code>Enter graph (0-3) and start (0-5):</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "এজের শুরু নোডে পৌঁছানো যায় কি না আগে দেখো।"
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "hard",
+      "title": "A source that cannot enter the rebate cycle",
+      "statementHtml": "<p>Read one Bellman-Ford scenario index in 0–3 to investigate reachability from sink F. Use F as the source of the selected directed negative-edge graph. Print each letter followed by its finite distance, INF or -INF. Determine whether any reachable negative cycle affects it. F is a sink in these scenarios, so a cycle elsewhere must not create a false warning. Begin the A source that cannot enter the rebate cycle output with <code>Enter graph (0-3); start is F:</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "নেগেটিভ সাইকেল থেকে যাওয়া যায় এমন নোডের খরচ সীমা ছাড়া কমে।"
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Immediate updates and the extra scan by hand",
+      "statementHtml": "<p>For Bellman-Ford graph 0 from A, show the first pass in the listed edge order, its intermediate distances and the no-change pass. Explain why no vertex receives -INF.</p>",
+      "hints": [
+        "V-1 পাসের পরও দূরত্ব কমলে পৌঁছানো যায় এমন নেগেটিভ সাইকেল আছে।"
+      ],
+      "answerHtml": "<p>Starting from A in the acyclic negative-edge graph, the listed edge order propagates several improvements during pass one. Pass two makes no changes and allows the early stop. The trace records the distance after each edge, rather than claiming that only one path edge becomes available per pass.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Pass 1 edge</th><th scope=\"col\">Destination after checking</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>A-&gt;B:4</td><td>B=4</td><td>first finite route</td></tr><tr><td>A-&gt;C:2</td><td>C=2</td><td>first finite route</td></tr><tr><td>B-&gt;C:-3</td><td>C=1</td><td>4-3 improves 2</td></tr><tr><td>B-&gt;D:5</td><td>D=9</td><td>4+5</td></tr><tr><td>C-&gt;E:8</td><td>E=9</td><td>1+8</td></tr><tr><td>D-&gt;E:2</td><td>E=9</td><td>11 does not improve 9</td></tr><tr><td>D-&gt;F:6</td><td>F=15</td><td>9+6</td></tr><tr><td>E-&gt;F:3</td><td>F=12</td><td>9+3 improves 15</td></tr></tbody></table>\n<p>The distances after the first full pass are 0,4,1,9,9,12. Notice that E improves first to 9 through C; D later proposes 11 and is rejected. F first receives 15 through D, then improves to 12 through E. A pass table should preserve that edge order when using in-place relaxation.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Bound the number of edges in an optimal simple path by hand",
+      "statementHtml": "<p>Prove Bellman-Ford&#x27;s at-most-p-edge guarantee after pass p. Derive V-1, explain the extra scan and justify propagating affected flags only forward.</p>",
+      "hints": [
+        "V-1 পাসের পরও দূরত্ব কমলে পৌঁছানো যায় এমন নেগেটিভ সাইকেল আছে।"
+      ],
+      "answerHtml": "<p>After pass p, dist[v] is no greater than the cost of any source-to-v path with at most p edges. The base case is the source with its zero-edge route. For the induction step, take a path whose last edge is u to v. Its prefix has at most p-1 edges and is covered before pass p begins.</p>\n<p>When that final edge is scanned in pass p, dist[u] is already no larger than the prefix cost. Earlier updates during the pass can only improve it further. Relaxing therefore makes dist[v] no larger than the full path cost. Every finite distance is also the cost of an actual walk, so the algorithm never invents an unattainable cheaper value.</p>\n<p>Without a reachable negative cycle, a shortest route can be chosen simple. Removing a repeated-vertex cycle of nonnegative weight does not increase cost. A simple route uses at most V-1 edges. Consequently the pass guarantee and attainable-walk property together make all reachable distances exact after V-1 passes.</p>\n<p>If a reachable edge can still improve after those passes, the finite-simple-path conclusion is impossible. Some reachable negative cycle must exist. Equivalently, summing relaxation inequalities around a negative cycle shows that at least one cycle edge cannot satisfy a stable distance inequality.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Derive Bellman-Ford Algorithm resource bounds",
+      "statementHtml": "<p>Count full edge scans in relaxation, the cycle check and forward affected propagation. Separate edge-list input storage from distance and affected arrays.</p>",
+      "hints": [
+        "Count repeated scans separately from the one-time initialisation."
+      ],
+      "answerHtml": "<p>There are at most V-1 main passes, each checking E edges. The extra detection scan takes O(E). Initialising distances takes O(V), so the usual worst-case bound is O(VE+V). When E is positive and scales with the graph, this is commonly abbreviated O(VE).</p>\n<p>The bounded implementation propagates affected flags with another V complete edge scans. This also costs O(VE) and leaves the overall worst-case order unchanged. A queue could reduce only the propagation phase to O(V+E), while the main Bellman-Ford relaxation remains O(VE).</p>\n<p>Working arrays dist and affected use O(V) auxiliary space. Input storage for the edge list takes O(E), plus the unused demonstration adjacency storage. No priority queue or recursion stack is required. Early stopping is useful for easy cases but does not remove the worst case where each pass still changes a value.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why are V-1 complete passes enough when no reachable negative cycle exists?",
+      "options": [
+        "Every graph has exactly V-1 edges",
+        "A shortest route can be chosen simple with at most V-1 edges",
+        "Only one edge can ever improve per pass",
+        "Every pass settles one vertex permanently"
+      ],
+      "answer": 1,
+      "explanation": "Removing nonnegative repeated cycles leaves a simple optimal route."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why must relaxation test that the tail distance is finite?",
+      "options": [
+        "Negative weights cannot be added in C",
+        "Every destination is initially the source",
+        "INF plus a negative weight can look like an improvement",
+        "All edges must be reversed first"
+      ],
+      "answer": 2,
+      "explanation": "A sentinel is a finite integer, so unreachable arithmetic needs a guard."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does another reachable relaxation after V-1 passes imply?",
+      "options": [
+        "The graph is necessarily disconnected",
+        "Every vertex has a finite shortest route",
+        "The edge list is already topologically sorted",
+        "A reachable negative cycle exists"
+      ],
+      "answer": 3,
+      "explanation": "Some repeated cycle must allow an improvement beyond every simple path."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which vertices receive -INF after detecting a reachable negative cycle?",
+      "options": [
+        "Vertices reachable forward from the affected cycle",
+        "Every vertex in the graph",
+        "Only the original source",
+        "Only unreachable vertices"
+      ],
+      "answer": 0,
+      "explanation": "The cycle can be repeated before travelling onward to those destinations."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a full no-change pass justify?",
+      "options": [
+        "Skipping the reachability guard forever",
+        "Stopping early because later identical scans cannot change anything",
+        "Declaring every route zero",
+        "Declaring a negative cycle"
+      ],
+      "answer": 1,
+      "explanation": "The distances are already a fixed point of all relaxations."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can in-place Bellman-Ford propagate through several edges in one pass?",
+      "options": [
+        "No, exactly one edge always becomes usable",
+        "Only when the graph is undirected",
+        "Yes, if their edge-list order allows it",
+        "Only after a negative cycle is detected"
+      ],
+      "answer": 2,
+      "explanation": "Later edges can consume improvements made earlier in the same scan."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does an unreachable negative cycle invalidate the selected source's distances?",
+      "options": [
+        "Yes, every cycle affects all sources",
+        "Only if its vertex letter is A",
+        "Only when all weights are integers",
+        "No"
+      ],
+      "answer": 3,
+      "explanation": "Without a route from the source, the cycle cannot be used."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What distance reaches 2 through the negative edge after two Bellman-Ford passes?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int from[3]={0,1,2},to[3]={1,2,1},w[3]={4,-3,2};\n    int d[3]={999,999,999},edges=2;\n    d[0]=0;\n    for(int pass=0;pass<2;pass++) {\n        for(int e=0;e<edges;e++) {\n            int u=from[e],v=to[e];\n            if(d[u]!=999 && d[u]+w[e]<d[v]) { d[v]=d[u]+w[e]; }\n        }\n    }\n    printf(\"%d\\n\",d[2]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "1",
+        "0",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "The route 0,1,2 costs 4-3=1."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What distance remains at 0 when the source is a sink at vertex 2?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int from[3]={0,1,2},to[3]={1,2,1},w[3]={4,-3,2};\n    int d[3]={999,999,999},edges=2;\n    d[2]=0;\n    for(int pass=0;pass<2;pass++) {\n        for(int e=0;e<edges;e++) {\n            int u=from[e],v=to[e];\n            if(d[u]!=999 && d[u]+w[e]<d[v]) { d[v]=d[u]+w[e]; }\n        }\n    }\n    printf(\"%d\\n\",d[0]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1000",
+        "998",
+        "999",
+        "1001"
+      ],
+      "answer": 2,
+      "explanation": "No edge returns from 2, and the finite-tail guard preserves the unreachable marker."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does a further relaxation remain possible after two passes around the negative cycle?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int from[3]={0,1,2},to[3]={1,2,1},w[3]={4,-3,2};\n    int d[3]={999,999,999},edges=3;\n    d[0]=0;\n    for(int pass=0;pass<2;pass++) {\n        for(int e=0;e<edges;e++) {\n            int u=from[e],v=to[e];\n            if(d[u]!=999 && d[u]+w[e]<d[v]) { d[v]=d[u]+w[e]; }\n        }\n    }\n    int improve=0;\n    for(int e=0;e<edges;e++) {\n        if(d[from[e]]!=999 && d[from[e]]+w[e]<d[to[e]]) { improve=1; }\n    }\n    printf(\"%d\\n\",improve);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "0",
+        "3",
+        "1"
+      ],
+      "answer": 3,
+      "explanation": "The 1-to-2-to-1 cycle costs -1, so another improvement is possible."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why can a reachable undirected negative edge make shortest walks unbounded?",
+      "options": [
+        "Every undirected graph has a directed DAG",
+        "Crossing it and immediately returning gives a negative closed walk",
+        "A shortest walk forbids repeated vertices by definition",
+        "An edge weight cannot be stored twice"
+      ],
+      "answer": 1,
+      "explanation": "Representing the road in both directions permits arbitrarily many negative-cost round trips."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Removing nonnegative repeated cycles leaves a simple optimal route.",
+      "bn": "নেগেটিভ সাইকেল না থাকলে শর্টেস্ট পথ V-1 এজের মধ্যেই পাওয়া যায়।"
+    },
+    {
+      "en": "A sentinel is a finite integer, so unreachable arithmetic needs a guard.",
+      "bn": "এজের শুরু নোডে পৌঁছানো যায় কি না আগে দেখো।"
+    },
+    {
+      "en": "Some repeated cycle must allow an improvement beyond every simple path.",
+      "bn": "V-1 পাসের পরও দূরত্ব কমলে পৌঁছানো যায় এমন নেগেটিভ সাইকেল আছে।"
+    },
+    {
+      "en": "The cycle can be repeated before travelling onward to those destinations.",
+      "bn": "নেগেটিভ সাইকেল থেকে যাওয়া যায় এমন নোডের খরচ সীমা ছাড়া কমে।"
+    },
+    {
+      "en": "The distances are already a fixed point of all relaxations.",
+      "bn": "এক পাসে কিছু না বদলালে পরের একই পাসেও বদলাবে না।"
+    },
+    {
+      "en": "Later edges can consume improvements made earlier in the same scan.",
+      "bn": "একই পাসে আগের আপডেট পরে থাকা এজ ব্যবহার করতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 8,
+      "question": "Show every step of Bellman-Ford Algorithm for the lesson's graph 0 from A. Include the table and final result.",
+      "answerHtml": "<p>Starting from A in the acyclic negative-edge graph, the listed edge order propagates several improvements during pass one. Pass two makes no changes and allows the early stop. The trace records the distance after each edge, rather than claiming that only one path edge becomes available per pass.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Pass 1 edge</th><th scope=\"col\">Destination after checking</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>A-&gt;B:4</td><td>B=4</td><td>first finite route</td></tr><tr><td>A-&gt;C:2</td><td>C=2</td><td>first finite route</td></tr><tr><td>B-&gt;C:-3</td><td>C=1</td><td>4-3 improves 2</td></tr><tr><td>B-&gt;D:5</td><td>D=9</td><td>4+5</td></tr><tr><td>C-&gt;E:8</td><td>E=9</td><td>1+8</td></tr><tr><td>D-&gt;E:2</td><td>E=9</td><td>11 does not improve 9</td></tr><tr><td>D-&gt;F:6</td><td>F=15</td><td>9+6</td></tr><tr><td>E-&gt;F:3</td><td>F=12</td><td>9+3 improves 15</td></tr></tbody></table>\n<p>The distances after the first full pass are 0,4,1,9,9,12. Notice that E improves first to 9 through C; D later proposes 11 and is rejected. F first receives 15 through D, then improves to 12 through E. A pass table should preserve that edge order when using in-place relaxation.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Give a correctness proof for Bellman-Ford Algorithm. Explain the assumptions and termination.",
+      "answerHtml": "<p>After pass p, dist[v] is no greater than the cost of any source-to-v path with at most p edges. The base case is the source with its zero-edge route. For the induction step, take a path whose last edge is u to v. Its prefix has at most p-1 edges and is covered before pass p begins.</p>\n<p>When that final edge is scanned in pass p, dist[u] is already no larger than the prefix cost. Earlier updates during the pass can only improve it further. Relaxing therefore makes dist[v] no larger than the full path cost. Every finite distance is also the cost of an actual walk, so the algorithm never invents an unattainable cheaper value.</p>\n<p>Without a reachable negative cycle, a shortest route can be chosen simple. Removing a repeated-vertex cycle of nonnegative weight does not increase cost. A simple route uses at most V-1 edges. Consequently the pass guarantee and attainable-walk property together make all reachable distances exact after V-1 passes.</p>\n<p>If a reachable edge can still improve after those passes, the finite-simple-path conclusion is impossible. Some reachable negative cycle must exist. Equivalently, summing relaxation inequalities around a negative cycle shows that at least one cycle edge cannot satisfy a stable distance inequality.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and auxiliary-space bounds of Bellman-Ford Algorithm, distinguishing representation and working storage.",
+      "answerHtml": "<p>There are at most V-1 main passes, each checking E edges. The extra detection scan takes O(E). Initialising distances takes O(V), so the usual worst-case bound is O(VE+V). When E is positive and scales with the graph, this is commonly abbreviated O(VE).</p>\n<p>The bounded implementation propagates affected flags with another V complete edge scans. This also costs O(VE) and leaves the overall worst-case order unchanged. A queue could reduce only the propagation phase to O(V+E), while the main Bellman-Ford relaxation remains O(VE).</p>\n<p>Working arrays dist and affected use O(V) auxiliary space. Input storage for the edge list takes O(E), plus the unused demonstration adjacency storage. No priority queue or recursion stack is required. Early stopping is useful for easy cases but does not remove the worst case where each pass still changes a value.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms: graph algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

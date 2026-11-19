@@ -1,3 +1,66 @@
+# Algorithms – Batch 3
+
+Package version: **0.3.0**, schema **1.1**, track **algorithms**.
+
+This delivery adds all **10 topics and 9 labs** in `graph-algorithms`. The cumulative package contains **43 of 56 topics and 28 of 32 labs**. The new material includes **35 complete C17 examples, 20 code-practice solutions with 80 captured test outputs, 23 worked written exercises, and 105 quiz questions, including 30 compiled output questions**. Titles, summaries, key points and key animation decisions use natural Bangla following `BANGLA_STYLE.md`. All new topics remain `review.status: draft` for normal subject and language review.
+
+## Batch 3 coverage
+
+| Topic | Included material and reviewer focus |
+| --- | --- |
+| `algo-bfs` | FIFO traversal over adjacency lists, mark-before-enqueue, unweighted shortest-layer proof, predecessor recovery and a runnable four-direction grid BFS. Lab: `bfs`, graph. |
+| `algo-dfs` | Recursive call stack, discovery/finish timestamps, complete undirected component forest, directed tree/back/forward/cross classification and the reverse-parent-edge exception. Lab: `dfs`, graph. |
+| `algo-topological-sort` | Kahn's indegrees and FIFO readiness, full-order/cycle decision, DFS grey-edge rejection and reverse finish order, rank-based verification and blocked downstream tasks. Lab: `topological-sort`, graph. |
+| `algo-strongly-connected` | Kosaraju's two complete forests, explicit transpose adjacency lists, decreasing original finish order, component-DAG proof, duplicate-free condensation and a separate two-mutual-pair example. No lab is listed for this topic. |
+| `algo-dijkstra` | Relaxation, real lazy binary min-heap, stale records, strict predecessor updates, route reconstruction, nonnegative-weight proof and a directed negative-edge counterexample. Lab: `dijkstra`, graph. |
+| `algo-bellman-ford` | Immediate-update edge passes, early fixed-point exit, V−1 proof, reachable negative-cycle detection and forward propagation distinguishing finite, INF and −INF destinations. Lab: `bellman-ford`, graph. |
+| `algo-floyd-warshall` | Allowed-intermediate state and recurrence, outer-k/in-place invariant, all-pairs distance matrix, first-hop reconstruction and negative-cycle affected-pair interpretation. Lab: `floyd-warshall`, grid. |
+| `algo-prim` | Single-component growth, joining-edge keys versus source distances, real lazy binary min-heap, cut exchange proof, total/count reporting and explicit disconnected-input limitations. Lab: `prim`, graph. |
+| `algo-kruskal` | Stable merge sorting of complete edge records, path-compressed union-find with union by size, cycle rejection, cut exchange proof and minimum spanning forest reporting. Lab: `kruskal`, graph. |
+| `algo-cycle-bipartite` | Simple-undirected parent checks, directed grey-state DFS, complete-component BFS two-colouring, odd-cycle equivalence, even-cycle distinction and parallel-edge assumptions. Lab: `bipartite-check`, graph. |
+
+Every Batch 3 `covers` point is addressed. The remaining **13 topics and 4 labs** belong to the later modules; no extra topic ids are proposed. Full Bangla lesson bodies are optional and have not been added. Video lists remain empty because no specific catalogue match was verified.
+
+## Curriculum kinds are preserved
+
+The request describes graph labs, but the authoritative curriculum explicitly assigns **`grid` to `floyd-warshall`**. Its distance-matrix states and cell comparisons fit the grid player. That lab keeps `grid`; the other eight new labs keep `graph`. The curriculum lists no SCC lab. **No file in `spec/`, no checker and no player code is changed in Batch 3.** All changes are confined to `content-kit/algorithms/content/`.
+
+## Verification for Batch 3
+
+Run from inside `content-kit/`:
+
+```bash
+node tools/check.mjs algorithms/content --sanitize --report algorithms/content/CHECK_REPORT.txt
+```
+
+The cumulative report records **0 errors and 0 warnings**. GCC executions produced every new example and practice `.out`; the output-quiz answers were also selected from real executions. The required checker independently repeats compilation/output comparisons, runs examples and practice with AddressSanitizer and UndefinedBehaviorSanitizer, and validates all cumulative lab presets, explicit checks and generated inputs.
+
+Actual tools: GCC 14.2.0 (Debian 14.2.0-19), Node.js v24.22.1 and Python 3.12.14 for temporary authoring/reference scripts. Learner programs use C17. The lab traces are pure deterministic JavaScript, as required by `LAB_FORMAT.md`. Temporary validation scripts and binaries are outside the repository.
+
+Additional independent verification passed **2,864 assertions**:
+
+- **216 lab cases / 648 assertions:** all four scenario selectors and six source choices for each lab, repeated-call determinism, input immutability and valid shared-player operations. The longest trace contained 160 steps. For the source-independent Kahn/Kruskal labs, source values are redundant verification inputs, not extra form controls.
+- **2,216 reference assertions, including 240 C executions:** every primary example was compiled once and run for every scenario/source pair. Independent simple-path enumeration verified shortest costs; elementary-cycle enumeration and reachability verified Bellman-Ford's affected set; iterative DFS frames verified timestamps; all vertex permutations checked topological feasibility; mutual reachability checked SCC partitions; spanning-subset enumeration checked minimum forests; exhaustive binary colour assignments checked bipartiteness.
+- Those reference assertions include **1,326 nonadjacent-edge pair comparisons** across the graph-lab cases. There were no edge crossings. The common drawing uses manually chosen positions, while the chain/ring preset uses a separate manually chosen perimeter layout. Neither uses automatic layout.
+
+## Conventions and reviewer attention for Batch 3
+
+- Shared undirected vertices are A–F, indexed 0–5. Edges are AB=4, AC=2, BC=1, BD=5, CE=8, DE=2, DF=6 and EF=3. BFS/DFS ignore displayed weights. BFS from A gives layers 0,1,1,2,2,3; Dijkstra gives 0,3,2,8,10,13. Prim and Kruskal both give total weight 13. Neighbours are visited in ascending vertex order.
+- Directed topics orient those listed endpoint pairs left to right. Directed Floyd-Warshall therefore gives A's row 0,4,2,9,10,13, which intentionally differs from undirected Dijkstra. Bellman-Ford changes B→C to −3; its cycle preset adds E→B of weight −6. Only B–F become unbounded from A; starting from sink F cannot reach that cycle.
+- Scenario 0 is the shared graph, scenario 1 a chain (or a directed ring, or Bellman-Ford's negative-cycle variant), scenario 2 isolates F, and scenario 3 has six vertices with no edges. Graph topology is fixed in the trace, as the format requires. Source-independent labs expose only the graph selector. C examples share a graph/start input convention and explicitly explain when start is ignored.
+- The main C graph helper reserves fixed arrays and constructs sorted adjacency lists by searching its small edge list. Lessons distinguish that preparation and reserved capacity from general O(V+E) traversal/list-storage claims. Matrix-based supplementary examples explicitly state their O(V²) scanning costs.
+- Dijkstra and Prim C examples use actual lazy binary heaps. Visual priority panels sort their tiny entry lists for readability but use identical removal/tie semantics; their descriptions disclose this difference. Thirty-two heap slots exceed the bound for the fixed at-most-eight-undirected-edge scenarios. General-purpose code needs dynamic capacity or checks.
+- Equal tentative paths keep the earlier parent. Heap ties use the smaller vertex index; Kruskal ties retain original edge order through stable merge sort. SCC ids are traversal labels, not canonical group names. A valid mathematical answer may use other equal-cost routes, valid topological orders or component labels.
+- Prim reports only the selected start component and explicitly flags fewer than six reached vertices. Kruskal returns the minimum spanning forest over the entire graph. They intentionally answer different scopes on disconnected input. Union-find parent links do not represent graph paths.
+- Bellman-Ford prints `INF` for unreachable and `-INF` for negative-cycle-affected destinations. Its affected propagation uses repeated edge scans, preserving O(VE+V) overall. Floyd-Warshall's supplied scenarios have no negative cycle; the lesson explains the additional diagonal/reachability classification needed before extending reconstruction to such inputs.
+- The programs use fixed six-node graphs with small weights, making integer bounds, recursion depth, queue lengths and sentinels explicit. Floyd/Dijkstra use −1 only for unreachable output where finite costs are nonnegative; the Floyd lab instead displays `INF` in cells. Empty routes, source-equals-target and isolated-source outcomes are covered.
+- Cycle-by-parent-vertex code assumes simple undirected graphs; the lesson explains why multigraphs require parent edge ids. Directed classification's runnable example groups completed forward/cross destinations as `finished`, while the text gives the full interval-based distinction.
+- Reviewers should double-check the cut exchanges, Kosaraju finish-time argument, Bellman-Ford affected propagation, outer-k recurrence and Bangla phrasing before publication. These are normal draft-content reviews, not unresolved checker warnings.
+
+Earlier delivery notes follow as historical records; their counts, versions and scope apply to their respective batches.
+
+---
+
 # Algorithms – Batch 2
 
 Package version: **0.2.0**, schema **1.1**, track **algorithms**.

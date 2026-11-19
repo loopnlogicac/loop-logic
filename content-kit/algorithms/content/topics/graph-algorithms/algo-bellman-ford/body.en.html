@@ -1,0 +1,60 @@
+<h2 id="introduction">Allow negative edges without guessing a final vertex</h2>
+<p class="lead">A route can include a rebate. Its total cost may fall after another edge is added. Dijkstra&#x27;s finalisation argument no longer works, because a currently expensive prefix may lead to a cheaper destination. Bellman-Ford handles directed negative edges by repeatedly relaxing every edge.</p>
+<p>A negative cycle has total edge weight below zero. If you can reach such a cycle, each extra lap reduces the cost. Vertices reachable after that cycle have no finite minimum route cost. Bellman-Ford detects this situation instead of reporting an ordinary distance as if it were final.</p>
+<p>The relevant cycle must be reachable from the selected source. A negative cycle in a disconnected region does not affect that source&#x27;s routes. Even a reachable negative cycle does not invalidate every vertex: vertices that the cycle cannot reach may still have finite shortest distances.</p>
+<h2 id="syntax">Repeat a complete edge scan</h2>
+<p>Bellman-Ford stores dist[start]=0 and INF elsewhere. For each pass, it visits all directed edges in a fixed listed order. An edge u to v can improve v only if u is already reachable and dist[u]+w is smaller than dist[v]. The reachability guard prevents INF from participating in arithmetic.</p>
+<p>The algorithm needs at most V-1 full relaxation passes before a cycle check. A changed flag allows early termination after a pass with no improvement. No change means another identical pass would start from exactly the same distances and also make no change.</p>
+<p>Updates in these examples happen immediately within the pass. A newly improved vertex can help a later edge in that same scan. This can propagate farther than one edge per pass. The guarantee is at least all paths with up to the pass number of edges, not exactly one extra edge of progress.</p>
+<pre><code class="language-text">dist[*] = INF; dist[start] = 0
+for pass = 1 to V-1: changed = false
+    scan every edge u -&gt; v in its listed order
+        if u is reachable and dist[u]+w &lt; dist[v]: relax; changed = true
+    if not changed: stop early
+mark destinations of any still-relaxable reachable edges as affected
+propagate affected forward along outgoing edges
+report -INF for affected vertices, INF for unreachable ones</code></pre>
+<h2 id="how-it-works">Use a directed variant with one negative arc</h2>
+<p>Bellman-Ford scenario 0 uses the shared directions AB, AC, BC, BD, CE, DE, DF and EF. Its weights are 4,2,-3,5,8,2,6,3 in that order. The negative B to C edge creates no cycle because every arc still points forward through the DAG.</p>
+<p>Scenario 1 adds E to B with weight -6. The cycle B,C,E,B costs -3+8-6=-1. A reaches it through B. From that cycle, D, E and F can also be reached, so B through F lose finite shortest distances. A remains at zero because no directed route returns from the cycle to A.</p>
+<p>Scenario 2 removes the two arcs entering F while keeping the negative B to C edge. F is unreachable from A. Scenario 3 keeps all six vertices but removes every edge. Selecting F as source in scenario 1 leaves the negative cycle unreachable, because F has no outgoing arc.</p>
+<h2 id="examples">Try rebates, a cycle and an isolated destination</h2>
+<h3>The shared graph</h3><p>The acyclic negative-edge graph has finite distances 0,4,1,9,9,12.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>The reachable negative cycle makes B through F unbounded below, while A stays zero.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>F remains unreachable, distinct from destinations affected by a negative cycle.</p><div data-example="ex-3"></div>
+<p>Example 1 accepts graph and start indices and prints one classified result per letter. Example 2 fixes the reachable negative-cycle scenario at source A. Example 3 uses the acyclic variant with F isolated. Compare the different meanings of -INF and INF before comparing the finite numeric rows.</p>
+<p>The C code keeps an explicit edge list, which suits Bellman-Ford&#x27;s full scans. Adjacency lists are built by the shared graph helper but are unnecessary for the core relaxation loop. The forward affected propagation also scans the edge list; a queue over adjacency lists could perform that propagation in linear time.</p>
+<h2 id="trace">Immediate updates and the extra scan</h2>
+<p>Starting from A in the acyclic negative-edge graph, the listed edge order propagates several improvements during pass one. Pass two makes no changes and allows the early stop. The trace records the distance after each edge, rather than claiming that only one path edge becomes available per pass.</p>
+<table class="ref"><thead><tr><th scope="col">Pass 1 edge</th><th scope="col">Destination after checking</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>A-&gt;B:4</td><td>B=4</td><td>first finite route</td></tr><tr><td>A-&gt;C:2</td><td>C=2</td><td>first finite route</td></tr><tr><td>B-&gt;C:-3</td><td>C=1</td><td>4-3 improves 2</td></tr><tr><td>B-&gt;D:5</td><td>D=9</td><td>4+5</td></tr><tr><td>C-&gt;E:8</td><td>E=9</td><td>1+8</td></tr><tr><td>D-&gt;E:2</td><td>E=9</td><td>11 does not improve 9</td></tr><tr><td>D-&gt;F:6</td><td>F=15</td><td>9+6</td></tr><tr><td>E-&gt;F:3</td><td>F=12</td><td>9+3 improves 15</td></tr></tbody></table>
+<p>The distances after the first full pass are 0,4,1,9,9,12. Notice that E improves first to 9 through C; D later proposes 11 and is rejected. F first receives 15 through D, then improves to 12 through E. A pass table should preserve that edge order when using in-place relaxation.</p>
+<div data-lab="bellman-ford"></div>
+<h2 id="correctness">Bound the number of edges in an optimal simple path</h2>
+<p>After pass p, dist[v] is no greater than the cost of any source-to-v path with at most p edges. The base case is the source with its zero-edge route. For the induction step, take a path whose last edge is u to v. Its prefix has at most p-1 edges and is covered before pass p begins.</p>
+<p>When that final edge is scanned in pass p, dist[u] is already no larger than the prefix cost. Earlier updates during the pass can only improve it further. Relaxing therefore makes dist[v] no larger than the full path cost. Every finite distance is also the cost of an actual walk, so the algorithm never invents an unattainable cheaper value.</p>
+<p>Without a reachable negative cycle, a shortest route can be chosen simple. Removing a repeated-vertex cycle of nonnegative weight does not increase cost. A simple route uses at most V-1 edges. Consequently the pass guarantee and attainable-walk property together make all reachable distances exact after V-1 passes.</p>
+<p>If a reachable edge can still improve after those passes, the finite-simple-path conclusion is impossible. Some reachable negative cycle must exist. Equivalently, summing relaxation inequalities around a negative cycle shows that at least one cycle edge cannot satisfy a stable distance inequality.</p>
+<h2 id="edge-cases">Separate affected, finite and unreachable vertices</h2>
+<p>The extra scan marks the destination of every still-relaxable edge with a reachable tail. The program does not change distances during that scan. It then propagates the affected flag forward along outgoing edges. Up to V passes are sufficient to reach every downstream vertex in the six-node graph.</p>
+<p>An affected vertex is printed as -INF, meaning no finite lower bound. An unreachable vertex is printed as INF, meaning no route from the source. All other vertices receive numeric distances. These are different conclusions and should never share one marker.</p>
+<p>Marking only a single improved endpoint and stopping would miss other affected destinations. Marking every vertex whenever any negative cycle exists would also be wrong. In scenario 1 from A, the correct affected set is B,C,D,E,F. In the same graph from F, the affected set is empty.</p>
+<h2 id="complexity">Full scans multiply vertices by edges</h2>
+<p>There are at most V-1 main passes, each checking E edges. The extra detection scan takes O(E). Initialising distances takes O(V), so the usual worst-case bound is O(VE+V). When E is positive and scales with the graph, this is commonly abbreviated O(VE).</p>
+<p>The bounded implementation propagates affected flags with another V complete edge scans. This also costs O(VE) and leaves the overall worst-case order unchanged. A queue could reduce only the propagation phase to O(V+E), while the main Bellman-Ford relaxation remains O(VE).</p>
+<p>Working arrays dist and affected use O(V) auxiliary space. Input storage for the edge list takes O(E), plus the unused demonstration adjacency storage. No priority queue or recursion stack is required. Early stopping is useful for easy cases but does not remove the worst case where each pass still changes a value.</p>
+<h2 id="comparison">Undirected negative roads have a different consequence</h2>
+<p>Replacing an undirected negative edge with two directed arcs creates a negative two-arc walk cycle. You can travel across and immediately return for a lower total cost. Thus unrestricted shortest walks in a reachable undirected graph with a negative edge have no finite answer downstream.</p>
+<p>A problem that forbids repeated vertices is asking about simple paths, which is a different contract. Bellman-Ford&#x27;s negative-cycle diagnosis concerns unrestricted route walks. Do not silently reinterpret the problem to preserve a finite answer after detecting a reachable negative cycle.</p>
+<h2 id="common-mistakes">Keep the source reachability guard</h2>
+<h3>Relaxing INF plus a negative weight</h3>
+<p>A finite sentinel can become numerically smaller after adding a negative value. Check dist[u] is not INF before adding the edge weight, or you may create a route in an unreachable region.</p>
+<h3>Checking for a cycle after too few passes</h3>
+<p>An improvement in an early pass is normal. Use the additional scan only after completing V-1 passes, unless a no-change pass has already established stability.</p>
+<h3>Printing tentative cycle values as shortest costs</h3>
+<p>Values may keep falling around a reachable negative cycle. Label affected vertices -INF after forward propagation rather than presenting the last finite approximation.</p>
+<h2 id="best-practices">Explain the pass convention</h2>
+<p>State whether updates are immediate or use a separate previous-pass array. Both versions have valid guarantees, but their intermediate tables can differ. Keep the edge order visible whenever you show immediate-update values.</p>
+<h2 id="version-notes">Finite arithmetic in C17</h2>
+<p>Bellman-Ford&#x27;s C17 distances use a one-million sentinel. With six vertices, at most nine edges and five main passes, even repeated negative-cycle improvements remain safely inside int range. Arbitrary graphs require wider types and explicit overflow bounds.</p>
+<h2 id="summary">Repeated relaxation reveals unstable costs</h2>
+<p>Bellman-Ford finds finite shortest routes with negative edges and identifies destinations affected by reachable negative cycles. Its edge-count proof explains the V-1 passes. Continue with <a href="topic:algo-floyd-warshall">Floyd-Warshall Algorithm</a> to compute routes for every source and destination together.</p>
