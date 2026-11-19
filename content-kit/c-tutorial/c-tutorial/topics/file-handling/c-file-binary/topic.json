@@ -1,0 +1,441 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-file-binary",
+  "module": "file-handling",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Binary Files",
+    "bn": "বাইনারি ফাইল ও record encoding"
+  },
+  "summary": {
+    "en": "Transfer complete binary items, distinguish local struct round trips from portable formats, and reject incomplete records before decoding.",
+    "bn": "বাইনারি item সম্পূর্ণ পড়ো; local struct dump ও portable format আলাদা করো, অসম্পূর্ণ record decode করবে না।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "c-file-read-write-text",
+    "c-structures"
+  ],
+  "related": [
+    "c-file-positioning"
+  ],
+  "keywords": [
+    "fread fwrite",
+    "binary records",
+    "struct padding",
+    "byte order",
+    "portable encoding"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "Raw struct files are limited to the same implementation and representation.",
+      "The explicit two-octet encoding examples require CHAR_BIT == 8 and uint16_t."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give stored bytes a meaning"
+    },
+    {
+      "id": "syntax",
+      "title": "Read element size and element count separately"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Require a complete item before interpreting it"
+    },
+    {
+      "id": "examples",
+      "title": "Compare four different binary promises"
+    },
+    {
+      "id": "comparison",
+      "title": "Compare text records with specified byte records"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Reject truncation without inventing missing fields"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid shortcuts that erase the format contract"
+    },
+    {
+      "id": "version-notes",
+      "title": "State representation assumptions beside the code"
+    },
+    {
+      "id": "summary",
+      "title": "Transfer first, validate second, decode only complete records"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Round-trip three explicit byte values",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The zero byte is ordinary data rather than a string terminator for fread. The three returned bytes are shown in hexadecimal, including FF.</p>",
+      "standard": "c17",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Read back whole structs only within the same local representation",
+      "level": "intermediate",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The same program reads the representation it wrote. This demonstrates local whole-item transfer, not a portable exchange format. Padding, byte order and floating representation are deliberately not treated as a public format.</p>",
+      "standard": "c17",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Encode a roll and hundredths of a mark in four specified octets",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The format assigns two high-byte-first octets to each unsigned field. The mark is stored as the integer 8550 hundredths rather than dumping a double. These bytes have a stated meaning independent of struct padding.</p>",
+      "standard": "c17",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Detect a final partial four-byte record",
+      "level": "advanced",
+      "file": "examples/ex-4.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The first four bytes form one complete block. Three trailing bytes remain, so a decoder must reject the incomplete final record rather than use stale bytes to invent a fourth one.</p>",
+      "standard": "c17",
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Store and recover one unsigned two-octet value",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read one integer from 0 through 65535. On an eight-bit-byte system with uint16_t, encode it high-byte first into value.bin, close, reopen, and recover it. Print Value: and the recovered decimal value. The input token fits int on the documented toolchain.</p>",
+      "hints": [
+        "Use two unsigned char values, not sizeof(int) bytes.",
+        "Check that exactly two bytes were read."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Count complete blocks and an incomplete suffix",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n from 0 through 12, followed by n byte values from 0 through 255. Write them to blocks.bin in binary mode. Read blocks of four bytes and print Complete: and Trailing: counts. The final incomplete block is reported by its byte count and is not treated as a complete record.</p>",
+      "hints": [
+        "Use size 1 in fread when you need the number of returned bytes.",
+        "A zero-byte final read differs from a partial final block."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Explain a short whole-item read",
+      "difficulty": "medium",
+      "statementHtml": "<p>fread(&amp;record, sizeof record, 1, in) returns zero after encountering a truncated record. Why must the program not print record fields? How can reading into a byte buffer make the incomplete length visible?</p>",
+      "hints": [
+        "The return counts complete items, not a promise that the object remained unchanged."
+      ],
+      "type": "written",
+      "answerHtml": "<p>No complete Record was read. A partial item may leave an incomplete representation, so its members are not valid decoded data. Read sizeof record bytes with element size one into an unsigned-character buffer to observe the byte count. Decode or copy into a valid representation only after the entire expected block arrives and the format is validated.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Design a portable mark record",
+      "difficulty": "hard",
+      "statementHtml": "<p>Specify a four-octet record for a roll and a mark with two decimal places. Include ranges, byte order, scale and validation rules. Explain why writing a pointer to a name cannot store the name.</p>",
+      "hints": [
+        "State field meaning before choosing a C struct."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Use two high-byte-first octets for an unsigned roll from 0 through 65535 and two for mark hundredths from 0 through 10000. Require eight-bit octets, validate a complete length of four and reject a mark above 10000. A pointer representation stores an address meaningful only in its process, not the pointed-to characters. Store an explicit bounded text encoding if a name is required.</p>"
+    },
+    {
+      "id": "p-5",
+      "title": "Compare text and binary for reviewable club records",
+      "difficulty": "hard",
+      "statementHtml": "<p>Choose a representation for a small report humans inspect and for a fixed-width exchange protocol. Discuss readability, parsing, portability and file corruption rather than saying that binary is always smaller or safer.</p>",
+      "hints": [
+        "The format and the stream mode solve different problems."
+      ],
+      "type": "written",
+      "answerHtml": "<p>A text report can expose readable decimal values and field separators, but needs encoding, escaping and numeric validation. A fixed-width protocol can define precise byte fields and direct offsets, but needs documented widths, order and versioning. Either can be corrupted or truncated. Binary mode alone provides no validation, compression, encryption or portable struct layout.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does fwrite(rows, sizeof rows[0], 3, out) returning 2 report?",
+      "options": [
+        "Two bytes necessarily written",
+        "Three records guaranteed durable",
+        "A zero-based final index",
+        "Two complete elements written"
+      ],
+      "answer": 3,
+      "explanation": "The result counts complete elements of the requested size; a short result must be handled."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can a zero byte be copied with fread but not used as part of an ordinary C string length?",
+      "options": [
+        "All binary files end at zero",
+        "strlen counts every byte in the file",
+        "fread transfers a specified count rather than searching for a terminator",
+        "fread converts zero into a space"
+      ],
+      "answer": 2,
+      "explanation": "Binary block transfer does not use the C string null-terminator convention."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which fact limits dumping a struct as a public format?",
+      "options": [
+        "fwrite stores field names",
+        "Padding and member representations can vary",
+        "Every struct has exactly one byte",
+        "wb removes padding automatically"
+      ],
+      "answer": 1,
+      "explanation": "The raw object representation includes implementation details rather than a universal record encoding."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which fread form directly reports the number of bytes obtained for a four-byte block?",
+      "options": [
+        "fread(buf, 1, 4, in)",
+        "fread(buf, 4, 1, in)",
+        "fread(buf, 0, 4, in)",
+        "fread(buf, 4, 0, in)"
+      ],
+      "answer": 0,
+      "explanation": "With element size one, each completed element is one byte and a partial block length remains visible."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A final record has only three of its four required bytes. Which action is valid?",
+      "options": [
+        "Fill the missing byte from an uninitialised variable",
+        "Treat three as four because EOF is normal",
+        "Print every struct member immediately",
+        "Reject or report the incomplete record before decoding"
+      ],
+      "answer": 3,
+      "explanation": "End-of-file can explain truncation but cannot make an incomplete record valid."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does wb promise about encrypted or compressed contents?",
+      "options": [
+        "Automatic compression",
+        "Both are guaranteed",
+        "Neither is provided by the mode",
+        "Automatic encryption"
+      ],
+      "answer": 2,
+      "explanation": "b selects binary stream handling, not a security or compression algorithm."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why store 85.50 as the specified integer 8550 hundredths in an exchange record?",
+      "options": [
+        "Integer storage needs no range check",
+        "The scale and integer encoding can be defined explicitly",
+        "Every C double has the same bytes",
+        "The decimal point is a hidden fifth byte"
+      ],
+      "answer": 1,
+      "explanation": "A fixed scale plus specified integer bytes avoids relying on a local double representation, while still requiring validation."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is a stored pointer not a saved variable-length name?",
+      "options": [
+        "It stores an address rather than the pointed-to characters",
+        "Pointers are always ASCII names",
+        "fwrite follows every pointer recursively",
+        "A pointer value is permanent across runs"
+      ],
+      "answer": 0,
+      "explanation": "The address belongs to a process context. Serialise the actual data with a length or another documented convention."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many complete two-byte items fit the five-byte temporary stream?",
+      "options": [
+        "5",
+        "3",
+        "1",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "Only two complete size-two items are returned; the trailing byte cannot form the third item.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    unsigned char data[5] = {1, 2, 3, 4, 5};\n    fwrite(data, 1, 5, f);\n    rewind(f);\n    unsigned char copy[6];\n    size_t got = fread(copy, 2, 3, f);\n    printf(\"%zu\\n\", got);\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which decimal value does the high-byte-first pair encode?",
+      "options": [
+        "3",
+        "12",
+        "258",
+        "513"
+      ],
+      "answer": 2,
+      "explanation": "One times 256 plus two is 258. Byte order is part of the defined encoding.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    unsigned char pair[2] = {0x01, 0x02};\n    unsigned value = ((unsigned)pair[0] << 8) | pair[1];\n    printf(\"%u\\n\", value);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does the embedded zero stop this explicit-count byte transfer?",
+      "options": [
+        "0",
+        "3",
+        "1",
+        "2"
+      ],
+      "answer": 1,
+      "explanation": "The count is three bytes; no string scan stops at the middle zero.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    unsigned char data[3] = {65, 0, 66};\n    printf(\"%zu\\n\", fwrite(data, 1, 3, f));\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-12",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What element count is returned by a zero-length block request?",
+      "options": [
+        "0",
+        "1",
+        "7",
+        "EOF"
+      ],
+      "answer": 0,
+      "explanation": "A zero element count requests no transfer and returns zero.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    unsigned char byte = 7;\n    printf(\"%zu\\n\", fwrite(&byte, 1, 0, f));\n    fclose(f);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "fread and fwrite return complete element counts.",
+      "bn": "fread ও fwrite সম্পূর্ণ element-এর সংখ্যা ফেরায়।"
+    },
+    {
+      "en": "Use element size one when an incomplete byte count matters.",
+      "bn": "অসম্পূর্ণ block-এর byte count দরকার হলে element size এক নাও।"
+    },
+    {
+      "en": "A local struct round trip is not a portable exchange format.",
+      "bn": "এক system-এ struct লিখে পড়া মানেই portable format নয়।"
+    },
+    {
+      "en": "Define field widths, byte order, scale and version explicitly.",
+      "bn": "কত byte-এ field থাকবে, কোন byte আগে আসবে এবং scale/version কী—সব স্পষ্ট করে লেখো।"
+    },
+    {
+      "en": "Never decode an incomplete record as if every field arrived.",
+      "bn": "অসম্পূর্ণ record-এ সব field এসেছে ধরে decode করবে না।"
+    },
+    {
+      "en": "Binary mode does not serialize pointed-to data automatically.",
+      "bn": "Binary mode নিজে পয়েন্টারের পেছনের ডেটা লিখে দেয় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Compare fread(buf, 4, 3, in) and fread(buf, 1, 12, in) on a file with ten bytes remaining.",
+      "marks": 6,
+      "answerHtml": "<p>The first reports two complete four-byte items, with an incomplete third item not counted. The second reports ten one-byte items. Neither represents three complete four-byte records. A byte-buffer reader can observe the final length directly and reject a partial record before decoding.</p>"
+    },
+    {
+      "type": "short",
+      "question": "List four reasons a raw Record containing int, double and char * is not a portable saved record.",
+      "marks": 6,
+      "answerHtml": "<p>Integer widths and byte order may differ; floating representations may differ; structure layout and padding are implementation-dependent; and the pointer stores an address rather than the name characters. Specify a byte format with explicit field ranges and lengths instead of copying the object representation.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Explain the high-byte-first encoding of roll 101 and mark hundredths 8550.",
+      "marks": 6,
+      "answerHtml": "<p>101 is hexadecimal 0065, so its two octets are 00 and 65. 8550 is hexadecimal 2166, so its octets are 21 and 66. The complete record is 00 65 21 66. Decode the first pair as high times 256 plus low and repeat for the mark, then validate the allowed semantic ranges.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design a reader policy for a truncated final fixed-width record.",
+      "marks": 7,
+      "answerHtml": "<p>Read into an unsigned-byte buffer with size one. Process only complete records. If the last read returns a positive short count, report truncation without interpreting fields. A zero short count at clean EOF means no final record; ferror instead reports an I/O failure. Close the stream and preserve the appropriate failure outcome.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C input/output library reference",
+      "url": "https://en.cppreference.com/w/c/io"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,71 @@
+<h2 id="introduction">Give stored bytes a meaning</h2>
+<p class="lead">A mark can be written as the text 85.50, or encoded as a few specified byte values. Both representations can describe the same result. <dfn>Binary I/O</dfn> transfers blocks without treating them as newline-delimited strings. The important design question is what those blocks mean, not whether a text editor can display them.</p>
+<p>Think of a row of numbered boxes. A reader can use the boxes only after knowing their sizes and rules. One box might hold a roll number, another hundredths of a mark. Without that agreement, a sequence of bytes is not automatically a valid student record.</p>
+<p>C also lets you copy an object’s local representation into a binary stream. That can demonstrate whole-item transfer, but it carries implementation details. Keep that local technique separate from designing a file that another system must understand. This distinction prevents many misleading claims about saving structs.</p>
+<p>The examples use invented records and private teaching files. They show byte transfer, a same-program struct round trip, an explicit four-octet format and a truncated final record. Compare their guarantees before choosing one for an application.</p>
+
+<h2 id="syntax">Read element size and element count separately</h2>
+<pre><code class="language-c">size_t written = fwrite(records, sizeof records[0], count, out);
+size_t obtained = fread(records, sizeof records[0], count, in);
+
+unsigned char block[4];
+size_t bytes = fread(block, 1, sizeof block, in);</code></pre>
+<table class="ref"><thead><tr><th scope="col">Argument or result</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>Pointer</td><td>Storage to read from or write into</td></tr><tr><td>Element size</td><td>Bytes belonging to one requested item</td></tr><tr><td>Element count</td><td>How many such items are requested</td></tr><tr><td>Return value</td><td>How many complete items transferred</td></tr></tbody></table>
+<p>All sizes and returned counts use size_t. Print them with %zu. A request for three four-byte items is twelve bytes of capacity, but a return of two means two complete items. It does not mean two bytes. A zero size or zero count requests no transfer and returns zero.</p>
+<p>Use rb and wb when binary stream handling is required. A null byte inside a block does not end fread or fwrite. The requested count controls the transfer, unlike strlen or a string-output operation searching for a terminating null.</p>
+
+<h2 id="how-it-works">Require a complete item before interpreting it</h2>
+<h3>Match the buffer to the request</h3>
+<p>The destination must have enough storage for the requested size times count. Giving fread a larger count does not enlarge an array. Check your buffer capacity before the call, especially when a file supplies a claimed record count. Multiplying untrusted sizes also needs an overflow check before allocation.</p>
+<p>The return value is the number of complete elements. A short read can mean end-of-file or an I/O failure. Inspect ferror after the read to distinguish them. An incomplete final element is not a valid newly loaded object, even when some of its bytes reached memory.</p>
+<p>Reading with element size one makes each returned element a byte. That is useful for fixed-width file protocols. The final example can see three trailing bytes directly. Reading one four-byte object instead would report zero complete objects for that incomplete record.</p>
+<h3>A local object representation is a local agreement</h3>
+<p>The struct example writes two Record objects and reads them with the same program and representation. Each transfer uses sizeof one array element and asks for two elements. It checks that both arrived before printing any field. The output recovers the roll and mark values.</p>
+<p>This is not proof that another compiler or machine can read the file. A struct can contain padding between or after its fields. Integer widths, byte order, floating-point representation and alignment rules can differ. Writing sizeof record includes representation details that the source member list does not specify.</p>
+<p>Padding bytes are not meaningful field values and should not become a public data format. Initialising the named members does not establish a portable padding encoding. Raw dumps can also expose unwanted representation bytes. Use explicit fields when exchanging data or storing records with a long lifetime.</p>
+<h3>Encode values rather than memory layouts</h3>
+<p>The four-octet format assigns two octets to an unsigned roll and two to a mark in hundredths. An <dfn>octet</dfn> means exactly eight bits. The code checks its eight-bit-byte assumption and uses uint16_t where that exact-width type exists. A C byte is not universally promised to contain eight bits.</p>
+<p>The first octet of each field is the high part. For 8550, hexadecimal 2166 gives octets 21 and 66. Decoding multiplies the high part by 256 and adds the low part. The rule is explicit, so a reader does not guess the writer’s native byte order.</p>
+<p>Storing hundredths avoids relying on a dumped double. The file says that 8550 means 85.50 marks. It must still validate a mark range such as zero through 10000 hundredths. A syntactically complete record can contain a semantically invalid value.</p>
+
+<h2 id="examples">Compare four different binary promises</h2>
+<h3>Round-trip three explicit byte values</h3>
+<p>The zero byte is ordinary data rather than a string terminator for fread. The three returned bytes are shown in hexadecimal, including FF.</p>
+<div data-example="ex-1"></div>
+<h3>Read back whole structs only within the same local representation</h3>
+<p>The same program reads the representation it wrote. This demonstrates local whole-item transfer, not a portable exchange format. Padding, byte order and floating representation are deliberately not treated as a public format.</p>
+<div data-example="ex-2"></div>
+<h3>Encode a roll and hundredths of a mark in four specified octets</h3>
+<p>The format assigns two high-byte-first octets to each unsigned field. The mark is stored as the integer 8550 hundredths rather than dumping a double. These bytes have a stated meaning independent of struct padding.</p>
+<div data-example="ex-3"></div>
+<h3>Detect a final partial four-byte record</h3>
+<p>The first four bytes form one complete block. Three trailing bytes remain, so a decoder must reject the incomplete final record rather than use stale bytes to invent a fourth one.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Compare text records with specified byte records</h2>
+<table class="ref"><thead><tr><th scope="col">Choice</th><th scope="col">Strength</th><th scope="col">Responsibility</th></tr></thead><tbody><tr><td>Readable decimal text</td><td>Convenient inspection and editing</td><td>Separators, encoding, escaping and numeric validation</td></tr><tr><td>Raw local struct</td><td>Direct same-representation demonstration</td><td>Implementation dependence and padding</td></tr><tr><td>Specified byte fields</td><td>Stable widths and explicit decoding</td><td>Ranges, byte order, version and truncation checks</td></tr></tbody></table>
+<p>Binary is not automatically smaller. A padded struct can be larger than a short text record. A compact integer encoding can be smaller than a long decimal string. Compare the actual fields and representation. Likewise, readable text is not automatically portable without an encoding and delimiter policy.</p>
+<p>Neither representation provides encryption or integrity protection merely by being difficult to read. A user can edit a binary file with suitable tools. A complete format may need a header, a version, a record count or an integrity check. Those fields need their own defined meaning and validation rules.</p>
+<p>A fixed-width record makes some positioning calculations straightforward. Record i can begin at a header length plus i times record width. That convenience assumes a defined width and safe arithmetic. The next lesson develops <a href="topic:c-file-positioning">random access</a> without treating arbitrary text offsets as interchangeable byte positions.</p>
+
+<h2 id="edge-cases">Reject truncation without inventing missing fields</h2>
+<p>Suppose a four-byte record ends after three bytes. The first three may look plausible, but the missing fourth byte still matters. Do not leave an old byte in the buffer and decode the mixture. Report the incomplete record, preserve the error outcome and decide whether the rest of the application can continue safely.</p>
+<p>A clean zero-byte read at a record boundary differs from a positive short read. The former can mean there are no more records. The latter reveals a broken fixed-width record under this format. An I/O failure is another outcome, even when it occurs exactly where an end was expected.</p>
+<p>For output, compare fwrite’s return with the requested element count and check fclose afterward. A short write may have changed part of the external file already. Returning failure does not undo those bytes. Applications needing atomic replacement must design a replacement protocol rather than assume one call is transactional.</p>
+<p>Never store a pointer expecting the pointed-to object to reappear later. A saved char pointer is an address, not a name. A linked structure needs a representation using values, explicit lengths and stable references or IDs. Rebuilding its in-memory pointers is a separate loading task.</p>
+
+<h2 id="common-mistakes">Avoid shortcuts that erase the format contract</h2>
+<h3>Using sizeof a pointer as a record width</h3>
+<p>A pointer parameter does not carry the array’s total storage size. Specify one record’s width or use the actual element type. In a portable format, prefer the format’s documented width over a native sizeof expression. This keeps external meaning separate from local layout.</p>
+<h3>Printing an object after a partial item read</h3>
+<p>The last incomplete item has not been loaded as a complete valid record. Its bytes can be only partly replaced. Treat a full transfer as a prerequisite, not a cosmetic check after printing. For untrusted formats, also validate that each encoded field represents an allowed value.</p>
+<h3>Believing binary means byte-order conversion</h3>
+<p>fwrite does not reorder an integer into a chosen network or file order. wb does not add a schema or field names. Perform encoding explicitly, and test it with known values such as zero, a value crossing one byte, and the maximum permitted field.</p>
+<h3>Confusing a local round trip with durable compatibility</h3>
+<p>Reading a file immediately with the writer’s executable tests one useful case. It says nothing about another ABI, a future struct edit, or a different floating format. Version a lasting file format and state how old records will be recognised. Do not silently reinterpret them after adding a member.</p>
+
+<h2 id="version-notes">State representation assumptions beside the code</h2>
+<div class="callout version"><p>fread and fwrite are standard C17 interfaces. Exact-width integer types such as uint16_t are available only when the implementation provides the corresponding representation. The explicit-octet example requires CHAR_BIT equal to eight. Raw structure transfer remains implementation-dependent even when both programs select C17.</p></div>
+
+<h2 id="summary">Transfer first, validate second, decode only complete records</h2>
+<p>Separate bytes from complete elements, and distinguish local object dumps from a specified format. Define widths, order and scale, check short transfers, and reject incomplete records before interpretation. To find or update a selected record, continue with <a href="topic:c-file-positioning">fseek, ftell and rewind</a>.</p>
