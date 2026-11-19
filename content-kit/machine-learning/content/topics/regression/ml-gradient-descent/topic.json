@@ -1,0 +1,879 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-gradient-descent",
+  "module": "regression",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Gradient Descent",
+    "bn": "ধাপে ধাপে gradient descent"
+  },
+  "summary": {
+    "en": "Compute simultaneous slope and intercept updates and recognise slow learning, convergence and divergence.",
+    "bn": "ঢাল আর intercept একসঙ্গে বদলাও; ধীরে শেখা, থামা আর ভুল বেড়ে যাওয়া চিনে নাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "ml-cost-function"
+  ],
+  "related": [],
+  "keywords": [
+    "Gradient Descent",
+    "regression",
+    "Python",
+    "prediction"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "NumPy 2.0+, pandas 2.2+, scikit-learn 1.5+; round displayed values only."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Tuktuk takes steps on a foggy hill"
+    },
+    {
+      "id": "intuition",
+      "title": "Follow a sequence of improving rulers"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Calculate both changes before moving"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Watch slow learning and divergence"
+    },
+    {
+      "id": "examples",
+      "title": "Compare iterative and direct fitting"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Inspect the path before changing the model"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: derivatives, stability and work"
+    },
+    {
+      "id": "summary",
+      "title": "A step is a calculated change"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Walk down the line-fitting bowl",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Forty full-batch updates approach slope 2 and intercept 1. Displayed zero error is rounded; finite updates need not reach exact equality.</p>",
+      "requires": [
+        "numpy"
+      ]
+    },
+    {
+      "id": "ex-2",
+      "title": "Compare the converged line with LinearRegression",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The closed-form library solver and iterative training reach the same rounded result here. LinearRegression itself does not perform these gradient updates.</p>",
+      "requires": [
+        "numpy",
+        "sklearn"
+      ]
+    },
+    {
+      "id": "ex-3",
+      "title": "Train a scaled stochastic regressor",
+      "level": "intermediate",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": false,
+      "explanationHtml": "<p>SGDRegressor changes weights after individual observations with a decaying rate. Training-only scaling makes differently sized features easier to optimise.</p>",
+      "requires": [
+        "pandas",
+        "sklearn"
+      ],
+      "workdirFiles": [
+        "shared/datasets/study.csv"
+      ]
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Make one simultaneous line update",
+      "statementHtml": "<p>Read n (1–100), n x/y pairs, then w b lr with positive lr. Print updated w and b to three decimals. Use full MSE derivatives at the old parameters.</p>",
+      "hints": [
+        "Calculate both gradients before assigning new values."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Walk a scalar quadratic",
+      "statementHtml": "<p>Read start lr updates. Require lr positive and updates 0–100. For cost (x-2) squared, make that many exact gradient updates. Print final x and cost to three decimals.</p>",
+      "hints": [
+        "The gradient is 2*(x-2)."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Diagnose increasing loss",
+      "statementHtml": "<p>Training MSE doubles each epoch after raw area is added. Give two checks before increasing the epoch count.</p>",
+      "hints": [
+        "Inspect the learning rate and feature magnitude."
+      ],
+      "answerHtml": "<p>Check that derivatives use the correct sign and simultaneous old parameters. Fit feature scaling on training rows and reduce the learning rate. More unstable updates will not repair divergence.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Count mini-batches",
+      "statementHtml": "<p>There are 10 rows, batch size 4 and 3 epochs, with a final short batch kept. How many updates occur?</p>",
+      "hints": [
+        "A pass has groups of 4,4,2."
+      ],
+      "answerHtml": "<p>Each epoch uses three batches: rows 1–4,5–8,9–10. Three epochs give nine updates, while full-batch training would give three updates.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which pictured learning rate diverges on these five points?",
+      "options": [
+        "0.6",
+        "0.01",
+        "0.1",
+        "All three converge equally fast"
+      ],
+      "answer": 0,
+      "explanation": "The 0.6 curve grows because the slope update multiplier is 1-4*0.6=-1.4, whose magnitude exceeds one.",
+      "figure": {
+        "caption": {
+          "en": "Ten full-batch updates on y=2x+1, x=-2,-1,0,1,2.",
+          "bn": "পাঁচটা পয়েন্টে দশ ধাপ full-batch ট্রেনিং।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Update",
+            "yLabel": "MSE",
+            "series": [
+              {
+                "id": "lr001",
+                "label": "lr=0.01",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    8.3332
+                  ],
+                  [
+                    2,
+                    7.717140639999999
+                  ],
+                  [
+                    3,
+                    7.147904698432001
+                  ],
+                  [
+                    4,
+                    6.621879654452454
+                  ],
+                  [
+                    5,
+                    6.1357338948195554
+                  ],
+                  [
+                    6,
+                    5.686394782372938
+                  ],
+                  [
+                    7,
+                    5.271028440315811
+                  ],
+                  [
+                    8,
+                    4.887021117924277
+                  ],
+                  [
+                    9,
+                    4.531962013838003
+                  ],
+                  [
+                    10,
+                    4.203627442790356
+                  ]
+                ]
+              },
+              {
+                "id": "lr01",
+                "label": "lr=0.1",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    3.5200000000000005
+                  ],
+                  [
+                    2,
+                    1.4464
+                  ],
+                  [
+                    3,
+                    0.6353919999999998
+                  ],
+                  [
+                    4,
+                    0.30214143999999993
+                  ],
+                  [
+                    5,
+                    0.15574712319999984
+                  ],
+                  [
+                    6,
+                    0.08613373542400007
+                  ],
+                  [
+                    7,
+                    0.05024959823871994
+                  ],
+                  [
+                    8,
+                    0.03040438559703037
+                  ],
+                  [
+                    9,
+                    0.018826878162829318
+                  ],
+                  [
+                    10,
+                    0.011821707721273523
+                  ]
+                ]
+              },
+              {
+                "id": "lr06",
+                "label": "lr=0.6",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    15.719999999999999
+                  ],
+                  [
+                    2,
+                    30.7344
+                  ],
+                  [
+                    3,
+                    60.23635200000003
+                  ],
+                  [
+                    4,
+                    118.06312704000004
+                  ],
+                  [
+                    5,
+                    231.40372408320007
+                  ],
+                  [
+                    6,
+                    453.55129900646415
+                  ],
+                  [
+                    7,
+                    888.9605460448054
+                  ],
+                  [
+                    8,
+                    1742.3626702475042
+                  ],
+                  [
+                    9,
+                    3415.0308336850953
+                  ],
+                  [
+                    10,
+                    6693.460434022783
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which curve makes the slowest steady progress over ten updates?",
+      "options": [
+        "The 0.6 curve",
+        "The 0.01 curve",
+        "The 0.1 curve",
+        "The curves overlap exactly"
+      ],
+      "answer": 1,
+      "explanation": "The small learning rate reduces error slowly; a downward curve need not have converged.",
+      "figure": {
+        "caption": {
+          "en": "Ten full-batch updates on y=2x+1, x=-2,-1,0,1,2.",
+          "bn": "পাঁচটা পয়েন্টে দশ ধাপ full-batch ট্রেনিং।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Update",
+            "yLabel": "MSE",
+            "series": [
+              {
+                "id": "lr001",
+                "label": "lr=0.01",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    8.3332
+                  ],
+                  [
+                    2,
+                    7.717140639999999
+                  ],
+                  [
+                    3,
+                    7.147904698432001
+                  ],
+                  [
+                    4,
+                    6.621879654452454
+                  ],
+                  [
+                    5,
+                    6.1357338948195554
+                  ],
+                  [
+                    6,
+                    5.686394782372938
+                  ],
+                  [
+                    7,
+                    5.271028440315811
+                  ],
+                  [
+                    8,
+                    4.887021117924277
+                  ],
+                  [
+                    9,
+                    4.531962013838003
+                  ],
+                  [
+                    10,
+                    4.203627442790356
+                  ]
+                ]
+              },
+              {
+                "id": "lr01",
+                "label": "lr=0.1",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    3.5200000000000005
+                  ],
+                  [
+                    2,
+                    1.4464
+                  ],
+                  [
+                    3,
+                    0.6353919999999998
+                  ],
+                  [
+                    4,
+                    0.30214143999999993
+                  ],
+                  [
+                    5,
+                    0.15574712319999984
+                  ],
+                  [
+                    6,
+                    0.08613373542400007
+                  ],
+                  [
+                    7,
+                    0.05024959823871994
+                  ],
+                  [
+                    8,
+                    0.03040438559703037
+                  ],
+                  [
+                    9,
+                    0.018826878162829318
+                  ],
+                  [
+                    10,
+                    0.011821707721273523
+                  ]
+                ]
+              },
+              {
+                "id": "lr06",
+                "label": "lr=0.6",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    15.719999999999999
+                  ],
+                  [
+                    2,
+                    30.7344
+                  ],
+                  [
+                    3,
+                    60.23635200000003
+                  ],
+                  [
+                    4,
+                    118.06312704000004
+                  ],
+                  [
+                    5,
+                    231.40372408320007
+                  ],
+                  [
+                    6,
+                    453.55129900646415
+                  ],
+                  [
+                    7,
+                    888.9605460448054
+                  ],
+                  [
+                    8,
+                    1742.3626702475042
+                  ],
+                  [
+                    9,
+                    3415.0308336850953
+                  ],
+                  [
+                    10,
+                    6693.460434022783
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which rate reduces cost quickly without growth in the displayed ten steps?",
+      "options": [
+        "0.6",
+        "All negative rates",
+        "0.1",
+        "Only a rate of zero"
+      ],
+      "answer": 2,
+      "explanation": "The 0.1 trace falls rapidly while the 0.6 trace grows. The statement applies to this scaled dataset.",
+      "figure": {
+        "caption": {
+          "en": "Ten full-batch updates on y=2x+1, x=-2,-1,0,1,2.",
+          "bn": "পাঁচটা পয়েন্টে দশ ধাপ full-batch ট্রেনিং।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Update",
+            "yLabel": "MSE",
+            "series": [
+              {
+                "id": "lr001",
+                "label": "lr=0.01",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    8.3332
+                  ],
+                  [
+                    2,
+                    7.717140639999999
+                  ],
+                  [
+                    3,
+                    7.147904698432001
+                  ],
+                  [
+                    4,
+                    6.621879654452454
+                  ],
+                  [
+                    5,
+                    6.1357338948195554
+                  ],
+                  [
+                    6,
+                    5.686394782372938
+                  ],
+                  [
+                    7,
+                    5.271028440315811
+                  ],
+                  [
+                    8,
+                    4.887021117924277
+                  ],
+                  [
+                    9,
+                    4.531962013838003
+                  ],
+                  [
+                    10,
+                    4.203627442790356
+                  ]
+                ]
+              },
+              {
+                "id": "lr01",
+                "label": "lr=0.1",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    3.5200000000000005
+                  ],
+                  [
+                    2,
+                    1.4464
+                  ],
+                  [
+                    3,
+                    0.6353919999999998
+                  ],
+                  [
+                    4,
+                    0.30214143999999993
+                  ],
+                  [
+                    5,
+                    0.15574712319999984
+                  ],
+                  [
+                    6,
+                    0.08613373542400007
+                  ],
+                  [
+                    7,
+                    0.05024959823871994
+                  ],
+                  [
+                    8,
+                    0.03040438559703037
+                  ],
+                  [
+                    9,
+                    0.018826878162829318
+                  ],
+                  [
+                    10,
+                    0.011821707721273523
+                  ]
+                ]
+              },
+              {
+                "id": "lr06",
+                "label": "lr=0.6",
+                "type": "line",
+                "points": [
+                  [
+                    0,
+                    9.0
+                  ],
+                  [
+                    1,
+                    15.719999999999999
+                  ],
+                  [
+                    2,
+                    30.7344
+                  ],
+                  [
+                    3,
+                    60.23635200000003
+                  ],
+                  [
+                    4,
+                    118.06312704000004
+                  ],
+                  [
+                    5,
+                    231.40372408320007
+                  ],
+                  [
+                    6,
+                    453.55129900646415
+                  ],
+                  [
+                    7,
+                    888.9605460448054
+                  ],
+                  [
+                    8,
+                    1742.3626702475042
+                  ],
+                  [
+                    9,
+                    3415.0308336850953
+                  ],
+                  [
+                    10,
+                    6693.460434022783
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "When computing two coupled gradient components, when should parameters change?",
+      "options": [
+        "After the first component and before computing the second",
+        "Only the intercept should move",
+        "Never recompute the gradients",
+        "After both components are calculated at the old parameters"
+      ],
+      "answer": 3,
+      "explanation": "Simultaneous gradient descent uses one common parameter point for every partial derivative."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How does full-batch descent differ from stochastic descent?",
+      "options": [
+        "It averages gradients over all training rows before an update",
+        "It always uses one row",
+        "It cannot use an intercept",
+        "It always has lower test error"
+      ],
+      "answer": 0,
+      "explanation": "Stochastic descent updates after one sampled row; mini-batch descent averages a small group."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why scale inputs before gradient training?",
+      "options": [
+        "Scaling guarantees zero test loss",
+        "Input magnitude changes curvature and stable step sizes",
+        "Scaling removes every outlier",
+        "Scaling changes the target labels into categories"
+      ],
+      "answer": 1,
+      "explanation": "Unequal feature scales can create a narrow bowl and make one common learning rate difficult to choose."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "A printed MSE is 0.000 after 40 steps. What can you conclude?",
+      "options": [
+        "The true error must be exactly zero",
+        "Every future row will be exact",
+        "The error rounds below the displayed precision",
+        "The model has no intercept"
+      ],
+      "answer": 2,
+      "explanation": "Keep unrounded values for updates and convergence decisions."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What slope follows one step from w=0 with gradient -8 and rate 0.1?",
+      "options": [
+        "-0.8",
+        "8.0",
+        "0.1",
+        "0.8"
+      ],
+      "answer": 3,
+      "explanation": "Subtracting a negative gradient increases w to 0.8.",
+      "code": "w, gradient, lr = 0.0, -8.0, 0.1\nprint(f\"{w-lr*gradient:.1f}\")\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What intercept follows the first update on targets averaging 1?",
+      "options": [
+        "0.2",
+        "-0.2",
+        "2.0",
+        "1.0"
+      ],
+      "answer": 0,
+      "explanation": "The intercept gradient at the zero line is minus twice the mean target.",
+      "code": "b, grad_b, lr = 0.0, -2.0, 0.1\nprint(f\"{b-lr*grad_b:.1f}\")\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many updates does a two-epoch mini-batch loop perform?",
+      "options": [
+        "2",
+        "6",
+        "5",
+        "8"
+      ],
+      "answer": 1,
+      "explanation": "Each epoch uses batches starting at 0,4,8; two epochs give six updates.",
+      "code": "updates = 0\nfor epoch in range(2):\n    for start in range(0, 10, 4):\n        updates += 1\nprint(updates)\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "The gradient points toward local increase.",
+      "bn": "gradient কোন দিকে cost বাড়ে, সেটা জানায়।"
+    },
+    {
+      "en": "Subtract learning rate times the gradient.",
+      "bn": "gradient-কে learning rate দিয়ে গুণ করে বর্তমান মান থেকে বাদ দাও।"
+    },
+    {
+      "en": "Compute both derivatives before changing either parameter.",
+      "bn": "কোনো প্যারামিটার বদলানোর আগে দুটো derivative বের করো।"
+    },
+    {
+      "en": "An excessive learning rate can increase the error.",
+      "bn": "learning rate বেশি হলে ভুল উল্টো বাড়তে পারে।"
+    },
+    {
+      "en": "Scaling affects the safe learning rate.",
+      "bn": "ফিচারের স্কেল বদলালে নিরাপদ learning rate-ও বদলায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Make one MSE gradient update at rate 0.1 from w=b=0 on x=-2,-1,0,1,2 and y=2x+1.",
+      "marks": 5,
+      "answerHtml": "<p>Errors prediction-minus-target are 3,1,-1,-3,-5. Mean error=-1 and mean error*x=-4. Thus grad_w=-8 and grad_b=-2. Simultaneous subtraction gives w=0.8,b=0.2, with new MSE=3.52.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Why does lr=0.6 diverge in the centred five-point slope direction?",
+      "marks": 5,
+      "answerHtml": "<p>Mean x²=2, so slope error multiplies by 1-4*lr=-1.4. Its magnitude exceeds one and grows each iteration. The stable slope interval for this objective is 0&lt;lr&lt;0.5.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare batch, stochastic and mini-batch descent.",
+      "marks": 8,
+      "answerHtml": "<p>Batch averages gradients across all rows for an update. Stochastic uses one row, often in seeded shuffled order. Mini-batch uses a subset per update. Smaller groups are cheaper but noisier; epochs and update counts must be distinguished.</p>"
+    }
+  ],
+  "labs": [
+    "gradient-descent"
+  ],
+  "references": [
+    {
+      "title": "scikit-learn linear models",
+      "url": "https://scikit-learn.org/stable/modules/linear_model.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

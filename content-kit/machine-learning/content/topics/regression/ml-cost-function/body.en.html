@@ -1,0 +1,40 @@
+<h2 id="introduction">A score for Tuktuk's guesses</h2>
+<div class="callout story"><p>Tuktuk guesses two cricket scores. One guess is three runs too high; the other is three runs too low. It adds the signed mistakes and announces zero error. Mina points at both wrong guesses. A score that hides both mistakes cannot help the robot improve.</p></div>
+<p class="lead">A cost function turns a model's mistakes into one number. It gives training a clear goal: find parameters with a smaller cost. Choosing the cost also decides which mistakes receive the strongest attention.</p>
+<p>For squared-error regression, long gaps matter much more than short ones. You will measure that effect, trace the cost of different slopes, and distinguish a one-knob experiment from the full two-knob fitting problem.</p>
+<p>A low training cost answers an optimisation question. It does not by itself answer whether the model will predict unfamiliar examples well. Keep the evaluation habit you learned during data preparation.</p>
+<h2 id="intuition">From vertical gaps to a bowl</h2>
+<table class="ref"><caption>The same intercept, several slopes</caption><thead><tr><th scope="col">Slope</th><th scope="col">Intercept</th><th scope="col">MSE</th></tr></thead><tbody><tr><td>0</td><td>1.4</td><td>17.36</td></tr><tr><td>1.0</td><td>1.4</td><td>1.96</td></tr><tr><td>1.2</td><td>1.4</td><td>1.52</td></tr><tr><td>2.0</td><td>1.4</td><td>8.56</td></tr></tbody></table>
+<p>A <dfn>loss</dfn> measures a prediction's mismatch with its answer. A <dfn>cost function</dfn> combines losses over a collection of examples. The <dfn>mean squared error</dfn>, or MSE, averages the squared numeric gaps.</p>
+<p>Picture a toy car at the bottom of a curved track. Each track position is one slope choice; its height is that choice's cost. Changing the slope moves the car along the track. Changing the intercept replaces the whole track with another slice through a larger landscape.</p>
+<div data-lab="cost-explorer"></div>
+<p>The lab tries slopes from -1 to 4 at intervals of 0.1. It keeps your intercept fixed and plots the actual cost of each tested line. Its minimum marker belongs to that grid. It does not silently claim to search every real-valued slope or every intercept.</p>
+<h2 id="how-it-works">Average squared mistakes</h2>
+<p>Use the five observations x=1,2,3,4,5 and y=3,4,5,4,9. The line with slope 1 and intercept 1.4 predicts 2.4,3.4,4.4,5.4,6.4. The observed-minus-predicted gaps are 0.6,0.6,0.6,-1.4,2.6.</p>
+<p>Square those gaps to obtain 0.36,0.36,0.36,1.96,6.76. Add them to obtain 9.8, then divide by five. The MSE is 1.96. Try slope 1.2 at the same intercept and the MSE falls to 1.52.</p>
+<pre class="diagram">for each candidate slope:
+    total = 0
+    for each observed pair:
+        prediction = slope * x + fixed_intercept
+        total += (observed - prediction) squared
+    cost = total / number_of_pairs
+record the slope and its cost together</pre>
+<p>In symbols, MSE=(1/n) sum (y_i-y_hat_i)². The symbol n means the number of observations. Each y_i is a known target, and y_hat_i is its corresponding prediction. The square removes sign and gives larger errors greater influence.</p>
+<p>Why not use absolute gaps? You can, and that leads to MAE, taught in the metrics lesson. Squared gaps are useful because the line-fitting objective is smooth and its derivatives are convenient. Their sensitivity to unusual observations is a tradeoff, not an automatic advantage.</p>
+<p>When both slope and intercept vary, every parameter pair has a cost. The result is a surface with cost as height. With genuine feature variation, linear regression gives a convex bowl. Holding one parameter fixed shows a cross-section, which may miss the full optimum.</p>
+<h2 id="try-it-yourself">Name what stays fixed</h2>
+<p>Load the first preset and locate slope 1.2 on the chart. Move the selected slope to 2 without changing the intercept. Check why the selected star rises. Now change the intercept and replay. The bottom may move because the cost slice itself has changed.</p>
+<div class="callout unplugged"><p>Give five paper gaps to a group. Ask one person to add signed gaps, another to add absolute gaps and a third to add squares. Include opposite gaps of the same size. Discuss which score can mistakenly say every guess was correct.</p></div>
+<p>Keep units beside the score. If targets are monthly taka, MSE has squared monthly-taka units. Comparing a raw MSE number with a typical rent directly mixes units. Later, RMSE will restore the original target unit.</p>
+<h2 id="examples">Calculate costs directly and with a metric</h2>
+<h3>Evaluate a slope grid</h3><p>The direct program computes every squared gap for each tested slope. The selected slope 1 has MSE 1.96, while the smallest sampled cost is 1.52 at slope 1.2.</p><div data-example="ex-1"></div>
+<h3>Use a library score</h3><p>mean_squared_error reproduces the same calculation on the same observations. Its result does not depend on which residual sign convention you used before squaring.</p><div data-example="ex-2"></div>
+<h3>Compare a fitted trend with a baseline</h3><p>The study example evaluates the fitted line and a training-mean prediction on identical held-out rows. A larger dataset makes this comparison more informative than judging one lucky basket or student.</p><div data-example="ex-3"></div>
+<p>The baseline predicts one fixed value, while the line varies with study hours. If that added variation does not improve held-out cost, investigate whether the feature helps. Do not keep adding parameters merely because they reduce the training score.</p>
+<h2 id="common-mistakes">Do not confuse the score with its search</h2>
+<ul><li><strong>Averaging signed gaps:</strong> positive and negative mistakes cancel. Average squared or absolute gaps when you want error magnitude.</li><li><strong>Comparing different target scales:</strong> changing marks from 100 to 10 divides MSE by 100. Keep units and scaling consistent.</li><li><strong>Calling a sampled minimum exact:</strong> a coarse grid may skip the continuous optimum. Report the tested range and spacing.</li><li><strong>Searching on final test answers:</strong> that makes model choices depend on evaluation data. Use validation for choices.</li></ul>
+<h2 id="going-deeper">Optional: curvature and a two-parameter surface</h2>
+<div class="callout math"><p>For fixed b, expanding (y-w*x-b)² makes MSE a quadratic in w. Its leading coefficient is the average of x². If at least one x is nonzero, that slice curves upward. At all x=0, changing w cannot affect predictions, so the slice is flat.</p><p>For the full parameter vector, the Hessian is twice the average outer product of [x,1] with itself. Its quadratic form is nonnegative. This establishes convexity. Feature variation gives independent feature and intercept columns, making the fitted parameter pair unique.</p><p>Some books define cost as MSE/2. The factor halves derivatives but leaves the location of the minimum unchanged. Keep that convention consistent when deriving gradient updates. Evaluating one line costs O(n); evaluating k slope candidates costs O(kn).</p></div>
+<h2 id="summary">Turn mistakes into a landscape</h2>
+<ul><li>Squared gaps prevent cancellation of opposite mistakes.</li><li>MSE divides total squared error by observation count.</li><li>Large residuals receive extra influence through squaring.</li><li>A slope curve holds the intercept fixed.</li><li>A sampled minimum belongs to its tested grid.</li><li>Training cost and future performance require separate checks.</li></ul>
+<p>Next, let derivatives guide the search in <a href="topic:ml-gradient-descent">gradient descent</a>.</p>
