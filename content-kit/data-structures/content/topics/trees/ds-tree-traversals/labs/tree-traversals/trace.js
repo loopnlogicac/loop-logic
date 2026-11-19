@@ -12,12 +12,12 @@ function trace(input) {
             bn: `এবার ${nodes[id].value} দেখো। বেছে নেওয়া ট্রাভার্সাল অনুযায়ী এর পালা এসেছে।`
         }});
         steps.push({op: 'list', name: 'order', items: order.slice(), line: 3,
-            note: {en: 'Append the visited key; the tree links stay unchanged.'}});
+            note: {en: 'Append the visited key; the tree links stay unchanged.', bn: 'দেখা কী শেষে যোগ করো; ট্রির লিংক একই থাকে।'}});
     };
     const walk = (id) => {
         if (id === null) return;
         steps.push({op: 'pointer', name: 'cur', target: id, line: 1,
-            note: {en: 'Enter this subtree; return immediately at a missing child.'}});
+            note: {en: 'Enter this subtree; return immediately at a missing child.', bn: 'এই সাবট্রিতে ঢোকো; চাইল্ড না থাকলে সঙ্গে সঙ্গে ফেরো।'}});
         if (input.mode === 0) emit(id);
         walk(left[id]);
         if (input.mode === 1) emit(id);
@@ -37,7 +37,7 @@ function trace(input) {
         }
     } else walk(root);
     steps.push({op: 'list', name: 'order', items: order.slice(), line: 5,
-        note: {en: 'The result contains each existing node exactly once.'}});
+        note: {en: 'The result contains each existing node exactly once.', bn: 'ফলে থাকা প্রতিটি নোড ঠিক একবার এসেছে।'}});
     steps.push({op: 'done', line: 5, note: {en: 'Traversal finished without changing the shape.',
         bn: 'ট্রাভার্সাল শেষ। ট্রির লিংকগুলো বদলায়নি।'}});
     return {init: {nodes, left, right, root}, steps};

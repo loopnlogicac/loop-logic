@@ -51,7 +51,7 @@ function trace(input) {
         emit(pop('No later token remains, so emit this pending operator.'));
     }
     steps.push({op: 'list', name: 'output', items: output.slice(), line: 9,
-        note: {en: valid ? 'The output preserves precedence and associativity.' : 'This partial output is not a valid converted expression.'}});
+        note: {en: valid ? 'The output preserves precedence and associativity.' : 'This partial output is not a valid converted expression.', bn: valid ? 'Output-এ precedence আর associativity বজায় আছে।' : 'এই আংশিক output বৈধ converted expression নয়।'}});
     steps.push({op: 'done', line: 9, vars: {valid, need_operand: need_operand ? 1 : 0},
         note: {en: valid ? `Postfix: ${output.join('')}` : 'Invalid: operand or grouping rules failed.',
             bn: valid ? 'Postfix তৈরি হয়েছে।' : 'Expression-এর নিয়ম মেলেনি।'}});
