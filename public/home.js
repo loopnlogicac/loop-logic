@@ -18,7 +18,7 @@ const T = {
     complete: (n) => `Complete · ${n} topics`, ofTopics: (a, b) => `${a}/${b} topics`, labsN: (n) => `${n} labs`, noLabs: 'Labs coming soon',
     modules: (n) => `${n} modules`, interactive: (n) => `${n} interactive labs`, ready: (a, b) => `${a} of ${b} topics ready`, readyTag: 'Ready', soonTag: 'Coming soon', more: (n) => `+ ${n} more modules`,
     free: 'FREE', startReading: 'Start reading', seeLabs: 'See the labs',
-    videos: (n, h) => `${n} videos · ${h} h · Bangla`, playlist: 'Playlist', startWatching: 'Start watching', readTut: (t) => `Read the ${t} tutorial`, samples: (n) => `${n} free sample videos`, locked: 'Locked until you buy', sample: 'Free sample',
+    videos: (n, h) => `${n} videos · ${h} h · Bangla`, playlist: 'Playlist', startWatching: 'Start watching', watchSamples: 'Watch the free samples', buy: 'Buy', readTut: (t) => `Read the ${t} tutorial`, samples: (n) => `${n} free sample videos`, locked: 'Locked until you buy', sample: 'Free sample',
     labsFor: 'Labs for this course', pickLab: 'Lab topics · pick one to preview', openLab: 'Open this lab', readLesson: 'Read the lesson', labsWay: 'Labs for this course are on the way', labsWayP: 'The written tutorial is ready to read now. When its labs are published, they will appear here, grouped by topic.', readTutorial: 'Read the tutorial',
     examTag: 'Exam prep · Pro', comingSoon: 'COMING SOON', includes: ['Solved past papers', 'Timed mock tests', 'Class materials', 'Certificate'], price: 'Price announced soon', join: 'Join the waitlist', stayFree: 'Videos and tutorials stay free.',
     play: 'Play', stepOf: 'Step 1 of many',
@@ -40,7 +40,7 @@ const T = {
     complete: (n) => `সম্পূর্ণ · ${n}টি টপিক`, ofTopics: (a, b) => `${a}/${b} টপিক`, labsN: (n) => `${n}টি ল্যাব`, noLabs: 'ল্যাব শিগগিরই আসছে',
     modules: (n) => `${n}টি মডিউল`, interactive: (n) => `${n}টি ইন্টারঅ্যাকটিভ ল্যাব`, ready: (a, b) => `${b}টির মধ্যে ${a}টি টপিক তৈরি`, readyTag: 'তৈরি', soonTag: 'শিগগিরই', more: (n) => `+ আরও ${n}টি মডিউল`,
     free: 'ফ্রি', startReading: 'পড়া শুরু করো', seeLabs: 'ল্যাবগুলো দেখো',
-    videos: (n, h) => `${n}টি ভিডিও · ${h} ঘণ্টা · বাংলা`, playlist: 'প্লেলিস্ট', startWatching: 'দেখা শুরু করো', readTut: (t) => `${t} টিউটোরিয়াল পড়ো`, samples: (n) => `${n}টি ফ্রি নমুনা ভিডিও`, locked: 'কিনলে খুলবে', sample: 'ফ্রি নমুনা',
+    videos: (n, h) => `${n}টি ভিডিও · ${h} ঘণ্টা · বাংলা`, playlist: 'প্লেলিস্ট', startWatching: 'দেখা শুরু করো', watchSamples: 'ফ্রি নমুনা দেখো', buy: 'কিনে নাও', readTut: (t) => `${t} টিউটোরিয়াল পড়ো`, samples: (n) => `${n}টি ফ্রি নমুনা ভিডিও`, locked: 'কিনলে খুলবে', sample: 'ফ্রি নমুনা',
     labsFor: 'এই কোর্সের ল্যাব', pickLab: 'ল্যাবের টপিক · একটি বেছে নিয়ে দেখো', openLab: 'ল্যাবটি খোলো', readLesson: 'পাঠটি পড়ো', labsWay: 'এই কোর্সের ল্যাব আসছে', labsWayP: 'লিখিত টিউটোরিয়াল এখনই পড়া যায়। ল্যাব প্রকাশ হলে টপিক অনুযায়ী এখানে দেখা যাবে।', readTutorial: 'টিউটোরিয়াল পড়ো',
     examTag: 'পরীক্ষার প্রস্তুতি · প্রো', comingSoon: 'শিগগিরই', includes: ['পুরোনো প্রশ্নের সমাধান', 'সময় ধরে মক টেস্ট', 'ক্লাসের ম্যাটেরিয়াল', 'সার্টিফিকেট'], price: 'দাম শিগগিরই জানানো হবে', join: 'ওয়েটলিস্টে যোগ দাও', stayFree: 'ভিডিও আর টিউটোরিয়াল ফ্রিই থাকবে।',
     play: 'চালাও', stepOf: 'প্রথম ধাপ',
@@ -176,7 +176,7 @@ async function coursePreview(L, key) {
     el('div', { class: 'hp-videos' }, el('strong', { class: 'hp-sub', text: L.playlist }),
       ...first.map((it, k) => el('div', { class: `hp-video${it.locked ? ' locked' : ''}` }, el('span', { class: 'hp-n', text: num(k + 1) }), el('span', { class: 'hp-video-title', text: it.title }),
         it.locked ? svg('hp-lock', LOCK) : it.sample ? el('span', { class: 'hp-tag on', text: L.sample }) : svg('hp-play-s', PLAY)))),
-    el('div', { class: 'hp-actions' }, btn(`/watch.html?course=${encodeURIComponent(c.id)}`, L.startWatching), tut ? btn(`/learn.html?track=${tut.id}`, L.readTut(tut.title), 'ghost') : null),
+    el('div', { class: 'hp-actions' }, btn(`/watch.html?course=${encodeURIComponent(c.id)}`, paid ? L.watchSamples : L.startWatching), paid ? btn(`/buy.html?course=${encodeURIComponent(c.id)}`, `${L.buy} · ${c.price ?? ''}`, 'pro') : null, tut ? btn(`/learn.html?track=${tut.id}`, L.readTut(tut.title), 'ghost') : null),
   ];
 }
 

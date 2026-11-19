@@ -13,6 +13,7 @@ const NAV = [
   ['users', 'Users and roles', 'M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
   ['ai', 'AI Teacher', 'M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5z'],
   ['pro', 'Pro and waitlist', 'M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5L5.5 21l2-7.5L2 9h7z'],
+  ['orders', 'Orders', 'M3 6h18M3 12h18M3 18h12M19 16l2 2 4-4'],
   ['coupons', 'Coupons', 'M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8zM7 7h.01'],
   ['ads', 'Ad banners', 'M3 5h18v10H3zM7 19h10M12 15v4'],
   ['site', 'Site and announcements', 'M3 11l15-6v14L3 13zM7 13v5a2 2 0 0 0 4 0v-3'],
@@ -468,9 +469,48 @@ async function proPage() {
     p.ownerEmail, `${num(p.lessons.length)} lessons · ${num(p.papers.length)} papers · ${num(p.mockTests)} mock tests · ${num(p.files.length)} files`,
     chip({ draft: 'Draft', review: 'Waiting for review', approved: 'Approved' }[p.status] ?? p.status, p.status === 'approved' ? 'ok' : p.status === 'review' ? 'info' : ''),
     p.status === 'review' ? el('span', {}, button('Approve', review(p, true), 'primary small'), ' ', button('Return', review(p, false), 'small line')) : p.files.length ? el('a', { href: p.files[0].url, target: '_blank', rel: 'noopener', text: 'First file ↗' }) : '']), 'No packs yet. Instructors write them in their dashboard.'));
-  return [el('div', { class: 'adm-kpis' }, kpi('On the waitlist', num(w.count)), kpi('Paid courses', num(paid.length)), kpi('Payments', 'bKash / Nagad', 'checked by an admin')),
+  return [el('div', { class: 'adm-kpis' }, kpi('On the waitlist', num(w.count)), kpi('Paid courses', num(paid.length)), kpi('Payments', 'bKash / Nagad', 'see Orders')),
     row(card('Paid courses', table(['Course', 'Price', 'Samples', ''], paid.map((c) => [c.title.en, `৳ ${num(c.price)}`, num(c.counts.samples), el('a', { href: `#course/${c.id}`, text: 'Manage access' })]), 'No paid courses yet.')),
       card('Latest waitlist sign-ups', el('p', { class: 'adm-hint', text: 'Emails are partly hidden here. The export is written to the audit log.' }), table(['Email', 'Wants', 'Joined'], w.waitlist.slice(0, 30).map((r) => [r.email, r.plan, ago(r.at)]), 'Nobody yet.'), exp)), packCard];
+}
+
+// ── orders (bKash / Nagad payments checked by hand) ──
+let orderTab = 'pending';
+async function ordersPage() {
+  setTitle('Orders', 'Payments for paid courses: check each one in your bKash or Nagad app, then approve');
+  const [d, pay] = await Promise.all([api('GET', `/api/admin/orders?status=${orderTab}`), api('GET', '/api/admin/payments')]);
+  const tabs = el('div', { class: 'adm-tabs', role: 'tablist' }, ...[['pending', `Waiting · ${d.counts.pending ?? 0}`], ['approved', 'Approved'], ['rejected', 'Not accepted'], ['all', 'All']].map(([id, label]) =>
+    el('button', { type: 'button', role: 'tab', 'aria-selected': String(id === orderTab), text: label, onclick: () => { orderTab = id; route(); } })));
+  const decide = (o, approve) => async () => {
+    let reason = null;
+    if (approve) { if (!confirm(`Approve ৳ ${o.total} from ${o.email}? Check TrxID ${o.trxId} in your ${o.method === 'bkash' ? 'bKash' : 'Nagad'} app first.`)) return; }
+    else { reason = prompt('Why is it not accepted? The student sees this.', 'No payment found with this TrxID'); if (!reason) return; }
+    try { await api('POST', `/api/admin/orders/${o.id}/${approve ? 'approve' : 'reject'}`, { reason }); toast(approve ? 'Approved. The course is unlocked.' : 'Marked as not accepted.'); route(); } catch (e) { toast(e.message); }
+  };
+  const p = structuredClone(pay);
+  const methodRow = (key, label) => row(
+    check(`Accept ${label}`, p[key].on, (on) => { p[key].on = on; }),
+    field(`${label} number`, input(p[key].number, (v) => { p[key].number = v; }, { inputmode: 'tel', placeholder: '01XXXXXXXXX' })),
+    field('Number type', select(p[key].type, [['personal', 'Personal (Send Money)'], ['merchant', 'Merchant (Payment)'], ['agent', 'Agent (Cash In)']], (v) => { p[key].type = v; })));
+  const savePay = button('Save payment details', null, 'primary');
+  savePay.onclick = busy(savePay, async () => { await api('POST', '/api/admin/payments', p); toast('Payment details saved.'); });
+  return [
+    el('div', { class: 'adm-kpis' }, kpi('Waiting to be checked', num(d.counts.pending ?? 0)), kpi('Approved', num(d.counts.approved ?? 0)), kpi('Not accepted', num(d.counts.rejected ?? 0)), kpi('Received (approved)', `৳ ${num(d.revenue)}`)),
+    tabs,
+    card('', table(['When', 'Student', 'Course', 'Amount', 'Paid with', 'Reference', ''], d.orders.map((o) => [
+      ago(o.createdAt), el('strong', { text: o.email }), o.courseTitle,
+      el('span', {}, el('strong', { text: `৳ ${num(o.total)}` }), o.coupon ? el('small', { class: 'adm-hint', text: ` (৳ ${num(o.price)} − ${o.coupon})` }) : null),
+      o.method === 'free' ? chip('Coupon, free', 'ok') : el('span', {}, `${o.method === 'bkash' ? 'bKash' : 'Nagad'} · `, el('code', { text: o.trxId }), el('small', { class: 'adm-hint', text: ` · from …${o.senderLast4}` }), o.duplicate ? chip('TrxID used twice', 'bad') : null),
+      el('code', { text: o.reference }),
+      o.status === 'pending' ? el('span', {}, button('Approve', decide(o, true), 'primary small'), ' ', button('Not accepted', decide(o, false), 'small danger'))
+        : el('span', {}, statusChip(o.status === 'approved' ? 'published' : o.status), o.reason ? el('small', { class: 'adm-hint', text: ` ${o.reason}` }) : null),
+    ]), orderTab === 'pending' ? 'No payments are waiting.' : 'Nothing here.')),
+    card('Payment details shown on the buy page',
+      el('p', { class: 'adm-hint', text: 'Students send money to these numbers with a reference code, then enter the transaction ID. Only switch on a method you check every day.' }),
+      methodRow('bkash', 'bKash'), methodRow('nagad', 'Nagad'),
+      row(field('Extra note on the buy page (English)', input(p.note?.en, (v) => { p.note = { ...p.note, en: v }; }, { placeholder: 'e.g. Payments are checked between 9am and 11pm.' })), field('Bangla', input(p.note?.bn, (v) => { p.note = { ...p.note, bn: v }; }, { lang: 'bn' }))),
+      savePay),
+  ];
 }
 
 // ── coupons ──
@@ -628,7 +668,7 @@ async function auditPage() {
 }
 
 // ── router ──
-const PAGES = { overview, content: contentPage, posts: postsPage, users: usersPage, ai: aiPage, pro: proPage, coupons: couponsPage, ads: adsPage, site: sitePage, settings: settingsPage, audit: auditPage };
+const PAGES = { overview, content: contentPage, orders: ordersPage, posts: postsPage, users: usersPage, ai: aiPage, pro: proPage, coupons: couponsPage, ads: adsPage, site: sitePage, settings: settingsPage, audit: auditPage };
 const DETAIL = { topic: topicPage, track: trackPage, course: coursePage, post: postPage, ad: adPage };
 let seq = 0;
 async function route() {

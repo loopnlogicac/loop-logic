@@ -219,12 +219,42 @@ export class AdminService {
     const email = str(emailIn, 254).toLowerCase();
     const member = (await this.store.listDocs('member')).find((m) => m.data.email === email);
     if (!member) throw bad('Nobody with this email has signed in yet. Ask them to sign in once, then try again.');
+    return this.grantLearner(actor, courseId, member.id, email);
+  }
+  /** Gives one learner access to a paid course for the course's access period. */
+  async grantLearner(actor: string, courseId: string, learnerId: string, email: string, detail: Json = {}) {
+    const course = this.doc('course', courseId);
+    if (!course || course.data.access !== 'paid') throw bad('Access can only be given for a paid course.');
     const months = Number(course.data.accessMonths) || 0;
     const until = months ? new Date(this.now().getTime() + months * 30 * 86400_000).toISOString() : null;
-    await this.store.putDoc({ kind: 'grant', id: this.grantKey(courseId, member.id), data: { courseId, learnerId: member.id, email, until, by: actor, at: this.now().toISOString() }, updatedAt: this.now().toISOString() });
-    this.grants.delete(this.grantKey(courseId, member.id));
-    await this.audit(actor, 'course.grant', courseId, { email, until });
+    await this.store.putDoc({ kind: 'grant', id: this.grantKey(courseId, learnerId), data: { courseId, learnerId, email, until, by: actor, at: this.now().toISOString(), ...detail }, updatedAt: this.now().toISOString() });
+    this.grants.delete(this.grantKey(courseId, learnerId));
+    await this.audit(actor, 'course.grant', courseId, { email, until, ...detail });
     return { ok: true, email, until };
+  }
+  /** A paid or free course added in the admin site (for checkout). */
+  courseDoc(id: string) { return this.doc('course', id)?.data; }
+  couponDoc(code: string) { return this.doc('coupon', code.toUpperCase())?.data; }
+  async useCoupon(code: string) {
+    const d = this.doc('coupon', code.toUpperCase());
+    if (d) await this.put('coupon', d.id, { ...d.data, used: (d.data.used ?? 0) + 1 });
+  }
+  async logAudit(actor: string, action: string, target: string, detail: Json = {}) { await this.audit(actor, action, target, detail); }
+
+  // ── payment details shown on the buy page (bKash / Nagad numbers) ──
+  paymentSettings() {
+    return this.doc('site', 'payments')?.data ?? { bkash: { number: '', type: 'personal', on: false }, nagad: { number: '', type: 'personal', on: false }, note: { en: '', bn: '' } };
+  }
+  async savePaymentSettings(actor: string, body: Json) {
+    const one = (v: Json) => {
+      const number = str(v?.number, 20).replace(/[\s-]/g, '');
+      if (v?.on === true && !/^01\d{9}$/.test(number)) throw bad('Enter an 11-digit Bangladeshi mobile number starting with 01.');
+      return { number, type: v?.type === 'merchant' ? 'merchant' : v?.type === 'agent' ? 'agent' : 'personal', on: v?.on === true };
+    };
+    const data = { bkash: one(body.bkash), nagad: one(body.nagad), note: bi(body.note, 500) };
+    await this.put('site', 'payments', data);
+    await this.audit(actor, 'payments.save', 'payments', { bkash: data.bkash.on, nagad: data.nagad.on });
+    return data;
   }
   async revokeAccess(actor: string, courseId: string, learnerId: string) {
     await this.store.deleteDoc('grant', this.grantKey(courseId, learnerId));
@@ -706,6 +736,8 @@ export class AdminService {
     if (drafts) attention.push({ tag: 'Draft', text: `${drafts} tutorial topic${drafts > 1 ? 's are' : ' is'} still a draft`, go: 'content' });
     const scheduled = this.docs('post').filter((d) => d.data.status === 'scheduled' && !this.live(d.data)).length;
     if (scheduled) attention.push({ tag: 'Posts', text: `${scheduled} post${scheduled > 1 ? 's are' : ' is'} scheduled`, go: 'posts' });
+    const waiting = (await this.store.listDocs('order').catch(() => [])).filter((o) => o.data.status === 'pending').length;
+    if (waiting) attention.unshift({ tag: 'Payments', text: `${waiting} payment${waiting > 1 ? 's are' : ' is'} waiting to be checked`, go: 'orders' });
     if (!this.opts.youtubeKey) attention.push({ tag: 'Setup', text: 'YOUTUBE_API_KEY is not set, so courses cannot be added from playlists yet', go: 'settings' });
     const feedback = events.filter((e) => e.type === 'feedback' && Date.parse(e.at) > weekAgo && /wrong|bad|unclear|not/i.test(String(e.payload.value ?? ''))).length;
     if (feedback) attention.push({ tag: 'Feedback', text: `${feedback} learner${feedback > 1 ? 's' : ''} marked an explanation as unhelpful this week`, go: 'ai' });

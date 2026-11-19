@@ -15,6 +15,7 @@ import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
+import type { OrderService } from '../app/orders.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
@@ -45,6 +46,7 @@ export interface AppDeps {
   tutorials: TutorialService;
   admin?: AdminService;
   classes?: ClassService;
+  orders?: OrderService;
   store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
@@ -117,6 +119,10 @@ export function buildRoutes(d: AppDeps): Route[] {
   const cls = () => {
     if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
     return d.classes;
+  };
+  const ord = () => {
+    if (!d.orders) throw new AppError('unavailable', 503, 'Buying is not available on this server.');
+    return d.orders;
   };
   const adm = () => {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
@@ -281,6 +287,18 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/admin/waitlist/export', async ({ email }) => ({ csv: await adm().waitlistCsv(email!) }), 'admin'),
     route('GET', '/api/admin/ai', () => adm().ai(), 'admin'),
     route('GET', '/api/admin/audit', () => adm().auditLog(), 'admin'),
+
+    // buying a paid course (bKash / Nagad, checked by an admin)
+    route('GET', '/api/buy/:course', ({ params, query, learnerId, email, signedIn }) => ord().page(learnerId, email, Boolean(signedIn) || d.auth.mode === 'supabase', params.course!, lang(query.get('lang')))),
+    route('POST', '/api/buy/:course/quote', ({ params, body, learnerId, email }) => ord().quote(learnerId, email, params.course!, body.coupon)),
+    route('POST', '/api/buy/:course', ({ params, body, learnerId, email, signedIn }) => ord().submit(learnerId, email, Boolean(signedIn) || d.auth.mode === 'supabase', params.course!, body)),
+    route('GET', '/api/my-orders', ({ learnerId }) => ord().mine(learnerId)),
+    route('POST', '/api/orders/:id/cancel', ({ params, learnerId }) => ord().cancel(learnerId, params.id!)),
+    route('GET', '/api/admin/orders', ({ query }) => ord().adminList(String(query.get('status') ?? 'pending')), 'admin'),
+    route('POST', '/api/admin/orders/:id/approve', ({ params, email }) => ord().decide(email!, params.id!, true, null), 'admin'),
+    route('POST', '/api/admin/orders/:id/reject', ({ params, body, email }) => ord().decide(email!, params.id!, false, body.reason), 'admin'),
+    route('GET', '/api/admin/payments', () => adm().paymentSettings(), 'admin'),
+    route('POST', '/api/admin/payments', ({ body, email }) => adm().savePaymentSettings(email!, body), 'admin'),
 
     // students and classes
     route('POST', '/api/learn-activity', ({ body, learnerId }) => tutorials.recordActivity(learnerId, body)),

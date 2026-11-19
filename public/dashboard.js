@@ -48,7 +48,7 @@ function render(d) {
   const L = t();
   applyI18n(L);
   document.title = `${L.hello} · Loop & Logic`;
-  const nodes = [el('div', { class: 'page-head' }, el('h1', { text: L.hello }), el('p', { text: L.helloSub })), classesBox()];
+  const nodes = [el('div', { class: 'page-head' }, el('h1', { text: L.hello }), el('p', { text: L.helloSub })), purchasesBox(), classesBox()];
 
   if (d.isNew) nodes.push(welcome(L));
 
@@ -181,6 +181,22 @@ function classesBox() {
       el('details', { class: 'mc-joinbox', open: !classes.length || null }, el('summary', { text: L.join }), el('p', { class: 'muted small', text: L.note }), form));
   };
   fill().catch(() => {});
+  return box;
+}
+
+/** Payments for paid courses, while any is waiting or recently decided. */
+function purchasesBox() {
+  const bn = getLang() === 'bn';
+  const box = el('div');
+  if (!currentUser()) return box;
+  api('GET', '/api/my-orders').then(({ orders }) => {
+    if (!orders.length) return;
+    const st = { pending: bn ? 'যাচাই চলছে' : 'Being checked', approved: bn ? 'অনুমোদিত' : 'Approved', rejected: bn ? 'গ্রহণ করা হয়নি' : 'Not accepted', cancelled: bn ? 'বাতিল' : 'Cancelled' };
+    box.replaceWith(el('section', { class: 'card my-classes' }, el('h2', { text: bn ? 'আমার কেনাকাটা' : 'My purchases' }),
+      ...orders.slice(0, 5).map((o) => el('div', { class: 'mc-head' }, el('strong', { text: o.courseTitle }), el('span', { class: `tag ${o.status === 'approved' ? 'live' : ''}`, text: st[o.status] ?? o.status }),
+        el('span', { class: 'muted small', text: `৳ ${num(o.total)} · ${ago(o.createdAt)}${o.reason ? ` · ${o.reason}` : ''}` }),
+        el('a', { href: o.status === 'approved' ? `/watch.html?course=${encodeURIComponent(o.courseId)}` : `/buy.html?course=${encodeURIComponent(o.courseId)}`, text: o.status === 'approved' ? (bn ? 'দেখো' : 'Watch') : (bn ? 'খোলো' : 'Open') })))));
+  }).catch(() => {});
   return box;
 }
 
