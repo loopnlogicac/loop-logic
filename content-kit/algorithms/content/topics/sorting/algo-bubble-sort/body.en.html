@@ -1,0 +1,62 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine students standing in a row by height. Walk along the row and exchange any neighbouring pair that stands in the wrong order. After one complete walk, the tallest student reaches the right end. <dfn>Bubble sort</dfn> repeats this local repair on the remaining row.</p>
+<p>Bubble sort is mainly useful for learning passes, comparisons and invariants. Its decisions are easy to see, but its worst-case work grows quadratically. Keep the example small enough to explain each swap. Speed on large datasets is not its main strength.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">for pass = 0 to n - 2
+    swapped = false
+    for j = 0 to n - 2 - pass
+        if a[j] &gt; a[j + 1]
+            swap a[j] and a[j + 1]
+            swapped = true
+    a[n - 1 - pass] is now in place
+    if not swapped: stop early</code></pre>
+<h2 id="how-it-works">Bubble Sort step by step</h2>
+<h3>A pass pushes a maximum right</h3>
+<p>For ascending order, compare a[j] with a[j + 1]. Swap only when the left value is larger. After this decision, the larger of those two values occupies the right cell. Continuing one position further compares that carried maximum with the next value. This explains why a large value can travel many cells during one left-to-right pass.</p>
+<p>Start with [7,3,5,3,1]. The first comparison moves 7 past 3. Further comparisons move the same 7 past 5, 3 and 1, leaving [3,5,3,1,7]. The maximum is now final. During the next pass, do not compare the final 7 again; only the unsorted prefix needs attention.</p>
+<p>A small value behaves differently. The trailing 1 moves left by only one position during that first pass, because earlier pairs have already been visited. This directional behaviour explains why reverse order requires many passes. A single local repair does not imply that both neighbouring values have reached their final places.</p>
+<h3>Shrink the unfinished prefix</h3>
+<p>Number passes from zero. Pass pass scans j from zero through n - 2 - pass, comparing each j with j + 1. The last compared right index is n - 1 - pass. At the end of that pass, this position holds the largest remaining value and joins the sorted suffix.</p>
+<p>At most n - 1 passes are needed. Once n - 1 largest values are placed, the remaining first value must be correct too. For a singleton, the outer loop runs no passes. For an empty array, neither loop accesses any element. Signed loop indices make the n - 1 stopping expressions easy to handle for these small cases.</p>
+<p>A pass is a complete sweep of the current unfinished prefix. A comparison is one check of neighbouring values. A swap is a data movement that happens only after a failed order check. Keep these counts separate in a trace. Two inputs of the same size can make the same first-pass comparisons but very different numbers of swaps.</p>
+<h3>Stop when a complete pass changes nothing</h3>
+<p>Set swapped to false at the start of each pass. Set it to true whenever you exchange a pair. If the whole pass finishes with no exchanges, every adjacent pair in the unfinished prefix is already ordered. Since the suffix was already final, the entire array is sorted and you may stop.</p>
+<p>The flag must be reset for every pass. If it stays true from an earlier pass, an already sorted later prefix cannot trigger early exit. The algorithm still sorts, but loses its best-case benefit. If you test the flag after only one comparison, you may stop while a later pair is still reversed.</p>
+<p>On already ascending input of length n greater than one, the first pass makes n - 1 comparisons and zero swaps, then stops. Nearly sorted input can also benefit, but do not promise linear time for every small disturbance. One tiny value near the end may still need many leftward passes.</p>
+<h3>Preserve equal-key record order</h3>
+<p>A sort is <dfn>stable</dfn> when records with equal keys keep their earlier relative order. Imagine two papers with mark 3, labelled 3A and 3B to remember arrival order. Bubble sort's strict greater-than test does not exchange equal neighbours. For 3A to cross 3B, they would have to swap at some point, which never happens.</p>
+<p>Changing the condition to greater-than-or-equal destroys that reasoning. Equal records would swap needlessly, and already equal input could prevent early stopping. Plain integer output cannot show a reversal among identical values. Use labels mentally, or attach a record identifier when studying stability.</p>
+<p>Bubble sort changes the array directly and keeps only a few counters, a flag and a saved swap value. It is both stable under the strict comparison and in-place. These properties are independent: other constant-workspace sorts may lose tie order. Compare them by following labelled equal records, rather than inferring stability from sorted numbers alone.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>Four shrinking sweeps move the maxima right. Eight adjacent exchanges produce 1 3 3 5 7.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>Bubble comparisons also order negative marks. The keyboard example ends at -2 -2 0 1 4 7.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>After bubble ordering, only changes between neighbouring values start a new group. There are three distinct marks.</p>
+<div data-example="ex-3"></div>
+<h3>Show one pass without claiming the whole array is sorted</h3>
+<p>One sweep leaves 3 5 3 1 7 after four swaps. The final 7 is correct, but the unfinished prefix still contains reversed neighbours.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Pass 1</td><td>[3,5,3,1,7]</td><td>Four swaps carry 7 to its final cell.</td></tr><tr><td>Pass 2</td><td>[3,3,1,5,7]</td><td>The remaining maximum 5 moves right.</td></tr><tr><td>Pass 3</td><td>[3,1,3,5,7]</td><td>The rightmost unfinished 3 becomes final.</td></tr><tr><td>Pass 4</td><td>[1,3,3,5,7]</td><td>The final reversed pair is repaired.</td></tr></tbody></table>
+<div data-lab="bubble-sort"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>During an inner pass, the value at the current right endpoint is the maximum of all values visited so far in that pass. Comparing it with the next value preserves this fact. Therefore the completed pass puts the unfinished prefix's maximum at its right edge. Before the next pass, the sorted suffix contains the largest already placed values.</p>
+<p>Each pass extends that suffix by one, or stops because no inversions remain between neighbours. Either outcome makes progress. Swaps preserve the collection of values because each exchange moves two existing values without creating or deleting one. These arguments establish both ascending order and preservation of the input.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>Worst-case comparisons sum to (n - 1) + (n - 2) + ... + 1 = n(n - 1)/2. Reverse order also forces that many adjacent swaps when keys are distinct. Thus worst-case time is Θ(n²). Under the usual uniformly random permutation model, average work is also Θ(n²). Early exit reduces the best case to Θ(n), while auxiliary storage remains Θ(1).</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Swapping equal values</h3>
+<p>Use a strict greater-than comparison. Equality already satisfies ascending order and swapping it loses the stability argument.</p>
+<h3>Scanning through index n - 1</h3>
+<p>The comparison also reads j + 1. Stop the pair loop before the right index reaches n.</p>
+<h3>Treating one swap-free comparison as a sorted array</h3>
+<p>Only a whole pass without changes proves adjacent order across the unfinished prefix.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>The bubble flag is an ordinary C17 int used as false or true. Zero means no exchange; one records an exchange. Declaring pass and j in loop headers is supported from C99 onward.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Move each unfinished maximum right with neighbour swaps and stop after a complete unchanged pass.</p>
+<p>Continue with <a href="topic:algo-selection-sort">selection sort</a>.</p>

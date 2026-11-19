@@ -1,0 +1,65 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A class mark is an integer within a small known range. Instead of asking which of two marks is smaller again and again, you can count how many students received each mark. <dfn>Counting sort</dfn> uses those frequencies to determine output positions directly.</p>
+<p>This method uses information beyond comparisons: a key can serve as an array index after a suitable offset. Its speed depends on the key range as well as the number of records. A thousand marks from a hundred possible scores is a promising case; two keys separated by a billion are not.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">count[0..198] = 0; allocate output[0..n)
+for i = 0 to n - 1: count[a[i] + 99]++
+for key = 1 to 198: count[key] += count[key - 1]
+for i = n - 1 down to 0: output[--count[a[i] + 99]] = a[i]
+copy output into a</code></pre>
+<h2 id="how-it-works">Counting Sort step by step</h2>
+<h3>Map a key into a counting slot</h3>
+<p>Let keys range from minimum L through maximum U, inclusive. Define k = U - L + 1. Allocate count[0..k) and initialise every entry to zero. Key x maps to slot x - L. This offset keeps all slots nonnegative even when the original keys include negative values.</p>
+<p>The C implementation accepts keys from -99 through 99, so k is 199 and the slot is a[i] + 99. The key -99 maps to zero, zero maps to 99, and 99 maps to 198. Validate the input range before using the key as an index. A value outside the stated range can otherwise corrupt memory.</p>
+<p>Make one input scan and increment the slot for each key. After that scan, count[s] is the number of records whose key maps to s. Empty input leaves all counts zero. Repeated keys increase the same slot rather than creating new positions in the count array.</p>
+<h3>Prefix totals turn counts into boundaries</h3>
+<p>A <dfn>prefix sum</dfn> is a running total over earlier entries. Replace count[s] by count[s] + count[s - 1] for increasing s from one through k - 1. Afterward count[s] equals the number of input keys at most the key represented by s.</p>
+<p>For [7,3,5,3,1], occupied key frequencies are 1:1, 3:2, 5:1 and 7:1. Their cumulative totals are 1, 3, 4 and 5. Therefore key 3 occupies output indices 1 and 2. Its cumulative total 3 is the excluded upper boundary of that group, not its first index.</p>
+<p>Keys with zero frequency still participate in the running total. For example the prefix total for key 4 is also 3 even though no input equals 4. You can hide empty frequency slots in a visual display, but the algorithm must preserve the meaning of the full range.</p>
+<h3>Fill output from right to left</h3>
+<p>Allocate an output array of n records. Scan the input from its final record to its first. For each key slot, decrease the cumulative count and use the new count as the output position. The pre-decrement matters: a group ending at boundary three has last valid position two.</p>
+<p>Why scan backwards? Imagine equal records 3A then 3B in input order. Processing 3B first places it at the last available position for key 3. Processing 3A later places it immediately before 3B. Their relative order is preserved. Prefix boundaries and reverse traversal work together to establish stability.</p>
+<p>A left-to-right input scan with the same decrementing end-boundary rule reverses ties. If you want forward traversal, redesign the position convention to use starting offsets that increase. Do not change traversal direction while keeping an incompatible placement rule.</p>
+<p>Once output is complete, copy it back to the input array if the caller expects an in-array result. This copying phase is separate from counting and placement. All keys are already correctly ordered in output; copying only changes where that result is stored.</p>
+<h3>Follow every data-dependent decision</h3>
+<p>In the animation, the count panel shows occupied key slots after each input value. The prefix panel then shows cumulative end boundaries. The output panel begins with empty cells and fills one position at a time from input's right end. Its values are copied back only after placement finishes.</p>
+<p>For the default array, input 1 first takes output position zero. The later 3 takes position two, 5 takes position three, the earlier 3 takes position one, and 7 takes position four. Although placement visits the original records backwards, their final key order is ascending and tie order remains original.</p>
+<p>The ordinary integer result cannot display which 3 arrived first. The labelled-record example therefore carries identifiers as well as keys. Stable placement copies the whole record into output. Counting only keys and reconstructing values would lose the identity of associated student data.</p>
+<h3>Compare n with the range k</h3>
+<p>Initialising and accumulating the count array cost Θ(k). Counting, placing and copying n records each cost Θ(n). Total time is Θ(n + k), and the stable buffered version needs Θ(n + k) auxiliary storage. The output array is not constant space merely because its cells eventually replace the original array.</p>
+<p>When k = O(n), counting sort is linear in n and can beat comparison sorting asymptotically. When k is much larger than n log n, scanning a mostly empty count range can be wasteful. Always name k in the bound before simplifying it for a specific domain.</p>
+<p>The comparison-sorting lower bound does not forbid this improvement. That bound assumes information is learned through comparisons between arbitrary keys. Counting sort uses key values to address a finite domain directly. It solves a more structured problem under stronger input assumptions.</p>
+<p>Negative keys are supported through an offset, but arbitrary real-valued marks are not automatically valid slots. You would need a bounded exact encoding or a different method. Scaling decimal values can introduce rounding and range problems, so define the representation rather than silently truncating them.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>Offsets map keys to slots 100, 102, 104 and 106. Prefix ends and reverse placement yield 1 3 3 5 7.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>The domain check permits -99 through 99. Shifting by 99 maps both -2 records to one nonnegative count slot.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>Stable counting places duplicate keys consecutively. Three occupied key groups correspond to three distinct marks.</p>
+<div data-example="ex-3"></div>
+<h3>Keep identifiers with equal marks</h3>
+<p>Records 2A and 2C emerge in that same order. The separate identifier exposes stability that identical integer values would hide.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Frequencies</td><td>1:1, 3:2, 5:1, 7:1</td><td>Count each original key once.</td></tr><tr><td>Prefix totals</td><td>1:1, 3:3, 5:4, 7:5</td><td>Totals define excluded group ends.</td></tr><tr><td>Reverse placement</td><td>1 to 0; later 3 to 2; 5 to 3</td><td>Each decrement claims an unused slot.</td></tr><tr><td>Complete</td><td>[1,3,3,5,7]</td><td>Earlier 3 takes position 1, then 7 takes 4.</td></tr></tbody></table>
+<div data-lab="counting-sort"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>After frequency counting, count[s] equals the number of input keys represented by slot s. The increasing prefix loop changes this to the number at most that key. Thus each key owns a consecutive output block whose length equals its frequency. Different key blocks do not overlap and appear in ascending key order.</p>
+<p>During reverse placement, decrementing a block's end selects one unused position within that block. Exactly its frequency many records consume exactly its block length. No record is lost or duplicated. Reverse traversal puts later equal records in later positions, proving stability. Copying the completed output preserves this sorted record sequence.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>For this fixed demonstration range, k = 199, so runtime grows linearly with n once that range is treated as a constant. The general algorithm must retain Θ(n + k), because a wider domain changes both work and storage. A frequency-only reconstruction can avoid an n-record output array for bare keys, but does not provide the same stable record-placement operation. The lesson uses the stable buffered form.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Indexing negative keys directly</h3>
+<p>Shift by the stated minimum before accessing count. Validate the full allowed range before the first indexing operation.</p>
+<h3>Using the cumulative total as an index without decrement</h3>
+<p>A total of n is an excluded end, so output[n] would be outside the array. Decrease first.</p>
+<h3>Dropping stability when carrying records</h3>
+<p>Copy each entire record during placement. Rebuilding only its key does not preserve the associated fields.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>Every C17 counting slot is an int counter initialised to zero. The fixed 199-key range and at most 64 records keep both prefix totals and offset arithmetic within range.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Map bounded integer keys into frequencies, prefix boundaries and stable reverse record placement.</p>
+<p>Continue with <a href="topic:algo-radix-sort">radix sort</a>.</p>

@@ -1,0 +1,70 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Choose one exam mark as a divider. Move smaller marks to one side and larger marks to the other. Then order each side independently. <dfn>Quick sort</dfn> uses this partitioning plan. Unlike merge sort, it performs the main rearrangement before sorting its children.</p>
+<p>Quick sort can be fast with balanced divisions, but the pivot can create highly uneven work. The partition contract matters as much as the pivot choice. Lomuto and Hoare partitioning use different boundaries, so their recursive calls must follow their own rules.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">quick_sort(low, high): if low &gt;= high: return
+pivot = a[high]; i = low
+for j = low to high - 1
+    if a[j] &lt;= pivot: swap a[i], a[j]; i = i + 1
+swap a[i], a[high]; p = i
+quick_sort(low, p - 1)
+quick_sort(p + 1, high)</code></pre>
+<h2 id="how-it-works">Quick Sort step by step</h2>
+<h3>Lomuto partition places one pivot finally</h3>
+<p>The shown Lomuto routine uses the final value a[high] as pivot, with an inclusive interval [low,high]. Begin i = low. Scan j from low through high - 1. Values before i are at most pivot; values from i through j - 1 are greater. Values from j to high - 1 have not yet been classified.</p>
+<p>When a[j] is at most pivot, swap a[i] and a[j], then increase i. Otherwise leave a[j] in the greater region. After the scan, exchange a[i] with the pivot at high. The pivot is now at final position p = i. Every earlier key in this interval is at most pivot and every later key is greater.</p>
+<p>Sort [low,p - 1] and [p + 1,high], excluding p from both calls. Empty and singleton closed intervals need no work. Equal keys are assigned to the left side by this version's less-than-or-equal rule. That choice is valid but can produce an extremely unbalanced split when many keys equal the pivot.</p>
+<h3>Trace the final-element pivot</h3>
+<p>For [7,3,5,3,1], pivot 1 is smaller than all scanned values. No eligible value advances i. The final pivot exchange produces [1,3,5,3,7] with p = 0. Only the right interval remains nontrivial.</p>
+<p>The next pivot is 7. Every scanned value is eligible, so several self-swaps occur and p becomes 4. On [3,5,3], pivot 3 moves the two 3 values into the left side and ends at index 2, producing [1,3,3,5,7]. The remaining nontrivial pieces are singletons.</p>
+<p>A trace may show a swap whose two indices are equal. That operation preserves the array and still corresponds to the written Lomuto rule. If you count physical exchanges, you may choose to skip such self-swaps, but do not compare that count with a version that includes them without stating the convention.</p>
+<h3>Hoare partition returns a split boundary</h3>
+<p>Hoare's method commonly chooses a pivot value near the middle and starts scans outside both ends. Move i right until a[i] is at least pivot. Move j left until a[j] is at most pivot. If i has met or passed j, return j as the split. Otherwise exchange a[i] and a[j] and repeat the scans.</p>
+<p>The scans advance before testing their next values. This is essential when keys equal pivot: after a swap, both scans must still progress. Choosing a pivot from within the interval guarantees that the initial scans meet a stopping value. Bounds and pivot conventions must be analysed together if you change that recipe.</p>
+<p>The returned j is a boundary, not necessarily the pivot's final position. Recursion sorts [low,j] and [j + 1,high]. Using Lomuto's p - 1 rule with a Hoare boundary can skip an unsorted value. Conversely, including a Lomuto pivot again can prevent the interval from shrinking.</p>
+<p>Hoare's scheme often performs fewer exchanges than basic Lomuto partitioning, especially with equal keys. It is still generally unstable because distant exchanges can cross equal records. Neither partition name alone promises constant recursion stack space or immunity from bad splits.</p>
+<h3>Balanced and unbalanced recurrence costs</h3>
+<p>A partition scans Θ(n) values. If the pivot divides into two roughly equal parts, T(n) is about 2T(n/2) + Θ(n), giving Θ(n log n). If one side is empty and the other has n - 1 values repeatedly, T(n) = T(n - 1) + Θ(n), giving Θ(n²).</p>
+<p>With a final-element pivot, already ascending distinct input chooses the largest value every time. Reverse order also produces extreme splits. All-equal input is particularly bad for this Lomuto less-than-or-equal version: every value joins one side. The word sorted does not mean best case for every sorting method.</p>
+<p>The ordinary two-recursive-call implementation has O(n) stack space in the worst case and O(log n) expected depth under random pivots. You can recurse on the smaller side and loop over the larger side to guarantee O(log n) stack depth. That transformation controls memory even when time remains quadratic.</p>
+<h3>Random pivots change the probability model</h3>
+<p>Randomised quick sort chooses a pivot index uniformly from the active interval, swaps it to high, and applies the same Lomuto routine. For distinct keys, expected work is Θ(n log n) for every fixed input order. Random choice makes consistently extreme ranks unlikely; it does not make them impossible.</p>
+<p>The worst-case time remains Θ(n²). A fixed seed produces reproducible demonstrations, while a genuine uniform source supports the usual expectation proof. C rand can be seeded for an example, but rand() modulo the interval length may introduce bias. A production implementation should use an appropriate unbiased selection method.</p>
+<p>For a small reproducible teaching program, an unsigned integer generator can use defined wraparound arithmetic and rejection sampling to choose a bounded index. It illustrates the mechanism without claiming cryptographic randomness. Analyse its pivot distribution separately from the pure partition correctness proof.</p>
+<p>When duplicates dominate, three-way partitioning can group values below, equal to, and above pivot. The equal group then needs no recursive sort. This avoids the all-equal degeneration of basic Lomuto. It is an additional variant; the animation deliberately uses the stated two-way Lomuto contract so its decisions remain comparable with the first C example.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>Lomuto first fixes pivot 1 at index zero. Later partitions produce the final order 1 3 3 5 7.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>Partitioning uses signed comparisons, so negative keys require no offset. The ascending result retains every input value.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>Quick-sort partitions eventually collect equal keys into adjacent positions. Three group beginnings remain in this five-mark row.</p>
+<div data-example="ex-3"></div>
+<h3>Sort with a Hoare boundary</h3>
+<p>Hoare recursion includes the returned split in its left interval. The pivot value is not promised a final index at that split.</p>
+<div data-example="ex-4"></div>
+<h3>Use reproducible pivot choices</h3>
+<p>A fixed unsigned generator seed makes this illustration reproducible. Rejection removes modulo range bias for a uniform source; the generator is a teaching mechanism, not a proof of independent uniform pivots.</p>
+<div data-example="ex-5"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Pivot 1 in [0,4]</td><td>[1,3,5,3,7], p = 0</td><td>Every scanned key exceeded the pivot.</td></tr><tr><td>Pivot 7 in [1,4]</td><td>[1,3,5,3,7], p = 4</td><td>All scanned keys joined the left side.</td></tr><tr><td>Pivot 3 in [1,3]</td><td>[1,3,3,5,7], p = 2</td><td>The pivot separates keys at most 3 from larger keys.</td></tr></tbody></table>
+<div data-lab="quick-sort"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>During Lomuto's scan, a[low..i) contains only keys at most pivot, a[i..j) contains only keys greater than pivot, and a[j..high) is unclassified. Swapping an eligible key into i and advancing both boundaries preserves these regions. Rejecting a large key extends the greater region. The pivot stays at high until the final exchange.</p>
+<p>After that exchange, p is a valid final pivot position. Induct on interval length: the two shorter recursive intervals become sorted, and every left key is no greater than pivot while every right key is greater. Their concatenation is sorted and preserves the original records. Strictly shorter child intervals ensure termination.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>Lomuto partition takes linear time and constant local workspace. Balanced recursion gives logarithmic levels of linear total work, while a chain of sizes n, n - 1 and smaller creates quadratic work. The simple quick-sort routine is unstable and has potentially linear auxiliary stack space. Random pivot selection improves expected time for fixed distinct inputs, but does not change its deterministic worst-case bound.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Mixing partition return contracts</h3>
+<p>Lomuto returns a final pivot index; Hoare returns a boundary. Use each implementation with its matching recursive intervals.</p>
+<h3>Calling quick sort on a pivot again</h3>
+<p>A repeated interval may never shrink. Exclude the final Lomuto pivot from both children.</p>
+<h3>Calling randomisation a worst-case guarantee</h3>
+<p>Random pivots support an expectation over pivot choices. An unlucky sequence can still make extreme splits.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>These partition routines use C17 signed indices for closed intervals. The reproducible pivot example uses uint32_t on systems providing this exact-width unsigned type.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Match Lomuto and Hoare contracts to their recursive ranges and reason about pivot quality and randomisation.</p>
+<p>Continue with <a href="topic:algo-heap-sort">heap sort</a>.</p>

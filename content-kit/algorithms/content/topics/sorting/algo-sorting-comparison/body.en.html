@@ -1,0 +1,65 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">You would not carry one paper and a thousand papers with the same plan. Sorting methods also suit different workloads. A nearly ordered short array, a strict memory limit, a bounded mark range, and a need to preserve tie order can each point to a different choice.</p>
+<p>Choosing an algorithm means matching its guarantees to your contract. Start with the number of records, key representation, available workspace and stability requirement. Then compare the relevant time costs. A single slogan such as fastest sort hides the assumptions that make a method useful.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">compare(left, right): read keys x and y
+return (x &gt; y) - (x &lt; y)
+qsort(a, n, sizeof a[0], compare)
+verify adjacent keys are nondecreasing</code></pre>
+<h2 id="how-it-works">Choosing a Sorting Algorithm step by step</h2>
+<h3>Read a comparison table carefully</h3>
+<p>Best, average and worst time describe different input or probability assumptions. For bubble sort, the listed linear best case assumes an early-exit flag. For insertion sort, it assumes already ascending input. Selection sort still scans every suffix regardless of order. Merge sort here always divides and merges, without a boundary-skip optimisation.</p>
+<p>Quick sort's expected n log n statement assumes random pivot ranks for distinct keys. Final-element deterministic pivots can have quadratic time on ascending input. Heap sort instead offers a worst-case n log n upper guarantee. The names alone do not tell you whether an implementation has changed pivot selection, duplicate handling or recursion strategy.</p>
+<p>Space entries refer to auxiliary memory beyond the input. Merge and stable counting sorts use output buffers. Iterative heap sort uses a few variables. The simple recursive quick sort can need a linear stack in its worst case, even though partition itself uses constant storage. Under our strict constant-workspace convention, that recursive version is not guaranteed in-place.</p>
+<h3>Stability depends on record movement</h3>
+<p>Suppose you first order student records by roll number, then order them by mark. A stable mark sort retains increasing rolls within equal marks. An unstable mark sort can scramble that useful earlier order. If the contract specifies only ascending marks, both outputs may be correct; if it requires roll tie order, only the stable behaviour is sufficient.</p>
+<p>A numeric output with repeated 3 values cannot demonstrate which equal record came first. Attach labels or inspect a second record field. Bubble and insertion sorts preserve ties with strict movement tests; merge sort chooses left on equality. Standard selection, quick and heap sorts allow distant exchanges that can cross equal records.</p>
+<p>You can make a total ordering by comparing mark first and original position second. This gives deterministic tie order even with an unstable underlying sort. However, the extra position field and comparison rule become part of the representation. Do not claim the library algorithm itself became stable.</p>
+<h3>Why comparisons need n log n in the worst case</h3>
+<p>For n distinct keys, there are n! possible input orders. A comparison-based sorter must learn enough information to distinguish them. Represent its decisions as a binary tree when each comparison has two possible outcomes for distinct keys. A leaf corresponds to one ordering outcome that the algorithm can correctly identify.</p>
+<p>A binary tree of height h has at most 2^h leaves. Therefore a correct comparison sort requires 2^h ≥ n!, giving h ≥ log2(n!). For sufficiently large n, at least half the factors in n! are at least n/2, so log2(n!) ≥ (n/2)log2(n/2). This proves an Ω(n log n) worst-case comparison lower bound.</p>
+<p>The bound concerns arbitrary distinct-key permutations and comparison-only information. It does not say every input needs n log n comparisons. An already ordered input can be verified in linear work by an adaptive method. It also does not cover counting or radix operations that use a structured bounded representation directly.</p>
+<p>The decision tree argument is about the worst path, not measured seconds on a specific processor. A comparison may itself be expensive if it examines long strings or several record fields. When key comparison cost is nonconstant, multiply or otherwise include that cost rather than treating it as one machine instruction.</p>
+<h3>Use the C library qsort contract</h3>
+<p>The function qsort is declared in stdlib.h. Pass the base address, number of elements, element size, and a comparator function. The comparator receives pointers to two elements as const void pointers. Convert each to the correct element-pointer type and inspect its value without modifying either element.</p>
+<p>Return a negative integer when the first key belongs earlier, zero when they compare equal, and a positive integer when it belongs later. The safe integer pattern is (x &gt; y) - (x &lt; y). Returning x - y can overflow for extreme signed integers, producing undefined behaviour or the wrong ordering sign.</p>
+<p>Use sizeof a[0] for element size when a is the actual element array in the calling scope. Do not use sizeof a pointer as the record size. For a structure, cast to the structure type and compare its fields. All comparisons must agree with one consistent ordering; a comparator that changes its mind can invalidate the sort's contract.</p>
+<p>The C standard does not require qsort to use quick sort, promise stability, or specify a universal asymptotic complexity. Its name is historical. A particular library can use another algorithm internally. When stability or strict worst-case resource guarantees are essential, choose an implementation whose documented guarantees meet them.</p>
+<h3>Make a choice from constraints</h3>
+<p>For thirty nearly ordered marks, insertion sort is a reasonable transparent choice. Its work follows the inversion count and it uses constant extra space. For a large arbitrary array with a strict constant-workspace requirement, iterative heap sort offers a useful worst-case bound. These choices depend on requirements rather than fashion.</p>
+<p>For many student records where equal-mark roll order must survive, stable merge sort is appropriate if a linear buffer is available. For integers in a small range, compare n + k with n log n before selecting counting sort. If key width is small and digit extraction is well-defined, radix passes may also fit.</p>
+<p>For ordinary application code without special stability or resource guarantees, a library sort can reduce implementation mistakes. You still own the comparator and must test its ordering rules, including equal and extreme keys. A reliable API cannot repair an inconsistent or overflowing comparator.</p>
+<p>Write down the rejected alternatives when solving an exam design question. For example, choosing counting sort for ten sparse keys spread over a huge interval may waste memory. Choosing bubble sort solely because it is stable ignores its quadratic worst case. A good answer connects each constraint to an algorithm property.</p>
+<table class="ref"><caption>Properties of the implementations in these lessons</caption><thead><tr><th scope="col">Method</th><th scope="col">Best time</th><th scope="col">Average or expected time</th><th scope="col">Worst time</th><th scope="col">Extra space</th><th scope="col">Stable</th><th scope="col">Strictly in-place</th></tr></thead><tbody><tr><td>Bubble, early exit</td><td>Θ(n)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>yes</td><td>yes</td></tr><tr><td>Selection, swapping</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>no</td><td>yes</td></tr><tr><td>Insertion, shifting</td><td>Θ(n)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>yes</td><td>yes</td></tr><tr><td>Merge, buffered</td><td>Θ(n log n)</td><td>Θ(n log n)</td><td>Θ(n log n)</td><td>Θ(n)</td><td>yes</td><td>no</td></tr><tr><td>Quick, simple recursion</td><td>Θ(n log n)</td><td>Θ(n log n) expected, random distinct pivots</td><td>Θ(n²)</td><td>O(n) worst stack</td><td>no</td><td>not guaranteed</td></tr><tr><td>Heap, iterative</td><td>Ω(n), O(n log n)</td><td>O(n log n)</td><td>Θ(n log n)</td><td>Θ(1)</td><td>no</td><td>yes</td></tr><tr><td>Counting, stable</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>yes</td><td>no</td></tr><tr><td>Radix LSD, stable</td><td>Θ(d(n+b))</td><td>Θ(d(n+b))</td><td>Θ(d(n+b))</td><td>Θ(n+b)</td><td>yes</td><td>no</td></tr></tbody></table>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>The integer comparator orders the keys numerically. The qsort result is 1 3 3 5 7, with no tie-identity promise.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>Relational comparator results handle negative keys without subtraction overflow. The library produces ascending numeric order.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>The library-ordered keys form three equal-value groups. Group counting needs no assumption about the internal sorting algorithm.</p>
+<div data-example="ex-3"></div>
+<h3>Sort records by mark then arrival</h3>
+<p>The secondary arrival key makes tie order explicit. This does not rely on qsort preserving the order of records that compare equal.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Input</td><td>[7,3,5,3,1]</td><td>The ordering contract is ascending integer keys.</td></tr><tr><td>Comparator</td><td>negative, zero or positive</td><td>Only the sign controls relative order.</td></tr><tr><td>Result</td><td>[1,3,3,5,7]</td><td>The library sorts according to that contract.</td></tr><tr><td>Ties</td><td>Two 3 records remain</td><td>Their relative identity order is not promised by qsort.</td></tr></tbody></table>
+<h2 id="correctness">Why the method is correct</h2>
+<p>To justify the comparator, consider the three integer relations. If x &lt; y, its expression gives 0 - 1 = -1. If x equals y, it gives zero. If x &gt; y, it gives 1 - 0 = 1. Only boolean results are subtracted, so extreme key differences cannot overflow. The comparison defines the usual consistent integer order.</p>
+<p>For algorithm selection, prove the required properties rather than a universal winner. The decision tree establishes a worst-case comparison lower bound. A stable tie rule establishes record-order preservation. A workspace argument counts simultaneously live buffers and frames. Each claim answers a different requirement in the contract.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>The table summarises the specific implementations taught here. Counting uses range k; radix uses d digits and base b. Quick sort's simple recursion has worst O(n) stack, with expected logarithmic depth under random pivots. qsort receives no universal standard complexity or stability guarantee. Distinguishing these assumptions prevents a table entry from being mistaken for a property of every implementation carrying the same name.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Subtracting arbitrary signed keys in a comparator</h3>
+<p>x - y may overflow. Use relational comparisons and subtract their boolean results.</p>
+<h3>Assuming qsort must implement quick sort</h3>
+<p>The API promises ordering according to the comparator, not one internal algorithm or stability.</p>
+<h3>Ignoring key-domain size</h3>
+<p>Linear-time counting claims require controlling k. A sparse huge interval can make counting slower and larger than comparison sorting.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>qsort is a standard library interface available before C17. Its comparator contract and lack of a stability guarantee still apply in C17.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Choose sorting guarantees from constraints and implement a safe, consistent C qsort comparator.</p>
+<p>Continue with <a href="topic:algo-divide-and-conquer">divide and conquer</a>.</p>

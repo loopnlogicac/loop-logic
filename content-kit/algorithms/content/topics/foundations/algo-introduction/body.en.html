@@ -1,0 +1,52 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine adding laboratory fees from three slips. You read each amount, add it to a running total, and stop after the last slip. Someone else can follow those instructions and get the same answer. An <dfn>algorithm</dfn> is a finite sequence of clear steps for solving a stated problem.</p>
+<p>You already use algorithms when you follow a timetable or divide a bill. Programming makes the instructions precise enough for a computer. This course asks three questions about every method: what answer should it produce, why does it produce that answer, and how much work does it need?</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">sum = 0
+for i = 0 to n - 1
+    sum = sum + a[i]
+return sum</code></pre>
+<h2 id="how-it-works">What Is an Algorithm? step by step</h2>
+<h3>Describe the problem before the steps</h3>
+<p>An algorithm starts with a contract. The <dfn>input</dfn> is the information you receive. The <dfn>output</dfn> is the information you must return. For the fee problem, input is a list of integer amounts and output is their sum. State whether negative adjustments are allowed. Also decide what an empty list means; here its total is zero.</p>
+<p>A useful algorithm has definite instructions, permitted inputs, a stated result, effective operations, and a stopping rule. Definite means that two readers interpret a step the same way. Effective means that each operation can actually be carried out. Finite means that every permitted input eventually reaches an end. A procedure that repeatedly waits for another fee without an end signal has no such guarantee.</p>
+<p>Distinguish a problem from one particular input. Adding [40,25,35] solves one instance. A general algorithm also handles [10], an empty list, or many fees. You should not hide the expected result inside the instructions. Writing return 100 describes one answer rather than a method for arbitrary fees.</p>
+<h3>Read pseudocode as a shared language</h3>
+<p><dfn>Pseudocode</dfn> describes an algorithm without all the punctuation of C. We use zero-based array positions. An array a of length n has valid positions 0 through n - 1. A loop written from 0 to n - 1 includes both endpoints. If n is zero, that loop has no repetitions.</p>
+<p>An assignment such as sum = sum + a[i] replaces the old sum. A comparison such as a[i] == target asks a yes-or-no question. Indentation groups the instructions controlled by a loop or condition. A return ends the current function. Later, a half-open interval [low,high) includes low and excludes high. Its length is high - low, including length zero.</p>
+<p>Translate one idea at a time into C. A pseudocode array length is mathematical; a C array needs actual storage. The sum example uses int because three small fees fit. For an unrestricted input size or unrestricted amounts, you must choose a suitable larger type or detect overflow. The mathematical algorithm does not grant C integers unlimited range.</p>
+<h3>Separate correctness from efficiency</h3>
+<p><dfn>Correctness</dfn> means returning the specified result for every allowed input. <dfn>Efficiency</dfn> describes the resources used to do so. A fast routine that forgets the last fee is still wrong. A slow routine that adds every fee correctly may still be useful for a short list.</p>
+<p>You can compare two correct approaches before timing them. Adding each amount once needs n additions. Recomputing the entire prefix for every slip repeats earlier additions and can need quadratic work. Their results may match even though their costs differ. This distinction matters when a class grows from forty students to many thousands of records.</p>
+<p>Testing helps you find counterexamples, but passing a few examples does not prove a universal claim. Test an empty list, one fee, equal fees, and a negative adjustment. Then explain what stays true during every loop repetition. That explanation connects the code to all permitted inputs rather than only the examples you happened to try.</p>
+<h3>How the topics fit a university course</h3>
+<p>The foundations introduce growth rates, loop counts, recurrences, and memory use. Searching and sorting then give concrete methods you can trace by hand. Later topics cover divide and conquer, greedy choices, dynamic programming, and graphs. These names describe different ways to organise a solution, rather than different programming languages.</p>
+<p>In a university exam, a correct final array may earn only part of the marks. You may need to show each pass, justify a loop condition, or derive a cost. Practise writing the input assumption first and the result last. Between them, show the decisions that changed the state. This habit also makes debugging less mysterious.</p>
+<p>For a programming laboratory, begin with a tiny input whose answer you can calculate yourself. Translate the pseudocode, run the program, and compare its changing variables with your hand calculation. Increase the input size only after the small case makes sense. If you cannot explain one iteration, adding more data usually hides the mistake.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Total a small set of fees</h3>
+<p>The running total goes from 0 to 40, then 65, then 100 taka. Every fee is added exactly once.</p>
+<div data-example="ex-1"></div>
+<h3>Find the largest cricket score</h3>
+<p>Starting with the first score avoids an invented value. The maximum stays 43 when another equal score appears.</p>
+<div data-example="ex-2"></div>
+<h3>Handle an empty fee list</h3>
+<p>The loop runs zero times, so no array access occurs. Zero is the correct total when there are no fees.</p>
+<div data-example="ex-3"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Start</td><td>sum = 0</td><td>No fees have been processed.</td></tr><tr><td>i = 0</td><td>sum = 40</td><td>Add the first fee, 40.</td></tr><tr><td>i = 1</td><td>sum = 65</td><td>Add 25 to the earlier total.</td></tr><tr><td>i = 2</td><td>sum = 100</td><td>Add the remaining fee, 35.</td></tr></tbody></table>
+<h2 id="correctness">Why the method is correct</h2>
+<p>Before iteration i, sum equals the sum of positions 0 through i - 1. Initially i is zero, so this is the empty sum, zero. The next addition includes exactly position i and keeps the statement true. When i reaches n, the statement covers every fee. This repeating fact is called a <dfn>loop invariant</dfn>.</p>
+<p>Termination needs its own argument. The index starts at zero and grows by one, while n stays fixed. The number n - i of unprocessed amounts decreases each time. It cannot decrease forever while remaining positive. Correctness therefore combines a correct result when the loop stops with a reason it really stops.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>The fee algorithm reads n amounts and performs n additions. Its time grows in direct proportion to the number of fees. The variables sum and i use a fixed amount of extra memory. The input list itself occupies n cells, so distinguish input storage from extra working storage. You will give these observations formal names in asymptotic notation.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Starting a maximum at zero</h3>
+<p>If every cricket score adjustment is negative, zero may not occur in the data. For a nonempty maximum problem, start with a[0]. Give the empty case a separate result.</p>
+<h3>Leaving the input rule unstated</h3>
+<p>A sum of positive fees and a sum allowing refunds are different contracts. Write the permitted range before choosing a C type.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>The fee total uses C17 int variables because the stated amounts are small. Larger unrestricted totals need a wider type or checked addition; mathematical sums do not remove C overflow limits.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Describe a problem precisely, write finite steps, and separate a correct answer from an efficient method.</p>
+<p>Continue with <a href="topic:algo-asymptotic-notation">asymptotic notation</a>.</p>

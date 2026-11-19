@@ -1,0 +1,67 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A tournament repeatedly promotes the strongest remaining player. A <dfn>max-heap</dfn> arranges values so that every parent is at least as large as either child. Its root therefore gives quick access to a largest value. Heap sort moves that root to the end and repairs the remaining heap.</p>
+<p>The heap is a logical tree stored inside an array. You do not allocate a node object for every value. This representation lets heap sort combine a worst-case O(n log n) time bound with constant auxiliary workspace when the repair routine is iterative.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">for root = floor(n / 2) - 1 down to 0: sift(n, root)
+sift(size, root): while root has a child
+    child = index of larger child
+    if a[root] &gt;= a[child]: stop sifting
+    swap a[root], a[child]; root = child
+for end = n - 1 down to 1
+    swap a[0], a[end]
+    sift(end, 0)</code></pre>
+<h2 id="how-it-works">Heap Sort step by step</h2>
+<h3>Read the tree inside the array</h3>
+<p>For zero-based position root, the left child is 2*root + 1 and the right child is 2*root + 2. A child exists only when its index is below size, the active heap length. For a nonroot position i, the parent is floor((i - 1)/2). These formulas describe a complete binary tree filled from left to right.</p>
+<p>The heap rule compares a parent with its children. It does not require the left child to be smaller than the right child, or all values on one subtree to precede all values in the other. A heap is therefore not a fully sorted array. Only the root is guaranteed to be a largest active value.</p>
+<p>For [7,3,5,3,1], root 7 dominates children 3 and 5. The parent 3 at index 1 dominates children 3 and 1. This input already happens to be a max-heap, although it is not ascending. That makes it useful for separating heap order from sorted order in the animation.</p>
+<h3>Sift a misplaced parent down</h3>
+<p>The sift(size,root) routine assumes the child subtrees are already heaps. Choose the larger existing child. If the parent is at least as large as that child, it is also at least as large as the other child, so repair is complete. Otherwise exchange the parent with the larger child and continue at that child's position.</p>
+<p>Only one downward path can remain broken after a swap. The promoted value now dominates both child roots at its new position. The displaced smaller value may still violate the heap rule below, which is why root moves down. Choosing the smaller child could leave the larger sibling above the parent and fail to repair the heap.</p>
+<p>Check the right child's existence before reading it. A complete tree can end with a node that has only a left child. Leaves have no child and need no repair. The iterative while loop stops either at a valid parent-child order or at a leaf, so it uses a fixed number of index variables instead of recursive frames.</p>
+<h3>Build from the bottom upward</h3>
+<p>Every leaf is already a valid one-node heap. The last possible parent is floor(n/2) - 1. Starting there, sift each parent down while moving root towards zero. When you reach a parent, both its child subtrees have already been repaired. At the end, the entire active array is a max-heap.</p>
+<p>Building a heap is Θ(n), even though a single sift can cost O(log n). Most nodes are close to the bottom and can move only a little. Roughly n/2 nodes are leaves, n/4 have height one, n/8 have height two, and so on. The weighted sum n times (1/4 + 2/8 + 3/16 + ...) is bounded by a constant times n.</p>
+<p>The coarse bound n times log n is a valid upper bound but misses this tighter result. Bottom-up build differs from repeatedly inserting each input value into an initially empty heap. Repeated insertion can require Θ(n log n) worst-case work. State which construction method you are analysing.</p>
+<h3>Extract a maximum into the suffix</h3>
+<p>Once the max-heap exists, exchange a[0] with a[end], where end starts at n - 1. The old root becomes a final sorted value at the right end. Decrease the active heap length to end, excluding that value. The new root came from a leaf and may need to sift down.</p>
+<p>Repeat the exchange and repair until only one active value remains. The suffix grows in ascending final order from right to left: the largest value is furthest right, then the next largest immediately before it. The active heap contains only the still-unplaced values.</p>
+<p>During a repair, never include the completed suffix in size. A too-large size could pull a final maximum back into the heap. In the C routine, sift(a,end,0) uses end as a length, so indices zero through end - 1 remain active. The exchanged position end is excluded.</p>
+<h3>Understand guarantees and limitations</h3>
+<p>Heap sort performs at most n - 1 extractions, each with O(log n) repair, after linear heap construction. It guarantees O(n log n) worst-case time even on ascending, reverse or adversarial input. This distinguishes it from simple final-pivot quick sort. Practical speed can still depend on access patterns and data movement.</p>
+<p>Ordinary heap sort is unstable. Consider [2A,2B,1], already a max-heap. The first root-end exchange moves 2A to the final position. A repair promotes 2B in the active heap. The eventual ascending output is [1,2B,2A], reversing the equal records. Strict child comparisons do not prevent this distant movement.</p>
+<p>Heap sort uses the input cells as its heap representation. The iterative sift needs only root, child, size and a temporary swap value. Therefore its auxiliary space is O(1), independent of n. A recursive sift would add O(log n) stack depth, so the implementation detail matters for the strict in-place claim.</p>
+<p>Heaps also support priority queues, where you repeatedly request a largest or smallest item without sorting everything first. Heap sort instead consumes the whole heap to produce a final ordered array. The same repair idea appears in both uses, but their output contracts differ.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>The input already forms a max-heap. Repeated root extraction produces 1 3 3 5 7.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>The larger-child rule works for negative and positive keys alike. Extracting maxima leaves both -2 values at the front.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>Heap extraction creates contiguous equal-score groups. The final scan sees three distinct scores.</p>
+<div data-example="ex-3"></div>
+<h3>Build only the max-heap</h3>
+<p>Bottom-up repair produces 5 4 3 1 2. This is heap order, not ascending order; only the root maximum is immediately guaranteed.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>Build</td><td>[7,3,5,3,1]</td><td>The input already satisfies the max-heap rule.</td></tr><tr><td>end = 4</td><td>[5,3,1,3,7]</td><td>Move 7 to the suffix and repair the root.</td></tr><tr><td>end = 3</td><td>[3,3,1,5,7]</td><td>Move 5 into its final position.</td></tr><tr><td>end = 2</td><td>[3,1,3,5,7]</td><td>One 3 joins the completed suffix.</td></tr><tr><td>end = 1</td><td>[1,3,3,5,7]</td><td>Only the minimum remains active.</td></tr></tbody></table>
+<div data-lab="heap-sort"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>Sift assumes both child subtrees are heaps. When the larger child rises, its new parent position satisfies the heap rule; only the displaced value's downward path can remain invalid. The path strictly moves towards a leaf, so repair terminates with a valid heap.</p>
+<p>The outer extraction invariant says the prefix is a max-heap, the suffix is sorted, and no prefix value exceeds any suffix value. Moving the root to the suffix places the largest remaining value correctly. Repair restores the prefix heap without touching the suffix. Shrinking the heap to one value therefore gives a sorted permutation.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>The height of a complete binary tree is Θ(log n). Build-heap sums node heights to Θ(n), rather than charging every node the full height. Extraction costs sum to O(n log n) and the worst-case total is Θ(n log n). Iterative repair keeps auxiliary space O(1). Heap sort is not adaptive in the same useful way as insertion sort: an already ordered array does not let this version stop after a single linear verification.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Comparing only the left child</h3>
+<p>Promote the larger existing child. Otherwise a larger right child can still violate the parent rule after the exchange.</p>
+<h3>Repairing with the original n</h3>
+<p>The sorted suffix is no longer heap data. Pass the reduced active length after each extraction.</p>
+<h3>Claiming build takes n log n tightly</h3>
+<p>That charges leaves for work they cannot do. Sum the height-based costs to obtain the linear construction bound.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>Heap child formulas use C17 signed indices within a maximum length of 64 here. For unrestricted sizes, select an index type and overflow guards before computing twice a root index.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Build a max-heap from the bottom, extract maxima and repair the shrinking heap with iterative sift-down.</p>
+<p>Continue with <a href="topic:algo-counting-sort">counting sort</a>.</p>

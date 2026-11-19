@@ -1,0 +1,67 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Open an alphabetically ordered dictionary near the middle. If the word there comes before your target, you can ignore everything to its left. <dfn>Binary search</dfn> uses this ordered structure to discard about half the remaining candidates at each decision.</p>
+<p>The order is essential. A midpoint value in an unsorted row says nothing about all earlier or later values. The animation displays an ascending copy before searching. This preparation has its own sorting cost. Search indices refer to that displayed copy; they do not identify positions in the original unsorted input.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">a = ascending copy of values (setup, before search)
+low = 0; high = n
+while low &lt; high
+    mid = low + floor((high - low) / 2)
+    if a[mid] == target: return mid
+    if a[mid] &lt; target: low = mid + 1
+    else: high = mid
+return -1</code></pre>
+<h2 id="how-it-works">Binary Search step by step</h2>
+<h3>Maintain a half-open search interval</h3>
+<p>Use low = 0 and high = n, with candidates in [low,high). The interval includes low and excludes high. While low &lt; high, compute mid = low + (high - low)/2 using integer division. This form avoids adding two possibly large indices. At this moment mid is a valid element position because the interval is nonempty.</p>
+<p>If a[mid] equals target, return mid. If a[mid] is smaller, every position at or before mid is too small, so set low = mid + 1. Otherwise a[mid] is too large, so set high = mid. The excluded upper endpoint makes that second update correct without subtracting one. If the interval empties, return -1.</p>
+<p>For [1,3,3,5,7] and target 5, the first interval is [0,5). Mid is 2 and a[2] is 3, so low becomes 3. The next midpoint is 4, whose value 7 moves high to 4. Finally midpoint 3 finds 5. Duplicates do not break exact search, but this version promises any matching index rather than the first one.</p>
+<h3>Recursive search follows the same contract</h3>
+<p>The recursive version receives low and high directly. Its empty-interval base is low ≥ high. After inspecting mid, it recurses on [mid + 1,high) for a larger target or [low,mid) for a smaller one. The same boundaries and decisions appear in both versions, which makes their traces directly comparable.</p>
+<p>Every call uses a strictly shorter interval. This ensures termination and gives logarithmic depth. Iteration stores only a few indices, whereas straightforward recursion keeps a frame per level. Their comparison counts have the same asymptotic growth, but their auxiliary stack costs differ.</p>
+<p>Do not mix a closed-interval recipe into this implementation. A closed interval [low,high] starts with high = n - 1 and often uses high = mid - 1. Both conventions can be correct separately. Combining their initial values or updates can skip the first or last candidate or create a loop that never shrinks.</p>
+<h3>Lower bound and upper bound locate ties</h3>
+<p><dfn>Lower bound</dfn> is the first position whose value is at least target. It may be n if every value is smaller. When a[mid] &lt; target, set low = mid + 1. Otherwise set high = mid, including equality in the leftward search. The final low is an insertion position, not automatically a found element.</p>
+<p><dfn>Upper bound</dfn> is the first position whose value is strictly greater than target. Its rightward condition is a[mid] ≤ target. For [1,3,3,5,7] and target 3, lower bound is 1 and upper bound is 3. Their difference, two, counts equal values. The equal range is [1,3), which excludes the first larger value.</p>
+<p>To turn lower bound into exact membership, check position &lt; n before reading a[position], then compare it with target. A returned n is a valid insertion position but an invalid element access. For an absent interior value such as 4, both bounds return 3 and the count is zero.</p>
+<h3>Binary search can search an answer</h3>
+<p>Sometimes you do not have an explicit sorted array. Instead you have a yes-or-no condition that becomes true once and stays true. Such a condition is called <dfn>monotone</dfn>. You can search for the first feasible answer as though the answers formed a row of false values followed by true values.</p>
+<p>Consider processing jobs [7,3,5,3,5] in their existing order over at most three days. A daily capacity must hold every job assigned to that day; jobs cannot be split. For a proposed capacity, greedily fill a day until the next job would exceed it, then start another day. This uses the fewest days for that capacity because delaying a day boundary cannot reduce the remaining available capacity.</p>
+<p>Capacity 7 needs five days. Capacity 8 works with groups [7], [3,5], [3,5]. Every capacity above 8 also works, because the same grouping remains allowed. Search the integer capacities between 1 and the total 23, treating a capacity below the largest job as infeasible. On feasibility, move high to mid; otherwise move low past mid. The answer is 8.</p>
+<p>This search has two costs. The number of capacity trials is logarithmic in the numerical range. Each trial scans the jobs, so total work is O(n log S) when S bounds the answer range. Do not label it O(log n) merely because the outer control uses binary search.</p>
+<h3>Read boundaries before reading values</h3>
+<p>An empty search interval contains no midpoint element. A singleton interval either matches or becomes empty after one decision. Targets smaller than every element move high towards zero; targets larger than every element move low towards n. These are useful boundary cases because they exercise the extreme insertion positions.</p>
+<p>Sorting before a single query may cost more than scanning the original array. Binary search pays off when ordered data already exists or many searches share one sorted representation. If original record positions matter, store them alongside the sorted keys. Otherwise sorting changes the meaning of the returned index.</p>
+<p>The exact-search animation and C routine use the same ascending values and half-open convention. Watch high as a boundary between elements, even when its numeric value equals n. The pointer to mid always refers to an actual element; the excluded high endpoint need not.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Find a mark in five values</h3>
+<p>Insertion prepares the ascending copy 1 3 3 5 7, then binary search finds index 3. Preparation cost is separate from logarithmic searching.</p>
+<div data-example="ex-1"></div>
+<h3>Search the same interval recursively</h3>
+<p>The calls use [0,5), then [3,5). The second midpoint is index 4, followed by index 3, where 5 is found.</p>
+<div data-example="ex-2"></div>
+<h3>Find the equal-value interval</h3>
+<p>Lower bound returns the first index with a value at least 3. Upper bound returns the first index strictly above 3, giving [1,3).</p>
+<div data-example="ex-3"></div>
+<h3>Search for the least feasible daily capacity</h3>
+<p>Capacity 7 needs five days. Capacity 8 works with groups [7], [3,5], [3,5], and every larger capacity is also feasible.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>[0,5)</td><td>mid = 2, value = 3</td><td>Target 5 is larger; low becomes 3.</td></tr><tr><td>[3,5)</td><td>mid = 4, value = 7</td><td>Target 5 is smaller; high becomes 4.</td></tr><tr><td>[3,4)</td><td>mid = 3, value = 5</td><td>Return index 3 in the sorted copy.</td></tr></tbody></table>
+<div data-lab="binary-search"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>For exact binary search, maintain that any matching value not yet returned lies inside [low,high). Initially the interval contains the entire array. Sorted order justifies discarding all values through mid when a[mid] is too small, or all values from mid onward when it is too large. Equality directly satisfies the return contract.</p>
+<p>The nonnegative length high - low strictly decreases on every nonreturning iteration. When it reaches zero, no candidate remains, proving absence. For lower bound, a stronger partition invariant says all indices below low are too small and all indices at or above high are at least target. The shrinking gap eventually identifies the first eligible position.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>A search interval loses roughly half its length each time, so exact search and each bound require O(log n) comparisons for nonempty large arrays. Iterative auxiliary space is O(1); recursive stack space is O(log n). The display's ascending copy needs O(n) storage and separate sorting work. These setup costs must not be hidden inside the logarithmic claim about searching an already sorted array.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Setting low = mid after rejecting mid</h3>
+<p>For a one-element gap, mid can equal low. Keeping low unchanged prevents progress. Use mid + 1 when the middle value is too small.</p>
+<h3>Reading the bound at n</h3>
+<p>A bound can validly return n. Test the index against the array length before dereferencing it.</p>
+<h3>Assuming feasibility without a proof</h3>
+<p>Search on the answer requires one false-to-true transition. If a larger proposed answer can become infeasible again, binary search can discard the real solution.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>The half-open C17 implementation uses signed integer indices within the demonstrated bounds. A boundary may equal n, but the routine reads only a midpoint strictly below that boundary.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Shrink half-open intervals on ordered data, locate equal ranges and search monotone answer spaces.</p>
+<p>Continue with <a href="topic:algo-bubble-sort">bubble sort</a>.</p>

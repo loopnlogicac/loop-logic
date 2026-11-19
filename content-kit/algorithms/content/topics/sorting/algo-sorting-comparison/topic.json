@@ -1,0 +1,416 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-sorting-comparison",
+  "module": "sorting",
+  "order": 9,
+  "kind": "lesson",
+  "title": {
+    "en": "Choosing a Sorting Algorithm",
+    "bn": "কোন সর্টিং অ্যালগরিদম বেছে নেবে"
+  },
+  "summary": {
+    "en": "Choose sorting guarantees from constraints and implement a safe, consistent C qsort comparator.",
+    "bn": "সময়, মেমরি, stability আর key-এর ধরন দেখে sort বেছে নাও, এবং C-এর qsort নিরাপদে ব্যবহার করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "algo-radix-sort"
+  ],
+  "related": [
+    "algo-divide-and-conquer"
+  ],
+  "keywords": [
+    "sorting comparison",
+    "C17",
+    "algorithm analysis"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "C17 baseline; general algorithm bounds treat input size as variable."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Pseudocode and conventions"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Choosing a Sorting Algorithm step by step"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Trace on a small input"
+    },
+    {
+      "id": "correctness",
+      "title": "Why the method is correct"
+    },
+    {
+      "id": "complexity",
+      "title": "Time and space reasoning"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 details"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Order five marks, including a tie",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The integer comparator orders the keys numerically. The qsort result is 1 3 3 5 7, with no tie-identity promise.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Sort numbers entered at the keyboard",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Relational comparator results handle negative keys without subtraction overflow. The library produces ascending numeric order.</p>\n",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Use sorted neighbours to find distinct marks",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The library-ordered keys form three equal-value groups. Group counting needs no assumption about the internal sorting algorithm.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "Sort records by mark then arrival",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The secondary arrival key makes tie order explicit. This does not rely on qsort preserving the order of records that compare equal.</p>\n"
+    }
+  ],
+  "labs": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Print the smallest k marks",
+      "statementHtml": "<p>Call qsort with a safe integer comparator to list the smallest k keys. Display Enter n, then n values:, read n (0..64) and keys -99..99, then display Enter k: and read k (0..n). Print those k keys in ascending order on a space-separated line, using an empty line for k = 0.</p>",
+      "hints": [
+        "Sort all n values before choosing the first k positions."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Count different scores after ordering",
+      "statementHtml": "<p>Use the C library ordering interface before counting distinct keys. Read n (0..64) and n integers (-99..99) after the prompt Enter n, then n values:. The result line must have the form distinct = D; zero keys have zero distinct values.</p>",
+      "hints": [
+        "An empty score list has zero groups."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Justify the comparator and the lower bound",
+      "statementHtml": "<p>Explain why (x &gt; y) - (x &lt; y) defines a safe integer comparator, then justify the comparison-sorting lower bound using distinct input orders.</p>",
+      "hints": [
+        "Consider three comparison outcomes, then count the leaves required for n! permutations."
+      ],
+      "answerHtml": "<p>To justify the comparator, consider the three integer relations. If x &lt; y, its expression gives 0 - 1 = -1. If x equals y, it gives zero. If x &gt; y, it gives 1 - 0 = 1. Only boolean results are subtracted, so extreme key differences cannot overflow. The comparison defines the usual consistent integer order.</p>\n<p>For algorithm selection, prove the required properties rather than a universal winner. The decision tree establishes a worst-case comparison lower bound. A stable tie rule establishes record-order preservation. A workspace argument counts simultaneously live buffers and frames. Each claim answers a different requirement in the contract.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Derive the resource cost of Choosing a Sorting Algorithm",
+      "statementHtml": "<p>Choose a method under explicit time, workspace, stability and key-domain constraints.</p>\n",
+      "hints": [
+        "Count the work from this algorithm rather than naming a class alone."
+      ],
+      "answerHtml": "<p>The table summarises the specific implementations taught here. Counting uses range k; radix uses d digits and base b. Quick sort's simple recursion has worst O(n) stack, with expected logarithmic depth under random pivots. qsort receives no universal standard complexity or stability guarantee. Distinguishing these assumptions prevents a table entry from being mistaken for a property of every implementation carrying the same name.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which integer qsort comparator avoids subtraction overflow?",
+      "options": [
+        "(x > y) - (x < y)",
+        "x - y",
+        "y - x always",
+        "x * y"
+      ],
+      "answer": 0,
+      "explanation": "Only values zero and one are subtracted."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does standard C promise about qsort stability?",
+      "options": [
+        "Stable whenever n is even",
+        "No stability guarantee",
+        "Always stable",
+        "Stable only for duplicate integers"
+      ],
+      "answer": 1,
+      "explanation": "Tie order is not specified by the standard qsort contract."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which count drives the comparison decision-tree lower bound?",
+      "options": [
+        "Exactly two possible arrays",
+        "The maximum key magnitude",
+        "n! distinct input orders",
+        "Only n input positions"
+      ],
+      "answer": 2,
+      "explanation": "A correct sorter must distinguish all distinct-key permutations."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which sort offers constant auxiliary space with worst-case O(n log n) here?",
+      "options": [
+        "Buffered merge sort",
+        "Stable counting sort",
+        "The simple recursive final-pivot quick sort",
+        "Iterative heap sort"
+      ],
+      "answer": 3,
+      "explanation": "Iterative heap repair needs no growing buffer or recursion stack."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For a tiny nearly sorted row, which taught method is adaptive?",
+      "options": [
+        "Insertion sort",
+        "Ordinary selection sort",
+        "Every qsort implementation by standard rule",
+        "Counting over an unbounded domain"
+      ],
+      "answer": 0,
+      "explanation": "Insertion work is Theta(n + I) for I inversions."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can counting sort beat the comparison lower bound?",
+      "options": [
+        "It never stores output",
+        "It uses bounded keys as direct indices",
+        "The lower bound is false",
+        "It returns only unique values"
+      ],
+      "answer": 1,
+      "explanation": "Its operations use information outside the comparison-only model."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which qsort size argument describes one array element?",
+      "options": [
+        "The maximum key value",
+        "The array length times itself",
+        "sizeof a[0]",
+        "sizeof &a[0]"
+      ],
+      "answer": 2,
+      "explanation": "qsort needs the byte stride between consecutive records."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What comparator sign orders extreme keys -2147483647 and 2147483647?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int x = -2147483647;\n    int y = 2147483647;\n    printf(\"%d\\n\", (x > y) - (x < y));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "-2",
+        "1",
+        "-1",
+        "0"
+      ],
+      "answer": 2,
+      "explanation": "Relational subtraction returns -1 without subtracting the extreme keys."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How does the safe comparator classify two equal marks?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int x = 5;\n    int y = 5;\n    printf(\"%d\\n\", (x > y) - (x < y));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "-1",
+        "2",
+        "0"
+      ],
+      "answer": 3,
+      "explanation": "Both relations are false, producing zero."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many elements does this qsort input array contain?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int a[] = {7, 3, 5, 3, 1};\n    printf(\"%zu\\n\", sizeof a / sizeof a[0]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "5",
+        "6",
+        "4",
+        "7"
+      ],
+      "answer": 0,
+      "explanation": "Whole-array size divided by element size gives five."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Choose a sort from the actual constraints.",
+      "bn": "কাজের শর্ত দেখে sort বেছে নাও।"
+    },
+    {
+      "en": "Keep stability and workspace requirements separate.",
+      "bn": "Stability আর মেমরির শর্ত আলাদা করে দেখো।"
+    },
+    {
+      "en": "Comparison sorting has a worst-case n log n lower bound.",
+      "bn": "তুলনাভিত্তিক sort-এর worst-case নিচের সীমা n log n।"
+    },
+    {
+      "en": "Bounded key indexing changes the computational model.",
+      "bn": "সীমাবদ্ধ key দিয়ে index করলে কাজের ধরন বদলে যায়।"
+    },
+    {
+      "en": "A qsort comparator must define a consistent order.",
+      "bn": "qsort comparator-এ একই ধরনের সঙ্গত ক্রম মানতে হবে।"
+    },
+    {
+      "en": "Standard qsort does not guarantee stability.",
+      "bn": "C standard-এ qsort stable হওয়ার নিশ্চয়তা নেই।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 5,
+      "question": "For keys [7,3,5,3,1], state the qsort comparator sign contract and resulting order. Explain which tie-order property the C standard does not promise.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">State</th><th scope=\"col\">Decision</th></tr></thead><tbody><tr><td>Input</td><td>[7,3,5,3,1]</td><td>The ordering contract is ascending integer keys.</td></tr><tr><td>Comparator</td><td>negative, zero or positive</td><td>Only the sign controls relative order.</td></tr><tr><td>Result</td><td>[1,3,3,5,7]</td><td>The library sorts according to that contract.</td></tr><tr><td>Ties</td><td>Two 3 records remain</td><td>Their relative identity order is not promised by qsort.</td></tr></tbody></table>\n<p>A negative comparator result places the first key earlier, zero declares equivalent keys, and a positive result places the first key later. qsort does not promise the identity order of equal-key records.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Justify correctness and termination for Choosing a Sorting Algorithm using an invariant or proof.",
+      "answerHtml": "<p>To justify the comparator, consider the three integer relations. If x &lt; y, its expression gives 0 - 1 = -1. If x equals y, it gives zero. If x &gt; y, it gives 1 - 0 = 1. Only boolean results are subtracted, so extreme key differences cannot overflow. The comparison defines the usual consistent integer order.</p>\n<p>For algorithm selection, prove the required properties rather than a universal winner. The decision tree establishes a worst-case comparison lower bound. A stable tie rule establishes record-order preservation. A workspace argument counts simultaneously live buffers and frames. Each claim answers a different requirement in the contract.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and auxiliary-memory cost of Choosing a Sorting Algorithm, stating all assumptions.",
+      "answerHtml": "<p>The table summarises the specific implementations taught here. Counting uses range k; radix uses d digits and base b. Quick sort's simple recursion has worst O(n) stack, with expected logarithmic depth under random pivots. qsort receives no universal standard complexity or stability guarantee. Distinguishing these assumptions prevents a table entry from being mistaken for a property of every implementation carrying the same name.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Method</th><th scope=\"col\">Best time</th><th scope=\"col\">Average or expected time</th><th scope=\"col\">Worst time</th><th scope=\"col\">Extra space</th><th scope=\"col\">Stable</th><th scope=\"col\">Strictly in-place</th></tr></thead><tbody><tr><td>Bubble, early exit</td><td>Θ(n)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>yes</td><td>yes</td></tr><tr><td>Selection, swapping</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>no</td><td>yes</td></tr><tr><td>Insertion, shifting</td><td>Θ(n)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>yes</td><td>yes</td></tr><tr><td>Merge, buffered</td><td>Θ(n log n)</td><td>Θ(n log n)</td><td>Θ(n log n)</td><td>Θ(n)</td><td>yes</td><td>no</td></tr><tr><td>Quick, simple recursion</td><td>Θ(n log n)</td><td>Θ(n log n) expected, random distinct pivots</td><td>Θ(n²)</td><td>O(n) worst stack</td><td>no</td><td>not guaranteed</td></tr><tr><td>Heap, iterative</td><td>Ω(n), O(n log n)</td><td>O(n log n)</td><td>Θ(n log n)</td><td>Θ(1)</td><td>no</td><td>yes</td></tr><tr><td>Counting, stable</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>yes</td><td>no</td></tr><tr><td>Radix LSD, stable</td><td>Θ(d(n+b))</td><td>Θ(d(n+b))</td><td>Θ(d(n+b))</td><td>Θ(n+b)</td><td>yes</td><td>no</td></tr></tbody></table>"
+    },
+    {
+      "type": "short",
+      "marks": 3,
+      "question": "Explain and correct this sorting comparison mistake: Subtracting arbitrary signed keys in a comparator.",
+      "answerHtml": "<p>x - y may overflow. Use relational comparisons and subtract their boolean results.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

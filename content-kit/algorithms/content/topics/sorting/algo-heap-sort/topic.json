@@ -1,0 +1,412 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-heap-sort",
+  "module": "sorting",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Heap Sort",
+    "bn": "হিপ সর্ট"
+  },
+  "summary": {
+    "en": "Build a max-heap from the bottom, extract maxima and repair the shrinking heap with iterative sift-down.",
+    "bn": "max-heap বানিয়ে বারবার সর্বোচ্চ মান শেষে বসাও, আর build-heap-এর linear খরচ বোঝো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "algo-quick-sort"
+  ],
+  "related": [
+    "algo-counting-sort"
+  ],
+  "keywords": [
+    "heap sort",
+    "C17",
+    "algorithm analysis"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "C17 baseline; general algorithm bounds treat input size as variable."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Pseudocode and conventions"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Heap Sort step by step"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Trace on a small input"
+    },
+    {
+      "id": "correctness",
+      "title": "Why the method is correct"
+    },
+    {
+      "id": "complexity",
+      "title": "Time and space reasoning"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 details"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Order five marks, including a tie",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The input already forms a max-heap. Repeated root extraction produces 1 3 3 5 7.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Sort numbers entered at the keyboard",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The larger-child rule works for negative and positive keys alike. Extracting maxima leaves both -2 values at the front.</p>\n",
+      "stdin": "examples/ex-2.in"
+    },
+    {
+      "id": "ex-3",
+      "title": "Use sorted neighbours to find distinct marks",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Heap extraction creates contiguous equal-score groups. The final scan sees three distinct scores.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "Build only the max-heap",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Bottom-up repair produces 5 4 3 1 2. This is heap order, not ascending order; only the root maximum is immediately guaranteed.</p>\n"
+    }
+  ],
+  "labs": [
+    "heap-sort"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Find the kth largest through extraction",
+      "statementHtml": "<p>Heap-sort a nonempty row and report its kth largest value, counting duplicates separately. Print Enter n, then n values:, read n (1..64) and n values (-99..99), then print Enter k: and read k (1..n). Finish with kth = V.</p>",
+      "hints": [
+        "Ascending sorted position n - k contains the kth largest record."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Build a heap without extracting it",
+      "statementHtml": "<p>Construct the bottom-up max-heap but do not perform heap-sort extraction. Display Enter n, then n values:, accept n = 0..64 and keys -99..99, then print the heap array on one space-separated line. Use the larger-child rule; keep the left child on equal-child ties.</p>",
+      "hints": [
+        "Begin at n / 2 - 1 because later positions are leaves."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain the Heap Sort invariant",
+      "statementHtml": "<p>For Heap Sort, state what stays true as the main process repeats. Explain the start, preservation and completed result.</p>\n",
+      "hints": [
+        "Use the changing boundaries and the processed region in this method."
+      ],
+      "answerHtml": "<p>Sift assumes both child subtrees are heaps. When the larger child rises, its new parent position satisfies the heap rule; only the displaced value's downward path can remain invalid. The path strictly moves towards a leaf, so repair terminates with a valid heap.</p>\n<p>The outer extraction invariant says the prefix is a max-heap, the suffix is sorted, and no prefix value exceeds any suffix value. Moving the root to the suffix places the largest remaining value correctly. Repair restores the prefix heap without touching the suffix. Shrinking the heap to one value therefore gives a sorted permutation.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Derive the resource cost of Heap Sort",
+      "statementHtml": "<p>Use node heights for bottom-up construction and heap height for repeated root repair.</p>\n",
+      "hints": [
+        "Count the work from this algorithm rather than naming a class alone."
+      ],
+      "answerHtml": "<p>The height of a complete binary tree is Θ(log n). Build-heap sums node heights to Θ(n), rather than charging every node the full height. Extraction costs sum to O(n log n) and the worst-case total is Θ(n log n). Iterative repair keeps auxiliary space O(1). Heap sort is not adaptive in the same useful way as insertion sort: an already ordered array does not let this version stop after a single linear verification.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "For zero-based heap index r, where is its left child?",
+      "options": [
+        "2r + 1",
+        "2r",
+        "r / 2",
+        "r + 1 always"
+      ],
+      "answer": 0,
+      "explanation": "The complete-tree array representation uses 2r+1 and 2r+2."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which child must iterative sift consider for promotion?",
+      "options": [
+        "The last array value regardless of parent",
+        "The larger existing child",
+        "Always the left child",
+        "Always the right child"
+      ],
+      "answer": 1,
+      "explanation": "The promoted parent must dominate both children."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does bottom-up build-heap take linear time?",
+      "options": [
+        "The tree has only one level",
+        "No values ever move",
+        "Most nodes have very small height",
+        "Every sift costs constant time"
+      ],
+      "answer": 2,
+      "explanation": "Summing node heights gives a convergent weighted series times n."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "After swapping root with a[end], which length is passed to sift?",
+      "options": [
+        "end + 1",
+        "n always",
+        "0 always",
+        "end"
+      ],
+      "answer": 3,
+      "explanation": "The final position end must be excluded from the active heap."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Is a max-heap necessarily an ascending array?",
+      "options": [
+        "No; it guarantees parent-child order only",
+        "Yes; every left value is smaller",
+        "Yes; its root is the minimum",
+        "Only if n is even"
+      ],
+      "answer": 0,
+      "explanation": "Sibling and cross-subtree positions need not be globally ordered."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which workspace claim fits iterative heap sort?",
+      "options": [
+        "O(log n) mandatory recursive frames",
+        "O(1) auxiliary space",
+        "O(n) node allocations",
+        "O(n²) temporary cells"
+      ],
+      "answer": 1,
+      "explanation": "The array itself stores the heap and sift is iterative."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can heap sort reverse equal-key records?",
+      "options": [
+        "It removes all duplicates",
+        "Its keys must be unique",
+        "Root-end exchanges can jump across equal records",
+        "It directly compares every equal pair as unequal"
+      ],
+      "answer": 2,
+      "explanation": "A distant exchange can change tie order without an equal-pair swap."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "At root index 2, which left-child index is computed?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int root = 2;\n    printf(\"%d\\n\", 2 * root + 1);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4",
+        "7",
+        "5",
+        "6"
+      ],
+      "answer": 2,
+      "explanation": "Zero-based complete-tree children begin at 2r+1."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which child is selected when child keys are 3 and 5?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int a[] = {1, 3, 5};\n    int child = 1;\n    if (a[child + 1] > a[child]) {\n        child++;\n    }\n    printf(\"%d\\n\", child);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "1",
+        "4",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "The larger right child is at index 2."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "For n = 5, which root begins bottom-up heap construction?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int n = 5;\n    printf(\"%d\\n\", n / 2 - 1);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "2",
+        "0",
+        "3"
+      ],
+      "answer": 0,
+      "explanation": "Integer division gives 2, so the last parent index is 1."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A max-heap exposes a largest value at its root.",
+      "bn": "Max-heap-এর root-এ একটি সর্বোচ্চ মান থাকে।"
+    },
+    {
+      "en": "Sift down chooses the larger child.",
+      "bn": "Sift down-এ বড় child-টি বেছে নাও।"
+    },
+    {
+      "en": "Bottom-up construction takes linear work.",
+      "bn": "নিচ থেকে heap বানাতে linear কাজ লাগে।"
+    },
+    {
+      "en": "Shrink the active heap after extraction.",
+      "bn": "সর্বোচ্চ মান বের করার পর heap-এর সীমা ছোট করো।"
+    },
+    {
+      "en": "Iterative heap sort uses constant extra storage.",
+      "bn": "Iterative heap sort-এ constant বাড়তি জায়গা লাগে।"
+    },
+    {
+      "en": "Ordinary heap sort is unstable.",
+      "bn": "সাধারণ heap sort-এ সমান key-এর ক্রম নাও থাকতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 5,
+      "question": "For [7,3,5,3,1], show bottom-up max-heap construction and the full array after each root extraction and repair. Mark the shrinking active heap.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">State</th><th scope=\"col\">Decision</th></tr></thead><tbody><tr><td>Build</td><td>[7,3,5,3,1]</td><td>The input already satisfies the max-heap rule.</td></tr><tr><td>end = 4</td><td>[5,3,1,3,7]</td><td>Move 7 to the suffix and repair the root.</td></tr><tr><td>end = 3</td><td>[3,3,1,5,7]</td><td>Move 5 into its final position.</td></tr><tr><td>end = 2</td><td>[3,1,3,5,7]</td><td>One 3 joins the completed suffix.</td></tr><tr><td>end = 1</td><td>[1,3,3,5,7]</td><td>Only the minimum remains active.</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Justify correctness and termination for Heap Sort using an invariant or proof.",
+      "answerHtml": "<p>Sift assumes both child subtrees are heaps. When the larger child rises, its new parent position satisfies the heap rule; only the displaced value's downward path can remain invalid. The path strictly moves towards a leaf, so repair terminates with a valid heap.</p>\n<p>The outer extraction invariant says the prefix is a max-heap, the suffix is sorted, and no prefix value exceeds any suffix value. Moving the root to the suffix places the largest remaining value correctly. Repair restores the prefix heap without touching the suffix. Shrinking the heap to one value therefore gives a sorted permutation.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and auxiliary-memory cost of Heap Sort, stating all assumptions.",
+      "answerHtml": "<p>The height of a complete binary tree is Θ(log n). Build-heap sums node heights to Θ(n), rather than charging every node the full height. Extraction costs sum to O(n log n) and the worst-case total is Θ(n log n). Iterative repair keeps auxiliary space O(1). Heap sort is not adaptive in the same useful way as insertion sort: an already ordered array does not let this version stop after a single linear verification.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

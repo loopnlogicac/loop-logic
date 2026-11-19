@@ -1,0 +1,60 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Suppose you arrange answer scripts by roll number. Find the smallest roll in the whole pile and put it first. Then find the smallest roll among the remaining scripts and put it second. <dfn>Selection sort</dfn> follows exactly this repeated selection.</p>
+<p>Selection sort spends comparisons to save swaps. It scans the whole unfinished suffix before making at most one exchange. This gives a useful contrast with bubble sort, where many neighbouring exchanges may occur during a single pass.</p>
+<h2 id="syntax">Pseudocode and conventions</h2>
+<pre><code class="language-text">for i = 0 to n - 2
+    min = i
+    for j = i + 1 to n - 1
+        if a[j] &lt; a[min]: min = j
+    if min != i: swap a[i], a[min]
+    a[i] is final</code></pre>
+<h2 id="how-it-works">Selection Sort step by step</h2>
+<h3>Remember the minimum position</h3>
+<p>At outer position i, begin with min = i. This is a candidate index, not a copy of the smallest value. Scan j from i + 1 through n - 1. Whenever a[j] is smaller than a[min], remember j as the new min. Wait until the scan is complete before moving data.</p>
+<p>For [7,3,5,3,1], the candidate starts at 7, changes to the first 3, and finally changes to 1. A single swap exchanges positions 0 and 4, giving [1,3,5,3,7]. Values skipped by the strict comparison are not moved during the scan. This distinction separates selecting a position from actually swapping records.</p>
+<p>Keeping an index lets you exchange the chosen minimum with a[i] afterward. If you stored only the minimum value, you would also need to locate its original position to preserve the displaced value. Data movement should exchange both values rather than overwrite one and lose the other.</p>
+<h3>Grow a final sorted prefix</h3>
+<p>Before pass i, positions below i already hold the smallest i values in sorted order. The unfinished suffix starts at i. Its minimum is exactly the next value that belongs in the final prefix. Swap it into a[i], then advance the prefix boundary.</p>
+<p>If min equals i, the next value is already in place and no swap is necessary. The comparison scan still needs to finish: a smaller value could be waiting at the far end. This is why ascending input does not make ordinary selection sort's comparison count linear.</p>
+<p>After n - 1 passes, only the last value remains. Every smaller value is already before it, so a final scan is unnecessary. An empty array and a singleton require no pass. Duplicates are allowed; they affect which record is selected, but not the numerical ascending-order result.</p>
+<h3>Count comparisons separately from swaps</h3>
+<p>Pass zero makes n - 1 key comparisons, pass one makes n - 2, and the last useful pass makes one. The total is n(n - 1)/2, regardless of the initial key order. The locations of the minima do not change the length of each scan.</p>
+<p>There are at most n - 1 real swaps when self-swaps are skipped. Ascending data may need zero swaps while still making all comparisons. Reverse data does not necessarily need n - 1 swaps, because an early exchange can also place a large value at its final end position. State an upper bound rather than claiming every unsorted array attains it.</p>
+<p>This pattern can be attractive when moving a large record is expensive relative to comparing its key. However, modern library choices depend on many costs, including cache behaviour and comparator overhead. The low swap count alone does not make selection sort a good general-purpose method for large arrays.</p>
+<h3>A distant swap can reverse a tie</h3>
+<p>Label equal records as 2A and 2B. For [2A,2B,1], the first selected minimum is 1 at the last position. Swapping it with 2A produces [1,2B,2A]. The equal-key records have crossed, even though the comparison used strict less-than. Ordinary swapping selection sort is therefore unstable.</p>
+<p>The stability failure comes from jumping across a record, not from directly swapping an equal pair. This is a useful warning when proving stability for other algorithms. Checking only whether equal values compare as equal is insufficient. You must follow how record movement can change their order.</p>
+<p>A stable selection variant can remove the minimum and shift the intervening records right instead of swapping. That preserves tie order but increases movement. It is a different implementation with a different movement profile. The lesson and animation use the standard single-swap form, so their instability example applies directly.</p>
+<h2 id="examples">C implementations and results</h2>
+<h3>Order five marks, including a tie</h3>
+<p>The first minimum is 1 and later selections finish 1 3 3 5 7. Only two nontrivial exchanges are needed.</p>
+<div data-example="ex-1"></div>
+<h3>Sort numbers entered at the keyboard</h3>
+<p>The suffix-minimum scans accept negatives without any special slot encoding. Both copies of -2 remain first.</p>
+<div data-example="ex-2"></div>
+<h3>Use sorted neighbours to find distinct marks</h3>
+<p>Selection makes equal scores neighbours, allowing one forward group count to report three different values.</p>
+<div data-example="ex-3"></div>
+<h3>Count comparisons and real exchanges</h3>
+<p>Ascending selection input needs ten comparisons but no real exchange. The suffix scan length does not depend on movement.</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">Trace on a small input</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">State</th><th scope="col">Why this happens</th></tr></thead><tbody><tr><td>i = 0</td><td>[1,3,5,3,7]</td><td>Minimum 1 swaps with 7.</td></tr><tr><td>i = 1</td><td>[1,3,5,3,7]</td><td>The first remaining 3 is already in place.</td></tr><tr><td>i = 2</td><td>[1,3,3,5,7]</td><td>Minimum 3 swaps with 5.</td></tr><tr><td>i = 3</td><td>[1,3,3,5,7]</td><td>The remaining suffix is already ordered.</td></tr></tbody></table>
+<div data-lab="selection-sort"></div>
+<h2 id="correctness">Why the method is correct</h2>
+<p>Inside the scan, min identifies a smallest value among suffix positions i through j - 1. Initialising min to i establishes the claim before the first comparison. Comparing a[j] either finds a smaller candidate or leaves the existing one valid. At the scan's end, min identifies a minimum of the entire suffix.</p>
+<p>The outer invariant says the prefix below i is sorted and contains the smallest i input values. Installing the suffix minimum extends that prefix without losing any value. Each outer pass increases i, so the unfinished suffix shrinks until only one value remains. The final array is a sorted permutation of the input.</p>
+<h2 id="complexity">Time and space reasoning</h2>
+<p>All input orders make Θ(n²) comparisons. At most n - 1 nontrivial swaps give O(n) exchanges, while auxiliary storage is Θ(1). Few swaps do not reduce the total asymptotic time because comparison scans still dominate. Ordinary selection sort is in-place and unstable. A stable shift-based variant should be analysed separately rather than assigned the same exchange count.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Swapping every time a smaller candidate appears</h3>
+<p>That becomes a different exchange-based method and may make many swaps. Finish finding the suffix minimum first.</p>
+<h3>Keeping min from an earlier pass</h3>
+<p>Reset min = i before each suffix scan. Otherwise it can point inside the completed prefix.</p>
+<h3>Inferring stability from strict comparison</h3>
+<p>The [2A,2B,1] trace reverses the tie through a distant exchange without ever comparing equal values as smaller.</p>
+<h2 id="version-notes">C17 details</h2>
+<div class="callout version"><p>Selection uses a C17 signed index for its suffix boundary. For n below two, its outer condition fails before any access. The minimum candidate is reinitialised inside every pass.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Select each suffix minimum with few exchanges while keeping comparisons and stability claims separate.</p>
+<p>Continue with <a href="topic:algo-insertion-sort">insertion sort</a>.</p>

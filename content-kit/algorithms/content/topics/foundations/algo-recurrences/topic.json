@@ -1,0 +1,407 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-recurrences",
+  "module": "foundations",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Recurrence Relations",
+    "bn": "রিকারেন্স রিলেশন"
+  },
+  "summary": {
+    "en": "Translate recursion into equations and solve them using substitution, recursion trees and the master theorem.",
+    "bn": "পুনরাবৃত্ত ফাংশনের খরচ লিখে substitution, recursion tree আর master theorem দিয়ে সমাধান করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "algo-analysing-loops"
+  ],
+  "related": [
+    "algo-space-complexity"
+  ],
+  "keywords": [
+    "recurrences",
+    "C17",
+    "algorithm analysis"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "C17 baseline; general algorithm bounds treat input size as variable."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Pseudocode and conventions"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Recurrence Relations step by step"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Trace on a small input"
+    },
+    {
+      "id": "correctness",
+      "title": "Why the method is correct"
+    },
+    {
+      "id": "complexity",
+      "title": "Time and space reasoning"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 details"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Count leaves of balanced splitting",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>A size-seven task splits into sizes three and four. Each final size-one task contributes one leaf, giving seven.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Count all calls of a binary split",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The full binary split has eight leaves and seven internal tasks. Its fifteen calls follow C(n) = 2C(n/2) + 1 on powers of two.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Follow one half without branching",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>There are six sizes including the final size-one call. This counts calls, whereas five counts only the reductions.</p>\n"
+    }
+  ],
+  "labs": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Count split leaves for odd sizes",
+      "statementHtml": "<p>Read n (1..64). Split each size greater than one into floor(n/2) and ceil(n/2). Print Enter n (1..64):, then leaves = L for the number of size-one leaves.</p>\n",
+      "hints": [
+        "The two child sizes must add to the parent size."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Count a shrinking recursion chain",
+      "statementHtml": "<p>Read n (0..64). For a function that calls itself on n - 1 until zero, count every call including the base call. Print Enter n (0..64): then calls = C.</p>\n",
+      "hints": [
+        "Size zero still creates one call."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain the Recurrence Relations invariant",
+      "statementHtml": "<p>For Recurrence Relations, state what stays true as the main process repeats. Explain the start, preservation and completed result.</p>\n",
+      "hints": [
+        "Use the changing boundaries and the processed region in this method."
+      ],
+      "answerHtml": "<p>Use strong induction on the positive integer size n to prove that leaves(n) returns n. The base n = 1 returns one. For n &gt; 1, both child sizes are positive and strictly smaller than n. By the induction hypothesis their returned counts equal their sizes. Their sum is floor(n/2) + ceil(n/2) = n.</p>\n<p>Each recursive path strictly reduces its positive size until one. Therefore the count function terminates. This proof establishes its answer; a separate recurrence C(n) = C(floor(n/2)) + C(ceil(n/2)) + 1 counts its calls. Because every internal node has two children, n leaves imply n - 1 internal nodes and 2n - 1 total calls.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Derive the resource cost of Recurrence Relations",
+      "statementHtml": "<p>Explain why the split-leaf routine has many total calls but only logarithmic simultaneously active depth.</p>\n",
+      "hints": [
+        "Count the work from this algorithm rather than naming a class alone."
+      ],
+      "answerHtml": "<p>The leaf-count program makes Θ(n) calls, with constant local work per call. Its active recursion depth is Θ(log n), because each path repeatedly halves the size. The explicit-stack example counts fifteen tasks for size eight. Its stack holds pending siblings rather than all tree nodes at once. The one-child chain example visits six sizes from 32 down to 1, illustrating logarithmic work directly.</p>\n"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Reconstruct the small recurrences trace",
+      "statementHtml": "<p>For leaves(n) that splits n into floor(n/2) and ceil(n/2) until size one, draw the split tree for n = 7 and count all leaves.</p>",
+      "hints": [
+        "Record state before changing another boundary or moving the next value."
+      ],
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">State</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>size 7</td><td>3 and 4</td><td>The two sizes add to 7.</td></tr><tr><td>size 3</td><td>1 and 2</td><td>One leaf appears immediately.</td></tr><tr><td>size 4</td><td>2 and 2</td><td>Both sides split once more.</td></tr><tr><td>all leaves</td><td>seven size-one tasks</td><td>Every original item belongs to one leaf.</td></tr></tbody></table>\n<pre class=\"diagram\">7\n├── 3\n│   ├── 1\n│   └── 2\n│       ├── 1\n│       └── 1\n└── 4\n    ├── 2\n    │   ├── 1\n    │   └── 1\n    └── 2\n        ├── 1\n        └── 1</pre><p>The tree has seven leaves of size one.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which recurrence describes two half-size calls plus a full scan?",
+      "options": [
+        "T(n) = 2T(n/2) + Theta(n)",
+        "T(n) = T(n/2) + 1",
+        "T(n) = T(n-1) + 1",
+        "T(n) = 2T(n) + n"
+      ],
+      "answer": 0,
+      "explanation": "Both child costs and the parent scan must be counted."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "For 8T(n/2) + n², which master case applies?",
+      "options": [
+        "The theorem never applies to three powers",
+        "Case 1",
+        "Case 2",
+        "Case 3"
+      ],
+      "answer": 1,
+      "explanation": "Here log2 8 = 3 and n² is polynomially smaller than n³."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the bound for 2T(n/2) + n with constant bases?",
+      "options": [
+        "Theta(log n)",
+        "Theta(n²)",
+        "Theta(n log n)",
+        "Theta(n)"
+      ],
+      "answer": 2,
+      "explanation": "Each of log n internal levels costs n in total."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which extra condition belongs to master case 3?",
+      "options": [
+        "a must be zero",
+        "f(n) must be constant",
+        "The base case must cost n",
+        "a f(n/b) <= c f(n) for some c < 1"
+      ],
+      "answer": 3,
+      "explanation": "Regularity ensures child-level work shrinks geometrically."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is T(n-1) + n outside the standard master theorem?",
+      "options": [
+        "Its child size is not n divided by a fixed b",
+        "It has positive costs",
+        "It has only one child",
+        "Its base case is constant"
+      ],
+      "answer": 0,
+      "explanation": "The theorem requires fixed-factor size reduction."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many total calls appear in the full split with eight leaves?",
+      "options": [
+        "7",
+        "15",
+        "8",
+        "16"
+      ],
+      "answer": 1,
+      "explanation": "A full binary tree has one fewer internal node than leaves."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What proves the split-leaf routine terminates?",
+      "options": [
+        "It has two recursive calls",
+        "Its code contains return",
+        "Every child size is a smaller positive integer until one",
+        "Its output happens to match a sample"
+      ],
+      "answer": 2,
+      "explanation": "Strictly decreasing positive sizes cannot continue indefinitely."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many leaves does balanced splitting create for size 5?",
+      "code": "#include <stdio.h>\n\nstatic int leaves(int n)\n{\n    if (n <= 1) {\n        return 1;\n    }\n    return leaves(n / 2) + leaves(n - n / 2);\n}\n\nint main(void)\n{\n    printf(\"%d\\n\", leaves(5));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4",
+        "7",
+        "5",
+        "6"
+      ],
+      "answer": 2,
+      "explanation": "Both child leaf counts add to their combined size."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Including the base call, how many sizes does the halving chain from 8 visit?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int calls = 1;\n    for (int n = 8; n > 1; n /= 2) {\n        calls++;\n    }\n    printf(\"%d\\n\", calls);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "5",
+        "3",
+        "6",
+        "4"
+      ],
+      "answer": 3,
+      "explanation": "The sizes are 8, 4, 2 and 1, including the base."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What exact cost does repeated T = 2T + n produce at n = 8 from T(1) = 1?",
+      "code": "#include <stdio.h>\n\n\nint main(void)\n{\n    int cost = 1;\n    for (int n = 2; n <= 8; n *= 2) {\n        cost = 2 * cost + n;\n    }\n    printf(\"%d\\n\", cost);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "32",
+        "33",
+        "31",
+        "34"
+      ],
+      "answer": 0,
+      "explanation": "The costs are 4, 12 and 32, agreeing with n log2 n + n."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Write child sizes and local work separately.",
+      "bn": "সন্তানের আকার আর নিজের কাজ আলাদা করে লেখো।"
+    },
+    {
+      "en": "Substitution proves a guessed expression by induction.",
+      "bn": "Substitution-এ অনুমানকে induction দিয়ে প্রমাণ করো।"
+    },
+    {
+      "en": "A recursion tree sums work across whole levels.",
+      "bn": "Recursion tree-তে প্রতিটি স্তরের মোট কাজ যোগ করো।"
+    },
+    {
+      "en": "Master theorem needs fixed-factor splitting.",
+      "bn": "Master theorem-এ নির্দিষ্ট অনুপাতে আকার ছোট হতে হয়।"
+    },
+    {
+      "en": "Case three also requires regularity.",
+      "bn": "তৃতীয় case-এ regularity শর্তও যাচাই করতে হবে।"
+    },
+    {
+      "en": "Total calls differ from active stack depth.",
+      "bn": "মোট কল আর একসঙ্গে থাকা stack frame এক নয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 5,
+      "question": "For leaves(n) that splits n into floor(n/2) and ceil(n/2) until size one, draw the split tree for n = 7 and count all leaves.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">State</th><th scope=\"col\">Decision</th></tr></thead><tbody><tr><td>size 7</td><td>3 and 4</td><td>The two sizes add to 7.</td></tr><tr><td>size 3</td><td>1 and 2</td><td>One leaf appears immediately.</td></tr><tr><td>size 4</td><td>2 and 2</td><td>Both sides split once more.</td></tr><tr><td>all leaves</td><td>seven size-one tasks</td><td>Every original item belongs to one leaf.</td></tr></tbody></table>\n<pre class=\"diagram\">7\n├── 3\n│   ├── 1\n│   └── 2\n│       ├── 1\n│       └── 1\n└── 4\n    ├── 2\n    │   ├── 1\n    │   └── 1\n    └── 2\n        ├── 1\n        └── 1</pre><p>The tree has seven leaves of size one.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Justify correctness and termination for Recurrence Relations using an invariant or proof.",
+      "answerHtml": "<p>Use strong induction on the positive integer size n to prove that leaves(n) returns n. The base n = 1 returns one. For n &gt; 1, both child sizes are positive and strictly smaller than n. By the induction hypothesis their returned counts equal their sizes. Their sum is floor(n/2) + ceil(n/2) = n.</p>\n<p>Each recursive path strictly reduces its positive size until one. Therefore the count function terminates. This proof establishes its answer; a separate recurrence C(n) = C(floor(n/2)) + C(ceil(n/2)) + 1 counts its calls. Because every internal node has two children, n leaves imply n - 1 internal nodes and 2n - 1 total calls.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and auxiliary-memory cost of Recurrence Relations, stating all assumptions.",
+      "answerHtml": "<p>The leaf-count program makes Θ(n) calls, with constant local work per call. Its active recursion depth is Θ(log n), because each path repeatedly halves the size. The explicit-stack example counts fifteen tasks for size eight. Its stack holds pending siblings rather than all tree nodes at once. The one-child chain example visits six sizes from 32 down to 1, illustrating logarithmic work directly.</p>\n"
+    },
+    {
+      "type": "short",
+      "marks": 3,
+      "question": "Explain and correct this recurrences mistake: Applying master theorem to n - 1.",
+      "answerHtml": "<p>Subtracting one is not division by a fixed factor. Expand the chain or use substitution instead of forcing a and b.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
