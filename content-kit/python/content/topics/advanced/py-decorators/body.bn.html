@@ -1,0 +1,88 @@
+<h2 id="introduction">অনেক call ঘিরে একই আচরণ</h2>
+<p class="lead">কয়েক ফাংশনে একই logging-validation copy করলে পরে change বারবার। <dfn>Decorator</dfn> ফাংশন নিয়ে তার বদলি value ফেরায়। সাধারণত wrapper, যা original call ঘিরে কাজ যোগ করে।</p>
+<p>ফাংশন value আর closure enclosing variable মনে রাখে জানো। Decorator দুটো মেলায়। Wrapper original মনে রাখে, decorated name-এ caller এলে কখন original চলবে বাছে।</p>
+<p>Original source body rewrite নয়, name decorator-এর ফলে rebind। তাই অসাবধান wrapper return হারায়, valid argument বাদ দেয় বা metadata ঢাকে।</p>
+
+<h2 id="syntax">@-কে assignment-এ বোঝো</h2>
+<p>def calculate-এর ওপরে @announce ফাংশন তৈরির পরে announce চালিয়ে ফল calculate-এ বসায়। ধারণায় calculate = announce(calculate)। Decorator definition time-এ, returned wrapper সাধারণত পরে call time-এ।</p>
+<pre><code class="language-python">from functools import wraps
+
+def announce(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        print("begin")
+        result = function(*args, **kwargs)
+        print("end")
+        return result
+    return wrapper</code></pre>
+<p>Outer original callable পায়, inner পরের কল সামলায়। *args positional, **kwargs keyword জড়ো, expansion forward। return wrapper ফাংশন দেয়; wrapper() খুব আগে চালায়।</p>
+
+<h2 id="how-it-works">Decoration আর invocation আলাদা</h2>
+<p>Definition-এ original তৈরি, decorator-এ পাঠিয়ে replacement original নামে রাখা। তখন business calculation লাগবে না। Invocation-এ caller replacement পায়, তা remembered original ডাকে।</p>
+<p>Wrapper begin, original, end, তারপর result। Original raise করলে পরের line বাদ। Failure-তেও শেষ logging/cleanup লাগলে try/finally। Recovery contract না হলে failure গিলবে না।</p>
+<pre class="diagram">সংজ্ঞায়:
+    original function --&gt; decorator --&gt; wrapper নামে bind
+কলে:
+    caller --&gt; wrapper --&gt; original --&gt; result --&gt; caller</pre>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>C function pointer পাঠানো যায়, ordinary C-তে closure-এর supporting state হাতে লাগে। Python wrapper enclosing scope-এ original আর config রাখে। @ name binding, preprocessor expansion নয়।</p></div>
+<p>Wrapper ইচ্ছা করে argument বা result বদলাতে পারে, তবে transparent logging থেকে অন্য promise। Validation body-র আগে negative reject, formatting সংখ্যা বদলে string দিতে পারে। Caller-কে জানাও।</p>
+
+<h2 id="examples">Argument, value আর নাম রাখো</h2>
+<p>প্রথমটি call order, দ্বিতীয় wraps metadata। Configurable validator-এ তিন nested function। শেষটি variable timing না মেপে stable message-এ stacking দেখায়।</p>
+
+<h3>Before, result আর after trace</h3>
+<p>Wrapper positional-keyword forward। Original-এর আগে begin, পরে end, তারপর caller returned 30 প্রিন্ট।</p>
+<div data-example="ex-1"></div>
+
+<h3>রাখা metadata দেখো</h3>
+<p>wraps square নাম আর docstring রাখে। __wrapped__ original callable, যা 16 দেয়।</p>
+<div data-example="ex-2"></div>
+
+<h3>Minimum amount configure</h3>
+<p>Factory ten config রাখে। Twelve calculation-এ, five original-এর আগেই rejected।</p>
+<div data-example="ex-3"></div>
+
+<h3>Stacked wrapper order</h3>
+<p>নিচের decorator আগে apply, call-এ outer wrapper আগে। Exit উল্টো ক্রমে খুলে ফেরে।</p>
+<div data-example="ex-4"></div>
+
+<h2 id="metadata-and-wraps">ফাংশনের দরকারি পরিচয় রাখো</h2>
+<p>সাহায্য ছাড়া decorated name-এর __name__ wrapper, docstring wrapper-এর। Documentation-debug-signature tool বিভ্রান্ত। functools.wraps selected metadata copy করে __wrapped__ original-এ দেয়।</p>
+<p>Inner wrapper-এ @wraps(function)। এটি validation বা same behavior নিশ্চিত নয়, description আর inspection link রাখে। Argument forward আর result return নিজে ঠিক করবে।</p>
+<p>Caller decorated.__wrapped__-এ original পায়, inspection chain ধরতে পারে। তাই decorator access-control barrier নয়। Original freely চালাতে পারা caller-এর বিরুদ্ধে validation wrapper সুরক্ষা নয়।</p>
+<p>Metadata রাখলেই সব callable category চলে না। Sync wrapper coroutine ফিরিয়েই async function হয় না। Generator wrapper-এ timing-cleanup ভাবতে হয়। এখানে ordinary synchronous ফাংশন।</p>
+
+<h2 id="configured-decorators">Setting-এর জন্য outer factory</h2>
+<p>Argument-সহ decorator সাধারণত তিন layer। Factory configuration নেয়, actual decorator দেয়; সেটি original নেয়; wrapper পরের call-এর argument নেয়।</p>
+<p>@minimum(10)-এ definition-এ minimum(10), তার decorator function পায়। Wrapper threshold আর original মনে রাখে। পরের কল business argument, নতুন threshold নয়।</p>
+<p>Config wrapper-জুড়ে shared, purchase amount per-call। মেশালে numeric result-এর বদলে function object বা decoration-এ original চলে যেতে পারে।</p>
+<p>Factory নিজের config তাড়াতাড়ি validate করে। Negative minimum অবৈধ হলে তৈরি করার সময় reject। Wrapper পরে প্রতিটি amount আলাদা দেখে, config error আর business input আলাদা।</p>
+<p>@outer-এর নিচে @inner মানে outer(inner(function))। সংজ্ঞার কাছেরটি আগে, call-এ outer আগে। Before-after message বন্ধনীর মতো nested। ক্রমে validation-cache-log বদলায়।</p>
+
+<h2 id="design-and-state">Wrapper state আর effect বুঝে</h2>
+<p>Closure-এ call count রাখা যায়। Count ওই decorated function-এর, একই decorator-এর সবার নয়। Factory নতুন independent closure দিতে পারে। State lifetime ঠিক করো।</p>
+<p>Module-level mutable state সব wrapper share করতে পারে। Closure হলেও same wrapper-এর alias share। কোনোটিই automatic concurrent safety নয়; simple counter thread-safe বলা হয়নি।</p>
+<p>Validation original state change-এর আগে fail করবে। Logging default-এ private argument ছাপবে না। Stable result লাগলে output আর diagnostic আলাদা। সবসময় print করা reusable API-তে নাও মানাতে পারে।</p>
+<p>Decorator-এর আগে explicit helper ভাবো। এক function-এ validate(amount) পরিষ্কার। বহু compatible function ঘিরে একই policy আর নাম definition-এ অর্থ বললে decorator ভালো।</p>
+
+<h2 id="tracing-the-contract">Interface-এর অংশ হিসেবে wrapper test</h2>
+<p>শুধু successful positional call যথেষ্ট নয়। Keyword, explicit result আর raised exception test। প্রথমটি চললেও keyword হারানো বা failure None করা সম্ভব। তিন path-ই contract।</p>
+<p>আলাদা setting-এ দুই function বানাও। একটি কল অন্য config বদলাবে না। Factory সাধারণত আলাদা রাখে; shared mutable config object-এ পরে change দুটোতে প্রভাব ফেলে। Closure reference রাখে, snapshot নয়।</p>
+<p>অদৃশ্য effect-এর আগে distinct message-এ stacking trace। Outer cache hit-এ inner logger skip, outer logger সব hit-ও দেখে। সর্বজনীন সঠিক order নেই, প্রয়োজন দেখে বাছো।</p>
+<p>__wrapped__ সচেতন inspection/test-এ নাও। Direct call policy পাশ কাটায়। Original test pass public wrapper forwarding প্রমাণ নয়, public name দিয়েও test।</p>
+
+<h2 id="common-mistakes">প্রতি layer-এ call ধরো</h2>
+<h3>return result বাদ</h3>
+<p>Original ঠিক হিসাব করেও wrapper None দিতে পারে। ফল রাখার promise হলে explicit return।</p>
+<h3>Keyword বাদ</h3>
+<p>শুধু *args valid keyword call বাদ দেয়। Interface সমর্থন করলে **kwargs forward। Positional-এর সঙ্গে named-ও test।</p>
+<h3>ফেরানোর সময় wrapper কল</h3>
+<p>return wrapper() এখনই চালিয়ে ফল দেয়। পরের decorated call-এর জন্য return wrapper।</p>
+<h3>Failure-এ normal after-code চলবে ভাবা</h3>
+<p>Original raise-এ পরের statement বাদ। Guaranteed exit কাজ finally-তে, contract না বললে error চালিয়ে দাও।</p>
+
+<h2 id="version-notes">wraps মানেই পুরো transparency নয়</h2>
+<p>ফাংশন, closure, decorator আর functools.wraps Python 3.10–3.12-তে। Copied metadata বদলাতে পারে, তাই stable name-docstring-__wrapped__ দেখা। ParamSpec-সহ generic typing পরে, runtime pattern-এর বাইরে।</p>
+
+<h2 id="summary">Decorator definition-এ দৃশ্যমান policy</h2>
+<p>Wrapper reusable behavior যোগেও argument-result-error forward করে। wraps metadata, factory config দেয়। পরের <a href="topic:py-context-managers">context manager</a> call নয়, block ঘিরে entry-exit বলে।</p>
