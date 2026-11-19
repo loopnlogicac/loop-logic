@@ -1,0 +1,102 @@
+<h2 id="introduction">Prevent an ordered tree from becoming a chain</h2>
+<p class="lead">Insert increasing roll numbers into an ordinary BST and every new number extends the right branch. Searches gradually resemble a linked-list walk. An <dfn>AVL tree</dfn> keeps the BST ordering rule while repairing large height differences near the insertion path.</p>
+<p>Picture a shelf that becomes heavy on one side. Instead of sorting every item again, you move a few supporting links. In an AVL tree those local moves are rotations. They change roots and depths while preserving the left-to-right key order.</p>
+<p>This lesson implements insertion with rebalancing. It builds on <a href="topic:ds-binary-search-tree">BST insertion</a> and the owner-link ideas from <a href="topic:ds-bst-deletion">deletion</a>. AVL deletion needs additional rebalancing rules and is outside this insertion lesson. Ordinary BST deletion must not be applied unchanged while expecting AVL balance to survive.</p>
+<p>The cache here measures height in nodes: a missing subtree has height zero and a leaf has height one. This differs from the edge-height measurements introduced earlier. Adding one to every nonempty subtree height does not change the balance difference, provided both children use the same convention.</p>
+
+<h2 id="syntax">Cache height and define balance</h2>
+<pre><code class="language-c">int left_height = height(root-&gt;left);
+int right_height = height(root-&gt;right);
+root-&gt;height = 1 + (left_height &gt; right_height ? left_height : right_height);
+int balance = left_height - right_height;</code></pre>
+<p>The <dfn>balance factor</dfn> is left height minus right height. Values -1, zero and 1 are allowed at every node. A positive value means the left side is taller. The Node record adds a cached height field to its key and two child pointers.</p>
+<p>Cached height lets an update inspect two child fields in O(1) time. Recomputing each subtree height from scratch would repeatedly visit many records. Correct caching therefore belongs to the algorithm, rather than being a cosmetic optimization. Every changed subtree must report an updated height to its parent.</p>
+<pre><code class="language-text">insert(root, key):
+    perform distinct-key BST insertion
+    update root.height after its child returns
+    balance = height(left) - height(right)
+    if left-heavy: straighten LR if needed, then rotate right
+    if right-heavy: straighten RL if needed, then rotate left
+    return the repaired local root</code></pre>
+
+<h2 id="how-it-works">Four cases, two rotation directions</h2>
+<p>Follow the insertion path upward after creating a leaf. A node may become left-heavy with balance 2 or right-heavy with balance -2. The next turn toward the inserted key identifies a straight path or a bent path. These become LL, RR, LR and RL.</p>
+<table class="ref"><caption>Repair at the first unbalanced ancestor</caption><thead><tr><th scope="col">Case</th><th scope="col">Path</th><th scope="col">Repair</th></tr></thead><tbody><tr><td>LL</td><td>Left then left</td><td>Rotate root right</td></tr><tr><td>RR</td><td>Right then right</td><td>Rotate root left</td></tr><tr><td>LR</td><td>Left then right</td><td>Rotate left child left, then root right</td></tr><tr><td>RL</td><td>Right then left</td><td>Rotate right child right, then root left</td></tr></tbody></table>
+<h3>Right rotation for LL</h3>
+<pre class="diagram">Before:             y=30          After:        x=20
+                   /    \                       /    \
+                x=20     C                     A     y=30
+                /  \                                /  \
+               A    B                               B    C
+Pointer moves: middle=x.right; y.left=middle; x.right=y
+Return x to the former owner of y.</pre>
+<p>Save x and its right subtree B before changing links. Move B to y.left first, then link y as x.right. All A keys remain below x; B keys stay between x and y; C keys remain above y. This interval argument proves that inorder stays unchanged.</p>
+<p>After rewiring, update y before x. Node y is now lower, and x's new height depends on y's new height. Reversing those updates can preserve a stale height even when the visible shape looks correct. Return x because it is the local subtree's new root.</p>
+<h3>Left rotation for RR</h3>
+<pre class="diagram">Before:        x=10               After:          y=20
+              /    \                            /    \
+             A     y=20                       x=10    C
+                   /  \                      /  \
+                  B    C                     A    B
+Pointer moves: middle=y.left; x.right=middle; y.left=x
+Return y, then reconnect its incoming owner link.</pre>
+<p>A left rotation is the mirror operation. The right child rises and the old root moves left. Its middle subtree B transfers to the old root's right link. Again update the old root first, then the new root.</p>
+<h3>Double rotations for bent paths</h3>
+<pre class="diagram">LR before: 30.left=10; 10.right=20
+First:     rotate_left(10) -&gt; 30.left=20; 20.left=10
+Second:    rotate_right(30)
+LR after:  root=20; 20.left=10; 20.right=30
+RL before: 10.right=30; 30.left=20
+First:     rotate_right(30) -&gt; 10.right=20; 20.right=30
+Second:    rotate_left(10)
+RL after:  root=20; 20.left=10; 20.right=30</pre>
+<p>For LR, a single right rotation would leave the inner branch too tall. First rotate the left child left to turn the bend into a straight LL arrangement. Then rotate the original root right. RL performs the symmetric pair.</p>
+<p>The three-key examples make every transferred middle subtree empty. In larger trees, those middle subtrees may contain many nodes. Save and reconnect them exactly as in the rotation functions. A rotation moves only a constant number of pointers regardless of the number of records below those pointers.</p>
+<div data-lab="avl-insert"></div>
+<p>The lab uses the same insert, update, rotate_left and rotate_right logic as example one. It animates each changed child link and the new root separately. Watch the temporarily detached local subtree before it is reconnected to its parent. The completed operation includes both the rotation and that owner-link repair.</p>
+<p>Use presets for all four cases instead of judging correctness from increasing input alone. Increasing keys exercise RR repairs but cannot reveal every LR or RL mistake. The duplicate preset confirms that equality adds no record. The empty preset confirms that height zero needs no allocated root.</p>
+
+<h2 id="examples">Check shape and cached height together</h2>
+<p>The first example accepts an insertion sequence and prints the root after every key. It finishes with sorted inorder keys, node height and a balance-cache check. The fourth example runs all four three-key cases, so you can compare their common result with their different repairs.</p>
+
+<h3>Insert with LL, RR, LR and RL repairs</h3>
+<p>After inserting 20, the left subtree leans right. A left rotation at 10 followed by a right rotation at 30 makes 20 the root.</p>
+<div data-example="ex-1"></div>
+
+<h3>Increasing keys stay balanced</h3>
+<p>Repeated right-heavy paths trigger left rotations. Height here counts nodes, so the empty tree has height zero.</p>
+<div data-example="ex-2"></div>
+
+<h3>Duplicate insertions preserve height</h3>
+<p>Set semantics reject equal keys. Repeating 10 and 20 does not allocate nodes or alter the balance factors.</p>
+<div data-example="ex-3"></div>
+
+<h3>Check all four three-key shapes</h3>
+<p>All four insertion orders end with root 20 and node height two, although their rotation sequences differ.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="variations">Why the height is logarithmic</h2>
+<p>Let N(h) be the fewest nodes in an AVL tree of node height h. To reach height h with as few nodes as possible, one child has height h-1. The other can be only one level shorter, so its height is h-2. Include the root to get N(h)=1+N(h-1)+N(h-2).</p>
+<p>The base values are N(0)=0 and N(1)=1. The next values are 2, 4, 7, 12 and 20. This Fibonacci-like growth is exponential in h. Turning the relationship around makes h logarithmic in the number of stored nodes.</p>
+<p>You do not need an exact logarithm constant to use the guarantee. A path has O(log n) nodes, so searching and inserting take O(log n) time. Recursive insertion uses O(log n) active calls. The tree itself uses O(n) records, each with one extra height field.</p>
+<p>One insertion can make several ancestors look taller while the call stack unwinds. Rebalancing the lowest unbalanced ancestor restores that subtree's previous height. Therefore at most one rebalancing location needs rotation for a single AVL insertion, using one or two rotations. Higher ancestors still receive their returned child pointers and updated caches.</p>
+<p>The code checks for imbalance while unwinding every ancestor rather than stopping through a separate flag. This keeps the recursive structure easy to follow. Its asymptotic time remains logarithmic because the path length is logarithmic. A single rotation costs O(1) local time and O(1) extra pointer storage.</p>
+<p>Contrast that with repeatedly computing recursive heights from scratch during insertion. Even though the final tree may be balanced, those repeated scans can add much more work. Cached child heights make each ancestor update constant time. The guarantee assumes those cached values are correct after every operation.</p>
+
+<h2 id="edge-cases">Duplicates, allocation and ownership</h2>
+<p>Insertion into an empty tree creates a leaf with height one. Inserting the same key again returns that record without increasing the count. There is no fixed full boundary for linked AVL storage. If allocation fails, the ok flag prevents rebalancing incomplete work and the caller destroys the retained tree.</p>
+<p>A failed allocation happens at an empty child link. Returning NULL there does not replace a populated subtree. Existing ancestor records remain reachable, so cleanup can release them. The example programs treat failure as an unsuccessful run rather than claiming a new key was inserted.</p>
+<p>Rotations do not allocate or free records. A successful distinct insertion allocates one leaf, even when a double rotation follows. At program end, postorder cleanup frees each record once. Stored pointers to node records remain addresses of those records, although their parents and depths may change.</p>
+<p>Balance alone does not prove the BST property. A malformed tree could have perfectly even heights and misplaced keys. Review both facts: inorder must match the distinct input set, and every node must have correct height and allowed balance. The valid routine checks the cache and balance; insertion's comparison rule preserves ordering.</p>
+
+<h2 id="common-mistakes">Do not lose the middle subtree</h2>
+<h3>Linking the old root below its child too early</h3><p>If you overwrite x.right before saving it during a right rotation, the middle subtree can become unreachable. Save middle first. The diagram's three named subtrees show exactly which pointer must survive each assignment.</p>
+<h3>Choosing a rotation by the root comparison alone</h3><p>Left-heavy does not distinguish LL from LR. Inspect the insertion direction relative to the left child. A bent path needs its child rotation before the final root rotation.</p>
+<h3>Keeping the former local root in its parent</h3><p>A rotation's return value identifies the new subtree root. Assign it into the parent child field, or into the caller's root variable. Correct local links still form an incomplete repair if the owner keeps the former root.</p>
+<h3>Mixing zero-height and one-height leaf caches</h3><p>The C helper treats NULL as height zero and leaves as height one. Initialize new records accordingly. Subtracting heights from inconsistent conventions can trigger a rotation when none is needed.</p>
+
+<h2 id="version-notes">C17 height fields</h2>
+<div class="callout version"><p>The AVL implementation uses C17 structs, pointers and ordinary integer arithmetic. Heights are small under the bounded input. No compiler feature maintains a height cache automatically; every update and returned-root assignment is part of your algorithm.</p></div>
+
+<h2 id="summary">Local links give a global path bound</h2>
+<p>AVL insertion combines ordinary key comparisons with cached heights and four repair cases. Rotations preserve ordering while preventing long chains. Next, <a href="topic:ds-heap">binary heaps</a> use complete shape and a different ordering rule to make extreme keys easy to remove.</p>

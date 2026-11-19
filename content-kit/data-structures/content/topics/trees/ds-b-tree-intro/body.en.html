@@ -1,0 +1,87 @@
+<h2 id="introduction">Spend fewer page reads on a search</h2>
+<p class="lead">A disk index may contain millions of roll-number records. Fetching a page from storage costs much more than comparing a few keys already in memory. A <dfn>B-tree</dfn> places several keys and child links in each wide node, reducing the number of pages along a search path.</p>
+<p>Picture a directory page with several labeled intervals. One page can tell you which of many smaller directories to open next. A binary tree chooses between only two child intervals per node. With large storage pages, leaving room for only one key wastes an opportunity to reduce height.</p>
+<p>B-trees keep all leaves at the same depth and limit how empty their nodes may become. These rules guarantee useful fan-out. A <dfn>B+ tree</dfn> changes where records live and links its leaves for range scans. The two structures share wide-node ideas but have different separator behavior.</p>
+<p>This introduction explains both designs and supplies a small complete B-tree insertion program. It does not implement a production disk pager or B+ insertion. The final example uses a fixed B+ leaf layout to isolate range scanning. Keep that scope clear when comparing the examples.</p>
+
+<h2 id="syntax">Define order before using a formula</h2>
+<p>Textbooks use order in different ways. Here <dfn>order m</dfn> means the maximum number of children in a node. A node with k sorted keys has k+1 child intervals when it is internal. Thus its maximum key count is m-1.</p>
+<p>Every non-root internal node has at least ceil(m/2) children in the usual order-m definition. Non-root pages therefore hold at least ceil(m/2)-1 keys. The root may have fewer keys; a non-leaf root must still have at least two children. Every leaf is at the same depth.</p>
+<p>The executable example uses the minimum-degree convention t=2. Under this convention, non-root nodes have t-1 through 2t-1 keys, and internal nodes have t through 2t children. Maximum fan-out is four, matching order four here. Do not substitute t for m in a formula without converting their meanings.</p>
+<pre class="diagram">One internal page: [10 | 20]
+Child 0: keys &lt; 10
+Child 1: 10 &lt; keys &lt; 20
+Child 2: keys &gt; 20
+           [10 | 20]
+          /    |     \
+       [5,6] [12,17] [25,30]
+All three child leaves have the same depth.</pre>
+<p>The C BNode contains a count, a leaf flag, room for three keys and four child indices. A fixed arena holds thirty-two such records. At most twelve distinct insertions occur, so the arena has more space than this bounded demonstration needs. No dynamic allocation is hidden in the page indices.</p>
+
+<h2 id="how-it-works">Search intervals and split full pages</h2>
+<p>To search a page, scan its sorted keys until the query is no larger than the next key. Equality finds a B-tree key in that page. If no equality occurs, the stopping position identifies the child interval. A leaf without equality proves the key is absent.</p>
+<p>A page with keys 10 and 20 sends query 17 into child interval one. Query 25 goes into interval two. The instructional code scans keys linearly inside each small page. Larger page implementations may use binary search within a page to reduce CPU comparisons.</p>
+<p>Insertion must preserve sorted page keys and equal leaf depths. The t=2 implementation splits a full three-key node before descending into it. A full page [5,10,20] becomes left [5], promoted key 10, and right [20]. The promoted key enters the parent between the two resulting child links.</p>
+<pre class="diagram">Before root split: root ---&gt; [5 | 10 | 20]
+Split:
+    left=[5], middle=10, right=[20]
+After root split: root ---&gt; [10]
+                             /  \
+                           [5]  [20]
+After inserting 6:          [10]
+                             /  \
+                         [5,6]  [20]</pre>
+<p>Splitting the root creates a new root with one key and two children. All existing leaves move one level deeper together. Splitting a non-root child changes only one page interval in its existing parent. The tree never lengthens just one leaf path.</p>
+<p>For an internal full page, split its child links as well as its keys. The old page keeps the lower two child intervals, and the sibling receives the upper two. Promoting the middle key separates those ranges. Forgetting to transfer children can preserve printed root keys while losing whole subtrees.</p>
+<p>The split_child routine first creates a sibling, saves the middle key and reduces the old count. It shifts the parent's later child indices and keys rightward to make space. Then it inserts the new sibling link and promoted key. The parent must have spare capacity before this operation begins.</p>
+<table class="ref"><caption>Insert 10,20,5,6,12,30,7,17 with t=2</caption><thead><tr><th scope="col">After key</th><th scope="col">Root</th><th scope="col">Leaf pages</th></tr></thead><tbody><tr><td>5</td><td>5,10,20</td><td>Root is still a leaf</td></tr><tr><td>6</td><td>10</td><td>5,6 and 20</td></tr><tr><td>30</td><td>10</td><td>5,6 and 12,20,30</td></tr><tr><td>7</td><td>10</td><td>5,6,7 and 12,20,30</td></tr><tr><td>17</td><td>10,20</td><td>5,6,7 and 12,17 and 30</td></tr></tbody></table>
+<p>The insertion entry first checks whether the key already exists. Equal keys leave the set unchanged and cause no split. For a new key, splitting the full root creates a non-full starting page. At each later descent, split a full child before entering it, so insert_nonfull always receives spare room.</p>
+<p>In a leaf, shift larger keys one position to the right and place the new key in the gap. In an internal page, select a child interval. If splitting promotes a key smaller than the incoming key, continue into the new right sibling. Otherwise descend into the retained left half.</p>
+
+<h2 id="examples">Run a tiny page index</h2>
+<p>The first example implements complete t=2 insertion, splitting and ordered traversal. The second uses those pages for membership search. The third focuses on B+ range scanning over a prepared leaf chain; it does not claim to construct that chain through insertion.</p>
+
+<h3>Split full nodes before descending</h3>
+<p>Minimum degree two permits three keys per node. Splitting a full root promotes its middle key and increases the height.</p>
+<div data-example="ex-1"></div>
+
+<h3>Search several keys within each page</h3>
+<p>The search compares against each sorted key in a page before selecting the child interval containing 17.</p>
+<div data-example="ex-2"></div>
+
+<h3>A leaf-chain range scan in a small B+ layout</h3>
+<p>Separators 10 and 20 choose a starting leaf. Following next links then emits 7, 10, 12, 17 and 20 without returning to the root.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">B-tree records versus B+ leaf records</h2>
+<p>In the B-tree model here, keys can represent records in internal pages as well as leaves. An equality match in an internal page can finish the search. A full ordered traversal must therefore print internal keys between their child traversals. Looking only at B-tree leaves would omit promoted records.</p>
+<p>In the B+ convention here, full data records remain in leaves. Internal keys are routing separators, commonly copies of boundary keys from below. A lookup continues to a leaf even when it matches an internal separator. Exact separator conventions vary, so a real implementation must state which interval owns equality.</p>
+<pre class="diagram">Prepared B+ routing page: [10 | 20]
+        /                    |                    \
+[5,6,7] --next--&gt; [10,12,17] --next--&gt; [20,30] --next--&gt; NULL
+Before range [7,20]: choose first leaf using separators
+After scan: output=[7,10,12,17,20], stop before key 30
+No page keys or leaf links changed.</pre>
+<p>For the example B+ scan, separators are the minimum keys of the next leaf. Query values below 10 begin in the first leaf. Values from 10 through below 20 begin in the second. Values at least 20 begin in the third.</p>
+<p>To scan an inclusive range, first locate its lower-bound leaf. Skip keys smaller than the lower bound, emit matching records, then follow next links. Stop as soon as a key exceeds the upper bound. This avoids returning to the root for every consecutive record.</p>
+<p>A B+ leaf split usually copies a separator upward while keeping its record key in the leaves. The B-tree split shown earlier instead removes the middle key from the child pages and moves it into the parent. Confusing those actions can lose or duplicate records. The distinction matters more than the similar-looking page diagrams.</p>
+
+<h2 id="edge-cases">Height, occupancy and resource bounds</h2>
+<p>With minimum fan-out t at least two, height grows as O(log<sub>t</sub> n). A search needs that many page levels. CPU work also depends on the within-page search method. With linear scans it is O(t log<sub>t</sub> n); treating fixed page capacity as a constant gives logarithmic time in n.</p>
+<p>Insertion visits one downward path and may split pages along it. A split moves O(t) keys and links, so CPU work has the same page-capacity factor. Recursive call space is proportional to tree height. Stored pages use O(n) total key capacity for a fixed minimum degree with occupancy guarantees.</p>
+<p>The empty example uses one leaf root with count zero. Inserting the first key fills that root without creating child pages. A full root is legal before insertion; it is split when the next distinct key arrives. The root's occupancy exception prevents an otherwise valid small tree from violating non-root rules.</p>
+<p>A production page allocator needs a failure policy when storage is full. The fixed arena example instead proves a small capacity bound from twelve insertions and does not perform file I/O. Wider key ranges do not change its page count, but a larger insertion limit requires revisiting that arena bound. Never present fixed demonstration capacity as a general B-tree limit.</p>
+<p>Deletion may borrow keys from siblings or merge pages to restore minimum occupancy. Those operations are beyond this introduction's insertion curriculum. Ordinary BST record deletion cannot maintain wide-page occupancy. Likewise, a B+ leaf chain requires repair whenever leaves split or merge.</p>
+
+<p>For a B+ range query, let q be the number of leaf pages scanned after the initial descent. Page reads cost O(h+q), with O(1) cursor storage when results are streamed. CPU work also includes inspected and emitted keys. The B-tree range practice instead walks every page in order, taking O(n) time and O(h+1) recursive space; it does not use B+ leaf links.</p>
+
+<h2 id="common-mistakes">Keep page conventions explicit</h2>
+<h3>Using order and minimum degree interchangeably</h3><p>Order four and minimum degree two describe the same maximum capacity here, but their numeric meanings differ. Write max children and max keys beside your definition. This makes an exam answer readable even when another textbook uses different vocabulary.</p>
+<h3>Moving a B+ record out of its leaf</h3><p>The leaf layer must retain all records under the chosen B+ convention. An internal separator is a routing copy. The B-tree middle-key move cannot be copied unchanged into a B+ leaf split.</p>
+<h3>Splitting into an already full parent</h3><p>split_child inserts one key and one child link into its parent. The top-down algorithm ensures that parent is non-full. Without that invariant, array shifting would write beyond the page's capacity.</p>
+
+<h2 id="version-notes">C17 page indices</h2>
+<div class="callout version"><p>The B-tree model uses C17 arrays and integer child indices. These indices simulate references between memory pages, not actual disk addresses. The fixed arena has automatic process lifetime; it creates no heap records requiring free and makes no assumptions about filesystem page sizes.</p></div>
+
+<h2 id="summary">Wide nodes reduce storage-level depth</h2>
+<p>B-trees use page occupancy and splits to keep all leaves at one depth. B+ trees keep records in linked leaves so ranges can advance sequentially. Next, <a href="topic:ds-trie">tries</a> organize search paths by characters rather than numeric key comparisons.</p>

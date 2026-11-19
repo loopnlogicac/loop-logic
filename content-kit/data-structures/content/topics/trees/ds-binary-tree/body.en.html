@@ -1,0 +1,73 @@
+<h2 id="introduction">Choose where the child links live</h2>
+<p class="lead">Imagine the seats in a small tournament chart. Each box has a left and right position below it. You can number every possible box, or give each occupied box two arrows. These become the array and linked representations of a binary tree.</p>
+<p>A <dfn>representation</dfn> is the way you arrange a logical structure in memory. The stored keys do not determine that arrangement by themselves. You also need rules describing which keys are children of which parents. Two programs can receive identical keys and build different shapes if their input conventions differ.</p>
+<p>This lesson builds a complete tree from keys supplied in level order. It also shows sparse array positions explicitly. Neither builder compares keys to impose search ordering. For the naming of root, leaf and height, revisit <a href="topic:ds-tree-terminology">tree terminology</a>.</p>
+
+<h2 id="syntax">Implicit positions and explicit pointers</h2>
+<p>In a zero-based array representation, the root occupies position zero. For an occupied index i, its potential left child is 2*i+1 and its potential right child is 2*i+2. A non-root node's parent is (i-1)/2 using integer division. The root needs a separate no-parent case.</p>
+<pre class="diagram">Complete tree:            Contiguous array:
+        [8]              index  0  1   2  3  4  5
+       /   \             key   8  3  10  1  6  9
+     [3]   [10]
+     / \    /
+   [1] [6] [9]
+Before append: index 6 absent; 10 has no right child
+After append:  index 6 holds 14; 10.right is position 6</pre>
+<p>For a complete tree with n keys, every index from zero through n-1 is occupied. A child exists exactly when its computed index is less than n. Append uses the next index and takes O(1) work when spare capacity exists. Array growth can require O(n) copying, as in the <a href="topic:ds-dynamic-array">dynamic array</a>.</p>
+<pre><code class="language-c">typedef struct Node {
+    int key;
+    struct Node *left, *right;
+} Node;</code></pre>
+<p>A linked node stores the key and two pointers. A NULL child pointer means that position is empty. The pointer named root identifies the first record, or is NULL for an empty tree. Records may live anywhere in allocated memory; their addresses need not follow key order.</p>
+<p>The array formulas change for one-based numbering: children become 2*i and 2*i+1, and parent becomes i/2. Both conventions work, but mixing them loses nodes. Write the root index beside any diagram before translating relationships into arithmetic.</p>
+
+<h2 id="how-it-works">Build the shape from level-order input</h2>
+<p>The complete-tree builder reads n in the range zero through twelve, then n keys from -99 through 99. It first saves those values in a temporary array. Reading everything before allocating nodes avoids a partly built tree when a key is missing. Only after successful reading does build begin.</p>
+<p>The build function receives the current array index i. If i lies outside the active range, it returns NULL. Otherwise it allocates one Node, writes the key, then builds the two child positions recursively. Returning that record publishes the completed local subtree to its caller.</p>
+<table class="ref"><caption>Building six positions</caption><thead><tr><th scope="col">Index</th><th scope="col">Key</th><th scope="col">Children</th><th scope="col">Result</th></tr></thead><tbody><tr><td>0</td><td>8</td><td>1, 2</td><td>Root record</td></tr><tr><td>1</td><td>3</td><td>3, 4</td><td>Two linked leaves</td></tr><tr><td>2</td><td>10</td><td>5, 6</td><td>Left leaf and NULL right</td></tr><tr><td>5</td><td>9</td><td>11, 12</td><td>Both outside n</td></tr></tbody></table>
+<p>Allocation can fail. The ok flag remembers failure without discarding records already returned by earlier calls. Remaining calls stop creating nodes. The main function still receives the partial root and passes it to destroy, which releases every reachable record before returning failure.</p>
+<p>Building n linked records takes O(n) time and O(n) node storage. The recursive calls add O(log n) space for this complete shape. A general arbitrary-shape builder can instead need O(h+1) call space. Allocation time is a library cost beyond the pointer assignments described here.</p>
+<pre class="diagram">Linked leaf creation:
+Before: parent.right ---&gt; NULL
+Local:  new ---&gt; [key=14 | left=NULL | right=NULL]
+After:  parent.right ---&gt; [14 | NULL | NULL]
+Release:
+Before: root ---&gt; [8 | left ---&gt; subtree | right ---&gt; subtree]
+After:  both child subtrees released, then record 8 released, root discarded</pre>
+<p>To represent a sparse shape in an array, keep a separate present flag for each possible position. The value zero cannot identify a hole if zero is legal data. Example three therefore stores occupancy independently from keys. It also rejects a child whose parent position is absent.</p>
+<p>Sparse input may name child positions before their parents. Validate relationships after all pairs have been read. An occupied node with an absent parent is an orphan, so those pairs do not describe a rooted tree. With the fixed fifteen-position bound, checking every position costs O(15), or O(capacity) in general.</p>
+<p>An explicit child-index table is another array-based option. Each record stores indices for its left and right children, with a special missing index. This preserves sparse shapes without enormous gaps. Its links behave like pointers, but indices refer to records inside the same array.</p>
+
+<h2 id="examples">See both memory layouts</h2>
+<p>Read the output of the linked example as a walk through the finished shape. Inorder output need not be sorted because the input convention preserves positions. The array example prints potential relatives only when those positions exist.</p>
+
+<h3>Build linked nodes from level order</h3>
+<p>Index 5 becomes the left child of index 2. Missing index 6 becomes a NULL right link.</p>
+<div data-example="ex-1"></div>
+
+<h3>Find relatives in an array</h3>
+<p>The root has no parent. The last three occupied positions are leaves; absent positions print -1.</p>
+<div data-example="ex-2"></div>
+
+<h3>Keep holes separate from stored values</h3>
+<p>A zero key and a negative key remain ordinary data. The present array records occupancy independently.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Choose storage for the expected shape</h2>
+<p>A complete array packs keys tightly and avoids two pointers per key. Neighboring positions can also share cache lines. Moving the array does not change implicit child indices. However, code holding raw pointers into its old storage must not keep using them after a resize.</p>
+<p>A right-only chain occupies implicit indices 0, 2, 6, 14 and 30. Five records already demand positions through thirty. Adding more nodes makes the highest position grow exponentially with chain length. Linked nodes use one record per occupied position, so they are a better fit for this sparse shape.</p>
+<p>Neither representation makes every operation constant time. Following a known child link is O(1), but locating an arbitrary unsorted key can visit all n nodes. Mirroring a linked tree swaps both pointers at each record and takes O(n) time. Its recursion adds O(h+1) space, while the existing records stay allocated.</p>
+<p>Deleting a general binary-tree node needs a stated policy about its children. Removing an arbitrary occupied array position leaves a hole unless you repair the shape. Removing a linked record without saving its subtrees loses access to them. The later BST lesson supplies one specific deletion policy based on key ordering.</p>
+
+<p>When an exam supplies a byte address and key width, array location is base plus index times width. Those widths are assumptions for that question. A linked node needs a separately supplied record layout before you can calculate its member addresses; the key-array formula does not describe pointer-based records.</p>
+
+<h2 id="common-mistakes">Keep shape separate from data</h2>
+<h3>Assuming input order means search-tree insertion</h3><p>The keys 8, 10, 3 place 10 on the left in a complete level-order build. That is valid for a binary tree. A BST insertion routine would choose different links, so always state the input interpretation.</p>
+<h3>Following a computed child beyond the active array</h3><p>The formula gives a position, not proof that a child exists. Check that position against n for complete storage. For sparse storage, check capacity and occupancy before reading its key.</p>
+<h3>Releasing a parent first</h3><p>Once you free a linked record, you cannot read its child pointers. Release its left and right subtrees before freeing the record. Destroying the whole tree costs O(n) time and leaves no live records.</p>
+
+<h2 id="version-notes">Portable C17 node storage</h2>
+<div class="callout version"><p>The Node type and builders use standard C17 allocation. Allocate with <code>sizeof *p</code> so the requested size follows the pointed-to type. Structure padding and pointer width vary by machine; no output assumes a fixed record size or prints real addresses.</p></div>
+
+<h2 id="summary">Representation defines the available moves</h2>
+<p>Array formulas are compact for complete shapes; child links handle sparse shapes directly. Both need clear occupancy and ownership rules. Continue with <a href="topic:ds-tree-traversals">tree traversals</a> to visit every stored node in useful orders.</p>

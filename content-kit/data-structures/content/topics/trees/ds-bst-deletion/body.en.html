@@ -1,0 +1,97 @@
+<h2 id="introduction">Remove a record without losing its neighbors</h2>
+<p class="lead">A roll number can leave a registry even when several other records hang below its tree node. Erasing the box immediately would lose those child links. BST deletion first decides who should take the box's place, then repairs the incoming link, and finally releases the unwanted record.</p>
+<p>The key problem is ownership. The parent, or the caller's root variable, owns the incoming pointer to a subtree. A deletion routine must return the subtree's new root. That returned pointer may equal the old root, refer to a surviving child, or be NULL.</p>
+<p>You already know <a href="topic:ds-binary-search-tree">BST ordering, search and minimum</a>. Deletion uses those same comparisons to reach a target. It then handles zero, one or two children separately. This lesson retains the unique-key policy, so each successful request removes exactly one stored key.</p>
+<p>Think about links before thinking about free. Freeing memory does not automatically repair other pointers. A parent that still points to the old address becomes unsafe. The diagrams below show the intended before and after state for every deletion case.</p>
+
+<h2 id="syntax">Return the replacement subtree root</h2>
+<pre><code class="language-text">erase(root, key):
+    if root is missing: return NULL
+    if key is smaller: root.left = erase(root.left, key)
+    if key is larger: root.right = erase(root.right, key)
+    if equal and at most one child: save child, free root, return child
+    if equal and two children:
+        next = minimum(root.right)
+        root.key = next.key
+        root.right = erase(root.right, next.key)
+    return root</code></pre>
+<p>The caller writes root = erase(root,key). Inside the function, child owners similarly assign the returned pointer to their left or right field. This rule is needed even when most requests preserve the root record. Root deletion is not a special exception hidden elsewhere.</p>
+<p>There are two independent events in a two-child removal: a key changes location, and a physical record disappears. Keep them separate in your trace. The original target record usually survives with its successor key. The record that previously held that successor key is the one eventually freed.</p>
+
+<h2 id="how-it-works">The three child-count cases</h2>
+<h3>Case one: no children</h3>
+<pre class="diagram">Before: parent.left ---&gt; [3 | NULL | NULL]
+After:  parent.left ---&gt; NULL
+Released: the record that held 3</pre>
+<p>A leaf owns no child subtrees. Save NULL as its replacement, release the leaf record, and return NULL. The parent assignment removes its incoming link. If this leaf was the whole tree, the caller receives NULL and the tree becomes empty.</p>
+<p>The removal itself uses O(1) pointer work. Finding the leaf can still require a full root-to-leaf search. Do not confuse the local edit with the cost of the whole operation. A missing target performs the search but never enters this release case.</p>
+<h3>Case two: exactly one child</h3>
+<pre class="diagram">Before: root ---&gt; [8 | left ---&gt; 3 | right=NULL]
+                     [3 | left ---&gt; 1 | right ---&gt; 6]
+Saved:  child ---&gt; 3
+After:  root ---&gt; [3 | left ---&gt; 1 | right ---&gt; 6]
+Released: only the old 8 record; subtree 3 stays alive</pre>
+<p>Save the non-NULL child pointer before free. The child already satisfies all bounds imposed by the deleted node's ancestors. Promoting it therefore preserves the BST property. Return that saved pointer so the actual owner can bypass the deleted record.</p>
+<p>Calling destroy on the deleted node would be wrong here. Destroy releases an entire owned subtree, including the child that must survive. Use free on the single detached record. Its former child fields do not own records after the replacement link has taken over that responsibility.</p>
+<h3>Case three: two children</h3>
+<pre class="diagram">Before:           [8]
+                 /   \
+               [3]   [10]
+                     /  \
+                   [9]  [14]
+Copy successor: record 8 changes key to 9
+Unlink old 9:    10.left ---&gt; NULL
+After:            [9]
+                 /   \
+               [3]   [10]
+                         \
+                         [14]</pre>
+<p>Choose the minimum node in the right subtree. Its key is greater than every key in the left subtree. It is no greater than any other right-subtree key. Copying that key into the target preserves the order once the old successor record is removed.</p>
+<p>The successor cannot have a left child, because that child would contain a smaller right-subtree key. It can have a right child. Its own removal therefore reduces to the zero-child or one-child case. That is why the recursive erase call will not require another two-child replacement for this successor.</p>
+<p>After the copy, the key briefly exists in two records. This is a temporary intermediate state inside the operation. Do not stop the algorithm there or expose it as a completed valid set. The next erase removes the old successor occurrence.</p>
+<div data-lab="bst-delete"></div>
+<p>The lab starts from the same insertion-order BST as example one. It displays comparisons, successor walking, key replacement, owner-link repair and physical deletion as separate actions. The delete action occurs only after no root or child link points to that record. This makes dangling references visible as a concrete link problem.</p>
+<p>Suppose the successor is the right child itself. Then the recursive removal updates the target's right link directly. Suppose the successor lies several levels farther left and owns a right child. Its parent must adopt that child through its left link; the rest of the right subtree remains intact.</p>
+
+<h2 id="examples">Trace the removed record</h2>
+<p>Example one removes a two-child root. Example two promotes the only child of a root. The drain example repeatedly removes minima until no root remains. Before each run, predict which physical record is freed and which pointer receives its replacement.</p>
+
+<h3>Remove a key and repair the root link</h3>
+<p>The root has two children. Its key becomes 9, then the old node containing 9 is unlinked and freed.</p>
+<div data-example="ex-1"></div>
+
+<h3>Delete a one-child root</h3>
+<p>The root link receives the saved child pointer. Node 3 stays alive after node 8 is freed.</p>
+<div data-example="ex-2"></div>
+
+<h3>Drain a tree through its minimum</h3>
+<p>Every minimum lacks a left child, so each removal uses the zero-child or one-child case. The final root is NULL.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs, failure cases and repeated requests</h2>
+<p>A deletion search follows one path of length at most h+1. The successor search stays within the right subtree and does not introduce a whole-tree scan. Total time is O(h+1). Recursive call space is also O(h+1); deletion allocates no new node records.</p>
+<p>On a balanced tree those bounds become O(log n), but an ordinary BST can have height n-1. A chain therefore permits O(n) deletion time and call depth. Removing a node does not automatically rebalance its ancestors. The upcoming AVL lesson introduces that separate responsibility.</p>
+<p>Deleting from an empty tree returns NULL without calling free. Deleting the only node also returns NULL, but frees one record first. Deleting an absent key leaves every node and link unchanged. Repeating a successful deletion request therefore reports no further removal the second time.</p>
+<p>The linked BST has no capacity-full case in deletion. A request releases storage rather than acquiring it. The input programs still enforce their twelve-key limit to keep traces manageable. Their failure paths destroy the remaining tree if a later query cannot be read.</p>
+<p>Deletion can invalidate pointers held by outside code. If a caller saved a pointer to the target record, two-child deletion may keep that address but change its key. A saved pointer to the successor record becomes invalid after release. This lesson exposes keys as queries and avoids promising stable record identities.</p>
+<p>If a real node holds more than an integer key, replacement needs more thought. Copy the complete logical record, or deliberately move ownership of its payload. Copying only a key while leaving unrelated data can attach one student's marks to another roll number. Shared or heap-owned payloads also need an explicit ownership policy.</p>
+<p>Whole-tree cleanup remains postorder: destroy left, destroy right, free current. Ordinary deletion must not run that cleanup on the promoted child. The example programs call destroy only on the final surviving root. That separates single-record removal from end-of-program ownership release.</p>
+<p>The practice pruning problem removes only leaves from the original shape. It tests leaf status before recursing, so newly exposed leaves survive. The trimming problem instead removes every key outside an interval after trimming children. Reading those policies carefully matters as much as recognizing the function name.</p>
+
+<h2 id="common-mistakes">Repair the pointer that owns the subtree</h2>
+<h3>Ignoring the returned root</h3><p>Writing erase(root,key) without assignment loses a promoted root or keeps an address that has been freed. Always reconnect the returned pointer at the current owner. Apply that rule recursively to both child fields.</p>
+<h3>Reading the child after free</h3><p>The expression free(root) ends the record's lifetime. A later root.left access has undefined behavior, even if the old bits look unchanged. Save the live child pointer first, then release the record and return the saved value.</p>
+<h3>Replacing with any larger key</h3><p>The maximum in the right subtree may leave smaller keys below the new root's right side. The right minimum is special because all other right keys remain greater. Use minimum(root.right), rather than a random right descendant.</p>
+<h3>Forgetting the old successor</h3><p>Copying a key is not a deletion. Without the second erase call, the node count stays unchanged and a duplicate remains. A correct two-child request decreases size by exactly one.</p>
+
+<h2 id="best-practices">Audit an erase operation by hand</h2>
+<p>Draw a small box for each allocated record, including its child fields. Circle the record that will be freed. Draw the replacement owner link before crossing out that record. Then check that every surviving record has one incoming tree link, except the root.</p>
+<p>Test a deep successor with a right child, such as keys 8,3,12,10,14,9,11 and deletion 8. Also test a direct-right successor, a singleton and a missing key. After each request, count records and compare inorder keys with the original set minus the target. These checks expose different failure modes.</p>
+
+<p>To exercise a successor with a right child, insert 8,3,15,10,20,12 and delete 8. The successor is 10, which owns right child 12. Copy 10 to the old root record, repair 15.left to point at 12, then release the old 10 record. The resulting inorder is 3,10,12,15,20. This differs from the earlier leaf-successor example: replacing the old successor with NULL here would lose the still-needed node 12.</p>
+
+<h2 id="version-notes">C17 lifetime rules</h2>
+<div class="callout version"><p>C17 permits free(NULL), but that does not make a freed non-NULL pointer safe to read or free again. The examples release each physical record once. There is no required relationship between its former address and any later allocation.</p></div>
+
+<h2 id="summary">Separate replacement from release</h2>
+<p>Zero-child and one-child cases replace an owner link directly. Two-child deletion copies a carefully chosen successor and removes its old record. Next, <a href="topic:ds-avl-tree">AVL trees</a> preserve short search paths through height checks and rotations.</p>
