@@ -1,0 +1,60 @@
+<h2 id="introduction">একই গঠনের উত্তর মেলাও</h2>
+<p class="lead">দুই office department ID list দিল, একটি student থেকে, অন্যটি teacher। সব occurrence,প্রতি ID একবার,শুধু shared ID বা দ্বিতীয়তে নেই এমন ID চাইতে পারো। একই input-এ চার আলাদা প্রশ্ন।</p>
+<p><dfn>Set operation</dfn> corresponding position-এর column মিলিয়ে পুরো result মেলায়। Join-এর মতো related record পাশে নয়, একই shape-এর row যোগ,ছেদ বা বিয়োগ। Compatible list স্তরে রাখার পরে repeat-এর আচরণ ভাবো।</p>
+<p>SQL result-এ duplicate সাধারণত চলে, একে bag বা multiset বলে। Mathematical set-এ প্রতি value একবার। Attendance,মানুষের count বা আর্থিক event-এ কোন model নাও জরুরি।</p>
+<p>আট student চার teacher মিলে বারো department occurrence, distinct মাত্র তিন। বারো আর তিন দুটোই অর্থপূর্ণ, record নাকি department identity গুনছ বলো।</p>
+<h2 id="syntax">Operator-এর আগে column মেলাও</h2>
+<p>দুই query-তে column count এক, position-পিছু compatible type চাই। Name matching চালায় না। প্রথমে student_id তারপর section_id হলে দ্বিতীয়তেও একই অর্থের ক্রম।</p>
+<p>Output name প্রথম block থেকে। ভালো alias দিয়ে final ORDER BY-তে নাও। শেষ sort পুরো result-এর; input block sort final order promise নয়।</p>
+<p>ALL না বললে UNION DISTINCT। দুই input জুড়ে complete duplicate বাদ। UNION ALL সব occurrence রাখে। Student-এ department চারবার teacher-এ দুবার হলে UNION এক, ALL ছয়।</p>
+<p>INTERSECT দুইপাশে থাকা row, EXCEPT left-এ আছে right-এ নেই। Default DISTINCT। ALL count-rule-এ multiplicity রাখে, arbitrary duplicate copy নয়।</p>
+<p>Mixed operator-এ বন্ধনীতে grouping বলো। MySQL-এ INTERSECT-এর precedence UNION-EXCEPT-এর বেশি। গুরুত্বপূর্ণ eligibility rule বুঝতে পাঠকের precedence মুখস্থ লাগবে না; port করতেও ভালো।</p>
+<pre><code class="language-sql">(&lt;left_query&gt;)
+INTERSECT
+(&lt;right_query&gt;)
+ORDER BY &lt;combined_columns&gt;;</code></pre>
+<h2 id="how-it-works">Complete row আর occurrence গুনো</h2>
+<p>INTERSECT DISTINCT দুই input-এ থাকা প্রতিটি complete row একবার। Registered আর recorded result-এ একই student থাকলে আসে; বহু result হলেও distinct intersection-এ এক ID।</p>
+<p>EXCEPT DISTINCT distinct left থেকে right member বাদ। Enrollment minus result-এ Sadia 107। Fahim enrollment-এই নেই, তাই candidate নয়। Students minus enrollment অন্য প্রশ্ন, Fahim পায়।</p>
+<p>INTERSECT ALL দুই count-এর ছোটটি। Dept 1 student-এ চার teacher-এ দুই, থাকে দুই। 2 আর 3 student-এ দুই teacher-এ এক, থাকে এক করে। মোট চার row।</p>
+<p>EXCEPT ALL left count থেকে right বাদ, minimum zero। Left তিন CSE right দুই হলে এক; উল্টে কিছু নেই। Difference directional, compatible union-intersection membership symmetric।</p>
+<p>Set duplicate comparison দুই NULL equal ধরে। সাধারণ <code>NULL = NULL</code> এখনও unknown। Town উদাহরণে missing আর Dhaka দিয়ে shared NULL intersection-এ একবার দেখায়।</p>
+<p>সব projected column মেলে। Department-এর পাশে student_name দিলে dedup identity বদলায়। দুই CSE student-এর নাম আলাদা হলে complete row আলাদা। আগে projection, তারপর operation; wide-row DISTINCT নিজে narrow identity প্রশ্ন নয়।</p>
+<table class="ref">
+<caption>দুইপাশের department occurrence</caption>
+<thead><tr><th scope="col">Department</th><th scope="col">Student</th><th scope="col">Teacher</th><th scope="col">INTERSECT ALL</th><th scope="col">EXCEPT ALL</th></tr></thead>
+<tbody>
+<tr><td>CSE</td><td>4</td><td>2</td><td>2</td><td>2</td></tr>
+<tr><td>MAT</td><td>2</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>EEE</td><td>2</td><td>1</td><td>1</td><td>1</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Native আর সমতুল্য rewrite তুলনা</h2>
+<p>Department union একবার directory, একবার contribution list ভাবো। Native intersection-difference-এর পাশে EXISTS। একইরকম report name দেখে নয়, actual ID আর population মিলাও।</p>
+<p>Enrollment report ইচ্ছা করে one-column। Nullable multi-column rewrite-এ প্রতিটি column null-safe চাই। DISTINCT বাদ দিলে left repeat থাকবে, default native operator-এর emulation নয়।</p>
+<h3>Distinct আর repeated membership</h3>
+<p>UNION তিন department, ALL বারো row, আট student চার teacher আলাদা contribute করে।</p>
+<div data-example="ex-1"></div>
+<h3>Enrollment-result দুটোই আছে</h3>
+<p>দুই version 101..106 দেয়। পুরোনো EXISTS version-এর DISTINCT repeated enrollment সরায়।</p>
+<div data-example="ex-2"></div>
+<h3>Recorded mark-ধারী বাদ</h3>
+<p>107 enrolled, result নেই। Fahim left-এই নেই, difference-এ আসবে না।</p>
+<div data-example="ex-3"></div>
+<h3>NULL match আর multiplicity</h3>
+<p>প্রথম intersection NULL-Dhaka। ALL-এ দুই CSE,এক MAT,এক EEE।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Membership আর pair মেশাবে না</h2>
+<h3>Pair count আর set count আলাদা</h3>
+<p>সঠিক projection-duplicate handling-এই inner join intersection হয়। দুইপাশে repeat-এ সব pair আসে: তিন left দুই right-এ ছয়, INTERSECT ALL দুই। প্রশ্ন আলাদা।</p>
+<p>Matched-side key non-NULL হলে anti-join distinct difference করতে পারে। Nullable projection-এ NOT EXISTS সহজ। NULL-NULL match চাইলে <code>&lt;=&gt;</code> নাও। Ordinary equality-তে কিছু rewrite missing value ভুল রেখে দেয়।</p>
+<h3>Duplicate removal অর্থের পছন্দ</h3>
+<p>বড় output ছোট করতে ALL-কে UNION কোরো না। একই displayed field-এর দুই আসল transaction দুটোই চাইতে পারে। আবার এক town একবার directory-তে ALL ভুল। Cost-এর আগে অর্থ।</p>
+<p>Type মিললেই unrelated মান নয়। Mark আর product stock compatible numeric list হলেও অর্থহীন। Column compatibility technical শর্ত, report যুক্তিসংগত তার evidence নয়।</p>
+<h2 id="best-practices">Population আর repetition বলো</h2>
+<p>প্রতি input-এর filter-projection এক বাক্যে, তারপর repeat জরুরি কি না। Eligibility-তে membership, event accounting-এ প্রতিটি occurrence সাধারণত জরুরি। Long result-এর আগেই ভুল ধরা যায়।</p>
+<p>Mixed operation বন্ধনীতে, পুরো শেষে এক ORDER BY। Displayed row আলাদা করার মতো column রাখো। Identical duplicate-এ extra tie লাগে না, স্থান বদলালেও display এক।</p>
+<h2 id="version-notes">Native syntax-এর সীমা</h2>
+<p>UNION-ALL পুরোনো MySQL-এও। Native INTERSECT-EXCEPT ও ALL-এ 8.0.31+। এখানে native example তাই ওই version চায়। আগের 8.0-তে দেখানো DISTINCT + EXISTS/NOT EXISTS, উপযুক্ত NULL match-সহ।</p>
+<h2 id="summary">Combination-এর আগে identity</h2>
+<p>Set operator পুরো projected row তুলনা করে, ALL count মেলানো বদলায়। Directional difference-এ candidate population স্পষ্ট। পরের <a href="topic:db-views">view</a> query interface-কে নাম দেয়, update আর access-এর প্রশ্নও আনে।</p>

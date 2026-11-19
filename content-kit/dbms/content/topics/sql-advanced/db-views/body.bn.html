@@ -1,0 +1,60 @@
+<h2 id="introduction">দরকারি query-র স্থির নাম</h2>
+<p class="lead">Librarian বারবার member ID-name চায়, email নয়। একই projection না লিখে নাম দিয়ে table-এর মতো query করো। View interface দেয়, আসল member record নিজের table-এ থাকে।</p>
+<p><dfn>View</dfn> stored query definition। সাধারণ MySQL view আলাদা result snapshot রাখে না। Query করলে definition দিয়ে data আসে। Base-এ নাম বদলালে পরের view query-তেও দেখা যায়।</p>
+<p>View report সহজ, public-sensitive column আলাদা, controlled update route-ও হতে পারে। Readable মানেই updatable নয়; view-এ column লুকালেই অন্য access revoke হয় না। আলাদা পরীক্ষা চাই।</p>
+<p>একই রেকর্ড দেখার named window ভাবো। জানালায় কী দেখাবে বদলালে নতুন student copy হয় না। Visible column,population,operation আর security context বলো।</p>
+<h2 id="syntax">Interface স্পষ্ট define</h2>
+<p>CREATE VIEW নাম আর SELECT definition দেয়। Explicit column আর meaningful alias। student_directory-তে ID-name-department, email বাদ। Consumer সব student field নয়, intended shape জানে।</p>
+<p>Controlled security interface-এর উদাহরণ ছাড়া SQL SECURITY INVOKER। Underlying access caller privilege-এ। DEFINER-এ view owner privilege-এ। কোনোটিই view-এ access-এর grant বাদ দেয় না।</p>
+<p>Simple filtered view-এ WITH CHECK OPTION। View দিয়ে write করলে predicate-এর মধ্যে থাকতে হবে। CSE-only-তে department 1 থেকে 2 করলে বাইরে যায়, তাই reject।</p>
+<p>CASCADED default, underlying view-এর প্রাসঙ্গিক condition-ও দেখে। LOCAL current condition দেখে, সঙ্গে underlying-এর নিজস্ব check option মানে। Stacked view-এ সব definition দেখো, এক filter সব write পথ রক্ষা ধরে নয়।</p>
+<pre><code class="language-sql">CREATE SQL SECURITY INVOKER VIEW &lt;view_name&gt; AS
+SELECT &lt;visible_columns&gt; FROM &lt;base_table&gt;
+WHERE &lt;visible_population&gt;
+WITH CASCADED CHECK OPTION;</code></pre>
+<h2 id="how-it-works">Live result আর update mapping আলাদা</h2>
+<p>Simple projection প্রতি visible row-কে এক base row-তে মেলায়। View-এ student_name update একই base column বদলায়। Primary key দেখালে target সহজ, কিন্তু শুধু key থাকলেই সব view writable নয়।</p>
+<p>Aggregate-এ mapping ভাঙে। Enrollment total row তিন registration বোঝাতে পারে; count চার করলে কোন নতুন enrollment চাই জানা যায় না। তাই GROUP BY-aggregate view non-updatable; DISTINCTসহ অন্য restriction-ও আছে।</p>
+<p>কিছু joined view MySQL rule-এ সীমিত update দেয়, সব join writable নয়। Permitted base-এ mapping ঠিক চাই। শুরুতে single-table maintenance interface review সহজ।</p>
+<p>Updatable হলেই সবভাবে insertable নয়। Required base column default ছাড়া বাদ থাকলে row সম্পূর্ণ হয় না। Insert promise-এর আগে NOT NULL,default,generated column,constraint দেখো।</p>
+<p>Stock zero-তে product 1 view থেকে যায়, rollback-এ ফেরে। REFRESH লাগে না; stored definition, আলাদা maintained result table নয়।</p>
+<p>CHECK OPTION সব base change বাঁধে না। Authorized direct students update CSE থেকে সরাতে পারে। Workflow boundary চাইলে privilege-এ অনুপযুক্ত direct write সরাও।</p>
+<table class="ref">
+<caption>পড়া,লেখা,ক্ষমতা আলাদা review</caption>
+<thead><tr><th scope="col">Definition choice</th><th scope="col">কী নিয়ন্ত্রণ করে</th></tr></thead>
+<tbody>
+<tr><td>Explicit projection</td><td>দেখানো column</td></tr>
+<tr><td>WHERE</td><td>দেখানো base row</td></tr>
+<tr><td>WITH CHECK OPTION</td><td>View write predicate ছাড়বে কি না</td></tr>
+<tr><td>SQL SECURITY</td><td>কার underlying privilege</td></tr>
+</tbody>
+</table>
+<h2 id="examples">একই data পড়ো,বদলাও,আবার দেখো</h2>
+<p>Directory-তে দুই MAT student। পরের view department রেখে নাম বদলায়। Grouped view reporting-only, stock view transaction-rollback-এর live প্রভাব দেখায়।</p>
+<p>Update শিখতে base-view দুটো দেখো, shared storage বোঝো। একই column নামেই একই update আচরণ নয়, definition ঠিক করে।</p>
+<h3>Public student directory-র নাম</h3>
+<p>Rafi-Fahim, email-town ছাড়া। INVOKER caller permission নেয়।</p>
+<div data-example="ex-1"></div>
+<h3>Filtered view দিয়ে update</h3>
+<p>Base row বদলায়। এই view দিয়ে department 2 করতে CHECK OPTION আটকাত।</p>
+<div data-example="ex-2"></div>
+<h3>Read-only enrollment summary</h3>
+<p>Registered student-এর সাত summary। এক row বহু base হতে পারে বলে GROUP BY-COUNT update আটকায়।</p>
+<div data-example="ex-3"></div>
+<h3>Live data আর rollback</h3>
+<p>Zero stock-এ product 1 নেই, rollback-এ ফেরে। View গতকালের result রাখে না।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">ছোট column list পুরো security নয়</h2>
+<h3>Direct-table route বন্ধ</h3>
+<p>Name-only view-এর সঙ্গে students SELECT-ও দিলে email এখনও পড়ে। View convenience exposure কমালেও broad grant boundary ভাঙে। Table,view,database,active role মিলিয়ে effective permission দেখো।</p>
+<p>Definer view caller-কে base grant ছাড়া approved data দিতে পারে। Owner-এ শুধু দরকারি privilege। সর্বক্ষম owner খারাপ definition বা unsafe change-এর ফল বাড়ায়। Owner সরালে interface ভাঙতে পারে, plan রাখো।</p>
+<h3>Query-কে history ভেবো না</h3>
+<p>View-এর ভেতর ORDER BY দিলেই সব consumer same order নয়। Outer query-optimizer বদলায়। Final SELECT-এ order দাও। View relation, printed layout নয়।</p>
+<p>View old semester freeze করে না। Date filter বর্তমান qualifying row, আগের মান copy নয়। History চাইলে snapshot/history storage design। Current query old_results নাম দিলেই history নয়।</p>
+<h2 id="best-practices">Definition interface contract</h2>
+<p>Public view-এ stable name আর explicit column, SELECT * নয়। Creation-এ star expand হয়, পরে table change-এ expectation অদ্ভুত হতে পারে। Explicit projection exposure-migration review সহজ।</p>
+<p>Maintenance-এ IS_UPDATABLE metadata দেখো, actual intended operation test-ও। Insertability base-required আর constraint-এও নির্ভর। DROP VIEW definition সরায়, base row নয়; DELETE থেকে আলাদা।</p>
+<h2 id="version-notes">MySQL security-update rule</h2>
+<p>8.0/8.4-তে feature আছে, CHECK-এ 8.0.16+। Ordinary view native materialized নয়। Stored query,transaction visibility,write permission,definer ownership আলাদা, দেখতে table হলেও।</p>
+<h2 id="summary">Query-র নাম আর authority দেখো</h2>
+<p>ভালো view-এ projection,population,update policy স্পষ্ট। SQL SECURITY-র সঙ্গে boundary-মেলা grant। পরের <a href="topic:db-indexes">index</a> logical result না বদলে access path দ্রুত করে।</p>
