@@ -15,6 +15,7 @@ import type { TutorialService } from './tutorials.ts';
 import { getCourse } from '../content/courses.ts';
 import { getVideo } from '../content/videos.ts';
 import { courseVideoOrder } from './watch.ts';
+import { NoticeService } from './notices.ts';
 import type { VideoExtrasService } from './video-extras.ts';
 
 type Json = Record<string, any>;
@@ -33,9 +34,11 @@ export class ClassService {
   private readonly extras: VideoExtrasService;
   private readonly minGroup: number;
   private readonly now: () => Date;
+  private readonly notices: NoticeService;
 
-  constructor(store: Store, tutorials: TutorialService, extras: VideoExtrasService, opts: { minGroup?: number; now?: () => Date } = {}) {
+  constructor(store: Store, tutorials: TutorialService, extras: VideoExtrasService, opts: { minGroup?: number; now?: () => Date; notices?: NoticeService } = {}) {
     this.store = store;
+    this.notices = opts.notices ?? new NoticeService(store);
     this.tutorials = tutorials;
     this.extras = extras;
     this.minGroup = opts.minGroup ?? 3;
@@ -124,7 +127,11 @@ export class ClassService {
     const key = `${classId}:${learnerId}`;
     const e = await this.store.getDoc('enrol', key);
     if (!e) throw new AppError('not_found', 404, 'No such request.');
-    if (ok) await this.put('enrol', key, { ...e.data, status: 'active' });
+    if (ok) {
+      await this.put('enrol', key, { ...e.data, status: 'active' });
+      const c = await this.classOr404(classId, staff);
+      await this.notices.emit(learnerId, 'join_approved', classId, { title: c.data.name, classId });
+    }
     else await this.store.deleteDoc('enrol', key);
     await this.audit(staff.email, ok ? 'class.approve' : 'class.remove', classId, { student: e.data.email });
     return { ok: true };
@@ -144,6 +151,7 @@ export class ClassService {
     const data = { classId, title, items, due: due ? new Date(Date.parse(due)).toISOString() : null, marks: Math.max(0, Math.min(1000, Number(body.marks) || 0)), passMark: Math.max(0, Math.min(100, Number(body.passMark ?? 60))), hintsOnly: body.hintsOnly !== false, createdAt: this.iso(), by: staff.email };
     const aid = id ?? randomUUID();
     await this.put('assignment', aid, data);
+    if (!id) await this.notices.forClass(classId, 'assignment', aid, title);
     await this.audit(staff.email, id ? 'assignment.update' : 'assignment.create', aid, { classId, title });
     return { id: aid, ...data };
   }
@@ -161,6 +169,7 @@ export class ClassService {
     const id = randomUUID();
     const data = { classId, title, body: text, pinned: body.pinned === true, at: this.iso(), by: staff.email };
     await this.put('classpost', id, data);
+    await this.notices.forClass(classId, 'announcement', id, title);
     await this.audit(staff.email, 'class.post', classId, { title });
     return { id, ...data };
   }

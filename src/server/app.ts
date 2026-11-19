@@ -29,6 +29,7 @@ import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
 import { allCourses } from '../content/courses.ts';
+import type { NoticeService } from '../app/notices.ts';
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -64,6 +65,7 @@ export interface AppDeps {
   search?: SearchService;
   studyPlan?: StudyPlanService;
   store?: Store;
+  notices?: NoticeService;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
   labModelFile: string;
@@ -354,6 +356,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/admin/ai', () => adm().ai(), 'admin'),
     route('GET', '/api/admin/audit', () => adm().auditLog(), 'admin'),
 
+    route('GET', '/api/my-notices', ({ learnerId, signedIn, query }) => {
+      if (!signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, 'Sign in to read notifications.');
+      if (!d.notices) throw new AppError('unavailable', 503, 'Notifications are unavailable.');
+      return d.notices.list(learnerId, lang(query.get('lang')));
+    }, 'learner'),
+    route('POST', '/api/my-notices/read-all', ({ learnerId, signedIn }) => {
+      if (!signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, 'Sign in to read notifications.');
+      if (!d.notices) throw new AppError('unavailable', 503, 'Notifications are unavailable.');
+      return d.notices.readAll(learnerId);
+    }, 'learner'),
     // buying a paid course (bKash / Nagad, checked by an admin)
     route('GET', '/api/buy/:course', ({ params, query, learnerId, email, signedIn }) => ord().page(learnerId, email, Boolean(signedIn) || d.auth.mode === 'supabase', params.course!, lang(query.get('lang')))),
     route('POST', '/api/buy/:course/quote', ({ params, body, learnerId, email }) => ord().quote(learnerId, email, params.course!, body.coupon)),
