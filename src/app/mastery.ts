@@ -4,7 +4,7 @@ import type { ReadingEventRow, Store } from '../store/store.ts';
 import type { TutorialService } from './tutorials.ts';
 
 type Result = { score: number; total: number };
-type Attempt = { ids: string[]; result?: Result };
+type Attempt = { ids: string[]; result?: Result; event?: { id: string; at: string }; recorded?: boolean };
 type State = { pre?: Attempt; post?: Attempt };
 type Phase = 'pre' | 'post';
 
@@ -46,7 +46,14 @@ export class MasteryService {
     const show = (a?: Attempt) => a ? { result: a.result ?? null, questions: a.result ? [] : a.ids.map((id) => quiz.find((q: any) => q.id === id)).filter(Boolean) } : null;
     return { available: quiz.length > 0, pre: show(state.pre), post: show(state.post), preClosed: Boolean(state.post) };
   }
-  async get(learnerId: string, track: string, topic: string, lang: 'en' | 'bn') { return this.view(track, topic, await this.state(this.key(learnerId, track, topic)), lang); }
+  async get(learnerId: string, track: string, topic: string, lang: 'en' | 'bn') {
+    const key = this.key(learnerId, track, topic);
+    const s = await this.state(key);
+    for (const phase of ['pre', 'post'] as const) {
+      if (s[phase]?.result && s[phase]?.event && !s[phase]?.recorded) await this.submit(learnerId, track, topic, phase, {}, lang);
+    }
+    return this.view(track, topic, await this.state(key), lang);
+  }
   async start(learnerId: string, track: string, topic: string, phaseIn: string, lang: 'en' | 'bn') {
     const phase = this.phase(phaseIn); const key = this.key(learnerId, track, topic);
     return this.locked(key, async () => {
@@ -69,11 +76,22 @@ export class MasteryService {
     return this.locked(key, async () => {
       const s = await this.state(key); const a = s[phase];
       if (!a) throw new AppError('check_not_started', 409, 'Start the check first.');
-      if (a.result) return this.view(track, topic, s, lang);
-      a.result = this.tutorials.gradeCheck(track, topic, a.ids, answers, lang);
-      const at = new Date().toISOString();
-      await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: `tutorial:${track}:${topic}`, blockId: null, type: phase === 'pre' ? 'pre_check' : 'post_check', payload: { ...a.result }, at }]);
-      await this.store.putDoc({ kind: 'mastery_check', id: key, data: s, updatedAt: at });
+      if (!a.result) {
+        a.result = this.tutorials.gradeCheck(track, topic, a.ids, answers, lang);
+        a.event = { id: randomUUID(), at: new Date().toISOString() };
+        // Freeze the grade before recording evidence: a retry after an event
+        // timeout must never accept a different answer set.
+        await this.store.putDoc({ kind: 'mastery_check', id: key, data: s, updatedAt: a.event.at });
+      }
+      if (!a.recorded && a.event) {
+        // A response may have been lost after the event was written. Reuse the
+        // persisted event identity and recover without a second evidence row.
+        if (!(await this.store.readingEvents(learnerId)).some((e) => e.id === a.event!.id)) {
+          await this.store.addReadingEvents([{ ...a.event, learnerId, lessonId: `tutorial:${track}:${topic}`, blockId: null, type: phase === 'pre' ? 'pre_check' : 'post_check', payload: { ...a.result } }]);
+        }
+        a.recorded = true;
+        await this.store.putDoc({ kind: 'mastery_check', id: key, data: s, updatedAt: a.event.at });
+      }
       return this.view(track, topic, s, lang);
     });
   }

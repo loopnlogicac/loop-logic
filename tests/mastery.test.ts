@@ -142,3 +142,29 @@ test('Supabase mastery evidence includes checks beyond the first page of reading
   assert.equal((await mastery.overall()).students, 1);
   assert.equal((await mastery.overall()).averageGain, 46.67);
 });
+
+test('failed evidence writes preserve the first score and recover without duplicate events', async () => {
+  for (const afterWrite of [false, true]) {
+    class InterruptedStore extends MemoryStore {
+      interrupted = false;
+      async addReadingEvents(rows: ReadingEventRow[]) {
+        if (!this.interrupted) {
+          this.interrupted = true;
+          if (afterWrite) await super.addReadingEvents(rows);
+          throw new Error('Simulated storage timeout');
+        }
+        return super.addReadingEvents(rows);
+      }
+    }
+    const { store, tutorials, mastery } = setup(new InterruptedStore());
+    const pre = (await mastery.start('a', track, topic, 'pre', 'en')).pre!;
+    await assert.rejects(mastery.submit('a', track, topic, 'pre', answers(pre.questions), 'en'), /timeout/);
+    const restarted = new MasteryService(store, tutorials);
+    const recovered = await restarted.get('a', track, topic, 'en');
+    assert.deepEqual(recovered.pre!.result, { score: 3, total: 3 });
+    const retry = await restarted.submit('a', track, topic, 'pre', answers(pre.questions, false), 'en');
+    assert.deepEqual(retry.pre!.result, { score: 3, total: 3 });
+    assert.equal((await store.readingEvents('a')).length, 1);
+    assert.deepEqual((await store.readingEvents('a'))[0].payload, { score: 3, total: 3 });
+  }
+});
