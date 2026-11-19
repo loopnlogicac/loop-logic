@@ -1,66 +1,58 @@
-# DBMS – Batch 2
+# DBMS – Batch 3
 
-Package version: **0.2.0**, format 1.1. All topic review statuses remain `draft`.
+Package version: **0.3.0**, format 1.1. This is the final delivery: **41/41 curriculum topics**, in the fixed curriculum order. Every review status remains `draft` for subject and language review.
 
 ## Delivered scope
 
-This cumulative package contains **26 of 41 curriculum topics**. Batch 2 adds all 11 topics in `sql-advanced`, in curriculum order:
+Batch 3 adds the final **15 topics**:
 
-| Topic | Coverage and review focus |
-| --- | --- |
-| db-joins | INNER, LEFT, RIGHT, CROSS and self joins; full outer join emulation; ON versus WHERE; three-table relationships; composite keys and multiplied child totals |
-| db-subqueries | Scalar, row and derived-table queries; IN, ANY, ALL, EXISTS; correlation; joins versus membership; NULL and empty-set rules |
-| db-set-operations | UNION/ALL, native INTERSECT/EXCEPT and their ALL forms; precedence, duplicate multiplicity, NULL matching, pre-8.0.31 EXISTS alternatives |
-| db-views | CREATE VIEW; update and insert restrictions; CHECK OPTION; live results; INVOKER/DEFINER security and alternate base-table access |
-| db-indexes | B-tree lookup; composite leftmost prefixes; CREATE/DROP INDEX; traditional EXPLAIN; covering access; selectivity, scans and write costs |
-| db-window-functions | ROW_NUMBER, RANK, DENSE_RANK; partitions and ties; explicit ROWS running sums; default RANGE peers; outer filtering |
-| db-cte | WITH stages; independent payment/item totals; recursive mentoring hierarchy; anchor, rounds, depth, path width and cycle handling |
-| db-stored-procedures | DELIMITER; IN/OUT/INOUT; local variables; IF, WHILE and SIGNAL; stored functions; execution authority and transaction ownership |
-| db-triggers | All six BEFORE/AFTER INSERT/UPDATE/DELETE combinations; OLD/NEW; real-change auditing; rollback; cascade and TRUNCATE audit gaps |
-| db-transactions-sql | InnoDB; START TRANSACTION, COMMIT, ROLLBACK, SAVEPOINT and RELEASE; autocommit; affected rows, statement failures and implicit DDL commits |
-| db-users-privileges | CREATE USER; table/column GRANT and REVOKE; account cleanup; host identity; least privilege; view access, roles and additive grants |
+| Module | Topic | Coverage and review focus |
+| --- | --- | --- |
+| normalization | db-functional-dependencies | FD meaning; Armstrong’s axioms; closures; complete candidate-key reasoning; singleton minimal/canonical cover reduction and equivalence |
+| normalization | db-normalization | Repeating course groups; anomalies; full 1NF→2NF→3NF registration decomposition; keys, FDs, losslessness and local enforcement; SQL anomaly and repair |
+| normalization | db-bcnf-4nf | Overlapping keys; 3NF exception versus BCNF; recursive BCNF splits; lost FD enforcement; independent MVD combinations, 4NF decomposition and an invalid-independence counterexample |
+| normalization | db-decomposition | Binary intersection test; lossy witness; projected implied FDs; preservation closure; multiway chase; 3NF synthesis with the necessary key component |
+| internals | db-transactions-acid | Bank transfers; transaction states; invariant checks; atomicity versus correct logic; durability settings; unknown commit outcomes and idempotency |
+| internals | db-concurrency-control | Schedules; precedence and wait-for graphs; recoverability; basic/strict/rigorous 2PL; deadlocks and timeouts; MySQL isolation, MVCC and locking reads |
+| internals | db-recovery | Failure classes; WAL; undo/redo; steal/no-force reasoning; conceptual log trace; actual process-crash observation; fuzzy checkpoints; backup, binary logs, RPO/RTO and committed mistakes |
+| internals | db-storage-indexing | Heap/sorted files; primary/secondary/clustered terminology; B+ tree traversal, splits, fanout and worked page counts; InnoDB row identity and coverage; hashing and range limits |
+| internals | db-query-processing | Parsing, name resolution, legal rewrites, cost estimates and execution; selectivity and stale estimates; traditional/tree EXPLAIN; coverage, date ranges and actual answer checks |
+| beyond | db-security-sql-injection | Unsafe read-only search versus bound values; repeated PREPARE execution; trusted dynamic identifiers; list parameters; second-order injection; authority, authorisation, secrets and backups |
+| beyond | db-nosql-intro | Document, key-value, wide-column and graph models; aggregate/partition boundaries; CAP’s partition case and linearizability; eventual convergence and model-selection tradeoffs |
+| practice-exam | db-sql-practice-set | **50 difficulty-graded university queries**, each with worked SQL and captured output; five groups of ten from projection through division, windows and weighted grade reports |
+| practice-exam | db-exam-questions | **12 fully worked exam answers** covering Chen design, weak entities, algebra and SQL, normalization, decomposition, graphs, recovery and secure access |
+| practice-exam | db-mini-project-university | University requirements→Chen relationships→tables; existing keys/checks/FKs; report view; transaction-owning capacity procedure; result audit triggers; integrity, concurrency and restricted-account checks |
+| practice-exam | db-interview-questions | **50 short questions with answers**, grouped by design, SQL, dependencies, transactions and operations; additional output and concept quiz |
 
-The original 15 topics remain in `foundations`, `er-modelling`, `relational-model` and `sql-basics`. Earlier Bangla metadata was standardized to **ডেটাবেস**. New Bangla titles, summaries and key points follow `BANGLA_STYLE.md`, using natural classroom language and terms such as টেবিল, কোয়েরি, ফাংশন and ভেরিয়েবল. Full lesson bodies are English; optional full Bangla bodies are not included.
+The earlier 26 topics remain included. Their Bangla transaction spelling was standardised in two metadata files. All Bangla uses **ডেটাবেস, টেবিল, ট্রানজ্যাকশন, নরমালাইজেশন** consistently. Bilingual titles, summaries and key points are provided; full lesson bodies are English. Optional complete Bangla bodies and unverified video links are not included.
 
-Batch 2 adds **51 executable examples, 46 practice problems, 119 quiz questions, 59 bilingual key points and 35 worked exam answers**. Twenty-two practice problems contain executable SQL; 24 have written worked answers. Thirty-three quiz questions execute SQL. Example counts vary from three to seven; larger topics receive additional practice or quiz questions. Every body has a syntax form, a topic-specific trace/reference table, mistake subheadings and links to related learning.
+Normalisation is taught through worked theory and complete decompositions. Metadata retains the curriculum’s fixed kinds: three normalization topics are `theory`; `db-normalization` is the required `lesson` with its runnable anomaly/repair examples. No curriculum or checker override was introduced.
 
-Cumulative totals are **96 examples, 113 practice problems, 278 quiz questions, 134 bilingual key points and 80 worked exam answers**. The SQL practice count is 44, and 60 output questions execute SQL.
+Batch 3 adds **21 executable examples, 58 practice problems, 165 quiz questions, 74 bilingual key points and 106 worked exam answers**. Ten practice problems execute SQL, and 48 have written answers. Twenty-five new output questions execute SQL. Larger topics have additional written problems or quiz questions; the question banks have their own prescribed counts.
 
-All curriculum `covers` points for this delivery are addressed. The remaining 15 topics in `normalization`, `internals`, `beyond` and `practice-exam` are outside Batch 2. The 50-query university practice set belongs to that later scope. No additional topics are proposed. Videos remain unlinked because individual videos were not verified as precise topic matches.
+Cumulative totals: **117 examples, 171 practice problems, 443 quiz questions, 208 bilingual key points and 186 exam answers**. There are 54 executable SQL practice problems, 85 executable output questions and 223 captured `.out` files.
 
-## Shared datasets and assumptions
+All 41 curriculum topics and their `covers` requirements are addressed. The fifty-query set is carried as five executable answer groups because the fixed lesson format allows at most eight examples. Each group contains ten numbered questions and corresponding SQL answers; result tables follow query order. The interview bank’s fifty items are both visible in the body and represented individually in `examQuestions`.
 
-The three Batch 1 datasets are reused **without changes**. Each begins with table creation, uses InnoDB and utf8mb4, and loads into an empty database without CREATE DATABASE or USE. Every table has at most 60 seed rows.
+## Datasets and assumptions
 
-| Dataset | Seed rows by table |
-| --- | --- |
-| university.sql | departments 3; teachers 4; students 8; courses 5; sections 6; enrollments 12; results 11 |
-| shop.sql | customers 5; products 6; orders 5; order_items 8; payments 4 |
-| library.sql | books 5; members 4; loans 5 |
+The original **university.sql, shop.sql and library.sql are unchanged**. Each loads into an empty schema, uses InnoDB and utf8mb4, and contains at most 60 seed rows per table. All new runnable lessons load their declared university setup. Bank accounts, flat anomaly tables, indexes and prepared statements are local to their example schemas.
 
-Names and contacts are fictional. `.test` addresses and `test-` identifiers are teaching placeholders. Student 108 has no enrollment; student 107 has an enrollment awaiting a result. Pending marks are absent rather than zero. Result identity uses both student_id and section_id.
+The university dataset has three departments, four teachers, eight students, five courses, six sections, twelve enrollments and eleven results. Student 108 has no enrollment, student 107 has a pending result, and section 36 has no enrollment. Missing results are not zero marks. The result key uses both student_id and section_id. Credit-weighted reports use recorded results only and assume no repeated-course replacement; a production CGPA policy must define retakes separately.
 
-The university grading policy is A+ 80–100/4.00, A 75–79/3.75, A− 70–74/3.50, B+ 65–69/3.25, B 60–64/3.00, B− 55–59/2.75, C+ 50–54/2.50, C 45–49/2.25, D 40–44/2.00 and F 0–39/0.00. Generated columns derive grades from integer marks. This is a teaching policy, not an institutional guarantee. The earlier CGPA report weights recorded grades by credits and assumes no repeated-course replacement.
+The simplified SC normalisation example explicitly permits one result per student-course pair; it is not substituted for the shared schema’s richer section-based event identity. BCNF instructor dependencies and 4NF language/hobby independence are stated assumptions. Their counterexamples show when the corresponding splits would be inappropriate.
 
-Shop money uses exact decimal BDT. Item prices preserve agreed prices, and orders can have several payments or none. Item totals and payment totals must be aggregated independently before joining. The library treats one book row as one lendable copy; a production catalogue would separate titles and copies. Overdue reports use fixed dates.
+The mini project adds only `project/extension.sql` within its topic, loaded after the unchanged university dataset. It supplies result_audit, section_overview, register_student and two triggers. The procedure owns its transaction and must be called without an existing caller transaction. Every enrollment insertion and administrative capacity reduction must follow a compatible section-lock protocol. Restrict direct DML so the application cannot bypass it. The fixed registration date is a teaching choice.
 
-The recursive CTE examples locally add `teacher_links`, referencing the shared teachers. The original dataset does not claim to contain a mentoring hierarchy. Trigger audit/event tables and routine/view/index definitions are also created locally in their fresh exercise databases. Tie examples modify only that example's isolated data. None of these changes edits a shared dataset.
+The project audit is transactional history of inserts and real marks updates, not authenticated or tamper-proof security evidence. It omits human identity/timestamps, disappears on rollback, and does not claim to capture foreign-key cascades, failed attempts or administrator tampering. Payment, timetable, prerequisites, repeated-attempt policy and production identity integration are outside this bounded project and are identified in its text.
 
-## MySQL environment and verification
+## MySQL environment
 
-The actual toolchain is **MySQL Community Server 8.4.7**, **mysql client 8.4.7**, and **Node.js v24.22.1**. The dataset baseline is MySQL 8.0.16 for enforced CHECK constraints. The native set-operation topic declares **MySQL 8.0.31**, explains that boundary, and supplies older-compatible DISTINCT/EXISTS alternatives. EXPLAIN ANALYZE is discussed with its 8.0.18 boundary; the executed plan example uses traditional EXPLAIN.
+Actual toolchain: **MySQL Community Server 8.4.7**, **mysql client 8.4.7**, **Node.js v24.22.1**. The requested sudo/apt/service/ALTER USER command was attempted first, but `sudo` is absent. As in earlier batches, the official Oracle MySQL 8.4.7 Linux binary was unpacked under `/tmp/dbms-mysql`; its libaio dependency was extracted under `/tmp/dbms-deps`. A real server runs on 127.0.0.1:3306 with the requested root/root credentials. MariaDB and simulated query output were not used. No binaries or temporary authoring drivers are committed.
 
-The exact requested apt/service command was attempted, but this environment has no `sudo` command. As documented for Batch 1, an official Oracle MySQL 8.4.7 Linux binary was installed under `/tmp/dbms-mysql`; its libaio dependency was extracted locally. A real MySQL server runs on 127.0.0.1:3306 with the requested root/root credentials. MariaDB and simulated SQL execution were not substituted. No binaries or temporary authoring/verification scripts are included in the package.
+Shared CHECK constraints require MySQL 8.0.16. The query-processing lesson uses FORMAT=TREE (8.0.16) for the joined plan and explains EXPLAIN ANALYZE’s 8.0.18 boundary. The prior native set-operation topic retains its MySQL 8.0.31 minimum. Version-sensitive plan estimates are observations from 8.4.7, not portable performance guarantees.
 
-All 51 new examples, both runs of each of the 22 new SQL practice solutions, and all 33 new output questions were executed before the independent checker. That is **128 new SQL executions**. The 95 new `.out` files and 33 correct output options were captured from `mysql --table`, not hand-authored. Each execution recreated an empty database and loaded its declared shared setup. All displayed multi-row SELECT results have a final ORDER BY; window order and final display order are explained separately. No output uses NOW(), RAND() or UUID().
-
-The supplied SQL practice runner uses a practice-level setup and does not feed test stdin into SQL. Each SQL solution therefore performs an ordinary scenario plus a boundary or state-transition scenario in the same script. Its two tests independently repeat that whole script in separate fresh databases. Identical output pairs are intentional; they are not claims of distinct stdin-driven fixtures. Examples include empty relations, absent keys, leaf hierarchies, threshold marks, no-op updates, rollback restoration and privilege removal.
-
-Additional verification used a **separate connection as a temporary reader account**, rather than only inspecting grants as root. It confirmed an allowed definer-view read, denied direct base-table read, denied view update, and denied view access after REVOKE and reconnect. Independent MySQL rejection checks confirmed CHECK OPTION rejection (1369) and scalar-subquery cardinality rejection (1242). All temporary verification accounts and schemas were removed.
-
-Batch 1's existing examples, practice and output quizzes are included in the cumulative checker run. Its previously documented integrity and grading-boundary checks remain relevant to the unchanged datasets.
-
-Run from `content-kit/`:
+From `content-kit/`:
 
 ```bash
 export PATH=/tmp/dbms-mysql/bin:$PATH
@@ -68,16 +60,32 @@ export MYSQL_USER=root MYSQL_PWD=root MYSQL_HOST=127.0.0.1
 node tools/check.mjs dbms/content --require-sql --report dbms/content/CHECK_REPORT.txt
 ```
 
-`CHECK_REPORT.txt` records the final full run: **0 errors, 0 warnings**, SQL executed, and all 26 bodies within their level's word target. No checker or curriculum files were changed. All repository changes are confined to `content-kit/dbms/content/`.
+## Verification evidence
 
-## Reviewer notes and limits
+Every new example, both independent fresh-schema runs of every new SQL practice solution and every new output quiz was executed before the package checker: **66 new registered SQL executions**. The fifty practice-set queries all ran as part of their five answer groups. Inline SQL exam outputs were also captured from actual runs. The 41 new `.out` files and all correct output options come from `mysql --table`.
 
-- Read the Bangla aloud for local classroom tone and consistent technical spelling.
-- Check preserved-side join logic, composite-key correlations, empty-set quantifiers and NULL-safe set rewrites.
-- Review the ranking tie policy, explicit ROWS frames, recursive cycle detection and the deliberately bounded hierarchy/path width.
-- Traditional EXPLAIN output was captured on 8.4.7. Plan fields and estimates can differ on another version or distribution; this tiny primary-key example is not a benchmark.
-- Function creation may require administrative authority under binary-logging policy. DETERMINISTIC/NO SQL are truthful for pass_label, not boilerplate for arbitrary routines.
-- InnoDB trigger logs share the caller's transaction. They do not capture rolled-back attempts, child foreign-key cascades or TRUNCATE as row deletes. They are not presented as tamper-proof auditing.
-- Privilege exercises require account-management authority and use the temporary `llk_b2_reader`@`localhost` account. Run the package checker serially on an isolated teaching server. The scripts drop this account after use; an interrupted run may require removing that temporary account before retrying.
-- The local demonstration password and administrator-owned definer view are exercise conveniences. Deployment guidance calls for protected credentials, narrowly privileged owners, review of broader/role grants, and actual target-account tests.
-- Savepoints do not create nested transactions. DDL implicit commits, affected-row checks and application error handling must remain explicit when examples are adapted.
+Each executable item loads its declared setup into a new empty schema. Every displayed multi-row SELECT has a final ORDER BY, including tie-breakers where needed. No result depends on NOW(), RAND() or UUID(). Traditional joined EXPLAIN includes a connection-specific schema name in `ref`, so that example uses the actual tree format instead of editing or normalising its output.
+
+The SQL practice runner supports practice-level setup and does not use test stdin as a fixture. Each new solution therefore includes an ordinary and a boundary/state-transition scenario in the same SQL script. Its two tests repeat that whole script in separate fresh schemas. The division exercise explicitly demonstrates both a nonempty and an empty required set; the report exercise demonstrates all-empty child relations. Identical output pairs are intentional, not claims of distinct stdin fixtures.
+
+Additional observations are committed with the corresponding lessons:
+
+- `topics/internals/db-concurrency-control/sessions/observed-sessions.json` and `sessions/README.md`: **44 real two-connection command events**. REPEATABLE READ observed 1000 after another connection committed 900; READ COMMITTED observed 900; READ UNCOMMITTED observed an uncommitted 900 that was rolled back. FOR UPDATE blocked an incompatible writer and produced 1205. An observed lock-wait edge was used to construct a two-row deadlock, producing 1213. The transcript preserves command issue order; send A’s second deadlock UPDATE asynchronously as described. Victim selection can differ.
+- `topics/internals/db-recovery/sessions/crash-observation.json` and `sessions/README.md`: a **separate port-3307 MySQL instance** was terminated with SIGKILL after an acknowledged 900/600 transfer and a later uncommitted edit to 1/600. Reconnecting after restart observed **900/600**. This demonstrates process-crash behaviour, not power-loss/media resilience or an exact internal redo-page trace. The ordinary port-3306 server was unaffected, and the isolated instance was shut down after validation.
+- `topics/practice-exam/db-mini-project-university/project/acceptance-observations.json`: six expected routine/integrity rejections (duplicate, missing student/section, low/high marks and result without enrollment); two callers competing for one seat with **exactly one commit**, one full-section rejection and final count one; four access tests through a real temporary registrar account. The account could execute the definer routine and read the report, but could neither insert enrollments directly nor read student email. Temporary accounts and schemas were removed.
+
+`CHECK_REPORT.txt` contains the final cumulative required run against MySQL: **0 errors, 0 warnings, SQL executed**. All 41 topic bodies meet their applicable word targets. No checker, curriculum, build or application files were changed; every repository change is within `content-kit/dbms/content/`.
+
+## Reviewer focus and limits
+
+- Read Bangla aloud for classroom tone and consistent technical spelling. All review statuses intentionally remain draft.
+- Check key enumeration, the canonical-cover convention, the formal 3NF prime-attribute exception, the 4NF independence assumption and each losslessness/preservation argument separately.
+- Review the chase symbol merges and the synthesis example where adding a key relation restores the lost association.
+- Keep precedence graphs, wait-for graphs and recoverability commit ordering distinct. InnoDB MVCC is not presented as literal shared-lock-only textbook 2PL.
+- Check snapshot creation, locking-read visibility, unique equality versus range locking and the different 1205/1213 rollback boundaries. The supplementary experiments exercise the documented cases, not every isolation anomaly.
+- EXPLAIN fields and costs can change with statistics or versions. The tiny dataset is suitable for correctness and plan reading, not benchmarking.
+- Confirm query-set row identities, empty-set division, tied ranks and recorded-only weighted grades. Query 50 correctly returns no students because CSE 121 has no enrollments.
+- The capacity routine requires one controlled write protocol and a clear transaction owner. Keep those caller and authority contracts if adapting it.
+- The SQL injection examples are isolated read-only teaching searches. Production applications need a connector’s binding API, separate authentication/authorisation, secret handling and tested backups. No deployment or external NoSQL service is included.
+- CAP uses distributed linearizability and partition-time availability, distinct from ACID’s invariant consistency. Wide-column and analytical columnar storage are also distinguished.
+- Earlier Batch 1/2 integrity, grading and privilege checks remain documented in their merged history; unchanged datasets and executable earlier topics are included in the final cumulative checker run.

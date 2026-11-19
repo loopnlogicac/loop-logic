@@ -1,0 +1,337 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-concurrency-control",
+  "module": "internals",
+  "order": 2,
+  "kind": "theory",
+  "title": {
+    "en": "Concurrency Control",
+    "bn": "কনকারেন্সি কন্ট্রোল"
+  },
+  "summary": {
+    "en": "Analyse schedules and lock cycles, then compare actual MySQL isolation observations.",
+    "bn": "Schedule ও lock cycle বিশ্লেষণ করো, তারপর MySQL-এর দুই সেশনে isolation-এর ফল দেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 45,
+  "prerequisites": [
+    "db-transactions-acid"
+  ],
+  "related": [
+    "db-recovery",
+    "db-transactions-sql"
+  ],
+  "keywords": [
+    "concurrency control",
+    "internals",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Let two cashiers work at once"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Build a precedence graph before guessing"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Move from schedules to actual locks"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid false conclusions from one connection"
+    },
+    {
+      "id": "summary",
+      "title": "Check graphs, boundaries and observations"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Draw a precedence cycle",
+      "statementHtml": "<p>For r1(X),r2(X),w1(X),w2(X), list conflict edges and decide serialisability.</p>",
+      "hints": [
+        "Ignore read-read pairs."
+      ],
+      "answerHtml": "<p>r1(X) before w2(X) gives T1 → T2. r2(X) before w1(X) gives T2 → T1; w1 before w2 also gives T1 → T2. The two-node cycle means the schedule is not conflict-serialisable.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Find a serial order",
+      "statementHtml": "<p>For r1(X),w1(X),r2(X),r2(Y),w2(Y), find a serial order.</p>",
+      "hints": [
+        "Build one node per transaction."
+      ],
+      "answerHtml": "<p>The X conflicts give T1 → T2. There is no edge back because T1 never accesses Y after T2. The graph is acyclic, so T1 then T2 is an equivalent serial order.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Diagnose an account deadlock",
+      "statementHtml": "<p>A locks account 1 then requests 2; B locks 2 then requests 1. Explain the graph and response.</p>",
+      "hints": [
+        "A wait-for edge points towards the holder."
+      ],
+      "answerHtml": "<p>A waits for B and B waits for A, producing a cycle. InnoDB can choose either victim and roll it back with 1213. Retry the whole victim transaction safely. Using a consistent account-id lock order reduces this cycle.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Predict a snapshot experiment",
+      "statementHtml": "<p>At REPEATABLE READ, A reads 1000, B commits 900, then A repeats an ordinary SELECT. What does A see?</p>",
+      "hints": [
+        "The first consistent read has already established the snapshot."
+      ],
+      "answerHtml": "<p>A sees 1000 under its established consistent-read snapshot, assuming A has not changed the row itself. A new transaction can see 900. A locking read is a different access mode and is not constrained to that old snapshot.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Distinguish error boundaries",
+      "statementHtml": "<p>How should an application handle errors 1213 and 1205 in an atomic transfer?</p>",
+      "hints": [
+        "Statement rollback and transaction rollback differ."
+      ],
+      "answerHtml": "<p>1213 aborts the deadlock victim transaction, so restart it from the beginning. A 1205 lock timeout normally rolls back only the waiting statement under the default setting; explicitly roll back the whole transfer before retrying. Neither case justifies committing an incomplete transfer.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which operation pair conflicts in a precedence test?",
+      "options": [
+        "r1(X),w2(X)",
+        "r1(X),r2(X)",
+        "r1(X),w2(Y)"
+      ],
+      "answer": 0,
+      "explanation": "At least one write and the same item are required."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does an acyclic precedence graph establish?",
+      "options": [
+        "Absence of every deadlock in the server",
+        "Conflict serialisability",
+        "Backup completeness"
+      ],
+      "answer": 1,
+      "explanation": "A topological order supplies an equivalent serial order."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which phase follows the first lock release in basic 2PL?",
+      "options": [
+        "A fresh growing phase",
+        "Commit is already guaranteed",
+        "Shrinking"
+      ],
+      "answer": 2,
+      "explanation": "No new lock may be acquired after shrinking starts."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which error identifies an InnoDB deadlock victim?",
+      "options": [
+        "1213",
+        "1205",
+        "1062 only"
+      ],
+      "answer": 0,
+      "explanation": "Deadlock detection aborts a selected transaction."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "At READ COMMITTED, what can a repeated plain SELECT see after another transaction commits?",
+      "options": [
+        "Only the first snapshot forever",
+        "The new committed value",
+        "Uncommitted rows by definition"
+      ],
+      "answer": 1,
+      "explanation": "Each consistent read takes a new snapshot."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When does ordinary REPEATABLE READ establish its snapshot?",
+      "options": [
+        "Always at client connection creation",
+        "After every UPDATE",
+        "At its first consistent read"
+      ],
+      "answer": 2,
+      "explanation": "An explicit consistent-snapshot request can establish it earlier."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is a SELECT FOR UPDATE intended to acquire?",
+      "options": [
+        "Current data with locks for a later change",
+        "Only an old snapshot with no locks",
+        "A permanent table copy"
+      ],
+      "answer": 0,
+      "explanation": "The locks protect rows during the active transaction."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a stable snapshot alone imply general serialisability?",
+      "options": [
+        "Yes",
+        "No",
+        "Only if names are ordered"
+      ],
+      "answer": 1,
+      "explanation": "Write-skew anomalies can still occur."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which graph diagnoses a lock waiting cycle?",
+      "options": [
+        "ER diagram",
+        "B+ tree",
+        "Wait-for graph"
+      ],
+      "answer": 2,
+      "explanation": "Edges point from waiting transactions to lock holders."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What reduces the two-account opposite-order deadlock pattern?",
+      "options": [
+        "Acquire account locks in a common id order",
+        "Use different lock orders",
+        "Keep transactions open during user input"
+      ],
+      "answer": 0,
+      "explanation": "A common order prevents that circular acquisition pattern."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can a plain SERIALIZABLE SELECT in an explicit transaction block a writer?",
+      "options": [
+        "Never",
+        "Yes",
+        "Only if it changes data"
+      ],
+      "answer": 1,
+      "explanation": "InnoDB converts the read to shared locking in this transaction context."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which default timeout behaviour makes an explicit whole-operation rollback important?",
+      "options": [
+        "1205 always commits earlier changes",
+        "Every timeout drops the database",
+        "1205 can undo only the waiting statement"
+      ],
+      "answer": 2,
+      "explanation": "Earlier transfer statements may still be pending."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Conflicting operations access one item in different transactions with at least one write.",
+      "bn": "দুই ট্রানজ্যাকশন একই আইটেমে কাজ করলে আর অন্তত একটি write হলে conflict হয়।"
+    },
+    {
+      "en": "An acyclic precedence graph proves conflict serialisability.",
+      "bn": "Precedence graph এঁকে দেখো, কোনো cycle না থাকলে schedule-টা conflict-serialisable হবে।"
+    },
+    {
+      "en": "Two-phase locking separates lock acquisition from lock release.",
+      "bn": "Two-phase locking-এ lock নেওয়ার পর্ব আর ছাড়ার পর্ব আলাদা থাকে।"
+    },
+    {
+      "en": "A deadlock needs victim handling and a safe whole-transaction retry.",
+      "bn": "Deadlock হলে victim ট্রানজ্যাকশন সামলে পুরো কাজ নিরাপদে আবার চালাতে হয়।"
+    },
+    {
+      "en": "InnoDB snapshot reads and locking reads have different visibility rules.",
+      "bn": "InnoDB-তে snapshot read আর locking read একই নিয়মে ডেটা দেখে না।"
+    },
+    {
+      "en": "A repeatable-read snapshot starts with the first consistent read unless explicitly requested earlier.",
+      "bn": "REPEATABLE READ-এ আলাদা করে snapshot না চাইলে প্রথম consistent read থেকে snapshot শুরু হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "For r1(X),r2(X),w1(X),w2(X), list conflict edges and decide serialisability.",
+      "marks": 6,
+      "answerHtml": "<p>r1(X) before w2(X) gives T1 → T2. r2(X) before w1(X) gives T2 → T1; w1 before w2 also gives T1 → T2. The two-node cycle means the schedule is not conflict-serialisable.</p>"
+    },
+    {
+      "type": "long",
+      "question": "For r1(X),w1(X),r2(X),r2(Y),w2(Y), find a serial order.",
+      "marks": 6,
+      "answerHtml": "<p>The X conflicts give T1 → T2. There is no edge back because T1 never accesses Y after T2. The graph is acyclic, so T1 then T2 is an equivalent serial order.</p>"
+    },
+    {
+      "type": "long",
+      "question": "A locks account 1 then requests 2; B locks 2 then requests 1. Explain the graph and response.",
+      "marks": 6,
+      "answerHtml": "<p>A waits for B and B waits for A, producing a cycle. InnoDB can choose either victim and roll it back with 1213. Retry the whole victim transaction safely. Using a consistent account-id lock order reduces this cycle.</p>"
+    },
+    {
+      "type": "long",
+      "question": "At REPEATABLE READ, A reads 1000, B commits 900, then A repeats an ordinary SELECT. What does A see?",
+      "marks": 6,
+      "answerHtml": "<p>A sees 1000 under its established consistent-read snapshot, assuming A has not changed the row itself. A new transaction can see 900. A locking read is a different access mode and is not constrained to that old snapshot.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

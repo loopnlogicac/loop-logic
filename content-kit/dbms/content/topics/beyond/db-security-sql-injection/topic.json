@@ -1,0 +1,395 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-security-sql-injection",
+  "module": "beyond",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Database Security and SQL Injection",
+    "bn": "ডেটাবেস নিরাপত্তা ও SQL injection"
+  },
+  "summary": {
+    "en": "Keep input separate from SQL structure and combine parameter binding with access control and recoverable backups.",
+    "bn": "ইনপুটকে SQL-এর গঠন থেকে আলাদা রাখো, কম permission দাও আর backup restore করে দেখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 35,
+  "prerequisites": [
+    "db-users-privileges",
+    "db-stored-procedures"
+  ],
+  "related": [
+    "db-recovery",
+    "db-mini-project-university"
+  ],
+  "keywords": [
+    "database security and sql injection",
+    "beyond",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Keep a typed name from becoming a command"
+    },
+    {
+      "id": "syntax",
+      "title": "Prepare the structure and bind the value"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Find the trust boundary"
+    },
+    {
+      "id": "examples",
+      "title": "Compare the same input across the boundary"
+    },
+    {
+      "id": "defence-in-depth",
+      "title": "Reduce authority and preserve recovery options"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid misleading fixes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use the appropriate client API"
+    },
+    {
+      "id": "summary",
+      "title": "Make every boundary explicit"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "See a concatenated search change meaning",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The unsafe read-only search returns all eight students. The inserted quote ends the intended name literal, and the injected OR condition becomes SQL structure. Do not copy this construction into an application.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Bind the identical text as one value",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The identical input now returns zero matches. It remains a student-name value; the OR characters cannot replace the WHERE condition.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Reuse a prepared identifier-value lookup",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The first execution finds Ayesha; the second returns no row. Reusing the prepared structure does not turn a missing identifier into a match or bypass an authorisation check.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Bind a marks threshold",
+      "statementHtml": "<p>Prepare a query that counts results at or above a bound marks threshold. Execute it with 80 and then 101, and deallocate it.</p>",
+      "hints": [
+        "The threshold belongs in the value channel."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Preserve hostile-looking input",
+      "statementHtml": "<p>Prepare a student-name equality count. Bind Ayesha Rahman and then the quote/OR text used in the lesson, and report both counts.</p>",
+      "hints": [
+        "Do not concatenate the name into the prepared statement text."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Choose a safe sort",
+      "statementHtml": "<p>A request can choose student_name or admitted_on and ascending or descending order. Describe safe construction.</p>",
+      "hints": [
+        "Keep dynamic structure within a small trusted vocabulary."
+      ],
+      "answerHtml": "<p>Map two allowed labels to the fixed identifiers student_name and admitted_on. Map two allowed direction labels to ASC and DESC. Reject unknown labels, add student_id as a deterministic tie-breaker and bind any filter values. A placeholder cannot stand for an arbitrary identifier.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Separate access from injection",
+      "statementHtml": "<p>A prepared query returns marks for any bound student_id. Is this enough to protect one student from reading another student’s marks?</p>",
+      "hints": [
+        "Data values can be valid yet unauthorised."
+      ],
+      "answerHtml": "<p>No. Binding prevents the identifier from changing SQL syntax, but it does not authorise access to that identifier. Authenticate the caller, check the permitted student or staff role and restrict returned columns. Database privileges and views can support this boundary.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many students match the injected text when it is bound as a name?",
+      "language": "sql",
+      "code": "SET @input = CONCAT(CHAR(39), ' OR 1=1 -- ');\nPREPARE safe_search FROM\n    'SELECT COUNT(*) AS matched FROM students WHERE student_name = ?';\nEXECUTE safe_search USING @input;\nDEALLOCATE PREPARE safe_search;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---------+\n| matched |\n+---------+\n|       0 |\n+---------+",
+        "+---------+\n| matched |\n+---------+\n|       1 |\n+---------+",
+        "+---------+\n| matched |\n+---------+\n|       2 |\n+---------+"
+      ],
+      "answer": 0,
+      "explanation": "No student has that exact name."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many students match the deliberately unsafe OR search?",
+      "language": "sql",
+      "code": "SET @input = CONCAT(CHAR(39), ' OR 1=1 -- ');\nSET @query = CONCAT('SELECT COUNT(*) AS matched FROM students WHERE student_name = ',\n    CHAR(39), @input, CHAR(39));\nPREPARE unsafe_search FROM @query;\nEXECUTE unsafe_search;\nDEALLOCATE PREPARE unsafe_search;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---------+\n| matched |\n+---------+\n|       9 |\n+---------+",
+        "+---------+\n| matched |\n+---------+\n|       8 |\n+---------+",
+        "+---------+\n| matched |\n+---------+\n|       0 |\n+---------+"
+      ],
+      "answer": 1,
+      "explanation": "The OR condition changes the predicate and matches all eight rows."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many records match a safely bound absent student id?",
+      "language": "sql",
+      "code": "SET @id=999;\nPREPARE n FROM 'SELECT COUNT(*) AS n FROM students WHERE student_id=?';\nEXECUTE n USING @id;\nDEALLOCATE PREPARE n;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "An absent value produces zero matches without changing the query structure."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which boundary does a bound value protect?",
+      "options": [
+        "The separation between data and SQL syntax",
+        "The physical disk boundary",
+        "The user’s right to every row"
+      ],
+      "answer": 0,
+      "explanation": "Binding prevents value text from becoming SQL structure."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can a value placeholder directly select an arbitrary table name?",
+      "options": [
+        "Yes",
+        "No",
+        "Only when quoted twice"
+      ],
+      "answer": 1,
+      "explanation": "Identifiers require trusted structural choices."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a stored procedure guarantee protection from SQL injection?",
+      "options": [
+        "Always",
+        "Only with an IN parameter",
+        "No"
+      ],
+      "answer": 2,
+      "explanation": "Unsafe dynamic SQL inside a procedure can still be injectable."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why retain least privilege with prepared statements?",
+      "options": [
+        "Other bugs and stolen credentials can still cause damage",
+        "Binding requires administrator access",
+        "Prepared statements disable GRANT"
+      ],
+      "answer": 0,
+      "explanation": "The controls address different failure paths."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does IN (?) automatically treat a bound comma-separated string as many values?",
+      "options": [
+        "Yes",
+        "No",
+        "Only if the string is long"
+      ],
+      "answer": 1,
+      "explanation": "One placeholder carries one value unless the driver offers explicit list handling."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What makes a backup a security concern?",
+      "options": [
+        "It contains only table names",
+        "It cannot be copied",
+        "It can contain the same sensitive rows as the live database"
+      ],
+      "answer": 2,
+      "explanation": "Protect recovery material as well as live access."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is second-order injection?",
+      "options": [
+        "Stored input later becomes unsafe dynamic SQL",
+        "Every second query in a session",
+        "A transaction with two UPDATE statements"
+      ],
+      "answer": 0,
+      "explanation": "Stored data can cross a later code/data boundary."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should happen to a user-supplied unknown sort label?",
+      "options": [
+        "Append it directly to SQL",
+        "Reject it or select a defined safe default",
+        "Grant the user CREATE privilege"
+      ],
+      "answer": 1,
+      "explanation": "Untrusted text must not become an identifier or keyword."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "SQL injection occurs when input becomes part of executable SQL structure.",
+      "bn": "ইনপুট SQL-এর গঠনের অংশ হয়ে গেলে SQL injection হতে পারে।"
+    },
+    {
+      "en": "Bound parameters carry values without turning them into SQL syntax.",
+      "bn": "Bound parameter মান পাঠায়, তাকে SQL syntax বানায় না।"
+    },
+    {
+      "en": "Identifiers and sort directions need trusted choices rather than value placeholders.",
+      "bn": "টেবিল বা কলামের নাম আর sort direction-এর জন্য আগে ঠিক করা বৈধ অপশন ব্যবহার করো।"
+    },
+    {
+      "en": "Least privilege limits damage but does not repair unsafe query construction.",
+      "bn": "কম permission ক্ষতি কমায়, কিন্তু ভুলভাবে কোয়েরি বানানো ঠিক করে না।"
+    },
+    {
+      "en": "Protected backups are useful only when a restore has been verified.",
+      "bn": "Backup সুরক্ষিত রাখার পাশাপাশি restore করে ঠিক আছে কি না দেখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "A request can choose student_name or admitted_on and ascending or descending order. Describe safe construction.",
+      "marks": 6,
+      "answerHtml": "<p>Map two allowed labels to the fixed identifiers student_name and admitted_on. Map two allowed direction labels to ASC and DESC. Reject unknown labels, add student_id as a deterministic tie-breaker and bind any filter values. A placeholder cannot stand for an arbitrary identifier.</p>"
+    },
+    {
+      "type": "long",
+      "question": "A prepared query returns marks for any bound student_id. Is this enough to protect one student from reading another student’s marks?",
+      "marks": 6,
+      "answerHtml": "<p>No. Binding prevents the identifier from changing SQL syntax, but it does not authorise access to that identifier. Authenticate the caller, check the permitted student or staff role and restrict returned columns. Database privileges and views can support this boundary.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why deleting apostrophes is weaker than parameter binding for a name search.",
+      "marks": 6,
+      "answerHtml": "<p>Apostrophes can be legitimate data, and removing selected characters does not reliably cover SQL syntax. A supported binding API sends the entire name as a value without allowing its characters to become operators or predicates. Validate length and business rules separately, and retain an appropriately restricted application account.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

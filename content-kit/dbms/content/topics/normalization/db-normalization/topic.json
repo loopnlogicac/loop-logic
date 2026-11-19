@@ -1,0 +1,388 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-normalization",
+  "module": "normalization",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Normalisation: 1NF, 2NF and 3NF",
+    "bn": "নরমালাইজেশন: 1NF, 2NF ও 3NF"
+  },
+  "summary": {
+    "en": "Decompose a registration sheet through normal forms and verify the repaired tables in MySQL.",
+    "bn": "একটি রেজিস্ট্রেশন টেবিল ধাপে ধাপে ভেঙে 1NF, 2NF ও 3NF বানাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 35,
+  "prerequisites": [
+    "db-functional-dependencies"
+  ],
+  "related": [
+    "db-bcnf-4nf",
+    "db-decomposition"
+  ],
+  "keywords": [
+    "normalisation: 1nf, 2nf and 3nf",
+    "normalization",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Repair a registration sheet"
+    },
+    {
+      "id": "syntax",
+      "title": "Write the relation and its dependencies"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Walk from 1NF to 3NF"
+    },
+    {
+      "id": "examples",
+      "title": "Observe the anomaly and its repair"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid mechanical splitting"
+    },
+    {
+      "id": "version-notes",
+      "title": "Map mathematical rules to MySQL"
+    },
+    {
+      "id": "summary",
+      "title": "Give each changing fact one home"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Expose a partial update",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>One row says CSE renamed while two other rows retain the old department name. A partial update breaks the intended department rule without violating the flat table’s structure.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Update the authoritative department",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The department name changes once. All three joined registrations show the same new value, and rollback restores the teaching data.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Keep course facts after the last registration",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The course remains even when section 31 has no registrations. Separate course storage removes the deletion anomaly; the transaction restores enrollments and cascaded results.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Change one course title",
+      "statementHtml": "<p>Change course 21 to Database Systems, show its joined offerings, then roll back and show its original title.</p>",
+      "hints": [
+        "The title belongs to courses, not to each offering."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Insert an independent course",
+      "statementHtml": "<p>Insert course 26 with code CSE 300, title Design, credits 3 and department 1; show it has zero sections; roll back and confirm its absence.</p>",
+      "hints": [
+        "LEFT JOIN preserves the new course without any offering."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Reach 3NF",
+      "statementHtml": "<p>For R(S,C,N,D,H,T,M), F = {S → ND,D → H,C → T,SC → M}, show keys and all decomposition stages.</p>",
+      "hints": [
+        "Separate student facts, then department facts."
+      ],
+      "answerHtml": "<p>SC is the only key because neither S nor C is derivable. 2NF gives SNDH, CT and SCM. 3NF splits SNDH into SND and DH. The final SND, DH, CT, SCM retain each FD locally. The intersections S, D and C determine their separated component, so every split is lossless.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Explain an insertion anomaly",
+      "statementHtml": "<p>A flat (student_id,course_id,course_title) table uses the pair as key. Why is a new course difficult to record?</p>",
+      "hints": [
+        "Do not invent a student to satisfy a course requirement."
+      ],
+      "answerHtml": "<p>No student-course pair exists yet, so a complete key cannot be supplied for the course fact alone. A separate Course(course_id,course_title) relation records the course before enrollment. Registration then references its course key.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Respect a retake policy",
+      "statementHtml": "<p>Students may take the same course twice in different semesters. Is (student_id,course_id) sufficient?</p>",
+      "hints": [
+        "Normal forms cannot decide which real event you intended."
+      ],
+      "answerHtml": "<p>No. The pair would reject a valid second attempt or overwrite the first. Include a section or attempt identifier with the student. Then restate the FDs and repeat normal-form analysis for that event key.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many title rows store course 21 before any offering join?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM courses WHERE course_id = 21;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "Course identity is stored once."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many offerings reference the single course-21 fact?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM sections WHERE course_id = 21;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 3 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Two offerings share one course row."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many department rows supply the name for all CSE students?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM departments WHERE department_id = 1;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "A department description has one authoritative row."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What makes SC → Mark a full dependency in the stated registration model?",
+      "options": [
+        "Neither S nor C alone determines Mark",
+        "Mark determines both S and C",
+        "SC contains only one attribute"
+      ],
+      "answer": 0,
+      "explanation": "The mark belongs to one registration pair."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which split removes C → Title from a table keyed by SC?",
+      "options": [
+        "Student(S,Title) only",
+        "Course(C,Title) plus registration facts",
+        "One title column per student"
+      ],
+      "answer": 1,
+      "explanation": "The course key determines its title."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which 3NF exception concerns an FD with a nonkey left side?",
+      "options": [
+        "Its right attribute may be any nonprime column",
+        "The table has a surrogate id",
+        "Its right attribute may be prime"
+      ],
+      "answer": 2,
+      "explanation": "Formal 3NF checks superkey determinants or prime results."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a joined department-name update avoid?",
+      "options": [
+        "Updating repeated department descriptions",
+        "All future locking",
+        "The need for foreign keys"
+      ],
+      "answer": 0,
+      "explanation": "Department descriptions have one stored home."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does a new row_id leave normalisation unfinished?",
+      "options": [
+        "Surrogate keys cannot be integers",
+        "Original nonkey dependencies still exist",
+        "Every table requires a composite key"
+      ],
+      "answer": 1,
+      "explanation": "A new identifier does not eliminate the business FDs."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which property prevents extra registration rows after a split?",
+      "options": [
+        "A shorter table name",
+        "Adding nullable columns",
+        "Lossless join"
+      ],
+      "answer": 2,
+      "explanation": "A lossless join reconstructs precisely the original relation."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must be analysed when candidate keys overlap?",
+      "options": [
+        "Every candidate key",
+        "Only the chosen primary key",
+        "Only column order"
+      ],
+      "answer": 0,
+      "explanation": "Prime attributes and partial dependencies depend on all candidate keys."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Normalisation moves each fact to the key that determines it.",
+      "bn": "নরমালাইজেশনে প্রতিটি তথ্য তাকে নির্ধারণ করা কি-এর কাছে রাখো।"
+    },
+    {
+      "en": "1NF removes repeating groups within the chosen attribute domains.",
+      "bn": "1NF করতে একই ঘরে রাখা একাধিক মান আলাদা সারিতে নাও।"
+    },
+    {
+      "en": "2NF removes partial dependencies of nonprime attributes on candidate keys.",
+      "bn": "2NF-এ nonprime অ্যাট্রিবিউট candidate key-এর শুধু এক অংশের ওপর নির্ভর করে না।"
+    },
+    {
+      "en": "3NF permits a nonkey determinant only when the determined attribute is prime.",
+      "bn": "3NF-এ determinant superkey না হলে ডান পাশের অ্যাট্রিবিউট prime হতে হবে।"
+    },
+    {
+      "en": "A safe split needs a lossless join and checks for dependency preservation.",
+      "bn": "টেবিল ভাঙার পর lossless join আর FD ঠিক আছে কি না যাচাই করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "For R(S,C,N,D,H,T,M), F = {S → ND,D → H,C → T,SC → M}, show keys and all decomposition stages.",
+      "marks": 6,
+      "answerHtml": "<p>SC is the only key because neither S nor C is derivable. 2NF gives SNDH, CT and SCM. 3NF splits SNDH into SND and DH. The final SND, DH, CT, SCM retain each FD locally. The intersections S, D and C determine their separated component, so every split is lossless.</p>"
+    },
+    {
+      "type": "long",
+      "question": "A flat (student_id,course_id,course_title) table uses the pair as key. Why is a new course difficult to record?",
+      "marks": 6,
+      "answerHtml": "<p>No student-course pair exists yet, so a complete key cannot be supplied for the course fact alone. A separate Course(course_id,course_title) relation records the course before enrollment. Registration then references its course key.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Students may take the same course twice in different semesters. Is (student_id,course_id) sufficient?",
+      "marks": 6,
+      "answerHtml": "<p>No. The pair would reject a valid second attempt or overwrite the first. Include a section or attempt identifier with the student. Then restate the FDs and repeat normal-form analysis for that event key.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

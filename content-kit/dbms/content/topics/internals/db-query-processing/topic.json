@@ -1,0 +1,390 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-query-processing",
+  "module": "internals",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Query Processing and Optimisation (Introduction)",
+    "bn": "কোয়েরি প্রসেসিং ও অপটিমাইজেশন"
+  },
+  "summary": {
+    "en": "Follow a query from parsing to execution and read access choices in real EXPLAIN output.",
+    "bn": "কোয়েরি parse হওয়া থেকে execution পর্যন্ত ধাপ দেখো আর EXPLAIN পড়ে access path বোঝো।"
+  },
+  "level": "advanced",
+  "estMinutes": 45,
+  "prerequisites": [
+    "db-storage-indexing"
+  ],
+  "related": [
+    "db-indexes",
+    "db-joins"
+  ],
+  "keywords": [
+    "query processing and optimisation (introduction)",
+    "internals",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "InnoDB and enforced CHECK constraints are used; MySQL 8.0.16 or later is required."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A query describes a result, not a route"
+    },
+    {
+      "id": "syntax",
+      "title": "Ask the server to explain a plan"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow the processing pipeline"
+    },
+    {
+      "id": "examples",
+      "title": "Read a plan and its actual result"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep result correctness in the tuning loop"
+    },
+    {
+      "id": "version-notes",
+      "title": "Read version-specific plan formats"
+    },
+    {
+      "id": "summary",
+      "title": "Explain the route before changing it"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Explain a unique-key lookup",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The primary-key equality has a one-row bound. Read the selected key and access type beside the actual Ayesha row; this is a plan-reading example rather than a speed benchmark.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Explain a selective joined report",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>The report returns students 101 and 102. The tree plan shows a covering enrollment lookup followed by student primary-key probes. FORMAT=TREE avoids a connection-specific schema name in traditional EXPLAIN’s ref field. Tiny teaching data establishes the plan shape, not a speed claim.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Use a date interval without wrapping the column",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>Both forms return the same five admissions. A half-open interval keeps a suitable date index available without requiring an expression index; this tiny table does not establish a runtime advantage.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Inspect covering access",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "tryNow": true,
+      "explanationHtml": "<p>InnoDB secondary entries contain the primary key. A hometown index can cover these requested columns. An Extra value such as Using index indicates coverage, not a guarantee of zero physical I/O.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Compare equivalent mark filters",
+      "statementHtml": "<p>Show student_id and section_id for marks BETWEEN 60 AND 80, then show the same rows using &gt;= and &lt;=. Order both by the composite result key.</p>",
+      "hints": [
+        "Preserve both endpoints when rewriting BETWEEN."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Inspect a covered department lookup",
+      "statementHtml": "<p>Create an index on department_id,hometown. Explain and run a query returning department_id,hometown,student_id for department 1, ordered by hometown and student_id. Then query the absent department 99.</p>",
+      "hints": [
+        "Secondary index entries also contain student_id."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Interpret an estimate",
+      "statementHtml": "<p>A plan estimates rows=2000 and filtered=5. How many rows survive this step, and is that an observed count?</p>",
+      "hints": [
+        "filtered is a percentage."
+      ],
+      "answerHtml": "<p>About 2000 × 0.05 = 100 rows are estimated to survive. It is a model estimate, not an observed count. Stale statistics, skew or correlated conditions can make it inaccurate. Compare with execution observations before tuning the next operation.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Protect an outer report",
+      "statementHtml": "<p>Why can moving an enrollment filter from ON to WHERE change a LEFT JOIN report?</p>",
+      "hints": [
+        "Track a student with no enrollments through both clauses."
+      ],
+      "answerHtml": "<p>The ON condition decides matching children before null-extension. A WHERE predicate that rejects NULL then removes unmatched students. A rewrite can therefore change a student-preserving report into one that drops students without a matching enrollment.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many rows does a primary-key query for student 101 return?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students WHERE student_id=101;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "A primary key identifies one matching student."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many students survive the half-open 2025 admission range?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students\nWHERE admitted_on >= '2025-01-01' AND admitted_on < '2026-01-01';\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 6 |\n+---+",
+        "+---+\n| n |\n+---+\n| 5 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Five students were admitted during that interval."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many students does the section-31 join actually produce?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM enrollments AS e\nJOIN students AS s ON s.student_id=e.student_id WHERE e.section_id=31;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 3 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "Two enrollment rows match section 31."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does the EXPLAIN key column name?",
+      "options": [
+        "The selected index",
+        "Every possible index",
+        "The exact elapsed time"
+      ],
+      "answer": 0,
+      "explanation": "possible_keys and key serve different purposes."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is cost-based optimisation comparing?",
+      "options": [
+        "Only the length of SQL text",
+        "Estimated work of equivalent plans",
+        "Only output column names"
+      ],
+      "answer": 1,
+      "explanation": "The optimiser evaluates alternative execution routes."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does EXPLAIN ANALYZE execute the query?",
+      "options": [
+        "No",
+        "Only if it has no tables",
+        "Yes"
+      ],
+      "answer": 2,
+      "explanation": "It reports observations from an actual execution."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does Using index commonly indicate in Extra?",
+      "options": [
+        "Covering index access",
+        "Every requested row is in memory",
+        "No CPU work"
+      ],
+      "answer": 0,
+      "explanation": "Coverage can avoid extra full-row retrieval."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can an ordinary date interval help an index?",
+      "options": [
+        "It guarantees a table scan",
+        "It can form a direct range on the indexed column",
+        "It changes 2025 dates"
+      ],
+      "answer": 1,
+      "explanation": "A suitable access path can locate the interval without wrapping the column."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a table scan on eight rows necessarily indicate a bad plan?",
+      "options": [
+        "Yes",
+        "Only when there is no primary key",
+        "No"
+      ],
+      "answer": 2,
+      "explanation": "Scanning a tiny relation can cost less than scattered index lookups."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should be checked before accepting a faster rewrite?",
+      "options": [
+        "It returns the required rows and duplicates",
+        "It has fewer characters",
+        "It uses more joins"
+      ],
+      "answer": 0,
+      "explanation": "Meaning must remain correct while access changes."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Parsing checks structure before optimisation chooses an execution plan.",
+      "bn": "আগে parsing-এ কোয়েরির গঠন যাচাই হয়, তারপর অপটিমাইজার plan বেছে নেয়।"
+    },
+    {
+      "en": "A cost estimate compares alternatives rather than promising elapsed time.",
+      "bn": "Cost estimate বিকল্প plan তুলনা করে, চলার সময় নিশ্চিত করে না।"
+    },
+    {
+      "en": "Selectivity and statistics affect estimated row counts.",
+      "bn": "Selectivity আর statistics দিয়ে কত সারি পড়তে হবে তার estimate বদলায়।"
+    },
+    {
+      "en": "A covering access path can avoid extra clustered-row retrieval.",
+      "bn": "Covering access path-এ আলাদা করে clustered row পড়ার দরকার কমতে পারে।"
+    },
+    {
+      "en": "EXPLAIN ANALYZE executes the query and reports observations.",
+      "bn": "EXPLAIN ANALYZE কোয়েরি চালিয়ে দেখা ফল জানায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "A plan estimates rows=2000 and filtered=5. How many rows survive this step, and is that an observed count?",
+      "marks": 6,
+      "answerHtml": "<p>About 2000 × 0.05 = 100 rows are estimated to survive. It is a model estimate, not an observed count. Stale statistics, skew or correlated conditions can make it inaccurate. Compare with execution observations before tuning the next operation.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Why can moving an enrollment filter from ON to WHERE change a LEFT JOIN report?",
+      "marks": 6,
+      "answerHtml": "<p>The ON condition decides matching children before null-extension. A WHERE predicate that rejects NULL then removes unmatched students. A rewrite can therefore change a student-preserving report into one that drops students without a matching enrollment.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Describe parsing, optimisation and execution for a joined student report.",
+      "marks": 6,
+      "answerHtml": "<p>Parsing validates grammar and resolves student and enrollment columns. Optimisation considers legal filter placement, table order and scan or index routes using estimated costs. Execution follows the chosen operators to produce the required student rows. Verify the result and compare estimates with measurements before changing indexes.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/explain-output.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
