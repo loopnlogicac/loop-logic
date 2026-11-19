@@ -1,0 +1,543 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-simple-linear-regression",
+  "module": "regression",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Simple Linear Regression",
+    "bn": "একটা ফিচার দিয়ে রেখা ফিট"
+  },
+  "summary": {
+    "en": "Derive the least-squares slope from centred products and inspect every squared residual.",
+    "bn": "গড় থেকে ফাঁক গুণ করে ঢাল বের করো, তারপর প্রতিটা ভুলের বর্গ দেখো।"
+  },
+  "level": "beginner",
+  "estMinutes": 50,
+  "prerequisites": [
+    "ml-what-is-regression"
+  ],
+  "related": [],
+  "keywords": [
+    "Simple Linear Regression",
+    "regression",
+    "Python",
+    "prediction"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "NumPy 2.0+, pandas 2.2+, scikit-learn 1.5+; round displayed values only."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A ruler that both friends can agree on"
+    },
+    {
+      "id": "intuition",
+      "title": "Count big gaps more strongly"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Centre, multiply and divide"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Move a dot, keep the rule"
+    },
+    {
+      "id": "examples",
+      "title": "Verify the same five-row answer"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Check the denominator and the units"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: why the formula minimises squared error"
+    },
+    {
+      "id": "summary",
+      "title": "A fitting rule built from means"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Calculate centred products explicitly",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The centred x squares total 10 and centred cross-products total 12. Their ratio gives 1.2 without trying many guesses.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Verify the least-squares solution",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The scikit-learn solution uses a stable least-squares solver. Its slope, intercept and error agree with the hand formula.</p>",
+      "requires": [
+        "numpy",
+        "sklearn"
+      ]
+    },
+    {
+      "id": "ex-3",
+      "title": "Estimate a study-hours trend",
+      "level": "intermediate",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": false,
+      "explanationHtml": "<p>The coefficient describes an association in invented study records. It does not prove that forcing another hour causes the predicted change.</p>",
+      "requires": [
+        "pandas",
+        "sklearn"
+      ],
+      "workdirFiles": [
+        "shared/datasets/study.csv"
+      ]
+    },
+    {
+      "id": "ex-4",
+      "title": "Handle a feature that never varies",
+      "level": "intermediate",
+      "file": "examples/ex-4.py",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>When every x is 2, many slope/intercept pairs give the same fitted values. Choosing zero slope and the target mean is an explicit convention.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Fit a line with a constant-feature policy",
+      "statementHtml": "<p>Read n (1–100) and n x/y pairs. Print slope and intercept to three decimals. If all x are equal, choose slope zero and intercept mean y.</p>",
+      "hints": [
+        "Calculate centred sums and guard sxx=0."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Add squared centred feature gaps",
+      "statementHtml": "<p>Read n (1–100) and n numeric feature values. Print their centred square sum with three decimals.</p>",
+      "hints": [
+        "Subtract the column mean before squaring."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Fit the five market cards",
+      "statementHtml": "<p>Use x=1,2,3,4,5 and y=3,4,5,4,9. Find w,b and predict x=6.</p>",
+      "hints": [
+        "The centred sums are 12 and 10."
+      ],
+      "answerHtml": "<p>Mean x=3, mean y=5. Therefore w=12/10=1.2 and b=5-1.2*3=1.4. At x=6, prediction=8.6. This extrapolation needs caution because 6 lies beyond the observed inputs.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Explain an influential observation",
+      "statementHtml": "<p>Why can one wrongly recorded target rotate a least-squares line? Propose a repair process.</p>",
+      "hints": [
+        "Consider the square of a large residual."
+      ],
+      "answerHtml": "<p>Large residuals contribute quadratically and can dominate the fit. Check the source and units, correct confirmed recording mistakes, and document any exclusion rule without choosing it from final test scores.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which centred-product total appears in the five-row calculation?",
+      "options": [
+        "12",
+        "10",
+        "5",
+        "25"
+      ],
+      "answer": 0,
+      "explanation": "The products are 4,1,0,-1,8. Adding them gives 12.",
+      "figure": {
+        "caption": {
+          "en": "Centred quantities for the same five observations.",
+          "bn": "একই পাঁচটা পয়েন্টে গড় থেকে ফাঁকের হিসাব।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 5,
+              "cols": 4,
+              "colLabels": [
+                "x - mean x",
+                "y - mean y",
+                "Product",
+                "x gap squared"
+              ],
+              "cells": [
+                [
+                  -2.0,
+                  -2.0,
+                  4.0,
+                  4.0
+                ],
+                [
+                  -1.0,
+                  -1.0,
+                  1.0,
+                  1.0
+                ],
+                [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  -1.0,
+                  -1.0,
+                  1.0
+                ],
+                [
+                  2.0,
+                  4.0,
+                  8.0,
+                  4.0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which least-squares slope follows from the two last columns?",
+      "options": [
+        "0.833",
+        "1.2",
+        "2.0",
+        "12.0"
+      ],
+      "answer": 1,
+      "explanation": "The product sum is 12 and the squared-x-gap sum is 10. Divide 12 by 10.",
+      "figure": {
+        "caption": {
+          "en": "Centred quantities for the same five observations.",
+          "bn": "একই পাঁচটা পয়েন্টে গড় থেকে ফাঁকের হিসাব।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 5,
+              "cols": 4,
+              "colLabels": [
+                "x - mean x",
+                "y - mean y",
+                "Product",
+                "x gap squared"
+              ],
+              "cells": [
+                [
+                  -2.0,
+                  -2.0,
+                  4.0,
+                  4.0
+                ],
+                [
+                  -1.0,
+                  -1.0,
+                  1.0,
+                  1.0
+                ],
+                [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  -1.0,
+                  -1.0,
+                  1.0
+                ],
+                [
+                  2.0,
+                  4.0,
+                  8.0,
+                  4.0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "At x=3, which point does the fitted line pass through?",
+      "options": [
+        "(3, 3)",
+        "(3, 9)",
+        "(3, 5)",
+        "(0, 5)"
+      ],
+      "answer": 2,
+      "explanation": "The means are x=3 and y=5, so the fitted line passes through (3,5).",
+      "figure": {
+        "caption": {
+          "en": "Five measured targets and their least-squares predictions.",
+          "bn": "পাঁচটা আসল মান আর least-squares রেখার অনুমান।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 5,
+              "cols": 4,
+              "colLabels": [
+                "x",
+                "Observed",
+                "Predicted",
+                "Residual"
+              ],
+              "cells": [
+                [
+                  1.0,
+                  3.0,
+                  2.6,
+                  0.4
+                ],
+                [
+                  2.0,
+                  4.0,
+                  3.8,
+                  0.2
+                ],
+                [
+                  3.0,
+                  5.0,
+                  5.0,
+                  0.0
+                ],
+                [
+                  4.0,
+                  4.0,
+                  6.2,
+                  -2.2
+                ],
+                [
+                  5.0,
+                  9.0,
+                  7.4,
+                  1.6
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which quantity is least squares minimising?",
+      "options": [
+        "Sum of signed residuals",
+        "Sum of horizontal feature values",
+        "Largest coefficient alone",
+        "Sum of squared vertical residuals"
+      ],
+      "answer": 3,
+      "explanation": "Signed residuals can cancel. Squaring gives each discrepancy a nonnegative contribution."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "All five feature values equal 2. What fails in the slope formula?",
+      "options": [
+        "The centred x-square sum is zero",
+        "The target mean cannot exist",
+        "Every prediction must be zero",
+        "The intercept must be negative"
+      ],
+      "answer": 0,
+      "explanation": "No x variation means a zero denominator. The lab explicitly chooses slope zero and predicts the target mean."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "A slope is 1200 BDT per square metre. How should you read it?",
+      "options": [
+        "Every flat must gain exactly 1200 BDT",
+        "Predicted rent rises 1200 BDT for one more square metre in this model",
+        "The rent itself equals 1200 BDT",
+        "The feature unit is irrelevant"
+      ],
+      "answer": 1,
+      "explanation": "Slope has target units per feature unit and describes a model association."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why can an outlier rotate a least-squares line strongly?",
+      "options": [
+        "All outliers are removed automatically",
+        "The slope formula ignores targets",
+        "Its squared residual can dominate the total",
+        "Squared errors are capped at one"
+      ],
+      "answer": 2,
+      "explanation": "A large gap is magnified by squaring; inspect unusual rows before deciding whether they are errors."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What slope comes from centred totals sxy=12 and sxx=10?",
+      "options": [
+        "0.8",
+        "2.0",
+        "12.0",
+        "1.2"
+      ],
+      "answer": 3,
+      "explanation": "The ratio is 1.2.",
+      "code": "sxy, sxx = 12, 10\nprint(f\"{sxy/sxx:.1f}\")\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which intercept puts slope 1.2 through mean point (3,5)?",
+      "options": [
+        "1.4",
+        "3.6",
+        "5.0",
+        "8.6"
+      ],
+      "answer": 0,
+      "explanation": "The line must satisfy 5=1.2*3+b, giving b=1.4.",
+      "code": "w, xm, ym = 1.2, 3, 5\nprint(f\"{ym-w*xm:.1f}\")\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What constant prediction does LinearRegression choose when x never changes?",
+      "options": [
+        "2.0",
+        "3.0",
+        "0.0",
+        "5.0"
+      ],
+      "answer": 1,
+      "explanation": "Without feature variation, the fitted values equal the mean target 3.",
+      "code": "from sklearn.linear_model import LinearRegression\nm = LinearRegression().fit([[2], [2], [2]], [1, 3, 5])\nprint(f\"{m.predict([[2]])[0]:.1f}\")\n",
+      "requires": [
+        "sklearn"
+      ]
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "One feature gives one slope and an intercept.",
+      "bn": "একটা ফিচারের জন্য একটা ঢাল আর একটা intercept থাকে।"
+    },
+    {
+      "en": "Least squares minimises total squared residuals.",
+      "bn": "least squares ভুলগুলোর বর্গের যোগফল কমায়।"
+    },
+    {
+      "en": "The fitted line passes through the two means.",
+      "bn": "ফিট করা রেখা দুই গড়ের পয়েন্ট দিয়ে যায়।"
+    },
+    {
+      "en": "Identical x values do not identify a unique slope.",
+      "bn": "সব x সমান হলে আলাদা করে ঢাল শেখা যায় না।"
+    },
+    {
+      "en": "Slope describes change in target units per feature unit.",
+      "bn": "ফিচার এক একক বাড়লে অনুমান কত বদলায়, ঢাল তা জানায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Fit x=1,2,3,4,5 and y=3,4,5,4,9 by least squares.",
+      "marks": 5,
+      "answerHtml": "<p>Means are 3 and 5. Centred products total 12 and centred x squares total 10. Hence w=1.2 and b=5-1.2*3=1.4. Residual squares sum to 7.6, giving MSE=1.52.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "All five x values equal 2 and targets are 1,2,3,4,5. Explain a fitted constant prediction.",
+      "marks": 5,
+      "answerHtml": "<p>Mean y=3 and sxx=0. Slope is not identifiable separately from intercept. Choosing w=0,b=3 minimises squared residuals at the observed x values.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Derive the centred slope formula from the least-squares objective.",
+      "marks": 8,
+      "answerHtml": "<p>Set the derivative in b to zero to obtain b=y_mean-w*x_mean. Substitute into the residuals to obtain dy-w*dx. Differentiating in w gives w*sum(dx²)=sum(dx*dy), yielding the stated slope when the denominator is positive.</p>"
+    }
+  ],
+  "labs": [
+    "least-squares"
+  ],
+  "references": [
+    {
+      "title": "scikit-learn linear models",
+      "url": "https://scikit-learn.org/stable/modules/linear_model.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

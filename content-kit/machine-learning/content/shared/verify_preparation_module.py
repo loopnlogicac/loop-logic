@@ -212,8 +212,8 @@ def main():
         assert sheet['quiz'][i-1]['figure'] == figures[key]
         assert (worksheet/f'assets/warm-up-{i}.svg').read_text() == builder['svg'](figures[key])
     manifest = json.loads((ROOT/'manifest.json').read_text())
-    assert manifest['packageVersion'] == '0.4.0'
-    assert len(manifest['modules']) == 4
+    assert manifest['packageVersion'] == '0.5.0'
+    assert len(manifest['modules']) == 5
     print(f'Eight topics: {example_count} examples, {practice_count} practice items ({code_count} coding), {output_count} output quizzes, {picture_count} picture quizzes and {exam_count} worked exam answers.')
     print('Computed picture catalogue, four printable quiz matches and all five default Python/library transcript pairs pass.')
 

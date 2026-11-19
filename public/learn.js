@@ -3,6 +3,7 @@ import { masteryStrings, topicChecks } from './mastery.js';
 // Tutorials: track list → topic list → topic page (lesson, runnable examples, labs,
 // quiz graded on the server, practice with solutions, exam questions).
 import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
+import { savedStrings, savedEditor } from './saved.js';
 import { mountLab, renderFigure } from './lab-player.js';
 import { codeRunner, runnerStatus } from './runner.js';
 
@@ -10,6 +11,7 @@ let RUN = { enabled: false, languages: [] };
 
 const T = {
   en: {
+    ...savedStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · every example in these tutorials was compiled and run before publishing',
     title: 'Tutorials', sub: (t, l) => `Step-by-step written lessons with runnable code, interactive labs, quizzes and practice. ${t} topics and ${l} labs so far, with more added every week.`,
     ...studyPlanStrings.en,
@@ -27,6 +29,7 @@ const T = {
     ...masteryStrings.en,
   },
   bn: {
+    ...savedStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · এই টিউটোরিয়ালের প্রতিটি উদাহরণ প্রকাশের আগে কম্পাইল করে চালানো হয়েছে',
     title: 'টিউটোরিয়াল', sub: (t, l) => `ধাপে ধাপে লেখা পাঠ, চালানো যায় এমন কোড, ইন্টারঅ্যাকটিভ ল্যাব, কুইজ আর অনুশীলন। এখন পর্যন্ত ${t}টি টপিক আর ${l}টি ল্যাব; প্রতি সপ্তাহে আরও যোগ হচ্ছে।`,
     ...studyPlanStrings.bn,
@@ -186,6 +189,7 @@ async function renderTopic() {
         checks.before, langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, checks.after, quiz, practice, exam, videos, refs, studyPlan(L, { track: d.track.id, topic: d.topic.id }), pager)));
   fillAdSlots();
   api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
+  main.querySelector('.tut-title').after(savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L));
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 }
 

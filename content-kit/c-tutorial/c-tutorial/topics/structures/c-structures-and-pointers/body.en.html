@@ -1,0 +1,67 @@
+<h2 id="introduction">A record can be reached through an address</h2>
+<p class="lead">A structure object stores its members. A pointer to that structure stores an address through which you can reach the object. Think of a lab form and a note telling you where the form is kept. Several notes may lead to the same form, so editing through one note changes what the others see.</p>
+<p>The <dfn>arrow operator</dfn>, written -&gt;, selects a member through a pointer to a structure. If pointer selects a live Mark record, pointer-&gt;score names that record's score member. The pointer does not contain a second score. It provides a route to the original object.</p>
+<p>This access works with automatic records as well as allocated records. A pointer to a local record borrows its lifetime. A malloc result can instead own a dynamic record that lasts until free. The pointer declaration alone does not reveal which ownership policy applies.</p>
+<p>Structure members can themselves be pointers. That adds another level of lifetime reasoning. Copying such a structure copies addresses, which can leave two records selecting the same data. Distinguish the record's own bytes from the objects reached through its pointer members before deciding who may modify or release anything.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>For a structure pointer p, p-&gt;score is equivalent to (*p).score. The parentheses in the second form are necessary because member selection binds more tightly than unary dereference. Write the arrow form for ordinary pointer member access because it shows the intention directly.</p>
+<p>The expression &amp;record creates a pointer to an existing structure. malloc(sizeof *owner) obtains enough storage for one structure of the pointed-to type. Initialize the members after checking the result. A compound literal is one concise way to assign a complete initial record.</p><pre><code class="language-c">struct Mark record = {7, 60};
+struct Mark *p = &amp;record;
+p-&gt;score = 65;
+(*p).roll = 8;
+</code></pre><table class="ref"><thead><tr><th scope="col">Starting expression</th><th scope="col">Member access</th><th scope="col">Lifetime responsibility</th></tr></thead><tbody><tr><td>struct Mark object</td><td>object.score</td><td>Depends on object storage duration</td></tr><tr><td>struct Mark *view</td><td>view-&gt;score</td><td>Owner keeps target live</td></tr><tr><td>Allocated struct Mark *owner</td><td>owner-&gt;score</td><td>Owner eventually calls free</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the object before selecting its member</h2>
+<p>The first example creates record with roll seven and score sixty. pointer receives &amp;record, so pointer->score designates record.score. Adding five through the pointer changes the original score. The printed score is sixty-five because there is only one Mark object, reached in two ways.</p>
+<p>The allocated example creates a different ownership shape. owner is an automatic pointer variable, but its target is an allocated Mark. After a successful request, the whole-record assignment initializes roll nine and score eighty-eight. free(owner) later ends the allocated record's lifetime, including its embedded scalar members.</p>
+<p>An array of allocated records is still one block if one malloc request created it. owner+1 selects the second Mark object by the structure stride. A borrowed view of that element may update its score, but must not be passed to free. Only the allocation base owns the release operation.</p><pre class="diagram">pointer ---&gt; record [roll 7 | score 65]
+
+owner -----&gt; [Mark 0][Mark 1]
+                       ^
+view ------------------+
+
+first View [data] --+--&gt; [99][20]
+second View [data] -+    shared target, separate View objects</pre><p>The View example stores a pointer and length rather than an embedded data array. Copying first to second creates two View objects, but both data members contain the same array address. Assigning second.data[0]=99 changes the shared array. Reading first.data[0] therefore also sees ninety-nine.</p>
+<p>This is often called a shallow copy: the record values are copied without duplicating pointed-to objects. A deep copy would create new target storage and copy the desired contents into it. Such a copy needs explicit code, failure cleanup, and a release policy. Do not infer deep ownership from ordinary structure assignment.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The first three programs distinguish an automatic record, one allocated record, and an allocated array with an interior borrower. The fourth changes the representation again: its record contains a pointer. Compare that final output with the earlier independent embedded-name copy in <a href="topic:c-structures">Structures</a>.</p>
+
+<h3>Update an automatic record through a pointer</h3>
+<p>pointer stores the address of record. Its arrow expression selects the same integer that record.score selects. The update therefore changes the original object rather than a copied record. There is no allocation in this program, so no free is needed. The automatic record remains live until main's block ends.</p>
+<div data-example="ex-1"></div>
+
+<h3>Allocate and initialize one record</h3>
+<p>sizeof *owner measures one complete Mark, including any padding needed by the implementation. After checking NULL, main assigns a compound literal to initialize the target. Arrow access prints both members. Releasing owner ends that record's allocated lifetime. The example never assumes a fixed Mark byte size and never reads its uninitialized storage.</p>
+<div data-example="ex-2"></div>
+
+<h3>Borrow one record inside an allocation</h3>
+<p>One allocation holds two consecutive Mark objects. owner+1 selects the second object using the structure's full stride. Updating through view changes owner[1].score. The output 50 80 confirms that only the selected element changed. view is not a separate allocation, so only owner is passed to free after the borrow ends.</p>
+<div data-example="ex-3"></div>
+
+<h3>Copy a record containing a pointer</h3>
+<p>The View type contains an int pointer, not an embedded array. Copying first copies that address into second. The two data pointers therefore still select the same automatic marks array. Updating through second changes what first reads, giving 99 99. Neither View owns an allocation here, so neither data pointer is passed to free.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">NULL, const, and member addresses</h2>
+<p>A NULL structure pointer has no record to select. Check it before applying the arrow operator. A non-NULL value is still not proof of a valid target: an uninitialized or dangling pointer can also be nonzero. Validity comes from initialization, type compatibility, alignment, and a live object lifetime.</p>
+<p>A const struct Mark * view prevents updates to the record through that view. You can still read view->score. Another mutable pointer may change the same record if the actual object is mutable. Const qualification does not extend the lifetime or make borrowed storage independently owned.</p>
+<p>The address &amp;p->score selects an ordinary member within a live record. It remains an interior pointer into that object. Do not free it separately. It also becomes unusable when the containing allocated record is freed or successfully resized. Save a value rather than an address if the caller needs a result after that lifetime ends.</p>
+<p>An allocated structure with pointer members may own further allocations, or may merely borrow them. Those policies need documentation. If it owns them, release the targets before releasing the outer record. If it borrows them, releasing them inside its cleanup would violate the lender's ownership. The structure's type alone cannot resolve that choice.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Using dot on a pointer</h3>
+<p>p.score treats p as a structure object, but p is a pointer. Use p->score or (*p).score. Likewise, an actual record object uses dot rather than arrow. Read the expression's type instead of choosing punctuation from the member name.</p>
+<h3>Freeing an interior record</h3>
+<p>A view equal to owner+1 points inside an allocated record array. Passing that view to free is invalid even though it selects a complete Mark object. Release the original owner base exactly once after all element views have finished. Individual elements were not separately allocated.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Use owner and view naming when it clarifies a teaching example, then document the contract in reusable code. Keep the record pointer and logical array length together. Check allocation before filling members. A whole-record initializer gives a reviewable starting value for all scalar fields.</p>
+<p>When copying a type with pointer members, ask whether targets should remain shared. If sharing is intentional, keep the lender alive and prevent duplicate releases. If independence is required, allocate and copy targets explicitly. Treat a deep-copy operation as resource construction with its own failure cleanup.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Structure pointers and arrow access are established C features. Compound literals and loop declarations in these examples require C99 or later; all programs target C17. The malloc-to-object-pointer conversion needs no cast in C. Pointer-containing structure assignment remains a value copy in C17 and does not introduce automatic deep copying or reference counting.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Use arrow to reach a member through a valid live structure pointer. Allocation adds ownership; an interior pointer remains a borrower. Embedded members copy independently, while pointer members can continue sharing targets. Next, choose value or pointer interfaces in <a href="topic:c-structures-and-functions">Structures and Functions</a>.</p>

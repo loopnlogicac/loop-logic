@@ -1,0 +1,80 @@
+<h2 id="introduction">Use a fingerprint to filter windows</h2>
+<p class="lead">Suppose you compare many same-length text windows with a pattern. Most windows are different, so a short numeric fingerprint can reject them quickly. Rabin-Karp computes a rolling hash and performs full character checks only when the fingerprint agrees.</p>
+<p>A hash maps many strings into a limited set of numbers. Equal strings always have equal hashes under the same formula. Different strings can also have equal hashes; that event is a collision. A hash hit is therefore a candidate, not proof of an occurrence.</p>
+<p>Our verified version compares characters after every hash equality. This makes its reported answers exact even with collisions. It can still be slow when there are many candidates, so correctness and expected speed need separate explanations.</p>
+<p>The teaching hash treats lowercase letters as digits a=0 through z=25, uses base twenty-six, and reduces modulo 101. The small modulus makes arithmetic easy to follow and collisions easy to demonstrate. It is not a recommended defence against adversarial input.</p>
+
+<h2 id="syntax">Give every digit a place value</h2>
+<p>For a length-m window with digit values d0 through d(m-1), use the polynomial hash d0*base^(m-1)+d1*base^(m-2)+...+d(m-1), reduced modulo q. Left-to-right construction repeatedly multiplies the accumulated hash by base and adds the next digit.</p>
+<p>Precompute high=base^(m-1) mod q. The outgoing first digit contributes outgoing*high. Subtract it, multiply by base to shift the remaining digits left, and add the incoming last digit. Each arithmetic stage reduces modulo q.</p>
+<p>C remainder can be negative. Our code subtracts an already-reduced outgoing contribution from a hash in zero through q-1, then adds q before reducing. This bounded expression needs only one addition of q to become nonnegative.</p>
+<p>The main program checks m&gt;n before building the initial text-window hash. A longer pattern cannot fit, and reading its length from the shorter text would access invalid positions. Handling that case early protects both the algorithm and the array.</p>
+<pre><code class="language-text">if m &gt; n: report no matches; stop
+high = base^(m - 1) mod q
+hash pattern and first m text characters
+for start = 0 to n - m:
+    if window == wanted:
+        compare all m characters; report only if equal
+    if another window exists:
+        remove outgoing digit times high, modulo q
+        window = (window * base + incoming digit) mod q</code></pre>
+
+<h2 id="how-it-works">Roll rather than rebuild</h2>
+<p>For pattern aba, digit values are zero, one and zero. Its integer polynomial value is 26, so its hash is 26 modulo 101. The first window aba agrees and passes verification.</p>
+<p>The next window bab has polynomial value 677 and hash 71. Starting from 26, remove the leading a contribution zero, multiply by 26 and append b=1. The modular result is 71. Rebuilding all three positions is unnecessary.</p>
+<p>Moving from bab back to aba removes b times high. Here high=26^2 mod 101=70. Subtracting seventy from seventy-one leaves one; shifting and appending a gives twenty-six again. The second true occurrence starts at two.</p>
+<p>A collision example uses aa and dx. Their digit polynomials are zero and 3*26+23=101. Both reduce to zero. When searching for aa inside dx, the hash test succeeds but the first character comparison fails. The candidate is a spurious hit and must not increase the match count.</p>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Search with verified rolling hashes</h3>
+<p>The main program reports two hash hits and two true matches for ababa and aba. For text dx and pattern aa, it reports one hash hit but count zero. Direct verification determines the answer.</p>
+<div data-example="ex-1"></div>
+<h3>Exhibit a real collision</h3>
+<p>The second example prints the equal hashes of aa and dx under the exact teaching formula. It makes the need for verification concrete rather than treating collisions as a remote possibility.</p>
+<div data-example="ex-2"></div>
+<h3>Inspect each short window hash</h3>
+<p>For length-two windows of ababa, the last program prints hashes 1,26,1,26. Equal windows repeat their hashes. This example isolates the rolling update so its arithmetic is easier to inspect.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Follow hashes and verification separately</h2>
+<p>The rolling value and the match count describe different events. A hash mismatch rejects a window without a character scan. A hash equality starts verification, which may accept or reject the candidate.</p>
+<p>The trace uses the same base, modulus and digit mapping as the C code. Changing any of those conventions changes the numeric hash values while leaving correctly verified match positions unchanged.</p>
+<table class="ref"><caption>Pattern aba has hash 26</caption><thead><tr><th scope="col">Start</th><th scope="col">Window</th><th scope="col">Hash mod 101</th><th scope="col">Verification</th></tr></thead><tbody><tr><td>0</td><td>aba</td><td>26</td><td>Equal; accept</td></tr><tr><td>1</td><td>bab</td><td>71</td><td>Hash differs; skip</td></tr><tr><td>2</td><td>aba</td><td>26</td><td>Equal; accept</td></tr></tbody></table>
+
+<h2 id="correctness">Hash updates preserve the polynomial</h2>
+<p>The hash invariant states that window equals the polynomial of text[start..start+m), reduced modulo q. Initial construction establishes it for start zero. Removing the highest-power outgoing digit leaves the suffix polynomial. Multiplication by base shifts its exponents up, and appending the incoming digit constructs the next window. Modular arithmetic preserves each equality of residues.</p>
+<p>If a text window equals the pattern, their digit sequences and polynomial values agree, so their hashes agree. The hash filter therefore never rejects a true occurrence. When hashes agree, direct comparison accepts exactly the equal windows. Together those facts prove both completeness and soundness of the reported matches.</p>
+<p>Collisions do not invalidate the invariant. They mean the polynomial map is many-to-one. The exactness of this version comes from verification, not from assuming a sufficiently large prime eliminates all collisions.</p>
+<p>A double hash makes accidental collisions less likely under suitable assumptions, but two fixed hashes still do not prove equality for arbitrary strings. If an application omits verification, it must accept a probabilistic or collision-dependent correctness policy. That is a different design from the exact matcher shown here.</p>
+
+<h2 id="complexity">Count candidate verification work</h2>
+<p>Constructing the pattern hash, first window and highest power takes O(m). Rolling through legal starts takes O(n). If H windows have equal hashes, verifying them adds up to O(H*m). A precise bound is therefore O(n+m+H*m).</p>
+<p>Under a suitable randomised hash choice and a nonadversarial model, spurious hits can be rare, giving near-linear expected filtering work. Real matches still need verification in this implementation. A text of repeated a letters and a pattern of repeated a letters creates many true hits, each scanning m positions.</p>
+<p>Thus verified Rabin-Karp has O(nm) worst-case time when m&lt;=n. A fixed small modulus does not supply a universal near-linear guarantee. Always state the hash assumptions behind an expected-time claim.</p>
+<p>The working hash values and counters require O(1) auxiliary space beyond input strings. Retaining all match positions adds O(z) output storage. The examples print positions immediately. Their fixed buffers are bounded teaching storage rather than a different mathematical space claim.</p>
+<p>For matching many patterns of the same length, hash buckets can filter against several candidates together. Every equal-hash candidate still needs verification. Different pattern lengths require separate window lengths or another indexing strategy; one rolling value cannot represent every length at once.</p>
+
+<h2 id="edge-cases">A window exists only when it fits</h2>
+<p>A one-character pattern has high=1. Rolling removes that sole old digit before appending the new one, which is still the same formula. Equal text and pattern lengths yield exactly one candidate window.</p>
+<p>If m&gt;n, the main program prints zero hits and zero matches. Empty patterns are outside the token interface; a boundary-match policy would need handling before computing m-1.</p>
+<p>Leading a digits contribute zero. This can make different-length strings share a polynomial value even without modular reduction. Our comparison always uses equal-length windows, so length remains part of the matching context rather than being inferred from the hash.</p>
+<p>Embedded zero bytes and spaces are also outside these lowercase-token inputs. A binary-data search would pass explicit lengths and compare bytes directly. C string termination is an input representation choice, not a property of rolling hashes.</p>
+
+<h2 id="common-mistakes">A hash hit must not increment the answer alone</h2>
+<p>Counting every equal hash as a match fails immediately on dx versus aa. Increase the hit counter at hash equality, but increase the occurrence counter only after all pattern bytes agree.</p>
+<p>Using base^m instead of base^(m-1) subtracts the wrong outgoing contribution. Write a two-character window by hand to see that its first digit is weighted by one power of base.</p>
+<p>Applying the final roll after the last legal window can read text[n] as if it were a new data character, or go further in a careless implementation. Guard the update with start+m&lt;n, which means a genuine incoming byte exists.</p>
+<p>Allowing large bases and moduli in int can overflow before the remainder reduces the result. Taking modulo after an overflowing multiplication does not repair undefined signed arithmetic. Choose a wider type or a safe modular multiplication routine and prove its bounds.</p>
+
+<h2 id="best-practices">Keep hash conventions visible</h2>
+<p>Record the alphabet mapping, base, modulus and window length beside any trace. Compare reported starts with the naive implementation on repeated strings and deliberately colliding strings.</p>
+<p>If you choose randomised hash parameters in production, separate that engineering choice from deterministic examples. For a classroom demonstration, fixed parameters make traces reproducible. The verifier preserves exact answers even when those parameters collide.</p>
+
+<h2 id="version-notes">Small modular products fit C17 int</h2>
+<p>With base twenty-six, modulus 101 and digits at most twenty-five, each shown product is only a few thousand. The code reduces outgoing*high before subtraction, so one added modulus suffices. These particular bounds justify int arithmetic. Wider general parameters need a fresh overflow analysis.</p>
+
+<h2 id="summary">Filter quickly, verify exactly</h2>
+<p>Rabin-Karp rolls a polynomial fingerprint across text windows. Hash disagreement proves inequality, while hash agreement only invites a direct check. Verification preserves exact answers; the number of candidate checks determines whether the run is near-linear or quadratic.</p>
+
+<p>Revisit the connected idea:</p>
+<p><a href="topic:algo-naive-string-matching">Naive String Matching</a></p>

@@ -1,9 +1,14 @@
+import { downloadFile } from './download.js';
 // Admin site (design: "admin site and instructor dashboard" canvas, Admin page).
 // Every number shown here is real; nothing is sample data. Pages are chosen by the
 // URL hash: #overview, #content, #topic/<id|new>, #track/new, #course/<id|new>,
 // #posts, #post/<id|new>, #users, #ai, #pro, #coupons, #ads, #ad/<id|new>, #site, #settings, #audit.
-import { api, el, toast, currentUser, showSignIn, num, ago, getConfig } from './common.js';
+import { getLang, api, el, toast, currentUser, showSignIn, num, ago, getConfig } from './common.js';
 
+const T = {
+  en: { backup: 'Backup', downloadBackup: 'Download backup (JSON)', backupHelp: 'Download stored documents grouped by kind. API keys and credentials are excluded.', revenue: 'Revenue report', revenueHelp: 'Approved orders only, grouped by approval month in Bangladesh time. Fully discounted orders add ৳0.', month: 'Month', course: 'Course', method: 'Method', orders: 'Approved orders', amount: 'Revenue (BDT)', total: 'Total revenue', downloadCsv: 'Download CSV', noRevenue: 'No approved orders yet.', unknown: 'Unknown date', free: 'Fully discounted', other: 'Other' },
+  bn: { backup: 'ব্যাকআপ', downloadBackup: 'ব্যাকআপ ডাউনলোড করো (JSON)', backupHelp: 'ধরন অনুযায়ী সেভ করা ডকুমেন্ট ডাউনলোড করো। API key আর সাইন ইনের গোপন তথ্য বাদ থাকবে।', revenue: 'আয়ের রিপোর্ট', revenueHelp: 'শুধু অনুমোদিত অর্ডার, বাংলাদেশের সময়ে অনুমোদনের মাস অনুযায়ী। পুরো ছাড়ের অর্ডারে আয় ৳০।', month: 'মাস', course: 'কোর্স', method: 'মাধ্যম', orders: 'অনুমোদিত অর্ডার', amount: 'আয় (BDT)', total: 'মোট আয়', downloadCsv: 'CSV ডাউনলোড করো', noRevenue: 'এখনো কোনো অর্ডার অনুমোদিত হয়নি।', unknown: 'তারিখ নেই', free: 'পুরো ছাড়', other: 'অন্যান্য' },
+};
 const $ = (id) => document.getElementById(id);
 const content = $('adm-content');
 const NAV = [
@@ -478,7 +483,8 @@ async function proPage() {
 let orderTab = 'pending';
 async function ordersPage() {
   setTitle('Orders', 'Payments for paid courses: check each one in your bKash or Nagad app, then approve');
-  const [d, pay] = await Promise.all([api('GET', `/api/admin/orders?status=${orderTab}`), api('GET', '/api/admin/payments')]);
+  const L = T[getLang()];
+  const [d, pay, revenue] = await Promise.all([api('GET', `/api/admin/orders?status=${orderTab}`), api('GET', '/api/admin/payments'), api('GET', `/api/admin/revenue?lang=${getLang()}`)]);
   const tabs = el('div', { class: 'adm-tabs', role: 'tablist' }, ...[['pending', `Waiting · ${d.counts.pending ?? 0}`], ['approved', 'Approved'], ['rejected', 'Not accepted'], ['all', 'All']].map(([id, label]) =>
     el('button', { type: 'button', role: 'tab', 'aria-selected': String(id === orderTab), text: label, onclick: () => { orderTab = id; route(); } })));
   const decide = (o, approve) => async () => {
@@ -494,7 +500,15 @@ async function ordersPage() {
     field('Number type', select(p[key].type, [['personal', 'Personal (Send Money)'], ['merchant', 'Merchant (Payment)'], ['agent', 'Agent (Cash In)']], (v) => { p[key].type = v; })));
   const savePay = button('Save payment details', null, 'primary');
   savePay.onclick = busy(savePay, async () => { await api('POST', '/api/admin/payments', p); toast('Payment details saved.'); });
+  const downloadRevenue = button(L.downloadCsv, null);
+  downloadRevenue.onclick = busy(downloadRevenue, () => downloadFile(`/api/admin/revenue.csv?lang=${getLang()}`, 'revenue.csv'));
+  const methodTitle = (m) => m === 'bkash' ? 'bKash' : m === 'nagad' ? 'Nagad' : m === 'free' ? L.free : L.other;
   return [
+    card(L.revenue, el('p', { class: 'adm-hint', text: L.revenueHelp }), downloadRevenue,
+      el('div', { class: 'adm-kpis' }, kpi(L.total, `৳ ${num(revenue.revenue)}`), kpi(L.orders, num(revenue.orders))),
+      row(table([L.month, L.orders, L.amount], revenue.byMonth.map((r) => [r.month === 'unknown' ? L.unknown : r.month, num(r.orders), num(r.revenue)]), L.noRevenue),
+        table([L.method, L.orders, L.amount], revenue.byMethod.map((r) => [methodTitle(r.method), num(r.orders), num(r.revenue)]), L.noRevenue)),
+      table([L.course, L.orders, L.amount], revenue.byCourse.map((r) => [r.title, num(r.orders), num(r.revenue)]), L.noRevenue)),
     el('div', { class: 'adm-kpis' }, kpi('Waiting to be checked', num(d.counts.pending ?? 0)), kpi('Approved', num(d.counts.approved ?? 0)), kpi('Not accepted', num(d.counts.rejected ?? 0)), kpi('Received (approved)', `৳ ${num(d.revenue)}`)),
     tabs,
     card('', table(['When', 'Student', 'Course', 'Amount', 'Paid with', 'Reference', ''], d.orders.map((o) => [
@@ -651,7 +665,10 @@ async function settingsPage() {
   setTitle('Settings', 'Set on the server, so secrets never pass through this page');
   const [m, cfg] = await Promise.all([api('GET', '/api/admin/me'), getConfig()]);
   const line = (label, ok, text) => el('div', { class: 'adm-list-row' }, chip(ok ? 'On' : 'Off', ok ? 'ok' : 'warn'), el('strong', { text: label }), el('span', { class: 'adm-hint', text }));
-  return [card('Server settings',
+  const L = T[getLang()];
+  const backup = button(L.downloadBackup, null, 'primary');
+  backup.onclick = busy(backup, () => downloadFile('/api/admin/export', 'loop-logic-backup.json', 'application/json'));
+  return [card(L.backup, el('p', { class: 'adm-hint', text: L.backupHelp }), backup), card('Server settings',
     line('YouTube playlist import', m.config.youtubeKey, m.config.youtubeKey ? 'YOUTUBE_API_KEY is set.' : 'Add YOUTUBE_API_KEY in the server environment (Render, or Hostinger later) to add courses from playlists.'),
     line('Admins from the server', m.config.adminEmails > 0, `${m.config.adminEmails} email(s) in ADMIN_EMAILS. They are always admins and cannot be removed here.`),
     line('Saved data', m.config.store === 'supabase', m.config.store === 'supabase' ? 'Supabase (kept across restarts).' : 'Memory only: everything resets on restart.'),

@@ -1,0 +1,433 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-multiple-regression",
+  "module": "regression",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Regression with Many Features",
+    "bn": "অনেক ফিচার দিয়ে রিগ্রেশন"
+  },
+  "summary": {
+    "en": "Use a design matrix to fit several weights and interpret coefficients in the presence of units and correlated inputs.",
+    "bn": "ম্যাট্রিক্সে অনেক ওজন ফিট করো; একক আর ফিচারের মিল মাথায় রেখে মানগুলোর অর্থ বোঝো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "ml-gradient-descent"
+  ],
+  "related": [],
+  "keywords": [
+    "Regression with Many Features",
+    "regression",
+    "Python",
+    "prediction"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "NumPy 2.0+, pandas 2.2+, scikit-learn 1.5+; round displayed values only."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Two flats with the same area"
+    },
+    {
+      "id": "intuition",
+      "title": "Several sliders contribute to one total"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Add a ones column and multiply"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Hold one card detail fixed"
+    },
+    {
+      "id": "examples",
+      "title": "Fit matrices and a multifeature predictor"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Read weights with their context"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: normal equations and identifiable predictions"
+    },
+    {
+      "id": "summary",
+      "title": "Several contributions, one prediction"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Solve a two-feature design matrix",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The leading ones learn the intercept. The two feature weights are 2 and 3, and the query (3,1) receives 19.</p>",
+      "requires": [
+        "numpy"
+      ]
+    },
+    {
+      "id": "ex-2",
+      "title": "Fit the same columns with LinearRegression",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Column order defines coefficient meaning. Both fitting methods agree because they use the same rows and target.</p>",
+      "requires": [
+        "numpy",
+        "sklearn"
+      ]
+    },
+    {
+      "id": "ex-3",
+      "title": "Combine three study measurements",
+      "level": "intermediate",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": false,
+      "explanationHtml": "<p>All three measurements are assumed available before the exam. The passed column is excluded because it is derived from the final marks.</p>",
+      "requires": [
+        "pandas",
+        "sklearn"
+      ],
+      "workdirFiles": [
+        "shared/datasets/study.csv"
+      ]
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Evaluate a two-feature model",
+      "statementHtml": "<p>Read b w1 w2, then x1 x2. Print b+w1*x1+w2*x2 to three decimals.</p>",
+      "hints": [
+        "Preserve feature order."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Rescale a coefficient without changing predictions",
+      "statementHtml": "<p>Read w factor, with factor positive. A new feature is old feature times factor. Print the corresponding new coefficient to three decimals.</p>",
+      "hints": [
+        "The product of coefficient and feature must stay unchanged."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Explain duplicate feature weights",
+      "statementHtml": "<p>Two columns both contain hours. Show two coefficient pairs giving an hours contribution of 2*hours.</p>",
+      "hints": [
+        "Only their sum affects predictions."
+      ],
+      "answerHtml": "<p>Pairs (2,0) and (1,1) both give 2*hours. More generally any pair summing to 2 gives identical fitted values. Individual coefficients are not identifiable from these duplicate columns.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Read an attendance coefficient",
+      "statementHtml": "<p>A coefficient is 0.2 marks per attendance percentage point. Interpret an increase from 70 to 80 while hours and past marks stay fixed.</p>",
+      "hints": [
+        "The feature change is ten percentage points."
+      ],
+      "answerHtml": "<p>The model prediction rises by 0.2*(80-70)=2 marks, conditional on the other included features staying fixed. This association alone does not establish a causal effect.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For fixed attendance flag 1, how much does prediction rise from hours 2 to 4?",
+      "options": [
+        "4 marks",
+        "2 marks",
+        "6 marks",
+        "0 marks"
+      ],
+      "answer": 0,
+      "explanation": "The table changes from 17 to 21: two added hours times coefficient 2.",
+      "figure": {
+        "caption": {
+          "en": "Predictions from 10 + 2 hours + 3 attendance flags.",
+          "bn": "10 + 2 hours + 3 attendance flag দিয়ে অনুমান।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 6,
+              "cols": 3,
+              "colLabels": [
+                "Hours",
+                "Attendance flag",
+                "Prediction"
+              ],
+              "cells": [
+                [
+                  1,
+                  0,
+                  12
+                ],
+                [
+                  2,
+                  1,
+                  17
+                ],
+                [
+                  3,
+                  0,
+                  16
+                ],
+                [
+                  4,
+                  1,
+                  21
+                ],
+                [
+                  5,
+                  0,
+                  20
+                ],
+                [
+                  6,
+                  1,
+                  25
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which design-matrix column learns an intercept?",
+      "options": [
+        "A column of row identifiers",
+        "A column of ones",
+        "A duplicate target column",
+        "A column of squared residuals"
+      ],
+      "answer": 1,
+      "explanation": "Multiplying the leading one by its weight adds the same offset to every prediction."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the safer NumPy alternative to explicitly inverting A transpose A?",
+      "options": [
+        "A / y",
+        "np.mean(A) only",
+        "np.linalg.lstsq(A, y, rcond=None)",
+        "np.linalg.inv(y)"
+      ],
+      "answer": 2,
+      "explanation": "Least-squares solvers handle numerical conditioning better and support rank-deficient matrices."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Two predictors are exact duplicates. Which conclusion is justified?",
+      "options": [
+        "No fitted predictions can exist",
+        "One duplicate must cause zero training loss",
+        "The larger coefficient proves causality",
+        "Individual weights need not be uniquely identifiable"
+      ],
+      "answer": 3,
+      "explanation": "Multiple coefficient vectors can give the same predictions; a pseudoinverse chooses one solution."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Can coefficients in hours and percentage points be ranked directly as importance?",
+      "options": [
+        "No; units and correlated features affect their magnitudes",
+        "Yes, the largest number is always most important",
+        "Yes, if the intercept is positive",
+        "Only when every target is an integer"
+      ],
+      "answer": 0,
+      "explanation": "Rescale inputs or inspect domain meaning and uncertainty before comparing weights."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does holding other included features fixed mean?",
+      "options": [
+        "Remove those columns from the trained model",
+        "Compare predictions at the same values of those features",
+        "Set every other weight to zero",
+        "Assume features are independent in the population"
+      ],
+      "answer": 1,
+      "explanation": "Coefficient interpretation conditions on the other model inputs; it is not a causal intervention."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why exclude passed when predicting final marks from pre-exam measurements?",
+      "options": [
+        "Binary columns cannot be numeric inputs",
+        "Its name is too short",
+        "It is derived from the final outcome and unavailable at prediction time",
+        "It duplicates the intercept in all datasets"
+      ],
+      "answer": 2,
+      "explanation": "Including future outcome information is leakage even if it raises a score."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What dot-product mark follows weights [2,3] and features [4,1] plus intercept 10?",
+      "options": [
+        "11",
+        "18",
+        "24",
+        "21"
+      ],
+      "answer": 3,
+      "explanation": "The sum is 10+8+3=21.",
+      "code": "x, w, b = [4, 1], [2, 3], 10\nprint(b + sum(a*v for a,v in zip(x,w)))\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What is the shape of a six-row matrix with intercept and two features?",
+      "options": [
+        "(6, 3)",
+        "(3, 6)",
+        "(6, 2)",
+        "(2, 6)"
+      ],
+      "answer": 0,
+      "explanation": "Adding a ones column gives three columns and keeps six rows.",
+      "code": "import numpy as np\nX = np.zeros((6, 2))\nA = np.column_stack([np.ones(len(X)), X])\nprint(A.shape)\n",
+      "requires": [
+        "numpy"
+      ]
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many coefficients does a two-feature LinearRegression learn, excluding its intercept?",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "answer": 1,
+      "explanation": "There is one learned coefficient for each of the two input columns.",
+      "code": "from sklearn.linear_model import LinearRegression\nm = LinearRegression().fit([[0,0],[1,0],[0,1],[1,1]], [1,3,4,6])\nprint(len(m.coef_))\n",
+      "requires": [
+        "sklearn"
+      ]
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Each feature has a weight in the prediction sum.",
+      "bn": "অনুমানের যোগফলে প্রতিটা ফিচারের একটা ওজন থাকে।"
+    },
+    {
+      "en": "The intercept needs a column of ones in a design matrix.",
+      "bn": "design matrix-এ intercept-এর জন্য একের একটা কলাম লাগে।"
+    },
+    {
+      "en": "Use least squares or a pseudoinverse instead of an explicit inverse.",
+      "bn": "আলাদা inverse বের না করে least squares বা pseudoinverse ব্যবহার করো।"
+    },
+    {
+      "en": "A coefficient holds the other included features fixed.",
+      "bn": "একটা coefficient বুঝতে অন্য নেওয়া ফিচারগুলো একই মানে ধরতে হয়।"
+    },
+    {
+      "en": "Correlated features can make individual weights unstable.",
+      "bn": "ফিচারগুলোর মধ্যে বেশি মিল থাকলে আলাদা ওজন অস্থির হতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Predict hours=3,flag=1 under marks=10+2*hours+3*flag. Interpret two more hours.",
+      "marks": 5,
+      "answerHtml": "<p>Prediction=10+6+3=19. Holding flag fixed, two extra hours change the model prediction by 2*2=4 marks. The statement is conditional association, not an intervention result.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Rewrite an hours coefficient of 2 using minutes as the feature.",
+      "marks": 5,
+      "answerHtml": "<p>Minutes=60*hours, so the coefficient becomes 2/60=1/30 marks per minute. Multiplying the new feature by its coefficient preserves every prediction.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Explain the normal equation and why a direct inverse is often avoided.",
+      "marks": 8,
+      "answerHtml": "<p>Adding an intercept column gives design A. The derivative yields A transpose A theta=A transpose y. An explicit inverse requires independent columns and can worsen numerical conditioning. lstsq or a pseudoinverse handles rank and stability more carefully.</p>"
+    }
+  ],
+  "labs": [],
+  "references": [
+    {
+      "title": "scikit-learn linear models",
+      "url": "https://scikit-learn.org/stable/modules/linear_model.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

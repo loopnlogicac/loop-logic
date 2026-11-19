@@ -1,0 +1,68 @@
+<h2 id="introduction">Try a choice, then return</h2>
+<p class="lead">Imagine filling a lab timetable one slot at a time. A choice that looks reasonable now may block the last course. You need a way to return to an earlier slot and try something else. Backtracking does exactly that: make a choice, explore its consequences, then undo the choice.</p>
+<p>A <code>state-space tree</code> is a picture of these decisions. The root has no choices yet. An edge adds one choice. A node holds a partial candidate, and a leaf represents a complete candidate. You normally explore this tree with depth-first recursion rather than storing the entire tree.</p>
+<p>Consider a length-four binary string with exactly two ones. You may put zero or one at every position. There are sixteen complete strings before filtering. Only six satisfy the requirement. This small problem lets you see the difference between generating candidates and rejecting impossible prefixes.</p>
+<p>Backtracking is useful when choices interact and you need a valid arrangement or every arrangement. It does not promise fast execution for large inputs. Before using it, estimate the decision depth and branching factor. A small search can be clearer than a complicated table.</p>
+
+<h2 id="syntax">Describe the recursive contract</h2>
+<p>Our function <code>explore(pos, used)</code> assumes positions before pos already contain a chosen prefix. The value used counts its ones. Positions from pos onward remain undecided. The global n and ones stay fixed during the search.</p>
+<p>At each call, first decide whether any completion is possible. Then handle a complete prefix. Otherwise, choose the next bit, recurse with one fewer undecided position, and restore that slot before trying another bit. Passing used by value means the child's counter cannot change the parent's counter.</p>
+<p>The array slot is restored explicitly so you can see the undo step. A freshly overwritten slot would also work here, but that shortcut does not generalise to shared sets, occupancy flags or running totals. Write down every piece of mutable state before relying on overwriting.</p>
+<pre><code class="language-text">explore(pos, used):
+    if used &gt; ones: return
+    if used + n - pos &lt; ones: return
+    if pos == n: report path; return
+    for bit in [0, 1]:
+        path[pos] = bit
+        explore(pos + 1, used + bit)
+        path[pos] = 0</code></pre>
+
+<h2 id="how-it-works">Reject a prefix for a reason</h2>
+<p>The first pruning test rejects too many ones. If used is already three but the requirement is two, adding more bits cannot help. The second test checks whether enough positions remain. With one open slot and zero ones so far, a requirement of two is unreachable.</p>
+<p>These are proofs about every continuation of a prefix. They are stronger than saying a choice seems unhelpful. A guess-based rejection might remove the only answer. Always explain why no allowed completion can repair the state.</p>
+<p>For n=4 and ones=2, try bits in the order zero then one. The first valid leaf is 0011. After printing it, return to its parent, undo the last bit and continue. The output order is lexicographic because every zero-prefixed subtree finishes before its corresponding one-prefixed subtree.</p>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Enumerate a fixed number of ones</h3>
+<p>With input 4 2, the recursive search prints 0011, 0101, 0110, 1001, 1010 and 1100. Each row is a different complete path. Input 0 0 prints one empty line: the empty string is a valid candidate.</p>
+<div data-example="ex-1"></div>
+<h3>Count the unpruned tree</h3>
+<p>For depth four, the loop reports sixteen leaves and thirty-one total nodes. Adding the sizes of all levels explains why visiting internal prefixes matters too.</p>
+<div data-example="ex-2"></div>
+<h3>Pass a prefix by value</h3>
+<p>The numeric-prefix example prints zero through seven for depth three. Multiplying by two appends a binary zero; adding one chooses a binary one. A value parameter avoids shared-counter restoration.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Follow one prefix to completion</h2>
+<p>The table follows the leftmost successful route, with rejected siblings noted. The prefix length equals pos. Empty positions are not zero choices until a branch assigns them.</p>
+<p>At prefix 000, only one position remains. Even a final one would give one one, so the search returns before reaching depth four. At prefix 001, one more one is still possible. Choosing its final one yields the first valid result.</p>
+<table class="ref"><caption>A branch and its nearby failures</caption><thead><tr><th scope="col">Prefix</th><th scope="col">pos</th><th scope="col">used</th><th scope="col">Decision</th></tr></thead><tbody><tr><td></td><td>0</td><td>0</td><td>Try zero</td></tr><tr><td>0</td><td>1</td><td>0</td><td>Try zero</td></tr><tr><td>00</td><td>2</td><td>0</td><td>Try zero</td></tr><tr><td>000</td><td>3</td><td>0</td><td>Prune: only one place remains</td></tr><tr><td>001</td><td>3</td><td>1</td><td>Try zero, then one</td></tr><tr><td>0010</td><td>4</td><td>1</td><td>Prune: too few ones</td></tr><tr><td>0011</td><td>4</td><td>2</td><td>Report and return</td></tr></tbody></table>
+
+<h2 id="correctness">Keep siblings independent</h2>
+<p>The invariant is that the chosen prefix contains exactly used ones when a call starts. Choosing bit b extends the prefix by one and changes that count to used+b. Thus the child receives a truthful state. Returning and undoing restores the parent's prefix before a sibling starts.</p>
+<p>For completeness, take any valid full string. Its prefixes never exceed the required ones, and each has enough remaining positions to finish. Neither pruning test rejects them. The search tries both bits at every surviving position, so it eventually follows that whole string.</p>
+<p>For uniqueness, two different paths first differ at some bit. They cannot produce the same full binary string. A complete surviving prefix has exactly the required count, so every reported string is valid. These arguments establish validity, completeness and no duplicate reports separately.</p>
+
+<h2 id="complexity">Depth is smaller than the whole tree</h2>
+<p>Without pruning, depth n gives 2^n leaves and 2^(n+1)-1 nodes. Visiting nodes alone takes O(2^n) time. Printing each length-n answer adds O(n) per answer, so O(n*2^n) is a safe overall bound.</p>
+<p>The active recursion stack has only one root-to-leaf path, not every node. It needs O(n) space together with the path array. If you store every answer instead of printing immediately, retained output can require O(n*2^n) memory.</p>
+<p>Pruning often makes individual instances much smaller. It does not turn every combinatorial search into a polynomial algorithm. Counting required-one strings can also use a binomial formula, but that formula does not list their actual contents.</p>
+
+<h2 id="edge-cases">First answer, all answers, and no answers</h2>
+<p>Length zero has one empty candidate. A zero-one requirement yields the all-zero string; a requirement equal to n yields the all-one string. The program rejects a requirement outside zero through n instead of searching an impossible input.</p>
+<p>If the task asks whether any answer exists, return a Boolean success flag at the first valid leaf. If it asks for all answers or their count, continue after every valid leaf. Mixing these stopping rules can silently undercount a correct search.</p>
+
+<h2 id="common-mistakes">An early return can leave damage</h2>
+<p>A common bug sets a shared flag and returns before clearing it. Later siblings then inherit a choice they never made. Put cleanup on every unsuccessful return path, or design the state so the child owns a separate copy.</p>
+<p>Another mistake tests the final condition at a partial prefix and treats it as complete. A prefix with two ones may still need more zero positions. Report only after every required position has a decision.</p>
+<p>Do not draw every rejected subtree and claim the algorithm explored it. Pruning means those descendants were never visited. Distinguish visited nodes from logically possible candidates when explaining a speedup.</p>
+
+<h2 id="best-practices">Name the state before coding</h2>
+<p>Write the recursive meaning in one sentence. Identify immutable parameters, copied counters and shared mutable containers. Mark the base case and the cleanup point before adding pruning.</p>
+<p>For a new search, temporarily disable the prune on tiny inputs. Compare its answer set with the pruned version. Equal results are useful evidence; the pruning proof explains why equality continues beyond those examples.</p>
+
+<h2 id="version-notes">Bound the recursion in C17</h2>
+<p>The demonstration allows at most twelve bit positions, so its path array and recursion depth are bounded. The tree-count example allows depth twenty, safely within its unsigned long long counter. General inputs need an overflow policy and a practical stack limit. C17 adds no automatic recursion-depth protection.</p>
+
+<h2 id="summary">A disciplined return path</h2>
+<p>Backtracking explores choices with a clear state contract and restores the parent before trying a sibling. A sound prune removes only impossible continuations. Next, apply these ideas to attacking pieces in the N-Queens problem.</p>

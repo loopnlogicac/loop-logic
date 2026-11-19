@@ -1,0 +1,62 @@
+<h2 id="introduction">A macro substitutes tokens, not a function body</h2>
+<p class="lead">A repeated constant such as a lab capacity is a natural macro use. A repeated expression such as a square looks tempting too. The difference is that a function-like macro inserts argument tokens into replacement text. It does not create a typed parameter object or evaluate an argument exactly once before using it.</p>
+<p>An <dfn>object-like macro</dfn> replaces a name with tokens. A <dfn>function-like macro</dfn> accepts parenthesized token arguments and substitutes them into a replacement. Their call-like appearance can hide this difference from ordinary functions. Understanding expansion helps you decide when the convenience is worth the risks.</p>
+<p>Think of a rubber stamp with spaces for words. If the stamp repeats the same blank twice, the supplied words appear twice. C operators in those words then execute wherever the expanded expression places them. Parentheses can preserve grouping, but they cannot turn repeated side effects into one evaluation.</p>
+<p>Macros also provide operations that ordinary C functions cannot perform directly: converting source tokens to string text with # and joining tokens with ##. Use those capabilities for a clear source-level purpose. For ordinary numeric helpers, a static inline function often gives a safer and equally readable interface.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>For a function-like macro definition, the opening parenthesis must immediately follow the macro name. Whitespace between the name and that parenthesis would make an object-like replacement instead. Parameter names inside the list stand for argument tokens, and replacement continues through the logical line.</p>
+<p>Parenthesize each expression parameter wherever it is used and parenthesize the complete resulting expression. In SQUARE(x), both occurrences of x need parentheses. The outer pair also protects the result when used inside a larger expression, such as ten divided by the macro result.</p><pre><code class="language-c">#define LIMIT 20
+#define SQUARE(x) ((x) * (x))
+#define STRINGIFY(x) #x
+#define JOIN(a, b) a ## b
+</code></pre><table class="ref"><thead><tr><th scope="col">Operator or form</th><th scope="col">Purpose</th><th scope="col">Main caution</th></tr></thead><tbody><tr><td>Object-like replacement</td><td>Name constant tokens</td><td>No automatic type or scope</td></tr><tr><td>Function-like replacement</td><td>Substitute argument tokens</td><td>Grouping and repeated evaluation</td></tr><tr><td>#parameter</td><td>Create a string literal from argument spelling</td><td>Direct stringification suppresses expansion of that argument</td></tr><tr><td>a ## b</td><td>Join tokens into one token</td><td>The result must be a valid preprocessing token</td></tr></tbody></table>
+
+<h2 id="how-it-works">Expand an expression before trusting its result</h2>
+<p>BAD_SQUARE(value+1), defined as x*x, becomes value+1*value+1. Multiplication binds before addition, so with value three the result is seven. SQUARE(value+1), defined with full grouping, becomes ((value+1)*(value+1)) and produces sixteen. The macro name does not override C precedence rules.</p>
+<p>The outer replacement parentheses matter too. A macro defined as (x)+1 may behave incorrectly in 2*PLUS_ONE(3), because multiplication binds to the first part only. Defining ((x)+1) makes the full expression one grouped operand. Protect each argument and the whole result for expression-style macros.</p>
+<p>Now consider SQUARE(i++). Even with perfect parentheses, i++ appears twice in the expanded multiplication. Those modifications are unsequenced relative to each other, so the behavior is undefined in C17. Do not run it to discover a supposed answer. Save the argument in an ordinary variable first, or call a real function.</p>
+<p>The inline square helper receives its value parameter once. Calling square(count++) passes the old count value and increments count once. The multiplication then uses the local value twice without touching count again. The example prints result nine and count four. inline is not a promise that the compiler must remove a call; it is a language facility with separate linkage rules.</p>
+<p>The # operator stringifies an argument's spelling. STRINGIFY(lab_score) produces the string literal "lab_score". It does not read the variable or print its numeric value. Whitespace in stringified tokens is normalized, and quote or backslash characters are escaped as required for a string literal.</p>
+<p>The ## operator pastes adjacent token spellings. JOIN(lab_,score) forms lab_score, which the C compiler can then resolve as an identifier. Pasting must produce a valid preprocessing token. It is not runtime string concatenation and cannot build a variable name from a student's entered text.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The worked programs cover constant replacement, safe grouping, token spelling, and a real function that handles a side effect once. The final comparison intentionally computes a wrong arithmetic formula with a badly grouped macro. Its behavior is defined, allowing you to observe the precedence mistake without executing undefined code.</p>
+
+<h3>Group a macro argument containing addition</h3>
+<p>The inner parentheses preserve value+1 as one operand on both sides of multiplication. The outer parentheses keep the square together inside other expressions. With value three, both operands are four, giving sixteen. LIMIT is an independent object-like macro. Neither macro creates a parameter variable or a runtime constant object.</p>
+<div data-example="ex-1"></div>
+
+<h3>Stringify a name and paste an identifier</h3>
+<p>STRINGIFY turns the argument spelling into a string literal. JOIN combines lab_ and score into one identifier token. That token then selects the declared integer variable during ordinary C compilation. The preprocessor does not read the variable's value. printf receives the generated label and the independently evaluated integer.</p>
+<div data-example="ex-2"></div>
+
+<h3>Use a function for a side-effecting argument</h3>
+<p>count++ is evaluated once to supply the function argument. square receives a value parameter equal to three and multiplies that local value by itself. count becomes four as a separate consequence of the argument expression. The use of inline does not create macro substitution. This preserves the single-evaluation function contract.</p>
+<div data-example="ex-3"></div>
+
+<h3>Compare bad and protected expression grouping</h3>
+<p>BAD_SQUARE(value+1) becomes value+1*value+1. With value three, ordinary precedence computes three plus three plus one. The protected SQUARE instead groups both four-valued arguments. The output 7 16 is defined because neither argument changes state. This example demonstrates a logical arithmetic error rather than undefined evaluation order.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Expansion layers and statement-like macros</h2>
+<p>Arguments used directly with # or ## are not expanded first in the ordinary way. To stringify a macro's expanded value, use two levels: define STR_RAW(x) as #x and STR(x) as STR_RAW(x). STR(LIMIT) then expands LIMIT before the inner stringification. A corresponding two-level paste helper can expand arguments before joining tokens.</p>
+<p>Do not confuse a valid pasted token with the final expression's type. A pasted identifier still needs a visible declaration. A pasted numeric token must still form valid C in its context. The preprocessor can build tokens, but the compiler remains responsible for the resulting declarations and expressions.</p>
+<p>A macro expanding to several statements can break if/else grouping. A conventional statement-style design wraps the statements in do { ... } while (0), allowing the caller's semicolon to end one statement. This pattern addresses control-flow grouping, not argument duplication or unexpected break behavior. Prefer a function when the task fits an ordinary typed operation.</p>
+<p>Macros can hide arithmetic overflow too. SQUARE on a large int may overflow signed int even though the macro is perfectly parenthesized. The exercises limit inputs so the result fits. A replacement mechanism cannot prove arithmetic bounds for every caller. Choose appropriate types and document the accepted domain.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Believing parentheses prevent repeated side effects</h3>
+<p>Parentheses fix grouping but do not reduce the number of substituted occurrences. An increment, input operation, or function call with side effects can run more than once after expansion. Use side-effect-free arguments or a real helper. Never give an output prediction for SQUARE(i++) in C17 as though it had one defined result.</p>
+<h3>Treating stringification as value printing</h3>
+<p>#x produces source spelling. To print the value of score, still pass score to an appropriate printf conversion. The token-label example deliberately prints both the stringified identifier and its separately evaluated integer. The label and value serve different purposes.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Reserve macros for capabilities that require preprocessing or for small clearly documented constants. Prefer static inline helpers for typed arithmetic that should evaluate arguments once. Keep a macro's side-effect rules visible at its definition. Use capitals to make potentially surprising substitution recognizable at a call site.</p>
+<p>Inspect expanded tokens for a precedence failure, then check evaluation counts separately. Test an argument containing addition, use the result inside a larger expression, and review signed ranges. These checks catch different classes of error; passing one does not imply the others are safe.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>The # and ## macro operators are part of standard C since C89. inline functions require C99, and these examples use static inline to avoid external-definition complications. All programs are compiled as C17. The C17 undefined-behavior warning about unsequenced repeated increments remains essential even when a compiler appears to produce a stable result.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Macros substitute tokens and require careful grouping and evaluation reasoning. Use # for source spelling and ## for token joining. Parentheses do not cure duplicated side effects, so prefer typed functions for ordinary single-evaluation arithmetic. Next, select source variants in <a href="topic:c-conditional-compilation">Conditional Compilation</a>.</p>
