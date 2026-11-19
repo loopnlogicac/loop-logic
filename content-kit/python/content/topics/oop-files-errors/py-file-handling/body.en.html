@@ -1,0 +1,84 @@
+<h2 id="introduction">Keep data after the program ends</h2>
+
+<p class="lead">Variables disappear when a process finishes. A file lets your program save marks or expense records for another run. File handling has two responsibilities: choosing a data format and managing the open resource correctly. A clear format helps later readers; reliable closing prevents resource leaks.</p>
+<p>A <dfn>path</dfn> describes where a file is located. The pathlib module represents paths as objects instead of manually joining strings with slashes. A Path can describe a file that does not yet exist. Creating the Path object alone does not create or open that file.</p>
+<p>These examples create their own temporary directories. That lets you study writing, reading and cleanup without preparing personal files. In your own application, choose a deliberate storage location and explain when existing data will be replaced. Never treat write mode as a harmless way to inspect a file.</p>
+
+<h2 id="syntax">Choose the mode before opening</h2>
+
+<p>open returns a file object. A text file converts between bytes on disk and Python strings using an encoding. Specify encoding="utf-8" for the text shown here. Use with to close the file when the block finishes or an exception leaves it.</p>
+<pre><code class="language-python">from pathlib import Path
+
+path = Path("marks.txt")
+with path.open("r", encoding="utf-8") as stream:
+    for line in stream:
+        print(line.rstrip("\n"))</code></pre>
+<table class="ref"><thead><tr><th scope="col">Mode</th><th scope="col">Meaning</th><th scope="col">Existing data</th></tr></thead><tbody><tr><td>r</td><td>Read text</td><td>Kept; missing file fails</td></tr><tr><td>w</td><td>Write text</td><td>Truncated on open</td></tr><tr><td>a</td><td>Append text</td><td>Kept; new writes go to end</td></tr><tr><td>x</td><td>Create text exclusively</td><td>Existing file causes failure</td></tr><tr><td>rb / wb</td><td>Read / write bytes</td><td>No text encoding argument</td></tr></tbody></table>
+<p>A relative path is resolved from the process working directory, which may differ from the script's folder. Use a configured base directory for a real application. Path("data") / "marks.txt" joins components portably. The slash here is pathlib's operator, not division of numbers.</p>
+
+<h2 id="how-it-works">Understand position, buffering and lifetime</h2>
+
+<p>A file object tracks a current position. read() consumes the remaining content, so calling it again at the end returns an empty string. readline() returns one line, usually including its newline, or an empty string at the end. A blank line is different: it contains a newline character.</p>
+<p>Iterating over the stream reads successive lines. This avoids keeping the whole file in a list, although each line is still stored while you process it. readlines() builds a list of all remaining lines. Choose the operation based on data size and the calculation you need.</p>
+<p>Text writes may be buffered before reaching the operating system. Closing the file flushes Python's buffer. This does not promise survival through a sudden power failure; durability has additional requirements. The with statement is primarily about reliable resource lifetime.</p>
+<p>Do not use a closed stream after the with block. A later read or write normally raises ValueError. Keep the processing inside the block, or store the needed values before leaving. A second with can open the same path again for a new independent read.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python text streams resemble FILE operations but return strings and raise exceptions on many failures. with handles close at block exit. Text encoding is explicit here, while binary mode reads and writes bytes without Unicode decoding.</p></div>
+
+<h2 id="examples">Write, reopen and interpret structured data</h2>
+
+<p>The text examples show replacement, appending and line iteration. CSV and JSON examples use library readers instead of inventing delimiter rules. They close the writer before reopening the file, so each read observes the completed Python write.</p>
+
+<h3>Write text, append and read lines</h3>
+<p>The first open creates the file and the append preserves 75 before adding 80. Iteration reads both lines and converts their text to integers.</p>
+<div data-example="ex-1"></div>
+
+<h3>Distinguish end of file from a blank line</h3>
+<p>The first line contains A and a newline. The second is a blank line containing a newline. Only the third read returns an empty string for end of file.</p>
+<div data-example="ex-2"></div>
+
+<h3>Round-trip a quoted CSV field</h3>
+<p>The comma stays inside the room field. DictReader returns the seats as text, so the program converts it before adding five.</p>
+<div data-example="ex-3"></div>
+
+<h3>Store Unicode and numbers as JSON</h3>
+<p>UTF-8 stores the Bangla label and JSON preserves the integer marks as numbers. The loaded list sums to 155.</p>
+<div data-example="ex-4"></div>
+
+<h3>Refuse to overwrite with exclusive creation</h3>
+<p>Mode x raises before replacing existing content. The final read confirms that keep remains stored.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="csv-records">Let CSV handle commas and quoted fields</h2>
+
+<p>A CSV file stores rows of fields. Commas inside a field need quoting, so splitting every line on a comma is unreliable. csv.reader and csv.writer implement the format rules. A name such as Lab, East remains one field when written and read correctly.</p>
+<p>Open CSV text files with newline="" in addition to the encoding. This lets the csv module manage its own newline conventions and avoids extra blank lines on some platforms. It also matters when quoted fields contain newlines. Do not strip each physical line before passing it to the CSV reader.</p>
+<p>csv.DictWriter associates column names with row dictionaries. Write a header once, then write rows using those named columns. csv.DictReader uses the header to produce dictionaries. Values read from CSV are strings, so convert marks with int before arithmetic and handle invalid data at an appropriate boundary.</p>
+<p>State which columns are required and what an empty field means. Missing marks might mean absent data, not a mark of zero. A CSV reader handles syntax; it does not know your grading rules. Keep format parsing and domain validation as distinct steps.</p>
+
+<h2 id="json-records">Use a format with numbers and nested values</h2>
+
+<p>JSON represents objects, arrays, strings, numbers, booleans and null. json.dump writes a Python value to a text stream; json.load reads it back. The plural forms dumps and loads work with strings rather than file objects. Mixing these pairs is a common source of confusion.</p>
+<p>A JSON object becomes a Python dictionary, and an array becomes a list. JSON true, false and null become True, False and None. Tuples serialize as arrays and load as lists, so round trips do not preserve every Python type. Sets and custom class instances need an explicit conversion policy.</p>
+<p>Use string keys for predictable JSON objects. Numeric dictionary keys can be converted to strings, changing the loaded result. For readable Bangla output, ensure_ascii=False preserves Unicode characters in the written text. It does not choose the file encoding; still open the file with UTF-8.</p>
+<p>Invalid JSON raises JSONDecodeError. A syntactically valid document can still have missing fields or wrong domain values. Check the loaded structure before treating it as trusted marks data. Saving the same path with w replaces the old document; it does not append a second valid document automatically.</p>
+<p>For important persistent data, writing a temporary sibling and replacing the destination can reduce partial-update risks. That needs deliberate error handling and filesystem assumptions. The introductory examples use temporary disposable data and make no transactional guarantee.</p>
+
+<h2 id="common-mistakes">Protect both content and resource lifetime</h2>
+
+<h3>Opening with w before reading old values</h3>
+<p>Truncation happens on opening, not on the first write. Read the existing data first if the operation needs it. Use x when accidental replacement should be rejected.</p>
+<h3>Removing meaningful whitespace</h3>
+<p>strip removes spaces and tabs as well as newlines. Use rstrip("
+") when you only mean the line ending. For CSV, let the reader process quoting and line boundaries.</p>
+<h3>Confusing a path with file content</h3>
+<p>A Path describes a location. read_text reads its content and write_text writes content using a managed open/close operation. These convenience methods suit small files; use a stream for line-by-line processing.</p>
+<h3>Appending multiple JSON documents</h3>
+<p>Two complete JSON values written consecutively are not one ordinary JSON document. Store a list and rewrite it, or choose a separately specified line-based format. Name the format before deciding how to append.</p>
+
+<h2 id="version-notes">Keep encoding and newline policies portable</h2>
+
+<p>The pathlib, csv and json APIs shown are available on Python 3.10–3.12. Default text encodings can depend on the operating system and runtime configuration. Explicit UTF-8 avoids that uncertainty. Temporary directory paths vary, so examples display only content and stable filenames.</p>
+
+<h2 id="summary">Choose the resource rule and the data format</h2>
+
+<p>Use with for file lifetime, select modes carefully, and let CSV or JSON libraries interpret their formats. pathlib keeps location handling readable. Next, <a href="topic:py-iterators-generators">iterators and generators</a> explain how to process values as they arrive.</p>

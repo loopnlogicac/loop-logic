@@ -1,0 +1,84 @@
+<h2 id="introduction">Keep one student’s data together</h2>
+
+<p class="lead">A student record needs a roll number and marks. Functions can pass those values separately, but the connection becomes harder to follow as the program grows. A <dfn>class</dfn> describes objects that hold related data and provide operations on that data. An <dfn>instance</dfn> is one particular object made from that class.</p>
+<p>Think of the class as the design for a marks card. Each card follows the same design but holds its own marks. Making a second card should not erase the first card. Classes help you express this separation directly instead of maintaining several lists whose positions must always agree.</p>
+<p>A class is useful when several functions repeatedly work on the same group of values. It is not a requirement for every small calculation. A function such as square(number) can stay a function. Choose a class when a clear object, such as a student or a balance, makes the program easier to explain.</p>
+
+<h2 id="syntax">Read a class definition from the outside</h2>
+
+<p>Use the class keyword followed by a name in CapWords style. The indented class body contains method definitions and sometimes class attributes. A <dfn>method</dfn> is a function attached to a class. Calling Student(12, 75) creates a Student instance and initializes it using the arguments.</p>
+<pre><code class="language-python">class Student:
+    school = "Campus"
+
+    def __init__(self, roll, marks):
+        self.roll = roll
+        self.marks = marks
+
+    def passed(self):
+        return self.marks &gt;= 40</code></pre>
+<p>The name self is a convention, not a reserved keyword. Keep the convention because other Python readers expect it. In self.roll = roll, the left side names an attribute on the instance. The right side is the parameter supplied to this call. These names can match without referring to the same storage.</p>
+<p>The double underscores in __init__ identify a special method Python calls during construction. It prepares an already created instance; it does not return the instance. Return None implicitly. Returning another value from __init__ raises TypeError. More specialized construction belongs to later study, not to ordinary student records.</p>
+
+<h2 id="how-it-works">Follow references and attribute lookup</h2>
+
+<p>When you call student.passed(), Python finds the method and binds student as its first argument. You supply no extra self argument. Conceptually, Student.passed(student) performs the same ordinary method call. The result comes from the marks stored on that particular instance.</p>
+<p>An <dfn>instance attribute</dfn> usually lives on one object. Assigning first.marks = 80 changes first, while second.marks can remain 55. A <dfn>class attribute</dfn> lives on the class and is available through instances that do not override it. The school name in the syntax example is suitable shared information.</p>
+<p>For these plain classes, reading an attribute checks the instance before falling back to its class. Assigning instance.school normally creates an instance attribute that shadows Student.school. It does not update the class attribute. Changing Student.school changes the fallback seen by instances that have no school override.</p>
+<pre class="diagram">first  ----&gt; Student instance: roll=12, marks=80
+alias  ----&gt; same instance
+second ----&gt; Student instance: roll=25, marks=55
+Student ---&gt; school="Campus"</pre>
+<p>Assignment copies a reference, not the whole student. After alias = first, updating alias.marks also changes what first.marks reads. Construct a separate Student when you need independent state. A collection of objects may contain repeated references, so count objects and names separately when tracing changes.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A Python instance can resemble a C struct together with functions operating on it. Python supplies self through method binding. You do not declare a pointer parameter or free the instance manually, but aliases can still observe the same mutable state.</p></div>
+
+<h2 id="examples">Construct, update and compare ownership</h2>
+
+<p>Read each program by identifying which object owns every changing attribute. The first example starts with separate students. Later examples show a method changing state, a class fallback, and the shared-list trap. All changes are deliberate and use defined Python behavior.</p>
+
+<h3>Build two independent marks cards</h3>
+<p>The two calls store different marks. The passed method reads self.marks, so roll 12 passes while roll 25 does not.</p>
+<div data-example="ex-1"></div>
+
+<h3>Update a balance through a method</h3>
+<p>deposit changes the existing wallet. Both names reach that wallet, so the returned balance and the value read through alias are 125.</p>
+<div data-example="ex-2"></div>
+
+<h3>Shadow a class default</h3>
+<p>first has its own room attribute B. second still falls back to the class, whose room is now C. The class itself also reports C.</p>
+<div data-example="ex-3"></div>
+
+<h3>Compare shared and independent lists</h3>
+<p>The shared class list appears through b after a appends 75. Separate constructs a new list for y, which stays empty.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="designing-state">Give every object a clear responsibility</h2>
+
+<p>Put per-object lists inside __init__, such as self.marks = []. This creates a fresh list for each construction. Writing marks = [] directly in the class body creates one shared list. Calling append through any instance then changes the same list unless an instance has replaced that attribute.</p>
+<p>A class attribute is still useful for stable shared settings. Keep a pass threshold on Student if the same rule applies to all students. If different courses use different thresholds, accept the threshold as input or give each instance its own value. Decide ownership from the meaning of the data.</p>
+<p>Methods should describe meaningful operations, such as deposit or passed. Avoid a method that unexpectedly edits several unrelated objects. Returning a calculated result makes it easy for the caller to choose whether to display, store or compare it. Printing inside every method mixes data behavior with presentation.</p>
+<p>Validation belongs at a clear boundary. If your class promises nonnegative balances, reject invalid starting values and updates consistently. The exception lesson explains how to report such failures. For now, state the accepted domain and keep the examples inside it. Do not silently repair a negative value unless that is the documented rule.</p>
+
+<h2 id="tracing-the-contract">Trace a change before adding another method</h2>
+
+<p>Suppose you have two students and an alias of the first. Write down each name and draw an arrow to its object. Then trace a marks update through the alias. Only the first student's marks change, because the second student has a separate instance. This small reference picture is more reliable than guessing from the number of variable names.</p>
+<p>A method can use another method on the same object through self.method(). That keeps the operation attached to the current instance. Avoid creating a replacement object inside every update unless a new value is what the interface promises. A counter increment should normally update its counter, while a computed report can return fresh text.</p>
+<p>Keep attribute names meaningful. A value named x gives little help in a student record, while roll and marks show the relationship immediately. You can inspect the same operation in a plain function and a method: the method makes the receiving object explicit through self, while the caller uses a shorter bound call.</p>
+
+<h2 id="common-mistakes">Check which object a name reaches</h2>
+
+<h3>Forgetting self in a method definition</h3>
+<p>A call through an instance supplies that instance automatically. A definition with no first parameter cannot accept it. Read the argument-count error and add self where the instance is needed.</p>
+<h3>Using a local name instead of an attribute</h3>
+<p>Writing marks = 90 inside a method creates a local variable. It leaves self.marks unchanged. Use the dotted form when the new value must survive after the call returns.</p>
+<h3>Sharing a list by accident</h3>
+<p>A mutable class attribute survives across instances. Moving its creation into __init__ gives each object a separate list. Copying a list at the wrong level can still leave nested values shared, as discussed in <a href="topic:py-lists">lists</a>.</p>
+<h3>Calling an attribute like a method</h3>
+<p>If student.roll is an integer, student.roll() tries to call that integer and fails. Parentheses request a call; a dot alone requests an attribute. Read the class interface before guessing which form to use.</p>
+
+<h2 id="version-notes">Use ordinary classes across Python versions</h2>
+
+<p>The class, __init__ and method patterns here work on Python 3.10 through 3.12. These examples use ordinary instance dictionaries. Other tools, including properties and slots, can change attribute behavior, so the simple lookup explanation is intentionally scoped to plain classes. Python does not enforce private access merely because a name begins with one underscore.</p>
+
+<h2 id="summary">Separate the design from each record</h2>
+
+<p>A class gives a group of values a useful interface. Initialize per-instance state in __init__, use self to reach it, and reserve class attributes for intentional sharing. Next, <a href="topic:py-inheritance-polymorphism">inheritance and polymorphism</a> show how several object types can support one operation.</p>

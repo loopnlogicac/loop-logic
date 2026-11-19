@@ -1,0 +1,99 @@
+<h2 id="introduction">Add one behavior around many calls</h2>
+
+<p class="lead">Several functions may need the same logging or validation step. Copying that step into every function makes later changes repetitive. A <dfn>decorator</dfn> receives a function and returns the value that should replace it. Most function decorators return a wrapper that adds behavior around the original call.</p>
+<p>You already know that functions are values and closures can remember surrounding variables. A decorator combines those ideas. The wrapper remembers the original function. When a caller uses the decorated name, the wrapper runs and decides when to call the original.</p>
+<p>Decoration does not rewrite the original source body. It rebinds a name to the decorator's result. This distinction explains both the convenience and the risks: a careless wrapper can lose return values, reject valid arguments or hide useful function metadata.</p>
+
+<h2 id="syntax">Translate the @ notation into assignment</h2>
+
+<p>A line @announce immediately above def calculate applies announce after Python creates the calculate function. The result is assigned back to the name calculate. Conceptually, it is calculate = announce(calculate). The decorator itself runs at definition time, while its returned wrapper usually runs later at call time.</p>
+<pre><code class="language-python">from functools import wraps
+
+def announce(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        print("begin")
+        result = function(*args, **kwargs)
+        print("end")
+        return result
+    return wrapper</code></pre>
+<p>The outer function receives the original callable. The inner function handles later calls. *args collects positional arguments and **kwargs collects keyword arguments, then the call expansion forwards them. return wrapper returns the function object; return wrapper() would call it too early.</p>
+
+<h2 id="how-it-works">Separate decoration from invocation</h2>
+
+<p>At definition time, Python creates the original function object, calls the decorator with it, and stores the returned replacement under the original name. No business calculation needs to run yet. At invocation time, a caller reaches the replacement, which can call the remembered original function.</p>
+<p>The example wrapper prints begin, calls the original, prints end and returns the original result. If the original raises, the normal line after its call is skipped. Use try/finally when a final logging or cleanup action must also run on failure. Do not swallow the failure unless recovery is part of the decorator's contract.</p>
+<pre class="diagram">definition:
+    original function --&gt; decorator --&gt; wrapper bound to name
+call:
+    caller --&gt; wrapper --&gt; original --&gt; result --&gt; caller</pre>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A C function pointer can be passed to another function, but closures need explicit supporting state in ordinary C. Python's wrapper remembers the original callable and configuration in its enclosing scope. The @ notation is name binding, not a preprocessor expansion.</p></div>
+<p>A wrapper can change arguments or results deliberately, but that is a different promise from transparent logging. State the policy. A validation decorator might reject negative amounts before the body runs; a formatting decorator might return a string instead of a number. Callers need to know such changes.</p>
+
+<h2 id="examples">Keep arguments, values and names intact</h2>
+
+<p>The first program traces the order around one calculation. The second inspects metadata kept by wraps. A configurable validator then uses three nested functions. The final example makes stacking order visible with stable messages rather than measuring variable execution time.</p>
+
+<h3>Trace before, result and after</h3>
+<p>The wrapper forwards a positional and a keyword argument. begin and end surround the original call, then the caller prints its returned 30.</p>
+<div data-example="ex-1"></div>
+
+<h3>Inspect preserved metadata</h3>
+<p>wraps preserves square and its docstring. __wrapped__ points to the original callable, which still computes 16.</p>
+<div data-example="ex-2"></div>
+
+<h3>Configure a minimum accepted amount</h3>
+<p>The factory stores ten as configuration. Twelve reaches the calculation, while five is rejected before the original function runs.</p>
+<div data-example="ex-3"></div>
+
+<h3>Observe stacked wrapper order</h3>
+<p>The lower decorator applies first, but the outer wrapper is entered first during the call. Exit messages unwind in the opposite order.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="metadata-and-wraps">Preserve the function’s useful identity</h2>
+
+<p>Without help, the decorated name refers to a function whose __name__ is wrapper and whose docstring describes the wrapper. That can confuse documentation, debugging and tools that inspect signatures. functools.wraps copies selected metadata from the original and sets __wrapped__ to the original callable.</p>
+<p>Use @wraps(function) on the inner wrapper. wraps does not perform argument validation or guarantee that the replacement behaves like the original. It preserves descriptions and a link for inspection. You must still forward the arguments and return the result correctly.</p>
+<p>A caller can inspect decorated.__wrapped__ to find the original function, and inspection tools may follow that chain. Therefore, a decorator is not an access-control barrier. Do not treat a validation wrapper as protection against a caller who can freely access and execute the original code.</p>
+<p>Preserving metadata also does not make every wrapper suitable for every callable category. A synchronous wrapper returning a coroutine does not become an asynchronous function automatically. A generator wrapper must consider iteration timing and cleanup. The introductory patterns here wrap ordinary synchronous functions.</p>
+
+<h2 id="configured-decorators">Add an outer factory for settings</h2>
+
+<p>A decorator with arguments usually has three layers. The factory receives configuration such as a minimum amount. It returns the actual decorator, which receives the original function. That decorator returns the wrapper, which receives the arguments of each later call.</p>
+<p>For @minimum(10), Python calls minimum(10) when processing the definition. The resulting decorator receives the function. The wrapper remembers both the threshold and original callable. Calling the decorated function later supplies its business argument, not a new threshold.</p>
+<p>Keep these inputs separate. A threshold is configuration shared by calls through that wrapper. The purchase amount is a per-call value. Confusing them can produce an extra function object where a numeric result was expected, or cause the original function to run while it is being decorated.</p>
+<p>A factory can validate its own configuration early. If a minimum threshold cannot be negative, reject it while creating the decorator. Then the wrapper can validate each later amount separately. This keeps configuration errors distinct from bad business input.</p>
+<p>Stacking @outer above @inner means outer(inner(function)). Decoration applies nearest to the definition first. Calling then enters the outer wrapper first. If both wrappers log before and after, their messages nest like matched brackets. Reordering decorators can change validation, caching and logging behavior.</p>
+
+<h2 id="design-and-state">Keep wrapper state and side effects deliberate</h2>
+
+<p>A decorator can count calls by storing state in a closure. That count belongs to the particular decorated function, not automatically to all functions using the same decorator. A factory invocation can create another independent closure. Decide the lifetime of the state before relying on it.</p>
+<p>If you store mutable state at module level, every wrapped function may share it. If you store state in a closure, aliases of the same wrapper still share it. Neither choice automatically becomes safe for concurrent calls. This lesson does not promise thread safety for simple counters.</p>
+<p>Validation wrappers should fail before making the original operation's state changes. Logging wrappers should avoid printing private arguments by default. Keep ordinary function output separate from diagnostic behavior when callers depend on a stable result. A decorator that always prints may be unsuitable for a reusable library API.</p>
+<p>Before choosing a decorator, consider an explicit helper call. A visible validate(amount) line can be clearer for one function. A decorator becomes useful when the same policy surrounds many compatible functions and its name makes that policy clear at the definition.</p>
+
+<h2 id="tracing-the-contract">Test the wrapper as part of the interface</h2>
+
+<p>A transparent wrapper needs checks for more than one successful positional call. Test a keyword argument, an explicit return value and a raised exception. A wrapper can pass the first case while accidentally dropping keywords or replacing failures with None. The contract includes all three paths.</p>
+<p>For a configured decorator, create two decorated functions with different settings. Calling one should not change the other's setting. The factory closure normally keeps those configurations separate. If both refer to a shared mutable configuration object, later mutation can affect both; closures retain references rather than taking automatic snapshots.</p>
+<p>Trace stacking with distinct messages before using decorators whose effects are harder to see. An outer cache can bypass an inner logging wrapper on cache hits, while an outer logger can observe every call including hits. Neither order is universally correct. Choose the behavior the function's callers and maintainers need.</p>
+<p>Use the decorated function's __wrapped__ link only for deliberate inspection or testing. Calling it bypasses the added policy. A passing direct-original test does not verify that the public wrapped function forwards values correctly, so include tests through the public name too.</p>
+
+<h2 id="common-mistakes">Follow the call through every layer</h2>
+
+<h3>Forgetting return result</h3>
+<p>The original function may compute the correct number while the wrapper returns None. Return the result explicitly when the decorator promises to preserve it.</p>
+<h3>Discarding keyword arguments</h3>
+<p>A wrapper accepting only *args rejects otherwise valid keyword calls. Accept and forward **kwargs when the wrapped interface supports them. Test a named argument as well as a positional one.</p>
+<h3>Calling the wrapper while returning it</h3>
+<p>return wrapper() executes immediately and returns its result. Return wrapper to make the later decorated call possible.</p>
+<h3>Expecting normal after-code to run on failure</h3>
+<p>If the original raises, statements after the call are skipped. Put guaranteed exit work in finally and let the exception continue unless the contract says otherwise.</p>
+
+<h2 id="version-notes">Use wraps without assuming full transparency</h2>
+
+<p>Functions, closures, decorators and functools.wraps work on Python 3.10–3.12. The exact metadata copied by wraps can evolve, so the examples inspect stable name, docstring and __wrapped__ behavior. Generic typing of decorators with ParamSpec is a later typing topic, beyond these runtime patterns.</p>
+
+<h2 id="summary">Treat a decorator as a visible policy at definition time</h2>
+
+<p>A wrapper can add reusable behavior while forwarding arguments, results and errors. wraps preserves useful metadata, and a factory adds configuration. Next, <a href="topic:py-context-managers">context managers</a> express entry and exit work around a block instead of a function call.</p>

@@ -1,0 +1,90 @@
+<h2 id="introduction">One request, several kinds of answer</h2>
+
+<p class="lead">A campus may calculate charges for regular and evening courses differently. The caller still wants one operation: fee(). <dfn>Polymorphism</dfn> means using one interface with objects that provide different behavior. You ask each course for its fee instead of writing a chain of type checks in every report.</p>
+<p><dfn>Inheritance</dfn> defines a new class using an existing class as a starting point. The existing class is the parent or base class. The new class is the child or subclass. Inheritance can share behavior, but sharing code alone is not enough reason to create a family.</p>
+<p>A subclass should make sense wherever the parent is expected. If a report accepts courses with a fee method, every course subtype should provide that operation with the same meaning. Changing fee to return an unrelated list would break the caller even though Python permits the definition.</p>
+
+<h2 id="syntax">Extend a class and initialize its part</h2>
+
+<p>Write the parent name in parentheses after the subclass name. Attributes and methods absent from the subclass can be found in its ancestors. Define a method with the same name to <dfn>override</dfn> the inherited behavior. The receiving object decides which implementation ordinary lookup finds first.</p>
+<pre><code class="language-python">class Course:
+    def __init__(self, credits):
+        self.credits = credits
+
+    def fee(self):
+        return self.credits * 1000
+
+class LabCourse(Course):
+    def __init__(self, credits, lab_fee):
+        super().__init__(credits)
+        self.lab_fee = lab_fee
+
+    def fee(self):
+        return super().fee() + self.lab_fee</code></pre>
+<p>Calling super().__init__ preserves the parent's initialization work. It is an explicit call, not an automatic extra action added to your new initializer. If a subclass defines no initializer, it can inherit the parent's initializer. These are different situations, so inspect which __init__ is actually found.</p>
+
+<h2 id="how-it-works">Trace method lookup before arithmetic</h2>
+
+<p>Consider LabCourse(3, 500). Construction finds the subclass initializer. That initializer passes 3 to the parent initializer, which stores credits on the same LabCourse object. Returning to the subclass then stores lab_fee on that object. No separate parent object is created inside it.</p>
+<p>Calling course.fee() starts lookup at LabCourse and finds the override. super().fee() continues lookup after LabCourse and finds Course.fee. The base result is 3000, and the override adds 500. The complete result is 3500. Both methods receive the same instance as self.</p>
+<p>Python's <dfn>method resolution order</dfn>, or MRO, is the ordered sequence used to search classes. With the single inheritance shown here, the child comes before its parent. super() follows this sequence; it does not mean an unconditional jump to a fixed parent in every possible hierarchy.</p>
+<pre class="diagram">LabCourse.fee(self)
+    |
+    +-- super().fee() --&gt; Course.fee(self) --&gt; 3000
+    |
+    +-- add self.lab_fee ------------------&gt; 3500</pre>
+<div class="callout note"><p class="callout-title">If you know C</p><p>C can simulate interchangeable behavior with function pointers and explicit data structures. Python performs ordinary method lookup when you call object.fee(). You do not select a C-style virtual table yourself, and objects need not share a declared base class to support the call.</p></div>
+
+<h2 id="examples">Reuse a contract without repeating the caller</h2>
+
+<p>These examples separate the caller's request from the selected implementation. Watch the output order when an override calls super. The final example keeps a wallet inside a student rather than treating a student as a kind of wallet.</p>
+
+<h3>Add a lab charge to the base fee</h3>
+<p>The same fee call returns 3000 for Course and 3500 for LabCourse. The override adds its charge to the base calculation.</p>
+<div data-example="ex-1"></div>
+
+<h3>Observe an extended method call</h3>
+<p>The override calls the base method first, so base appears before urgent. Both methods act on one Urgent instance.</p>
+<div data-example="ex-2"></div>
+
+<h3>Accept unrelated label providers</h3>
+<p>Room and Team have no custom shared parent. show_label only needs the label operation and prints each returned string.</p>
+<div data-example="ex-3"></div>
+
+<h3>Compose a student with a wallet</h3>
+<p>A Student holds a Wallet as an attribute. Its balance is available through that helper, while isinstance confirms Student is not a Wallet subtype.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="duck-typing">Ask what an object can do</h2>
+
+<p><dfn>Duck typing</dfn> means writing code around supported operations instead of requiring a named inheritance family. A send_report(target) function can call target.send(message). EmailSender and ScreenSender may be unrelated classes. If both implement the agreed send behavior, the caller can use either.</p>
+<p>A shared method name is only the start of a contract. The caller also depends on accepted arguments, returned values and effects. A send method that ignores its message is not a useful replacement merely because the call succeeds. State the contract in documentation and test behavior across implementations.</p>
+<p>Use isinstance when you truly need to distinguish membership in a family. isinstance(child, Parent) is true for ordinary subclass instances. Avoid type(value) is Parent when subclasses should be accepted, because that asks for the exact type. Neither check proves that an operation has the intended business meaning.</p>
+<p>Choose <dfn>composition</dfn> for a has-a relationship. A Student has a Wallet; a Student is not a Wallet. Store the wallet as an attribute and call its methods when needed. Composition lets you replace one helper without inheriting all of its public operations.</p>
+<p>A useful design question is whether the subclass keeps every promise of its parent. A special account may add a transaction charge, but callers still need a reliable balance result. If the child's rules make ordinary parent operations invalid, reconsider the family or use a separate helper.</p>
+
+<h2 id="tracing-the-contract">Trace the receiver through inherited code</h2>
+
+<p>An inherited method can call another method on self. If the child overrides that second method, the child implementation can run even though the calling method was defined in the parent. The receiver remains the actual child object. Inheritance does not freeze every internal call to the parent's implementation.</p>
+<p>For example, Course.summary may call self.fee(). A LabCourse can inherit summary unchanged and override fee. Calling LabCourse(...).summary then uses the specialized fee automatically. This is useful when the shared report format stays fixed while one calculation varies. Trace self through both calls to understand the result.</p>
+<p>Avoid adding type branches to that shared summary for every future subtype. The point of the fee interface is that the caller can ask for the operation without knowing each concrete formula. Put the formula in the relevant class and keep its result type consistent.</p>
+<p>A simple test for this design constructs each supported type and passes it to the same reporting function. Check that calls succeed and the meanings agree. This tests the contract more directly than checking only that every class inherits the same base.</p>
+
+<h2 id="common-mistakes">Preserve initialization and interface promises</h2>
+
+<h3>Skipping the parent initializer</h3>
+<p>An override of __init__ replaces the inherited method. If it never initializes credits, a later fee calculation can raise AttributeError. Call super().__init__ with the parent arguments before relying on the parent state.</p>
+<h3>Recursing instead of extending</h3>
+<p>Inside a fee override, self.fee() finds the same override again. It repeats until RecursionError unless another condition stops it. Use super().fee() when you intend the next implementation in the MRO.</p>
+<h3>Changing the expected call shape</h3>
+<p>If a parent fee() takes no extra arguments, making the child require a day argument breaks a caller using fee(). Keep a compatible signature and result meaning. Put optional differences into construction or documented optional parameters.</p>
+<h3>Building long inheritance chains</h3>
+<p>A deep family makes it harder to discover where behavior comes from. Prefer a small hierarchy with clear shared meaning. When two objects only need the same operation, a duck-typed function can be clearer than an artificial common parent.</p>
+
+<h2 id="version-notes">Start with single inheritance</h2>
+
+<p>Zero-argument super(), method overriding and duck typing work across Python 3.10–3.12. Python also supports multiple inheritance, whose MRO can be inspected through Class.__mro__. Cooperative multiple inheritance needs carefully compatible methods and is beyond this introduction. The examples make no claim that super always means the immediate textual parent.</p>
+
+<h2 id="summary">Keep the operation stable as implementations vary</h2>
+
+<p>Inheritance reuses a meaningful parent interface, overrides specialize behavior, and super continues method lookup. Duck typing lets unrelated classes meet the same caller contract. Next, <a href="topic:py-dunder-methods">special methods</a> connect your objects to print, len, comparisons and operators.</p>

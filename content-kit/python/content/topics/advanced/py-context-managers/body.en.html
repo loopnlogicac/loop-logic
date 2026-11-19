@@ -1,0 +1,105 @@
+<h2 id="introduction">Make resource lifetime visible in the code</h2>
+
+<p class="lead">Opening a file creates an obligation to close it. The calculation between open and close may return early or raise an exception. A <dfn>context manager</dfn> groups entry and exit behavior around a block so the resource's lifetime is visible. The with statement uses that protocol.</p>
+<p>Context managers are useful beyond files. A manager can temporarily change a setting, hold a lock or begin an operation that needs a matching finish. The shared idea is a paired action: enter a state, do work, then leave that state. The pair belongs together even when the work fails.</p>
+<p>A context manager does not automatically undo every change inside the block. A file manager closes a stream but does not restore overwritten content. A transaction manager may provide rollback because its own contract promises that. Always name the actual exit behavior rather than assume that with means universal reversal.</p>
+
+<h2 id="syntax">Use a manager and bind the entered value</h2>
+
+<p>Write with expression as name followed by an indented block. Python evaluates the expression to obtain the manager, then invokes its entry protocol. The as name receives the value returned by __enter__, which may be different from the manager object itself.</p>
+<pre><code class="language-python">class Session:
+    def __enter__(self):
+        print("open")
+        return "ready"
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        print("close")
+        return False</code></pre>
+<p>Here, with Session() as state binds state to the string ready. The manager remains responsible for exit. You can omit as when the block does not need an entered value. Returning self is common when the manager also provides the resource operations, but it is not required.</p>
+<p>The exit method takes three exception-related arguments after self. When the block ends normally, they are all None. When an exception leaves the block, they identify its type, value and traceback. Use them only as needed for the manager's promised cleanup and handling policy.</p>
+
+<h2 id="how-it-works">Follow entry, body and exit</h2>
+
+<p>If __enter__ succeeds, with executes the block and invokes __exit__ when leaving it through ordinary Python control flow. This includes a return or an exception. The exit method decides whether an active block exception continues. Returning False or None normally lets it propagate.</p>
+<p>A truthy result from __exit__ suppresses a block exception. Execution continues after with as though that exception had been handled. This is powerful and easy to misuse. A manager that only closes a resource should normally return False or None, so errors remain visible to the caller.</p>
+<p>If __enter__ raises, the block never starts and Python does not call that manager's __exit__. Entry code must therefore release resources it already acquired before failing. A manager cannot rely on its exit method to repair a partially completed entry that never returned.</p>
+<pre class="diagram">evaluate manager
+    |
+__enter__ succeeds --&gt; bind as target --&gt; run block
+                                             |
+                                        __exit__
+                                false/None: propagate error
+                                true: suppress block error</pre>
+<div class="callout note"><p class="callout-title">If you know C</p><p>C code often routes failure paths to a cleanup label. A Python context manager centralizes paired entry and exit behavior. It still needs careful acquisition logic and cannot promise cleanup after abrupt process termination.</p></div>
+
+<h2 id="examples">Trace normal exit and exceptional exit</h2>
+
+<p>The class manager prints entry and exit in order. A second program shows an exception continuing after cleanup. A narrowly suppressing manager then handles one explicit category. The generator-based example expresses temporary state restoration with contextlib.</p>
+
+<h3>Return a distinct entered value</h3>
+<p>__enter__ returns ready rather than the Session instance. Normal block completion supplies no exception type, so exit prints True.</p>
+<div data-example="ex-1"></div>
+
+<h3>Clean up and preserve an error</h3>
+<p>The manager cleans up but returns False. The ValueError continues to the outer handler, which prints after cleanup.</p>
+<div data-example="ex-2"></div>
+
+<h3>Suppress only a chosen category</h3>
+<p>The manager intentionally suppresses KeyError. Other categories would propagate because its exit condition would be false.</p>
+<div data-example="ex-3"></div>
+
+<h3>Restore a temporary setting after failure</h3>
+<p>The yielded dictionary shows exam inside the block. Finally restores the captured normal value before the outer handler reads it.</p>
+<div data-example="ex-4"></div>
+
+<h3>Observe nested resource order</h3>
+<p>A opens before B. The block runs once, then B closes before A, matching nested resource ownership.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="generator-managers">Use one yield to mark the block boundary</h2>
+
+<p>contextlib.contextmanager converts a generator function into a context-manager factory. Code before yield performs entry. The yielded value becomes the as target. When the block ends, execution resumes at the yield point so the function can finish its exit work.</p>
+<p>Wrap yield in try/finally for cleanup that must run on both success and failure. If the block raises, that exception is delivered back into the generator at yield. Finally still executes while the failure propagates. Code placed only after yield without finally may be skipped on that failure path.</p>
+<p>A contextmanager generator must yield exactly once. No yield means entry never supplies the block boundary and causes an error. A second yield means the generator did not finish during exit and also causes an error. Use separate manager invocations for separate with statements.</p>
+<p>Catching a block exception inside the generator can suppress it if the generator then finishes normally. Re-raise if you only intended to log it. As with __exit__, suppression must be part of a clear contract. A broad except around yield can accidentally hide unrelated bugs in the caller's block.</p>
+<p>The decorator notation here processes a generator function rather than wrapping every body step manually. It creates the protocol object used by with. This is a practical combination of the preceding <a href="topic:py-iterators-generators">generator</a> and <a href="topic:py-decorators">decorator</a> ideas.</p>
+
+<h2 id="nesting-and-ownership">Close in the opposite order from opening</h2>
+
+<p>Nested with statements enter the outer manager first, then the inner manager. Exit proceeds in reverse: inner before outer. A single with statement can list several managers and follows the same nesting model. This matters when one resource depends on another remaining available.</p>
+<p>If entering the inner manager fails, the successfully entered outer manager still exits. The inner manager whose entry failed must handle its own partial acquisition. This separates responsibility according to which entry steps completed.</p>
+<p>Keep ownership clear when passing a stream into a function. If the caller opened it, the caller may expect to keep using it. A helper that closes a borrowed stream can break that expectation. Either document ownership transfer or let the opener manage the surrounding with.</p>
+<p>A manager can return a resource different from itself. For example, a controller may own bookkeeping while __enter__ returns an open stream. The as target is the resource for the block; the original manager still receives __exit__. Do not call the target's exit method manually unless its own API requires that.</p>
+<p>Some manager objects support reuse and some are single-use. A generator-based contextmanager object is normally used once; call its factory again for a fresh manager. Do not assume that assigning the same manager object to another name gives it a new lifecycle.</p>
+<p>Context managers can simplify tests that temporarily change state. Capture the old value, set the temporary value, then restore the old value in finally. Restoration should use the captured old value, not a guessed default. Nested temporary settings then unwind correctly to the state each level observed.</p>
+
+<h2 id="failure-boundaries">Know what cleanup can and cannot guarantee</h2>
+
+<p>The with protocol is a structured control-flow tool. It runs exit work during ordinary execution paths, but it cannot respond after the process is forcibly killed or the machine loses power. A file being closed also does not prove a multi-file update is atomic. These are different guarantees.</p>
+<p>Cleanup itself may fail. If __exit__ raises a new exception, that new failure becomes the immediate problem while the original can remain in its context. Keep exit operations focused and avoid unrelated calculations or formatting there. If several resources need independent cleanup, a specialized tool such as ExitStack can help, though it is beyond this lesson.</p>
+<p>A temporary-setting manager is suitable only if the setting's ownership and concurrency rules permit it. Global state changed by one thread can be observed by another. The examples use local dictionaries and sequential code so the restoration rule is easy to inspect. A context manager alone does not add synchronization.</p>
+
+<h2 id="tracing-the-contract">Test entry failure separately from block failure</h2>
+
+<p>A block that raises after successful entry exercises exit handling. An entry method that raises exercises a different boundary, because the block never starts and exit is not called. Test both when your manager acquires more than one resource. Record which acquisitions succeeded so only those resources need release.</p>
+<p>For a cleanup-only manager, a useful test raises a known ValueError in the block, records that exit ran, and verifies that the same failure reaches an outer handler. This checks both cleanup and propagation. A normal-path test alone could miss an accidental truthy exit return that hides every failure.</p>
+<p>For a restoring manager, check the value inside and after the block, then repeat with a raised error. Nested uses should return to the outer temporary value before finally restoring the original value. These observations verify the public state rule without depending on the helper's private local variable names.</p>
+
+<h2 id="common-mistakes">Make exit behavior explicit</h2>
+
+<h3>Returning True from every __exit__</h3>
+<p>This hides failures from the block. Return False for cleanup-only managers. Suppress only an intentionally handled category and explain what the caller can assume afterward.</p>
+<h3>Assuming as always returns the manager</h3>
+<p>The entered value is __enter__'s return. A missing return binds None. Return self only when the manager itself is the intended resource interface.</p>
+<h3>Placing cleanup after an unprotected yield</h3>
+<p>A block exception can skip ordinary post-yield code. Put required restoration in finally around yield.</p>
+<h3>Relying on exit after failed entry</h3>
+<p>__exit__ is not called if __enter__ fails. Undo partial acquisition inside the entry path before re-raising.</p>
+
+<h2 id="version-notes">Use the synchronous protocol first</h2>
+
+<p>The synchronous with protocol and contextlib.contextmanager work on Python 3.10–3.12. Async context managers use __aenter__ and __aexit__ with async with and are separate. These examples do not require exception groups or newer contextlib suppression behavior.</p>
+
+<h2 id="summary">Pair acquisition with a precise exit policy</h2>
+
+<p>A manager defines entry, an entered value and exit handling. Preserve failures unless suppression is intentional, and put generator cleanup in finally. Next, <a href="topic:py-type-hints">type hints</a> document intended interfaces and support static analysis.</p>
