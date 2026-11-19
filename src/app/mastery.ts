@@ -61,7 +61,7 @@ export class MasteryService {
       if (s[phase]) return this.view(track, topic, s, lang);
       if (phase === 'pre' && s.post || phase === 'post' && s.pre && !s.pre.result) throw new AppError('check_order', 409, lang === 'bn' ? 'আগে চলমান চেক শেষ করো।' : 'Finish the open check first; the before check closes when the after check starts.');
       const quiz = this.tutorials.topic(track, topic, lang).quiz;
-      if (!quiz.length) throw new AppError('not_found', 404, 'No quiz available.');
+      if (!quiz.length) throw new AppError('not_found', 404, lang === 'bn' ? 'এই টপিকে এখনো কুইজ নেই।' : 'No quiz available.');
       const ids = quiz.map((q: any) => String(q.id));
       for (let i = ids.length - 1; i > 0; i--) { const j = randomInt(i + 1); [ids[i], ids[j]] = [ids[j]!, ids[i]!]; }
       const used = new Set(s.pre?.ids ?? []);
@@ -75,7 +75,7 @@ export class MasteryService {
     const phase = this.phase(phaseIn); const key = this.key(learnerId, track, topic);
     return this.locked(key, async () => {
       const s = await this.state(key); const a = s[phase];
-      if (!a) throw new AppError('check_not_started', 409, 'Start the check first.');
+      if (!a) throw new AppError('check_not_started', 409, lang === 'bn' ? 'আগে চেকটা শুরু করো।' : 'Start the check first.');
       if (!a.result) {
         a.result = this.tutorials.gradeCheck(track, topic, a.ids, answers, lang);
         a.event = { id: randomUUID(), at: new Date().toISOString() };
