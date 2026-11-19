@@ -1,5 +1,6 @@
 // HTTP layer: routing, JSON, identity, errors and static files. node:http only.
 
+import { Download } from './download.ts';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import type { RunnerService } from '../app/runner.ts';
@@ -326,6 +327,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/instructor/meta', () => ({ tracks: tutorials.adminTracks().filter((t) => t.delivered && !t.hidden).map((t) => ({ id: t.id, title: t.title })), courses: allCourses().map((c) => ({ id: c.id, title: c.title.en })) }), 'staff'),
     route('GET', '/api/instructor/classes', ({ staff }) => cls().myClasses(staff!), 'staff'),
     route('POST', '/api/instructor/classes', ({ body, staff }) => cls().saveClass(staff!, body), 'staff'),
+    route('GET', '/api/instructor/classes/:id/gradebook.csv', async ({ params, staff, query }) => new Download(await cls().gradebookCsv(staff!, params.id!, lang(query.get('lang'))), 'text/csv; charset=utf-8', 'gradebook.csv'), 'staff'),
     route('GET', '/api/instructor/classes/:id', ({ params, staff, query }) => cls().dashboard(staff!, params.id!, lang(query.get('lang'))), 'staff'),
     route('POST', '/api/instructor/classes/:id', ({ params, body, staff }) => cls().saveClass(staff!, body, params.id!), 'staff'),
     route('DELETE', '/api/instructor/classes/:id', ({ params, staff }) => cls().archiveClass(staff!, params.id!), 'staff'),
@@ -445,6 +447,10 @@ export function createApp(d: AppDeps) {
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
       const body = await readJson(req, match.r.maxBody);
       const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers, staff });
+      if (result instanceof Download) {
+        res.writeHead(200, { ...headers, 'content-type': result.contentType, 'content-disposition': `attachment; filename="${result.filename}"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+        return res.end(result.body);
+      }
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
       if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details } }, headers);

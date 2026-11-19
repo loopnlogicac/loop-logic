@@ -8,6 +8,7 @@
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { AppError } from './service.ts';
+import { csv } from './csv.ts';
 import type { DocRow, ReadingEventRow, Store } from '../store/store.ts';
 import type { TutorialService } from './tutorials.ts';
 import { getCourse } from '../content/courses.ts';
@@ -198,6 +199,18 @@ export class ClassService {
     return f.labs.has(`${item.topic}/${item.lab}`);
   }
 
+  async gradebookCsv(staff: Staff, classId: string, lang: Lang = 'en') {
+    const d = await this.dashboard(staff, classId, lang);
+    const L = lang === 'bn' ? { student: 'শিক্ষার্থী', complete: 'সম্পন্ন', quiz: 'কুইজ (%)', overall: 'মোট সম্পন্ন (%)' } : { student: 'Student', complete: 'Complete', quiz: 'Quiz (%)', overall: 'Overall completion (%)' };
+    return csv([
+      [L.student, ...d.assignments.flatMap((a) => [`${a.title} · ${L.complete}`, `${a.title} · ${L.quiz}`]), L.overall],
+      ...d.roster.map((student) => [student.email, ...d.assignments.flatMap((a) => {
+        const r = student.assignments.find((r) => r.id === a.id)!;
+        return [r.done === r.of ? '✓' : `${r.done}/${r.of}`, r.quizPercent ?? '—'];
+      }), student.overallPercent ?? '—']),
+    ]);
+  }
+
   /** Everything the instructor dashboard shows for one class. */
   async dashboard(staff: Staff, classId: string, lang: Lang = 'en') {
     const c = await this.classOr404(classId, staff);
@@ -217,6 +230,13 @@ export class ClassService {
 
     const roster = active.map((e) => {
       const f = this.studentFacts(byStudent.get(e.data.learnerId) ?? [], cls.track);
+      const assignmentResults = myAssignments.map((a) => {
+        const done = a.data.items.filter((it: Json) => this.itemDone(it, f, a.data.passMark)).length;
+        const quizTopics = [...new Set(a.data.items.filter((it: Json) => it.kind === 'quiz').map((it: Json) => it.topic as string))];
+        const scores = quizTopics.map((topic) => f.quizzes.get(topic)).filter((q) => q && q.total > 0);
+        const quizPercent = scores.length ? Math.round(scores.reduce((n, q) => n + q!.score / q!.total, 0) / scores.length * 100) : null;
+        return { id: a.id, done, of: a.data.items.length, quizPercent };
+      });
       const asks = (byStudent.get(e.data.learnerId) ?? []).filter((x) => x.type === 'ask').length;
       const inactiveDays = f.last ? Math.floor((now - Date.parse(f.last)) / DAY) : null;
       const reasons: string[] = [];
@@ -226,7 +246,8 @@ export class ClassService {
       return {
         learnerId: e.data.learnerId, email: e.data.email, joinedAt: e.data.joinedAt, done: f.seen.size, labs: f.labs.size,
         quizAvg: f.quizAvg === null ? null : Math.round(f.quizAvg * 100), lastActive: f.last, asks, reasons,
-        assignments: myAssignments.map((a) => ({ id: a.id, done: a.data.items.filter((it: Json) => this.itemDone(it, f, a.data.passMark)).length, of: a.data.items.length })),
+        assignments: assignmentResults,
+        overallPercent: assignmentResults.length ? Math.round(assignmentResults.reduce((n, a) => n + a.done, 0) / assignmentResults.reduce((n, a) => n + a.of, 0) * 100) : null,
         modules: track ? track.modules.map((m: Json) => {
           const avail = m.topics.filter((t: Json) => t.available);
           return { id: m.id, title: m.title, pct: avail.length ? Math.round((100 * avail.filter((t: Json) => f.seen.has(t.id)).length) / avail.length) : null };
