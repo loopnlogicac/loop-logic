@@ -22,6 +22,8 @@ import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
 import { ClassService } from '../app/classes.ts';
 import { OrderService } from '../app/orders.ts';
+import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
+import { SearchService } from '../app/search.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +61,17 @@ const tutorials = new TutorialService(store, join(here, '../../content-kit'));
 const admin = new AdminService(store, tutorials, watch, { adminEmails: (env.ADMIN_EMAILS ?? '').split(','), youtubeKey: env.YOUTUBE_API_KEY || null });
 const classes = new ClassService(store, tutorials, extras, { minGroup: Number(env.MIN_GROUP_SIZE ?? 3) });
 const orders = new OrderService(store, admin);
+// Code runner (an outside sandbox; student code never runs on this server):
+// - JUDGE0_RAPIDAPI_KEY alone → Judge0 CE on RapidAPI
+// - RUNNER_URL (+ RUNNER_KEY) → a self-hosted Judge0, or Piston with RUNNER_KIND=piston
+const runFetch = fetch as unknown as RunFetch;
+const rapidKey = env.JUDGE0_RAPIDAPI_KEY || '';
+const runnerUrl = env.RUNNER_URL || (rapidKey ? 'https://judge0-ce.p.rapidapi.com' : '');
+const runBackend = !runnerUrl ? null
+  : env.RUNNER_KIND === 'piston' ? pistonBackend({ url: runnerUrl, key: env.RUNNER_KEY || undefined, fetchImpl: runFetch })
+  : judge0Backend({ url: runnerUrl, key: rapidKey || env.RUNNER_KEY || undefined, host: rapidKey ? new URL(runnerUrl).host : undefined, fetchImpl: runFetch });
+const runner = new RunnerService(runBackend, tutorials, { dailyLimit: Number(env.RUNNER_DAILY_LIMIT ?? (rapidKey ? 45 : 2000)), perHour: Number(env.RUNNER_PER_HOUR ?? 30), perDay: Number(env.RUNNER_PER_DAY ?? 80) });
+const search = new SearchService(tutorials, admin);
 await admin.init().catch((e) => console.warn(`admin: could not load admin content: ${(e as Error).message}`));
 
 const server = createApp({
@@ -73,6 +86,8 @@ const server = createApp({
   admin,
   classes,
   orders,
+  runner,
+  search,
   store,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),
@@ -87,6 +102,7 @@ const server = createApp({
     editLocked: Boolean(env.RENDER) && !env.INSTRUCTOR_KEY,
     allowSeed: env.ALLOW_DEMO_SEED !== 'false',
     freeDailyAi: Number(env.FREE_DAILY_AI_CALLS ?? 10),
+    siteUrl: env.SITE_URL || null,
   },
 });
 
@@ -98,6 +114,7 @@ server.listen(port, host, () => {
   console.log(`  data:        ${store.kind}${store.kind === 'memory' ? ' (resets on restart)' : ''}`);
   console.log(`  sign-in:     ${auth.mode}`);
   console.log(`  AI:          ${gateway.describe()}`);
+  console.log(`  run code:    ${runBackend ? `${runBackend.name} at ${new URL(runnerUrl).host} (site limit ${Number(env.RUNNER_DAILY_LIMIT ?? (rapidKey ? 45 : 2000))}/day)` : 'off (set JUDGE0_RAPIDAPI_KEY or RUNNER_URL); unchanged examples still show their output'}`);
   console.log(`  tutorials:   ${tutorials.list('en').totals.topics} topics, ${tutorials.list('en').totals.labs} labs`);
   console.log(`  live search: ${live.enabled ? 'on (approved sites only)' : 'off'}`);
   console.log(`  instructor:  ${env.INSTRUCTOR_KEY ? 'key required' : 'open (set INSTRUCTOR_KEY before sharing)'}`);

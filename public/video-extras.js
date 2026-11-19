@@ -1,10 +1,11 @@
 // Under each video: materials, Try now, quiz (learners) and the editor (instructors).
 import { api, getLang, el, num, toast, store } from './common.js';
+import { codeRunner, runnerStatus } from './runner.js';
 
 const T = {
   en: {
     materials: 'Materials used in this video', copy: 'Copy', copied: 'Copied', open: 'Open ↗', show: 'Show',
-    tryNow: (l) => `▶ Try now in ${l}`, tryCopied: 'Code copied. Paste it into the compiler (Ctrl+V), then press Run.', tryHint: (l) => `Opens an online ${l} compiler in a new tab and copies this code for you.`, tryCode: 'Code to try', tryStarter: 'Starter program',
+    tryNow: (l) => `▶ Try now in ${l}`, tryCopied: 'Code copied. Paste it into the compiler (Ctrl+V), then press Run.', tryHint: (l) => `Opens an online ${l} compiler in a new tab and copies this code for you.`, tryCode: 'Code to try', runHere: 'Edit the code and press Run to see the output here.', tryStarter: 'Starter program',
     quiz: 'Quiz', quizN: (n) => `${n} question${n === 1 ? '' : 's'}`, submit: 'Check my answers', again: 'Try again', score: (a, b) => `You got ${a} of ${b} right`, last: (a, b) => `Last time: ${a}/${b}`,
     right: 'Correct', wrong: 'Not quite', answerWas: 'Correct answer:', unanswered: 'Answer every question first', why: 'Why',
     edit: '✎ Edit materials, quiz & Try now', editTitle: 'Edit this video', locked: 'Editing is off on this site until an instructor key is set.',
@@ -17,7 +18,7 @@ const T = {
   },
   bn: {
     materials: 'এই ভিডিওতে ব্যবহৃত উপকরণ', copy: 'কপি', copied: 'কপি হয়েছে', open: 'খোলো ↗', show: 'দেখো',
-    tryNow: (l) => `▶ ${l}-এ নিজে চালিয়ে দেখো`, tryCopied: 'কোড কপি হয়েছে। কম্পাইলারে পেস্ট করো (Ctrl+V), তারপর Run চাপো।', tryHint: (l) => `নতুন ট্যাবে অনলাইন ${l} কম্পাইলার খুলবে আর এই কোড কপি হয়ে যাবে।`, tryCode: 'চালানোর কোড', tryStarter: 'শুরুর প্রোগ্রাম',
+    tryNow: (l) => `▶ ${l}-এ নিজে চালিয়ে দেখো`, runHere: 'কোড বদলাও, তারপর চালাও চাপলে আউটপুট এখানেই দেখবে।', tryCopied: 'কোড কপি হয়েছে। কম্পাইলারে পেস্ট করো (Ctrl+V), তারপর Run চাপো।', tryHint: (l) => `নতুন ট্যাবে অনলাইন ${l} কম্পাইলার খুলবে আর এই কোড কপি হয়ে যাবে।`, tryCode: 'চালানোর কোড', tryStarter: 'শুরুর প্রোগ্রাম',
     quiz: 'কুইজ', quizN: (n) => `${n}টি প্রশ্ন`, submit: 'উত্তর যাচাই করো', again: 'আবার চেষ্টা করো', score: (a, b) => `${b}টির মধ্যে ${a}টি ঠিক`, last: (a, b) => `আগেরবার: ${a}/${b}`,
     right: 'ঠিক', wrong: 'হয়নি', answerWas: 'সঠিক উত্তর:', unanswered: 'আগে সব প্রশ্নের উত্তর দাও', why: 'কেন',
     edit: '✎ উপকরণ, কুইজ ও "নিজে চালাও" সম্পাদনা', editTitle: 'এই ভিডিও সম্পাদনা', locked: 'ইন্সট্রাক্টর কী সেট না করা পর্যন্ত এই সাইটে সম্পাদনা বন্ধ।',
@@ -62,10 +63,17 @@ export function learnerSections(courseId, video) {
   const out = [];
 
   if (x.tryNow) {
+    const body = el('div', {}, el('pre', { class: 'code' }, el('code', { text: x.tryNow.code })),
+      el('div', { class: 'watch-actions' }, copyBtn(x.tryNow.code), tryNowButton(x.tryNow)));
+    const summaryHint = el('span', { class: 'muted small', text: L.tryHint(x.tryNow.label) });
     out.push(el('details', { class: 'card vx' },
-      el('summary', {}, el('strong', { text: `${x.tryNow.starter ? L.tryStarter : L.tryCode} · ${x.tryNow.label}` }), el('span', { class: 'muted small', text: L.tryHint(x.tryNow.label) })),
-      el('pre', { class: 'code' }, el('code', { text: x.tryNow.code })),
-      el('div', { class: 'watch-actions' }, copyBtn(x.tryNow.code), tryNowButton(x.tryNow))));
+      el('summary', {}, el('strong', { text: `${x.tryNow.starter ? L.tryStarter : L.tryCode} · ${x.tryNow.label}` }), summaryHint), body));
+    // When this site can run code, edit and run it right here instead.
+    runnerStatus().then((rs) => {
+      if (!rs.enabled || !rs.languages.includes(x.tryNow.language)) return;
+      summaryHint.textContent = L.runHere;
+      body.replaceChildren(codeRunner({ code: x.tryNow.code, language: x.tryNow.language, tryNowUrl: x.tryNow.url }));
+    });
   }
 
   if (x.materials.length) {

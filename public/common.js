@@ -201,15 +201,11 @@ export function mountNav(active, onLang) {
   }
   const actions = document.querySelector('.top .top-actions');
   if (actions && !actions.querySelector('.top-search')) {
-    const input = el('input', { type: 'search', name: 'q', placeholder: bn ? 'খোঁজো: পয়েন্টার, লুপ…' : 'Search: pointers, for loop…', 'aria-label': bn ? 'টিউটোরিয়াল খোঁজো' : 'Search tutorials' });
-    const form = el('form', { class: 'top-search', role: 'search', action: '/learn.html', method: 'get' });
-    form.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5c6b67" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
-    form.append(input);
-    actions.prepend(form);
+    actions.prepend(searchBox(bn));
     if (active !== 'pricing') actions.append(el('a', { class: 'btn-pro', href: '/pricing.html', text: bn ? 'প্রো নাও' : 'Go Pro' }));
   } else if (actions) {
     const input = actions.querySelector('.top-search input');
-    if (input) { input.placeholder = bn ? 'খোঁজো: পয়েন্টার, লুপ…' : 'Search: pointers, for loop…'; }
+    if (input) { input.placeholder = searchHint(bn); input.setAttribute('aria-label', bn ? 'পুরো সাইটে খোঁজো' : 'Search the whole site'); }
     const pro = actions.querySelector('.btn-pro');
     if (pro) pro.textContent = bn ? 'প্রো নাও' : 'Go Pro';
   }
@@ -220,6 +216,64 @@ export function mountNav(active, onLang) {
   if (authErr) { store.del('ll_auth_error', 'session'); setTimeout(() => toast(authErr), 300); }
   const btn = document.getElementById('lang');
   if (btn && onLang) btn.onclick = async () => { setLang(getLang() === 'en' ? 'bn' : 'en'); mountNav(active, onLang); await onLang(getLang()); };
+}
+
+const searchHint = (bn) => (bn ? 'খোঁজো: পয়েন্টার, লুপ, ভিডিও…' : 'Search topics, videos, labs…');
+const HIT_ICON = { topic: '📘', lab: '🧪', course: '🎓', video: '▶', post: '📰' };
+
+/** Top-bar search: suggestions while typing (topics, videos, labs, courses, posts); Enter opens the results page. */
+function searchBox(bn) {
+  const input = el('input', { type: 'search', name: 'q', autocomplete: 'off', placeholder: searchHint(bn), 'aria-label': bn ? 'পুরো সাইটে খোঁজো' : 'Search the whole site', role: 'combobox', 'aria-expanded': 'false', 'aria-controls': 'top-search-list', 'aria-autocomplete': 'list' });
+  const list = el('div', { class: 'ts-list', id: 'top-search-list', role: 'listbox', hidden: true });
+  const form = el('form', { class: 'top-search', role: 'search', action: '/search.html', method: 'get' });
+  form.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5c6b67" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+  form.append(input, list);
+  let timer = 0, seq = 0, active = -1;
+  const close = () => { list.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; };
+  const items = () => [...list.querySelectorAll('a.ts-item')];
+  const mark = (i) => { const all = items(); active = (i + all.length) % all.length; all.forEach((a, k) => a.setAttribute('aria-selected', k === active ? 'true' : 'false')); all[active]?.scrollIntoView({ block: 'nearest' }); };
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2 && q.toLowerCase() !== 'c') return close();
+    timer = setTimeout(async () => {
+      const mine = ++seq;
+      try {
+        const r = await fetch(`/api/search?suggest=1&lang=${getLang()}&q=${encodeURIComponent(q)}`).then((x) => x.json());
+        if (mine !== seq) return;
+        const hits = r.groups?.[0]?.hits ?? [];
+        const bnNow = getLang() === 'bn';
+        list.replaceChildren(
+          ...hits.map((h) => el('a', { class: 'ts-item', href: h.href, role: 'option', 'aria-selected': 'false' }, el('span', { class: 'ts-ico', 'aria-hidden': 'true', text: HIT_ICON[h.type] ?? '•' }), el('span', { class: 'ts-text' }, el('strong', { text: h.title }), el('small', { text: h.subtitle })))),
+          el('a', { class: 'ts-all', href: `/search.html?q=${encodeURIComponent(q)}`, text: hits.length ? (bnNow ? `"${q}"-এর সব ফল দেখো →` : `See all results for "${q}" →`) : (bnNow ? `"${q}" পাওয়া যায়নি। অন্যভাবে খোঁজো →` : `Nothing for "${q}" yet. Search all →`) }));
+        list.hidden = false; input.setAttribute('aria-expanded', 'true'); active = -1;
+      } catch { close(); }
+    }, 180);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (list.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); mark(active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); mark(active - 1); }
+    else if (e.key === 'Escape') close();
+    else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); location.href = items()[active].href; }
+  });
+  input.addEventListener('blur', () => setTimeout(() => { close(); if (!input.value.trim()) form.classList.remove('open'); }, 150));
+  // phones: a search icon that opens into a full-width box
+  form.addEventListener('click', () => { if (!form.classList.contains('open')) { form.classList.add('open'); input.focus(); } });
+  input.addEventListener('focus', () => form.classList.add('open'));
+  form.addEventListener('submit', (e) => { if (!input.value.trim()) e.preventDefault(); });
+  // "/" focuses search from anywhere (not while typing in a field)
+  if (!window.__llSlash) {
+    window.__llSlash = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const box = document.querySelector('.top-search input');
+      if (box) { e.preventDefault(); box.focus(); }
+    });
+  }
+  return form;
 }
 
 /** Fill every [data-i18n] element from a {key: text} dictionary. */

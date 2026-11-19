@@ -2,6 +2,9 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import type { RunnerService } from '../app/runner.ts';
+import { SearchService } from '../app/search.ts';
+import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts';
 import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
@@ -47,6 +50,8 @@ export interface AppDeps {
   admin?: AdminService;
   classes?: ClassService;
   orders?: OrderService;
+  runner?: RunnerService;
+  search?: SearchService;
   store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
@@ -64,6 +69,8 @@ export interface AppDeps {
     allowSeed: boolean;
     /** Ask AI answers per learner per day on the free plan. */
     freeDailyAi?: number;
+    /** Public address for links in the sitemap and share previews, e.g. https://loopnlogic.com */
+    siteUrl?: string | null;
   };
 }
 
@@ -116,6 +123,7 @@ function sameSecret(a: string, b: string): boolean {
 export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
+  const search = d.search ?? (d.search = new SearchService(tutorials, d.admin));
   const cls = () => {
     if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
     return d.classes;
@@ -140,6 +148,7 @@ export function buildRoutes(d: AppDeps): Route[] {
       instructorKeyRequired: Boolean(d.config.instructorKey),
       editing: d.config.instructorKey ? 'key' : d.config.editLocked ? 'locked' : 'open',
       freeDailyAi: d.config.freeDailyAi ?? 10,
+      runner: d.runner ? d.runner.status() : { enabled: false, languages: [] },
       lessons: LESSONS.map((l) => ({ id: l.id, subject: l.subject, title: l.title, summary: l.summary })),
     }), 'none'),
     route('GET', '/api/me', async ({ learnerId, email, signedIn }) => {
@@ -172,6 +181,13 @@ export function buildRoutes(d: AppDeps): Route[] {
 
     // tutorials (content-kit packages)
     route('GET', '/api/learn', ({ query }) => tutorials.list(lang(query.get('lang'))), 'none'),
+    // site-wide search (topics, labs, courses, videos, posts); suggest=1 gives the best few for the top-bar box
+    route('GET', '/api/search', ({ query }) => search.search(String(query.get('q') ?? ''), lang(query.get('lang')), { limit: query.get('suggest') ? 8 : undefined }), 'none'),
+    // run code in an outside sandbox (unchanged examples answer from their verified output)
+    route('POST', '/api/run', ({ body, learnerId, signedIn }) => {
+      if (!d.runner) throw new AppError('runner_off', 503, 'Running code is not available on this server.');
+      return d.runner.run(body ?? {}, { learnerId, signedIn: Boolean(signedIn) || d.auth.mode === 'supabase' });
+    }, 'learner', 64 * 1024),
     route('GET', '/api/learn-search', ({ query }) => tutorials.search(String(query.get('q') ?? '').slice(0, 120), lang(query.get('lang'))), 'none'),
     route('POST', '/api/waitlist', async ({ body, learnerId }) => {
       const email = String(body.email ?? '').trim().toLowerCase();
@@ -342,7 +358,14 @@ export function createApp(d: AppDeps) {
   const connect = ["'self'", d.config.supabaseUrl && d.auth.mode !== 'anonymous' ? new URL(d.config.supabaseUrl).origin : ''].filter(Boolean).join(' ');
   const csp = `default-src 'self'; img-src 'self' data: https://i.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src ${connect}; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
-  async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
+  async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string, query: URLSearchParams) {
+    const base = siteBase(req.headers, d.config.siteUrl);
+    const seo = { tutorials: d.tutorials, admin: d.admin, search: d.search! };
+    if (pathname === '/robots.txt' || pathname === '/sitemap.xml') {
+      const text = pathname === '/robots.txt' ? robotsTxt(base) : sitemapXml(base, seo);
+      res.writeHead(200, { 'content-type': pathname === '/robots.txt' ? 'text/plain; charset=utf-8' : 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600', 'x-content-type-options': 'nosniff' });
+      return res.end(req.method === 'HEAD' ? undefined : text);
+    }
     const rel = pathname === '/' ? '/index.html' : pathname;
     let file = normalize(join(publicDir, rel));
     if (pathname === '/lab-model.js') file = d.labModelFile;
@@ -355,7 +378,8 @@ export function createApp(d: AppDeps) {
     try {
       const info = await stat(file);
       if (!info.isFile()) throw new Error('not a file');
-      const data = await readFile(file);
+      let data: Buffer | string = await readFile(file);
+      if (extname(file) === '.html') data = injectHead(data.toString('utf8'), pageMeta(pathname, query, base, seo));
       res.writeHead(200, {
         'content-type': (pathname === '/lab-model.js' ? MIME['.js'] : MIME[extname(file)]) ?? 'application/octet-stream',
         'cache-control': 'no-cache',
@@ -373,7 +397,7 @@ export function createApp(d: AppDeps) {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const headers: Record<string, string> = {};
     try {
-      if (!url.pathname.startsWith('/api/')) return await serveStatic(req, res, url.pathname);
+      if (!url.pathname.startsWith('/api/')) return await serveStatic(req, res, url.pathname, url.searchParams);
       const match = routes
         .filter((r) => r.method === req.method)
         .map((r) => ({ r, m: r.pattern.exec(url.pathname) }))

@@ -31,7 +31,7 @@ export const TRACK_INFO: Record<string, { title: Bi; blurb: Bi; course?: string;
 interface Topic {
   id: string; track: string; module: string; dir: string; custom?: boolean;
   json: Json; bodyEn: string; bodyBn: string | null;
-  examples: { id: string; title: string; language: string; code: string; output: string | null; explanationHtml: string; tryNow: boolean; outputNote?: string; demonstrates?: string }[];
+  examples: { id: string; title: string; language: string; code: string; output: string | null; stdin: string; runnable: boolean; explanationHtml: string; tryNow: boolean; outputNote?: string; demonstrates?: string }[];
   text: string;
 }
 interface Track { id: string; root: string; curriculum: Json; manifest: Json; language: string; topics: Map<string, Topic>; order: string[]; custom?: boolean }
@@ -74,6 +74,9 @@ const readText = (f: string) => (existsSync(f) ? readFileSync(f, 'utf8') : null)
 const readJsonFile = (f: string): Json | null => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
 const pick = <T extends Json>(o: T | undefined, lang: Lang): string => (o ? (o[lang] || o.en || '') : '');
 const TRY_NOW: Record<string, string> = { c: LANGUAGES.c.url, python: LANGUAGES.python.url, java: LANGUAGES.java.url };
+/** Languages the in-page runner accepts. SQL needs a MySQL setup and package-using Python needs numpy etc., so those keep "Try now". */
+export const RUN_LANGS = new Set(['c', 'cpp', 'java', 'python']);
+const canRun = (language: string, e: Json) => RUN_LANGS.has(language) && !(Array.isArray(e.requires) && e.requires.length) && e.runMode !== 'compile-only' && !e.setup;
 
 export class TutorialService {
   private tracks = new Map<string, Track>();
@@ -126,6 +129,8 @@ export class TutorialService {
       id: String(e.id), title: String(e.title ?? ''), language: String(e.language ?? track.language),
       code: readText(join(dir, String(e.file ?? ''))) ?? '',
       output: e.output ? readText(join(dir, String(e.output))) : null,
+      stdin: e.stdin ? readText(join(dir, String(e.stdin))) ?? '' : '',
+      runnable: canRun(String(e.language ?? track.language), e),
       explanationHtml: cleanHtml(String(e.explanationHtml ?? '')),
       tryNow: Boolean(e.tryNow) && Boolean(TRY_NOW[String(e.language ?? track.language)]),
       outputNote: e.outputNote, demonstrates: e.demonstrates,
@@ -165,7 +170,7 @@ export class TutorialService {
       };
       t.topics.set(d.id, {
         id: d.id, track: t.id, module: d.module, dir: '', custom: true, json, bodyEn, bodyBn, text: textOf(bodyEn),
-        examples: d.examples.map((e, i) => ({ id: `ex-${i + 1}`, title: e.title, language: e.language || t.language, code: e.code, output: e.output || null, explanationHtml: '', tryNow: Boolean(TRY_NOW[e.language || t.language]) })),
+        examples: d.examples.map((e, i) => ({ id: `ex-${i + 1}`, title: e.title, language: e.language || t.language, code: e.code, output: e.output || null, stdin: '', runnable: RUN_LANGS.has(e.language || t.language), explanationHtml: '', tryNow: Boolean(TRY_NOW[e.language || t.language]) })),
       });
       m.topics.push({ id: d.id, title: d.title.en, level: d.level, kind: 'lesson', custom: true });
       this.topicTrack.set(d.id, t.id);
@@ -278,7 +283,7 @@ export class TutorialService {
       examples: x.examples.map((e) => ({ ...e, tryNowUrl: e.tryNow ? TRY_NOW[e.language] : null })),
       labs: (j.labs ?? []) as string[],
       quiz: (j.quiz ?? []).map((q: Json) => ({ id: q.id, type: q.type, difficulty: q.difficulty, prompt: q.prompt, options: q.options, code: q.code ?? null, language: q.language ?? t.language, figure: q.figure ?? null })),
-      practice: (j.practice ?? []).map((p: Json) => ({ id: p.id, title: p.title, difficulty: p.difficulty, type: p.type ?? 'code', statementHtml: cleanHtml(String(p.statementHtml ?? '')), hints: (p.hints ?? []).map((h: unknown) => (typeof h === 'string' ? h : pick(h as Json, lang))), figure: p.figure ?? null })),
+      practice: (j.practice ?? []).map((p: Json) => ({ ...this.practiceSample(x, p, t.language), id: p.id, title: p.title, difficulty: p.difficulty, type: p.type ?? 'code', statementHtml: cleanHtml(String(p.statementHtml ?? '')), hints: (p.hints ?? []).map((h: unknown) => (typeof h === 'string' ? h : pick(h as Json, lang))), figure: p.figure ?? null })),
       keyPoints: (j.keyPoints ?? []).map((k: Json) => pick(k, lang)),
       examQuestions: (j.examQuestions ?? []).map((q: Json) => ({ question: q.question, type: q.type, marks: q.marks ?? null, answerHtml: cleanHtml(String(q.answerHtml ?? '')), figure: q.figure ?? null })),
       videos: (j.videos ?? []).map((v: Json) => { const vid = getVideo(String(v.videoId)); return vid ? { videoId: vid.id, title: vid.title, note: v.note ?? null } : null; }).filter(Boolean),
@@ -330,6 +335,58 @@ export class TutorialService {
     const language = String(p.language ?? t.language);
     const tests = (p.tests ?? []).slice(0, 3).map((tc: Json) => ({ stdin: tc.stdin ? readText(join(x.dir, String(tc.stdin))) : '', output: readText(join(x.dir, String(tc.output ?? ''))) ?? '' }));
     return { type: 'code', language, code: readText(join(x.dir, String(p.solution ?? ''))) ?? '', tests, tryNowUrl: TRY_NOW[language] ?? null };
+  }
+
+  /** First test of a code practice problem, so students can check their own program against it. */
+  private practiceSample(x: Topic, p: Json, trackLanguage: string) {
+    if ((p.type ?? 'code') === 'written') return { language: null, runnable: false, sample: null };
+    const language = String(p.language ?? trackLanguage);
+    const tc = (p.tests ?? [])[0];
+    const sample = tc ? { stdin: tc.stdin ? readText(join(x.dir, String(tc.stdin))) ?? '' : '', output: readText(join(x.dir, String(tc.output ?? ''))) ?? '' } : null;
+    return { language, runnable: canRun(language, p), sample };
+  }
+
+  /** The stored program, input and output for an example, used to answer an unchanged run without the sandbox. */
+  verifiedExample(trackId: string, topicId: string, exampleId: string) {
+    const x = this.tracks.get(trackId)?.topics.get(topicId);
+    const e = x?.examples.find((ex) => ex.id === exampleId);
+    return e && e.output !== null ? { language: e.language, code: e.code, stdin: e.stdin, output: e.output } : null;
+  }
+
+  /** Every delivered topic, for the sitemap and site search. */
+  allTopics(lang: Lang) {
+    const out: { track: string; trackTitle: string; topic: string; title: string; summary: string; keywords: string[]; level: string }[] = [];
+    for (const t of this.tracks.values()) {
+      if (this.hidden.has(t.id)) continue;
+      for (const id of t.order) {
+        const x = t.topics.get(id)!;
+        out.push({ track: t.id, trackTitle: TRACK_INFO[t.id]?.title[lang] ?? t.id, topic: id, title: pick(x.json.title, lang), summary: pick(x.json.summary, lang), keywords: x.json.keywords ?? [], level: x.json.level });
+      }
+    }
+    return out;
+  }
+
+  /** Visible track ids (sitemap). */
+  trackIds() { return [...this.tracks.keys()].filter((id) => !this.hidden.has(id)); }
+
+  /** Title and description for a track or topic page (SEO). */
+  pageInfo(trackId: string, topicId: string | null, lang: Lang) {
+    const t = this.tracks.get(trackId);
+    if (!t || this.hidden.has(trackId)) return null;
+    const trackTitle = TRACK_INFO[trackId]?.title[lang] ?? trackId;
+    if (!topicId) return { title: `${trackTitle} tutorial`, description: TRACK_INFO[trackId]?.blurb[lang] ?? '', trackTitle, topicTitle: null, keywords: [] as string[] };
+    const x = t.topics.get(topicId);
+    if (!x) return null;
+    return { title: pick(x.json.title, lang), description: pick(x.json.summary, lang), trackTitle, topicTitle: pick(x.json.title, lang), keywords: (x.json.keywords ?? []) as string[] };
+  }
+
+  /** Every lab across tracks (site search). */
+  allLabs(lang: Lang) {
+    const out: { track: string; topic: string; topicTitle: string; id: string; title: string; summary: string }[] = [];
+    for (const id of this.trackIds()) {
+      for (const tp of this.labIndex(id, lang).topics) for (const lab of tp.labs) out.push({ track: id, topic: tp.id, topicTitle: tp.title, id: lab.id, title: lab.title, summary: lab.summary });
+    }
+    return out;
   }
 
   /** Title, keyword and summary search over every delivered topic. */

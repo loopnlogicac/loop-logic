@@ -2,6 +2,9 @@
 // quiz graded on the server, practice with solutions, exam questions).
 import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
 import { mountLab, renderFigure } from './lab-player.js';
+import { codeRunner, runnerStatus } from './runner.js';
+
+let RUN = { enabled: false, languages: [] };
 
 const T = {
   en: {
@@ -13,7 +16,7 @@ const T = {
     min: (m) => `${m} min`, lab: 'Lab', freeTag: 'FREE', ready: (a, b) => `${a} of ${b} topics ready`, all: 'All tutorials', contents: 'Contents', onPage: 'On this page',
     example: 'Example', output: 'Output', copy: 'Copy', copied: 'Copied', tryNow: 'Try now', tryNowTip: 'Code copied. Paste it into the online compiler.',
     keyPoints: 'Key points', quiz: 'Check yourself', submit: 'Check my answers', score: (s, n) => `${s} of ${n} correct`, answerAll: 'Answer at least one question first.', retry: 'Try again',
-    practice: 'Practice problems', hints: 'Hints', solution: 'Show solution', written: 'Show worked answer', tests: 'Sample test', input: 'Input', expected: 'Expected output',
+    practice: 'Practice problems', tryOwn: '✎ Write and run your own solution', tryOwnHint: 'The sample input is filled in. Press Run and we compare your output with the expected output.', hints: 'Hints', solution: 'Show solution', written: 'Show worked answer', tests: 'Sample test', input: 'Input', expected: 'Expected output',
     exam: 'Exam-style questions', showAnswer: 'Show answer', videos: 'Watch the video', refs: 'Read more', prev: 'Previous', next: 'Next',
     results: (n, s) => `${n} topics match “${s}”`, noResults: (s) => `No topic matches “${s}” yet. Try another word, or browse the tutorials below.`,
     noBn: 'The full Bangla version of this lesson is coming. You are reading the English text; key points and quiz help are in Bangla where available.',
@@ -28,7 +31,7 @@ const T = {
     min: (m) => `${m} মিনিট`, lab: 'ল্যাব', freeTag: 'ফ্রি', ready: (a, b) => `${b}টির মধ্যে ${a}টি টপিক তৈরি`, all: 'সব টিউটোরিয়াল', contents: 'সূচিপত্র', onPage: 'এই পাতায়',
     example: 'উদাহরণ', output: 'আউটপুট', copy: 'কপি', copied: 'কপি হয়েছে', tryNow: 'এখনই চালাও', tryNowTip: 'কোড কপি হয়েছে। অনলাইন কম্পাইলারে পেস্ট করো।',
     keyPoints: 'মূল কথা', quiz: 'নিজেকে যাচাই করো', submit: 'উত্তর মিলিয়ে দেখো', score: (s, n) => `${n}টির মধ্যে ${s}টি সঠিক`, answerAll: 'আগে অন্তত একটি প্রশ্নের উত্তর দাও।', retry: 'আবার চেষ্টা',
-    practice: 'অনুশীলনী', hints: 'ইঙ্গিত', solution: 'সমাধান দেখাও', written: 'পূর্ণ উত্তর দেখাও', tests: 'নমুনা টেস্ট', input: 'ইনপুট', expected: 'প্রত্যাশিত আউটপুট',
+    practice: 'অনুশীলনী', tryOwn: '✎ নিজের সমাধান লিখে চালাও', tryOwnHint: 'নমুনা ইনপুট দেওয়া আছে। চালাও চাপলে তোমার আউটপুট প্রত্যাশিত আউটপুটের সঙ্গে মিলিয়ে দেখাব।', hints: 'ইঙ্গিত', solution: 'সমাধান দেখাও', written: 'পূর্ণ উত্তর দেখাও', tests: 'নমুনা টেস্ট', input: 'ইনপুট', expected: 'প্রত্যাশিত আউটপুট',
     exam: 'পরীক্ষার ধাঁচের প্রশ্ন', showAnswer: 'উত্তর দেখাও', videos: 'ভিডিও দেখো', refs: 'আরও পড়ো', prev: 'আগের', next: 'পরের',
     results: (n, s) => `“${s}”-এর সঙ্গে ${n}টি টপিক মিলেছে`, noResults: (s) => `“${s}”-এর সঙ্গে এখনো কোনো টপিক মেলেনি। অন্য শব্দে খোঁজো, অথবা নিচের টিউটোরিয়াল দেখো।`,
     noBn: 'এই পাঠের পূর্ণ বাংলা সংস্করণ আসছে। এখন ইংরেজি লেখা দেখছ; মূল কথা আর কুইজের সাহায্য যেখানে আছে বাংলায় পাবে।',
@@ -111,10 +114,12 @@ async function renderTrack() {
 // ── one topic ──
 async function renderTopic() {
   const L = t();
-  const [d, tr] = await Promise.all([
+  const [d, tr, rs] = await Promise.all([
     api('GET', `/api/learn/${encodeURIComponent(trackId)}/${encodeURIComponent(topicId)}?lang=${getLang()}`),
     api('GET', `/api/learn/${encodeURIComponent(trackId)}?lang=${getLang()}`),
+    runnerStatus(),
   ]);
+  RUN = rs;
   document.title = `${d.topic.title} · ${d.track.title}`;
   const body = el('article', { class: `tut-body lang-${d.topic.bodyLang}`, lang: d.topic.bodyLang });
   body.innerHTML = d.topic.bodyHtml; // sanitised on the server (tag and attribute whitelist)
@@ -191,7 +196,7 @@ function wireBody(body, d) {
   for (const img of body.querySelectorAll('img[src^="assets/"]')) { img.src = `/learn-assets/${d.track.id}/${d.topic.id}/${img.getAttribute('src').slice(7)}`; img.loading = 'lazy'; }
   for (const slot of body.querySelectorAll('div[data-example]')) {
     const ex = d.examples.find((e) => e.id === slot.dataset.example);
-    if (ex) slot.replaceWith(exampleBlock(ex)); else slot.remove();
+    if (ex) slot.replaceWith(exampleBlock(ex, d)); else slot.remove();
   }
   for (const slot of body.querySelectorAll('div[data-lab]')) {
     const host = el('div', { class: 'lp-host', id: `lab-${slot.dataset.lab}` });
@@ -207,14 +212,30 @@ function codeBox(code, language, tryNowUrl) {
   return el('div', { class: 'tut-code' }, el('div', { class: 'tut-code-bar' }, el('span', { text: language.toUpperCase() }), el('span', {}, copyBtn, tryBtn)), el('pre', {}, el('code', { class: `language-${language}`, text: code })));
 }
 
-function exampleBlock(ex) {
+const canRun = (language, runnable) => RUN.enabled && runnable && RUN.languages.includes(language);
+
+function exampleBlock(ex, d) {
   const L = t();
+  const runner = canRun(ex.language, ex.runnable);
+  const staticOut = ex.output !== null ? el('div', { class: 'tut-out' }, el('span', { class: 'small muted', text: L.output }), el('pre', { text: ex.output })) : ex.outputNote ? el('p', { class: 'small muted', text: ex.outputNote }) : null;
   return el('figure', { class: 'tut-example', id: ex.id },
     el('figcaption', {}, el('span', { class: 'pill', text: `${L.example} ${ex.id.replace('ex-', '')}` }), ' ', ex.title),
-    codeBox(ex.code, ex.language, ex.tryNowUrl),
-    ex.output !== null ? el('div', { class: 'tut-out' }, el('span', { class: 'small muted', text: L.output }), el('pre', { text: ex.output })) : ex.outputNote ? el('p', { class: 'small muted', text: ex.outputNote }) : null,
+    runner ? codeRunner({
+      code: ex.code, language: ex.language, stdin: ex.stdin, ref: { track: d.track.id, topic: d.topic.id, example: ex.id }, tryNowUrl: ex.tryNowUrl,
+      // the run shows its own output, so the printed one steps aside until Reset
+      onRun: () => { if (staticOut) staticOut.hidden = true; }, onReset: () => { if (staticOut) staticOut.hidden = false; },
+    }) : codeBox(ex.code, ex.language, ex.tryNowUrl),
+    !runner && ex.stdin ? el('div', { class: 'tut-out' }, el('span', { class: 'small muted', text: L.input }), el('pre', { class: 'tut-in', text: ex.stdin })) : null,
+    staticOut,
     ex.explanationHtml ? htmlBox(ex.explanationHtml) : null);
 }
+
+const STARTER = {
+  c: '#include <stdio.h>\n\nint main(void) {\n    // write your solution here\n\n    return 0;\n}\n',
+  cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // write your solution here\n\n    return 0;\n}\n',
+  java: 'import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner in = new Scanner(System.in);\n        // write your solution here\n\n    }\n}\n',
+  python: '# write your solution here\n',
+};
 
 function quizBlock(d) {
   const L = t();
@@ -264,11 +285,16 @@ function practiceBlock(d) {
           btn.remove();
         } catch (e) { out.textContent = e.message; btn.disabled = false; }
       };
+      const tryIt = p.type === 'code' && p.sample && canRun(p.language, p.runnable)
+        ? el('details', { class: 'prac-try' }, el('summary', { text: L.tryOwn }),
+          el('p', { class: 'small muted', text: L.tryOwnHint }),
+          codeRunner({ code: STARTER[p.language] ?? '', language: p.language, stdin: p.sample.stdin, expected: p.sample.output }))
+        : null;
       return el('div', { class: 'prac' },
         el('h3', {}, el('span', { class: `tb d-${p.difficulty}`, text: p.difficulty }), ` ${i + 1}. ${p.title}`),
         htmlBox(p.statementHtml), p.figure ? renderFigure(p.figure) : null,
         p.hints.length ? el('details', {}, el('summary', { text: L.hints }), el('ol', {}, ...p.hints.map((h) => el('li', { text: h })))) : null,
-        btn, out);
+        tryIt, btn, out);
     }));
 }
 
