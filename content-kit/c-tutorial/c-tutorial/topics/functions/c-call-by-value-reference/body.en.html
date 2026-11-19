@@ -1,0 +1,117 @@
+<h2 id="introduction">A copied address can still reach the original</h2>
+
+<p class="lead">Imagine writing a room number on a second piece of paper. You now have two pieces of paper, but both identify the same room. Changing the copied paper does not change the original paper. Entering the room can still change what both room numbers lead to.</p>
+
+<p>This picture helps explain C arguments. C always uses <dfn>pass-by-value</dfn>: an argument value is copied into a parameter. For an int argument, the copied value is an integer. For a pointer argument, the copied value identifies an object or is a null pointer.</p>
+
+<p>The title call by reference appears often in exam questions. In C, it usually means simulating updates to caller objects through pointer parameters. C has no built-in reference parameter mechanism. The address itself is still passed by value.</p>
+
+<h2 id="syntax">Read the address and the object separately</h2>
+
+<pre><code class="language-c">void swap(int *a, int *b)
+{
+    int temporary = *a;
+    *a = *b;
+    *b = temporary;
+}</code></pre>
+
+<p>A pointer stores an address-like value identifying an object. In the parameter declaration, <code>int *a</code> says that a points to int. In an expression, <code>*a</code> accesses the int selected by that pointer. This operation is called <dfn>dereferencing</dfn>.</p>
+
+<p>At the call, <code>swap(&amp;left, &amp;right)</code> passes addresses of the caller's two variables. The address operator <code>&amp;</code> does not copy the entire variable into the helper. It produces a pointer value, which is then copied into a or b.</p>
+
+<p>Dereferencing requires a valid target. The target must still exist, have a suitable type and permit the intended read or write. An arbitrary integer is not a safe replacement for an object address. More pointer rules appear in <a href="topic:c-pointers-intro">Introduction to Pointers</a>.</p>
+
+<h2 id="how-it-works">Compare the two swaps one assignment at a time</h2>
+
+<p>The value-copy swap receives two independent int parameters. Swapping those parameters changes the helper's own objects. Nothing in that function identifies the caller's original objects for writing. Printing inside the helper can therefore look correct while main remains unchanged.</p>
+
+<pre class="diagram">Before value swap: main a=12, main b=30
+Inside helper:      copy a=12, copy b=30
+After local swap:   copy a=30, copy b=12
+After return:       main a=12, main b=30
+
+Pointer swap: a points to main a; b points to main b
+*a = *b writes into main a
+*b = temporary writes into main b</pre>
+
+<p>For the pointer swap, first save the value reached through a. Next, copy the value reached through b into a's target. Finally, write the saved value into b's target. The temporary is necessary because the first write otherwise destroys a value still needed later.</p>
+
+<p>A caller may use completely different names, such as score and bonus. Parameter names a and b do not match objects by spelling. The argument expressions establish the connection. This matters when several functions each use local variables called value.</p>
+
+<p>Passing the same address twice is also worth tracing. With the temporary-based swap, both reads initially get the same value. Both writes store that value back, so the object stays unchanged. An XOR-based swap does not have this useful property when both pointers select one object.</p>
+
+<h2 id="examples">Observe copies, targets and redirection</h2>
+
+<h3>A swap that changes only copies</h3>
+
+<p>The helper prints 30 12, while main still prints 12 30. Both parameters were separate int objects.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Swap caller variables through their addresses</h3>
+
+<p>Dereferencing the copied addresses reaches main variables. The original objects now hold 30 and 12.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Reassigning a pointer parameter is local</h3>
+
+<p>The local pointer is redirected, so other becomes 25. The caller pointer still selects original, whose value remains 7.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Check an optional output address</h3>
+
+<p>The first call succeeds and leaves value equal to 5. A null pointer is rejected before dereferencing it.</p>
+
+<div data-example="ex-4"></div>
+
+<p>In the retarget example, changing chosen modifies the local pointer parameter. It does not redirect main's chosen pointer. The following starred assignment uses the new local target, so other becomes 25. This separates changing a pointer from changing the object it selects.</p>
+
+<p>The optional-output example gives null a deliberate meaning. NULL is a macro for a null pointer constant, and a null pointer identifies no object. The helper checks for null before dereferencing. Its return flag tells the caller whether an increment occurred.</p>
+
+<h2 id="edge-cases">State the pointer contract</h2>
+
+<p>Not every function must accept null. A swap helper can require two valid writable int pointers as part of its interface. A function that promises optional output should instead check whether that output pointer is null. Pick a rule and document it where callers can see it.</p>
+
+<p>A non-null pointer is not automatically valid. A pointer can refer to an object whose lifetime has ended, or hold an unrelated value. Testing against NULL cannot prove that storage is alive or correctly typed. The caller and helper must preserve these conditions together.</p>
+
+<p>Two parameters may select the same object. This is called <dfn>aliasing</dfn>. Decide whether an algorithm allows it before accepting shared targets. The transfer practice uses distinct source and destination variables. If a transfer interface allowed the same object for both, its promised meaning would need careful explanation.</p>
+
+<p>An input pointer may be declared <code>const int *value</code> when the helper should only read that int. The const qualification limits writes through this access path. It does not promise that every other part of the program is unable to change the object.</p>
+
+<p>To change a caller's pointer variable itself, a helper normally needs its address, producing a pointer-to-pointer parameter. That is a different interface from the int-pointer swap. See <a href="topic:c-pointer-to-pointer">Pointer to Pointer</a> when you need to replace which object a caller pointer selects.</p>
+
+<h2 id="common-mistakes">Match each operation to the intended object</h2>
+
+<h3>Passing values where addresses are required</h3>
+
+<p>A call to swap(a, b) is wrong when the prototype expects int pointers and a and b are ints. Use the address operator on each live variable. Do not try to silence the type diagnostic with a cast.</p>
+
+<h3>Assigning the pointer instead of its target</h3>
+
+<p>Inside a pointer helper, <code>a = b;</code> changes which object local a selects. <code>*a = *b;</code> copies one target value to another. Read the stars before deciding what a line changes.</p>
+
+<h3>Returning an address of a short-lived local</h3>
+
+<p>A local int disappears when its automatic lifetime ends. Returning its address does not extend that lifetime. Place result storage in the caller or choose storage with an appropriate longer duration.</p>
+
+<h3>Overwriting before saving</h3>
+
+<p>Writing the first target from the second and then the second from the first copies the same value twice. Save the original first value before either write. A three-line trace makes the lost-value bug visible.</p>
+
+<h2 id="best-practices">Make updates visible at the call</h2>
+
+<p>Use pointer parameters when a helper must update caller-owned storage or work with a larger object. For a small calculation with one result, returning that result is often easier to follow. An address at the call helps readers notice an intended update.</p>
+
+<p>Check a helper with different values, equal values and shared targets when its contract allows them. A rotation needs three distinct variables in its practice task. A swap can be checked with one address used twice. Choose boundary checks from the actual update rules.</p>
+
+<p>Keep reads and writes in separate statements while learning. A complicated expression containing several modifications hides which value was saved first. Straightforward assignments make a pointer trace easier to verify and maintain.</p>
+
+<h2 id="version-notes">Reference terminology does not change the language rule</h2>
+
+<div class="callout version"><p>C89 through C23 pass arguments by value. Pointer parameters provide indirect access to objects; they do not create a separate language-level pass-by-reference mode. The programs here follow C17 pointer rules without compiler extensions.</p></div>
+
+<h2 id="summary">Follow values and storage separately</h2>
+
+<p>An int parameter is a copied integer; an int-pointer parameter is a copied pointer. Dereferencing a valid copied pointer can update the original target. Continue with <a href="topic:c-scope-lifetime">Scope and Lifetime</a> to understand where names work and how long their objects remain valid.</p>

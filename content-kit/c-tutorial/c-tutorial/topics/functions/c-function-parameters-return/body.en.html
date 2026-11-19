@@ -1,0 +1,98 @@
+<h2 id="introduction">Choose what goes in and what comes back</h2>
+
+<p class="lead">A function interface is like a small calculation form. The caller fills in the inputs and receives a result. A mark-adjustment function might need a mark and a bonus, then return the adjusted total. Clear inputs and results make the calculation easy to reuse.</p>
+
+<p>An <dfn>argument</dfn> is an expression written at a call. A <dfn>parameter</dfn> is a variable declared by the function to receive an argument value. Textbooks sometimes call these actual and formal parameters. Arguments belong to the calling expression; parameters belong to the called function.</p>
+
+<p>A return value is different from printed text. A function can return a number without printing it. The caller can then add that number, compare it or display it. A void function may instead perform an action, such as printing a label.</p>
+
+<h2 id="syntax">Read input types and result types</h2>
+
+<pre><code class="language-c">double average(int first, int second)
+{
+    return (first + second) / 2.0;
+}</code></pre>
+
+<p>The two parameters receive int values. The declared result type is double. The expression computes a fractional average because the divisor is 2.0. A call such as average(7, 8) therefore produces 7.5.</p>
+
+<p>Arguments are matched by position, not by matching names. The first argument initializes first and the second initializes second. Writing the two parameter names differently in main changes nothing about this positional rule. Swapping two arguments can matter greatly when a function subtracts or divides.</p>
+
+<p>A <code>return expression;</code> statement ends the current call and converts the expression to the declared result type. A void function uses <code>return;</code> without an expression when it needs to exit early. Reaching the final brace of a void function also finishes its action.</p>
+
+<h2 id="how-it-works">Track a call and its value</h2>
+
+<p>Suppose main evaluates <code>add_bonus(72, 5)</code>. The helper receives separate local parameters containing 72 and 5. Their sum is calculated inside the helper. Returning 77 supplies the value of the call expression in main.</p>
+
+<table class="ref"><caption>One call to add_bonus</caption><thead><tr><th scope="col">Moment</th><th scope="col">Values and action</th></tr></thead><tbody><tr><td>Before entry</td><td>Arguments evaluate to 72 and 5</td></tr><tr><td>Inside helper</td><td>mark holds 72; bonus holds 5</td></tr><tr><td>At return</td><td>mark + bonus gives 77</td></tr><tr><td>Back in main</td><td>The call supplies 77 to total</td></tr></tbody></table>
+
+<p>After return, the helper's automatic parameters no longer exist. The returned int remains usable because its value was passed back. It is not a reference to the former local parameter.</p>
+
+<p>Every ordinary non-void helper should produce a result on every path where the caller uses that result. If one branch returns but another falls through the closing brace, the interface is incomplete. main has a special rule allowing fall-through to mean success, but helpers do not share that convenience.</p>
+
+<h2 id="examples">Values, actions and two-output helpers</h2>
+
+<h3>Two inputs, one calculated result</h3>
+
+<p>The arguments 72 and 5 initialize mark and bonus. return supplies 77 to the initializer in main.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Return a fractional average</h3>
+
+<p>Dividing by 2.0 produces 7.50. Declaring double alone would not repair integer division performed before return.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>A void function can stop early</h3>
+
+<p>The first call prints an error and leaves through return. The second reaches the formatted mark line.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Return quotient and remainder through addresses</h3>
+
+<p>&amp; supplies each caller variable address. The starred assignments store 3 and 2 there; the divisor is positive.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The invalid-mark call demonstrates an early return from a void function. Its error branch prints a message and stops that call. Execution still continues in main, which makes a second call with a valid mark. Returning from a helper does not terminate the whole program.</p>
+
+<p>The quotient example introduces pointers only to explain two results. <code>int *quotient</code> is a parameter holding an int address. The expression <code>&amp;quotient</code> in main obtains an address, while <code>*quotient</code> inside the helper accesses the pointed-to int. Full pointer operations come later in <a href="topic:c-pointers-intro">Introduction to Pointers</a>.</p>
+
+<h2 id="edge-cases">More than one result needs a design</h2>
+
+<p>A C return statement returns one value. A helper that computes both quotient and remainder can return one and write the other through a pointer. Another design uses two output pointers and a void result, as divide_parts does. Later, a structure can group several values into one return value.</p>
+
+<p>An output pointer must identify a live, writable object of the right type. Passing an uninitialized pointer does not create storage for a result. The caller should declare its result variables and pass their addresses. The helper's contract should also explain whether null pointers are allowed.</p>
+
+<p>The division helper requires a nonzero divisor and values whose signed division result is representable. Its example uses a positive divisor and small nonnegative inputs. General signed division needs extra care for the most negative integer divided by minus one.</p>
+
+<p>Do not rely on a particular order of evaluating different function arguments. Calls such as add_bonus(x++, x++) have unsequenced modifications of x and undefined behavior in C17. Calculate separate input values in separate statements before passing them when order matters.</p>
+
+<h2 id="common-mistakes">Keep result calculation separate from formatting</h2>
+
+<h3>Returning the wrong expression type</h3>
+
+<p>If average uses <code>(first + second) / 2</code>, integer division happens first. Converting that truncated result to double cannot restore the lost half. Use a floating operand before the division.</p>
+
+<h3>Using a void call as a value</h3>
+
+<p>A printing function declared void cannot initialize an int total. Either let it print as an action, or redesign it to return a number. Do not confuse printf's own character-count return value with the text it prints.</p>
+
+<h3>Forgetting one result path</h3>
+
+<p>A clamp function needs an answer for below-range, above-range and in-range values. Check each branch and the final path. A clear final return often makes this review easier than deeply nested conditions.</p>
+
+<h2 id="best-practices">Write a short contract for the caller</h2>
+
+<p>Choose parameters that represent the calculation's real inputs. Keep temporary working variables inside the function. If a result can fail, consider a success flag plus an output pointer, and explain when the output becomes valid.</p>
+
+<p>Try boundary values that choose different return paths. For a pass predicate, marks 39 and 40 should give different truth values. For a minute splitter, 59 and 60 reveal whether both the quotient and remainder are calculated correctly.</p>
+
+<h2 id="version-notes">Explicit types remain useful</h2>
+
+<div class="callout version"><p>The input and return rules used here are standard C17. C99 removed old implicit-int declarations. Explicit result types and complete prototypes let compilers check calls reliably across modern C editions.</p></div>
+
+<h2 id="summary">Give the caller a dependable result</h2>
+
+<p>Parameters receive input values, return supplies one result, and void describes an action with no result value. Output pointers can fill several caller variables when their contract is clear. Next, <a href="topic:c-call-by-value-reference">Call by Value and Call by Reference</a> explains why pointer updates can change caller storage.</p>

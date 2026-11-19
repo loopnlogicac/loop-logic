@@ -1,0 +1,102 @@
+<h2 id="introduction">A name for a useful job</h2>
+
+<p class="lead">A <dfn>function</dfn> is a named group of statements that performs one job. Think of a lab assistant who knows how to calculate a photocopy bill. You give the page count, receive the price, and continue your own work. You do not explain the multiplication rule at every request.</p>
+
+<p>Functions give the same benefit in C. A program may need the same price rule at several points. Writing that rule once makes it easier to understand and change. A later price change belongs in one place. Every call then uses the revised rule.</p>
+
+<p>You have already called functions such as <code>printf</code> and <code>scanf</code>. Those are library functions supplied by the C implementation. A <dfn>user-defined function</dfn> is one you write for your own problem. Both kinds are called using a name followed by parentheses.</p>
+
+<h2 id="syntax">Read the parts of a function</h2>
+
+<pre><code class="language-c">int copy_cost(int pages)
+{
+    return pages * 3;
+}</code></pre>
+
+<p>The first <code>int</code> describes the result type. The name <code>copy_cost</code> describes the job. Inside the parentheses, <code>int pages</code> declares an input parameter. The braces contain the function body. The return statement calculates a result and finishes this call.</p>
+
+<p>A <dfn>parameter</dfn> is a local variable that receives an input value. In <code>copy_cost(12)</code>, the expression 12 is an argument. The argument value initializes pages when the call begins. Here the returned value is 36, and the caller may print it or store it.</p>
+
+<p>A function with return type <code>void</code> does not supply a result value. A greeting function is a good example. It still performs work, but there is no number to assign. Writing <code>void</code> inside the parameter parentheses states that a function takes no arguments.</p>
+
+<h2 id="how-it-works">Pause, call and resume</h2>
+
+<p>A call transfers control to the named function. The caller waits while the called function runs. When the called function returns, control resumes at the waiting call. Execution does not restart at the beginning of main.</p>
+
+<p>A <dfn>call stack</dfn> is a useful picture of active calls. Each active call has a record of its local work and where to return. The most recent call finishes first. This picture explains nested calls even though C does not require a particular physical stack design.</p>
+
+<pre class="diagram">main starts report
+    main waits | report starts line
+    main waits | report waits | line prints
+    main waits | report resumes and finishes
+main resumes after report()</pre>
+
+<p>The nested report example follows this order in its messages. main cannot print its final message while report is still active. report itself cannot finish before line returns. A function definition may appear earlier in the file without running earlier; a call starts execution.</p>
+
+<p>Two calls to the same helper normally create separate automatic parameters and local variables. The page count of one bill does not become the next bill's count. Later lessons introduce static objects, which deliberately retain values between calls.</p>
+
+<h2 id="examples">Start with one action, then combine calls</h2>
+
+<h3>A welcome used twice</h3>
+
+<p>Both calls print the same greeting. After the first call returns, main reaches the second call.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Calculate two photocopy bills</h3>
+
+<p>The two page counts produce 36 and 21 taka. Each call uses a separate pages value.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Follow a nested call</h3>
+
+<p>The line function finishes before report ends. Only then can main print its final message.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Combine a library call and a helper</h3>
+
+<p>The user-defined helper calls abs from the C library. The chosen value is far from the INT_MIN exception.</p>
+
+<div data-example="ex-4"></div>
+
+<p>Use the greeting to separate repetition from definition. Find the single body that describes the greeting, then count its two calls. For the photocopy program, identify the two argument values before calculating either price. The arithmetic is familiar; the new part is where it happens.</p>
+
+<p>The distance helper combines code you own with a library service. Including <code>stdlib.h</code> makes the declaration of <code>abs</code> available. The function returns an integer magnitude. Avoid passing the most negative int to abs when its positive counterpart cannot fit in int.</p>
+
+<h2 id="edge-cases">Decide what the helper promises</h2>
+
+<p>A useful function has a small, clear contract. For copy_cost, this could mean accepting a nonnegative page count small enough for multiplication by three. The return value then means the total price in taka. A negative page count would violate that classroom contract.</p>
+
+<p>Decide which layer checks input. main can reject unsuitable user input before calling a mathematical helper. That keeps the calculation focused. A widely reused helper may also need its own checks. The important point is to make the responsibility clear rather than hoping every caller guesses correctly.</p>
+
+<p>Functions can call other functions, including library functions. They cannot be defined inside another function in standard C. Place helper definitions outside main, with their own braces. Indentation helps you see that the helpers are separate pieces of the program.</p>
+
+<h2 id="common-mistakes">Distinguish a definition from a call</h2>
+
+<h3>Writing a name without calling it</h3>
+
+<p>The parentheses in <code>welcome()</code> matter. The name alone does not run the greeting. Call the function as a statement when only its action matters. Use a result-producing call inside an expression when you need its returned value.</p>
+
+<h3>Expecting every helper to print</h3>
+
+<p>A price helper can return 36 without displaying anything. Printing belongs to the caller in that design. Keeping calculation separate from display lets another caller use the same number in a larger total.</p>
+
+<h3>Making one function do unrelated jobs</h3>
+
+<p>A helper named copy_cost should not also read marks and choose a grade. Unrelated actions make the name misleading. Split those jobs so each name tells the reader what to expect.</p>
+
+<h2 id="best-practices">Choose a small boundary</h2>
+
+<p>Name functions with verbs or clear result descriptions, such as show_report or copy_cost. Read a call as a short sentence. If the meaning remains unclear, improve the name or reduce the number of responsibilities.</p>
+
+<p>Try a helper with a small input, a typical input and a boundary input. For the price rule, zero pages should cost zero. Compare the returned number with a calculation you can do by hand. You can then trust that part while reading a larger report.</p>
+
+<h2 id="version-notes">Functions across C editions</h2>
+
+<div class="callout version"><p>Named functions, explicit return types and prototypes are available in C89. The programs here use C17 and some C99 declaration style. No special extension is needed for one function to call another.</p></div>
+
+<h2 id="summary">Follow the call boundary</h2>
+
+<p>A function gives a reusable job one name and one interface. Follow the arguments into its parameters, then follow control back to the caller. Next, <a href="topic:c-function-declaration-definition">declarations and definitions</a> explain how C checks a call before seeing the function body.</p>

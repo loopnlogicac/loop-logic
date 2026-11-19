@@ -1,0 +1,113 @@
+<h2 id="introduction">Solve one smaller version first</h2>
+
+<p class="lead">Imagine a row of students passing a question backward. Each student asks the next student about a shorter remaining row. The last student knows an immediate answer. Answers then travel forward, with each waiting student adding one small contribution.</p>
+
+<p><dfn>Recursion</dfn> is the same general idea in a function. A function calls itself to solve a smaller instance of its problem. A factorial helper asks for the factorial of a smaller number. It then multiplies that returned result by its own number.</p>
+
+<p>Recursion is useful when a problem already describes itself through smaller parts. It also requires careful stopping rules. A call that keeps asking the same question never reaches an answer. Before writing recursive code, identify both the simplest case and a measure that decreases.</p>
+
+<h2 id="syntax">Base case before the smaller call</h2>
+
+<pre><code class="language-c">unsigned long long factorial(unsigned int n)
+{
+    if (n == 0) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}</code></pre>
+
+<p>The <dfn>base case</dfn> returns an answer without another recursive call. Here it is zero factorial, defined as one. The <dfn>recursive case</dfn> expresses the current answer using a smaller call. For positive n, factorial(n) equals n times factorial(n minus one).</p>
+
+<p>The condition appears before subtracting from an unsigned zero. Otherwise n minus one would wrap to a very large value. Correct ordering protects both termination and arithmetic. The accepted input domain in the practice task is zero through twenty.</p>
+
+<p>A function can also recurse indirectly, by calling another function that eventually calls it again. The same requirements apply to the complete call cycle. There must be a reachable stopping case and progress toward it.</p>
+
+<h2 id="how-it-works">Trace entry and return as separate journeys</h2>
+
+<p>Factorial of four begins with a chain of smaller arguments. The pending multiplications do not finish on the way down. They wait for the smaller results. Only the base case supplies the first completed answer.</p>
+
+<table class="ref"><caption>Factorial of four</caption><thead><tr><th scope="col">Call</th><th scope="col">Work waiting</th><th scope="col">Returned value</th></tr></thead><tbody><tr><td>factorial(4)</td><td>4 times factorial(3)</td><td>24</td></tr><tr><td>factorial(3)</td><td>3 times factorial(2)</td><td>6</td></tr><tr><td>factorial(2)</td><td>2 times factorial(1)</td><td>2</td></tr><tr><td>factorial(1)</td><td>1 times factorial(0)</td><td>1</td></tr><tr><td>factorial(0)</td><td>No smaller call</td><td>1</td></tr></tbody></table>
+
+<p>Each active call has its own n. Returning from factorial(0) does not change the n stored by factorial(4). The waiting call resumes with its original local values. This is why tracing only one changing n variable gives a misleading picture.</p>
+
+<p>The trace example prints on both sides of the recursive call. Its enter messages show descent. Its leave messages show unwinding, meaning the return through waiting calls. Putting an action before or after recursion changes its visible order.</p>
+
+<h2 id="examples">Follow one branch, then two branches</h2>
+
+<h3>Factorial from a smaller factorial</h3>
+
+<p>Five pending products unwind to 120. The zero case returns 1, which preserves multiplication.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Watch calls descend and return</h3>
+
+<p>Entry lines descend from 3 to 0. Leave lines ascend from 0 to 3 as the suspended calls resume.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Fibonacci with two base cases</h3>
+
+<p>The sequence starts with 0 and 1. Each later value combines the preceding two, although many calls repeat work.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Compare factorial with an iterative version</h3>
+
+<p>Both functions return 720. The loop keeps one product, while the recursive version leaves unfinished multiplications behind.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The factorial loop and recursive helper calculate the same mathematical product. The difference lies in saved work. The loop updates one product repeatedly. The recursive version keeps enough information to complete each waiting multiplication later.</p>
+
+<p>For Fibonacci, the base answers are F(0) = 0 and F(1) = 1. F(4) asks for F(3) and F(2). F(3) then asks for F(2) again. This duplicate work matters even though each individual call is short.</p>
+
+<h2 id="comparison">Compare time and extra storage</h2>
+
+<p>A factorial call on n performs roughly n multiplications. Both the loop and direct recursive version therefore take O(n) time. Big-O describes how work grows as the input size grows; constants and machine details are left out.</p>
+
+<p>The direct recursive factorial has O(n) active call depth in its straightforward execution model. The iterative version uses O(1) extra working storage. For a long count, the loop often has a practical advantage because it does not need a growing chain of calls.</p>
+
+<p>Naive recursive Fibonacci is much more expensive. Its call tree branches repeatedly, giving exponential time, commonly bounded by O(2^n). Its maximum active depth is O(n), not exponential, because branches are executed one after another rather than all remaining active together.</p>
+
+<p>An iterative Fibonacci calculation keeps the previous two numbers and computes the next. It takes O(n) time and O(1) extra storage. Saving already computed answers is another way to avoid repeated work, introduced later with dynamic programming.</p>
+
+<p>A <dfn>tail call</dfn> is a call whose result can be returned without further work. The factorial expression here is not tail-recursive because multiplication remains pending. Even a tail-recursive version has no guarantee of constant call storage in standard C.</p>
+
+<h2 id="edge-cases">Termination is necessary but not sufficient</h2>
+
+<p>A recursive function may terminate mathematically yet still fail for a large input. Real implementations have limited execution storage. Too many active calls can exhaust the call stack or another implementation resource. C does not promise a portable recursion-depth limit or a recoverable stack-overflow result.</p>
+
+<p>Keep recursion depth bounded for classroom tasks. Do not demonstrate a missing base case by deliberately running until a crash. Instead, inspect the recursive argument and show why it fails to shrink. A debugger can display active calls for a small safe input.</p>
+
+<p>Arithmetic limits are independent of depth limits. Twenty factorial fits in an unsigned long long on every conforming implementation with at least its standard minimum range. Larger factorials may exceed that type even when the call depth is still small. Unsigned wraparound is defined, but it is not the intended factorial answer.</p>
+
+<p>The zero case deserves direct testing. A loop that starts its product at zero would return zero for every factorial. A recursive factorial returning zero at its base case makes the same mathematical mistake. Correct termination must also return the correct identity value.</p>
+
+<h2 id="common-mistakes">Check progress and combine the returned result</h2>
+
+<h3>Calling with the same argument</h3>
+
+<p>A positive factorial call that invokes factorial(n) has made no progress. Its base case stays unreachable. Use n minus one only after confirming that n is not already zero.</p>
+
+<h3>Ignoring the recursive result</h3>
+
+<p>Calling factorial(n minus one) as a statement throws away its value. The current call still needs to multiply by that value and return the product. Follow the data coming back as carefully as the calls going down.</p>
+
+<h3>Writing only one Fibonacci base case</h3>
+
+<p>The recurrence needs two starting values. Allowing the n equals one case to subtract two from an unsigned n creates a huge argument. Handle both values below two before branching.</p>
+
+<h2 id="best-practices">Explain a recursive function in three claims</h2>
+
+<p>State the answer for the smallest input. State why every recursive call uses a smaller valid input. Finally, explain why combining a correct smaller answer produces the current answer. These three claims give a practical correctness argument.</p>
+
+<p>Use small traces before larger numeric tests. For factorial, trace zero, one and four. For Fibonacci, draw F(4) with its repeated F(2). Choose iteration when the recursive form adds depth without making the reasoning clearer.</p>
+
+<h2 id="version-notes">Recursion has no special keyword</h2>
+
+<div class="callout version"><p>C supports recursive function calls without an extra keyword. C17 does not require tail-call elimination or prescribe the available call-stack size. Compiler optimizations may alter resource use, so portable code cannot rely on a particular optimized call layout.</p></div>
+
+<h2 id="summary">Shrink the question, then build the answer</h2>
+
+<p>Recursion needs a correct base case, a smaller recursive case and a way to use returned answers. Count both repeated work and maximum active depth. Continue with <a href="topic:c-recursion-problems">Recursion Problems</a> to apply these ideas to digits, Hanoi and searching.</p>

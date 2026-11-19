@@ -1,104 +1,115 @@
-# C 0.2.0 — reviewer notes
+# C 0.3.0 — reviewer notes
 
-All 42 topics use schemaVersion 1.1 and remain draft for editorial review.
-The cumulative package contains all 18 revised Batch 1 topics and all 24 topics
-from the operators, decision-making and loops modules. No requested topic or
-curriculum coverage point is deferred. No additional topic IDs are proposed.
+This cumulative package contains 60 draft topics: the 42 topics from versions
+0.1.0 and 0.2.0, plus all 18 Batch 3 topics in functions and arrays. The manifest
+uses schemaVersion 1.1 and packageVersion 0.3.0. No requested topic or curriculum
+coverage point is deferred. No additional curriculum IDs are proposed.
 
-## Batch 1 revision
+## Batch 3 coverage
 
-Batch 1 was imported from origin/codex/c-tutorial-batch-1 because main did not
-contain the package. All 18 lessons now have student-oriented openings, shorter
-paragraphs, topic-specific exercise guidance and specific output-quiz prompts.
-Repeated cross-topic paragraphs and references to lesson production were removed.
-The scanf explanation and several Bangla summaries/key points were rewritten.
-Small topics now have four focused practice tasks; larger topics retain five.
-The compiler-verified Batch 1 programs are retained, and every normal output was
-regenerated during this delivery.
-
-## Added topics and coverage
-
-| Module | Topics | Coverage emphasis |
+| Module | Topic | Coverage and review focus |
 | --- | --- | --- |
-| operators | c-operators-overview, c-arithmetic-operators, c-increment-decrement, c-relational-operators, c-logical-operators | Category table; unary/binary/ternary operands; expressions and statements; negative division/remainder and fmod; prefix/postfix sequencing; comparisons and tolerances; truth tables and short-circuit guards. |
-| operators | c-bitwise-operators, c-assignment-operators, c-conditional-operator, c-comma-sizeof-operators, c-operator-precedence | Binary diagrams and flag masks; set/clear/toggle/check, parity and XOR swap; all compound assignments; chained assignment; maximum of three; comma versus separators; array sizes and VLA caveats; full C17 precedence table and grouping versus evaluation order. |
-| decision-making | c-if-statement, c-if-else, c-else-if-ladder, c-nested-if | Flow diagrams, scalar truth, braces, dangling else, pass/fail and parity; complete classroom grade scale and boundary cases; maximum/ties, Gregorian leap-year exceptions and flattened conditions. |
-| decision-making | c-switch, c-goto | Integer constant cases, default, grouped labels and fall-through; calculator/menu choices; nearest-break targets; labels, jump limits and one cleanup path for partial resource acquisition. |
-| loops | c-loops-overview, c-while-loop, c-do-while-loop, c-for-loop | Entry/exit tests; counted and sentinel repetition; digit sum/reversal; bounded menus and validation; initialization/condition/update flowchart; C99 header declarations, paired counters and omitted parts. |
-| loops | c-nested-loops, c-break-continue | Row/column traversal, multiplication grids and n*m/triangular work counts; continuation targets for each loop form; nested exits using a flag and a named label. |
-| loops | c-pattern-programs | Eight complete examples: growing/inverted stars, numbers, alphabet lookup, pyramid, diamond, Floyd triangle and Pascal triangle. Row formulas, spacing, center duplication and bounded coefficient arithmetic. |
-| loops | c-loop-problems | Factorial, Fibonacci, prime check/range, Euclid GCD/LCM, palindrome, general digit-count Armstrong and perfect numbers; invariants, zero cases, arithmetic bounds and square-root prime testing. |
+| functions | c-functions-intro | Library versus user-defined functions; body, parameters, result and calls; nested-call messages and a simple call-stack picture. |
+| functions | c-function-declaration-definition | Prototypes versus definitions; declaration before use; compatible parameter types; no implicit declarations since C99; shared headers and guards; C17 versus C23 empty parameter lists. |
+| functions | c-function-parameters-return | Arguments versus parameters; positional matching; value and void returns; early exits; fractional results; two caller-owned outputs through pointers. |
+| functions | c-call-by-value-reference | C always passes values, including pointer values; failed copy-only swap versus working pointer swap; local pointer redirection, null checks, aliasing and a self-swap. |
+| functions | c-scope-lifetime | Block, file, function-label and prototype scope; shadowing; declaration points; automatic versus static duration; expired targets and lexical versus call nesting. |
+| functions | c-storage-classes | auto, register, local and file static, extern; scope/duration/linkage comparison table; persistent counters; one definition across files; register address restriction under C17. |
+| functions | c-recursion | Base and recursive cases; factorial descent/unwinding table; Fibonacci repetition; time versus active depth; stack exhaustion, arithmetic bounds and iteration comparison. |
+| functions | c-recursion-problems | Power, digit sum, Euclid GCD, ASCII word reversal, Hanoi peg roles and recurrence, recursive binary search with inclusive endpoints, and recursive row/star patterns. |
+| functions | c-variadic-functions | stdarg.h, va_list, va_start, va_arg, va_end and va_copy; counted sum, promoted-double average, independent traversals and a tiny typed printer; printf concepts, count/type/lifetime pitfalls and C23 differences. |
+| functions | c-math-library | sqrt, pow, fabs, ceil, floor, round, sin and cos; -lm; negative halfway rounding, radians, finite/domain checks, tolerances and floating accuracy. |
+| arrays | c-arrays-intro | Explicit, inferred, partial and designated initialization; zero-based indices, consecutive storage, sizeof element counts, logical empty ranges and undefined out-of-bounds access. |
+| arrays | c-array-operations | Checked input and output; sum/average/min/max; reversal; insertion and deletion with directional shifts; bounded frequency counts; second distinct largest and absence flag. |
+| arrays | c-2d-arrays | Row/column bounds and row-major diagram; matrix input/output, addition, rectangular multiplication, transpose, separate diagonal sums and diagonal union without a duplicate center. |
+| arrays | c-multidimensional-arrays | 3D nested initialization, layer traversal and collapse, row-major offsets, physical versus logical dimensions, storage growth and dense-data use cases. |
+| arrays | c-arrays-and-functions | Array-to-pointer conversion and parameter adjustment; separate count, const input access, mutations and caller-owned results; fixed column widths, invalid int** assumptions and result lifetime choices. |
+| arrays | c-linear-binary-search | Linear first occurrence, iterative half-open binary search, sortedness precondition, trace and invariant, missing keys, lower bound, duplicate policy and O(n) versus O(log n). |
+| arrays | c-sorting-basics | Complete bubble, selection and insertion implementations, each with a separate pass table and invariant; stability example, cost comparison, qsort interface and overflow-safe comparator. |
+| arrays | c-variable-length-arrays | Positive bounds checked before declaration; retained extent, runtime sizeof, C17 const-bound nuance, no C17 VLA initializers; C99/C11/C17/C23 support differences, fixed fallbacks, bounded runtime-width matrix and checked malloc/free alternative. |
 
-The for-loop reference lesson was adapted from the kit's first-party sample.
-Its misleading empty-body quiz prompt was corrected. Input and arithmetic bounds
-were added, array indexing was briefly introduced, and its outputs were rerun.
-The other new lessons and exercises were written for this delivery.
+The new topics include 76 examples, 76 practice solutions, 208 quiz questions
+(54 executed output questions), 60 exam questions and bilingual title, summary
+and key-point fields. Counts vary with scope: 3–6 examples, 4–5 practice problems,
+10–13 quizzes and 3–4 exam questions. Every lesson meets its level's body-word
+range. Lesson fragments contain actual subject explanations and code; they do
+not describe content-production placeholders or templates. Full Bangla bodies
+are not included. Uncertain video matches remain empty.
 
-## Verification and output provenance
+## Real execution and output provenance
 
-Toolchain: gcc (Debian 14.2.0-19) 14.2.0, Node.js v24.22.1, 64-bit Linux.
-C17 is the normal baseline. The inherited, explicitly labeled C23 binary-literal
-example uses -std=c2x as specified in the kit.
+Toolchain: gcc (Debian 14.2.0-19) 14.2.0; Node.js v24.22.1; 64-bit Linux.
+Normal programs use C17 with -Wall -Wextra -Wpedantic -Werror -O2. math.h examples
+and exercises link with -lm. The inherited C23 binary-literal example retains
+its explicit -std=c2x requirement.
 
-Package totals: 170 examples, 180 practice solutions, 430 quiz questions and
-168 exam questions. Example counts range from 3 to 8, practice counts from 4 to 5,
-and quiz counts from 10 to 13 according to topic scope. Every lesson meets its
-level's body-word range and includes at least three executed output questions.
+The cumulative output-generation pass compiled and ran:
 
-The output-generation pass performed these real builds and runs:
+- 227 normal examples, writing their .out files from actual execution;
+- 256 practice solutions across 576 input cases, writing every case's .out;
+- all 183 output-quiz programs, checking each selected answer against its run;
+- the inherited 12 intentional compilation/link failures and 7 warning examples
+  for their declared diagnostics, without inventing runnable output for them.
 
-- 151 normal example runs wrote their .out files.
-- 413 practice-case runs wrote their .out files.
-- 129 output-quiz programs ran, and their answers matched the produced text.
-- 12 intentional compile/link failures were confirmed.
-- 7 intentional warning examples compiled for diagnostics and were not executed.
+All 803 .out files were regenerated from real runs. This includes the 239 new
+files (76 examples and 163 practice cases) and all 564 inherited files. The
+inherited pointer-format example captures a new actual address; it remains
+explicitly nondeterministic. Earlier topic source and metadata are unchanged.
 
-All 564 .out files therefore come from actual runs, including the inherited
-examples and practice tasks. Unsafe or intentionally unbuildable examples have
-no invented result files and retain their demonstrates metadata.
-
-From content-kit/, the final command was:
+From inside content-kit/, the required cumulative check was run as:
 
 ```sh
 node tools/check.mjs c-tutorial/c-tutorial --sanitize --report c-tutorial/c-tutorial/CHECK_REPORT.txt
 ```
 
-CHECK_REPORT.txt records **0 errors and 0 warnings**, with all 42 topics present.
-The unchanged checker compiles normal code using -std=c17 -Wall -Wextra
--Wpedantic -Werror -O2 and repeats normal example/practice runs with AddressSanitizer
-and UBSan. Output quizzes are also compiled and run by the checker.
+The report records **0 errors and 0 warnings** for all 60 topics. The unchanged
+checker compiles and executes the programs, verifies outputs and quizzes, and
+repeats normal example and practice runs with AddressSanitizer and UBSan.
+The initial 42-topic baseline also passed with 0 errors and 0 warnings.
 
-An additional 442 comparisons passed against independent Python calculations
-for nine reference solutions: all factorial inputs 0–20; Fibonacci lengths 0–60
-using a fast-doubling oracle; prime intervals; GCD/LCM including 100 seeded random
-pairs; zero and known multi-digit Armstrong cases; all marks 0–100; Gregorian
-century boundaries; pyramids and Pascal coefficients through height ten.
-Those temporary verification scripts and executables stay outside the repository.
-Only content-kit/c-tutorial/c-tutorial/ is changed.
+An additional 1,025 independent checks passed using temporary verification
+programs and a seeded Python oracle:
+
+- random lists for all three sorts, duplicate removal and inversion/shift counts;
+- second distinct largest, linear/binary search, first occurrence and insertion
+  positions, including empty lists, duplicates and absent keys;
+- prefix sums and filtering against independent Python calculations;
+- matrix addition, transpose, row sums, multiplication and diagonal unions;
+- every factorial input 0–20, bounded powers including exponent zero, and GCDs;
+- Hanoi plans for 0–5 disks, checking legality, final peg state and move count;
+- 12 fixed-fallback example/practice runs compiled with
+  -D__STDC_NO_VLA__=1 -Werror=vla, checking that fallback outputs match;
+- the actual two-source extern/header arrangement described in the storage
+  lesson, compiled and linked together and run to print 60.
+
+The oracle scripts, compilation products and diagnostic logs remain outside the
+repository. Only content-kit/c-tutorial/c-tutorial/ changes are included.
 
 ## Human review and limits
 
-- Review the natural Bangla wording and PPS/SPL exam phrasing before publication.
-  Bilingual metadata is complete; a full Bangla lesson body is not included.
-- The DIU-style grade scale is explicitly a classroom model. Confirm the actual
-  department policy before presenting it as an official grading policy.
-- Earlier installation and gdb walkthroughs are explanatory instructions. This
-  Linux session compiled and executed the C programs; it did not run Windows,
-  macOS or editor installers, or an interactive gdb session.
-- Typical sizes, limits, decimal floating output and character encodings are
-  labeled for the GCC/Linux host. The UINT_MAX input 4294967295 assumes its
-  32-bit unsigned int. Exact-width types are optional on other implementations.
-- The pointer-format example is explicitly nondeterministic. Its .out contains
-  one captured address; the checker does not require the same address next time.
-  Tabs and output padding are preserved as emitted, including trailing spaces
-  where the associated task explicitly calls for them.
-- Numeric scanf tasks assume representable input text within their stated
-  domains. Conversion counts alone are not a general parser for arbitrary huge
-  numeric strings. Later line-input/conversion lessons provide that extension.
-- Early uses of input guards, helpers, pointers and arrays include short
-  explanations and curriculum links. Links to later modules are intentional.
-- The cleanup example releases both allocations and safely handles NULL. Its
-  practice model exercises all three acquisition paths without depending on
-  nondeterministic allocation failure.
-- No checker warnings remain. Reference links use approved hosts. Uncertain
-  video matches were left empty rather than assigned unrelated videos.
+- Review natural Bangla wording and PPS/SPL exam phrasing before publication.
+  All topics remain draft for the platform's editorial process.
+- Pointer, character-array and allocation previews are explained locally and
+  link to their later lessons. Word reversal deliberately accepts ASCII; byte
+  reversal is not presented as a general UTF-8/Bangla operation.
+- New arithmetic tasks state bounded domains. The power exercise explicitly
+  chooses 0^0 = 1; the GCD exercise explicitly chooses GCD(0,0) = 0.
+- Numeric scanf tasks assume representable input text inside their stated
+  domains. Conversion counts are not a general parser for oversized integers.
+- Runtime array bounds are small on purpose. Automatic VLA declarations have no
+  recoverable allocation-failure result. The allocated alternative checks
+  failure and releases storage on normal and post-allocation input-error exits.
+- The VLA fallback tests simulate the opt-out macro using GCC; they do not claim
+  validation on a separate compiler without VLA support. Output quizzes using
+  VLAs target the recorded GCC C17 toolchain.
+- C17 matrix examples avoid nested const-array qualification conversions that
+  differ across standards. Physical row width is explicit even in fixed-capacity
+  arrays whose logical used column count is smaller.
+- qsort is presented without a promised algorithm, stability or complexity
+  guarantee. The elementary-sort table describes the exact shown versions.
+- The 0.2.0 installation walkthroughs, platform-dependent integer sizes and
+  nondeterministic address example retain their earlier qualifications. No new
+  installer, editor or interactive debugger validation is claimed.
+- Empty-array print tasks deliberately emit an empty result line after their
+  prompt. Their real .out files preserve that trailing blank line.
+- No checker warnings remain and no curriculum content is deferred.

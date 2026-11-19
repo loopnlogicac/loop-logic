@@ -1,0 +1,114 @@
+<h2 id="introduction">Choose a search that matches the data order</h2>
+
+<p class="lead">Finding a roll number in an unsorted list means looking through entries until one matches. A sorted list offers more information. A middle entry tells you which side could still contain the target, so you can discard a large part of the remaining list.</p>
+
+<p><dfn>Linear search</dfn> checks elements one after another. <dfn>Binary search</dfn> repeatedly halves a sorted candidate interval. Both can return an index when a key is present and a separate failure value when it is absent.</p>
+
+<p>The key is the value you want to locate. The index is where that value occurs. These are different numbers. A key of sixty-three might appear at index four. Make the function's result meaning explicit before using it as another array index.</p>
+
+<h2 id="syntax">Return an index or a clear failure value</h2>
+
+<pre><code class="language-c">int linear(const int values[], int count, int key);
+int binary(const int values[], int count, int key);</code></pre>
+
+<p>Both helpers read the input through const element pointers and receive the length separately. They return a nonnegative zero-based index on success. They return minus one on failure, which cannot be confused with a valid index under this interface.</p>
+
+<p>The linear helper returns immediately at the first equal element. This promises the first occurrence. The ordinary binary helper returns the first equality encountered on its chosen midpoint path, which need not be the first occurrence among duplicates.</p>
+
+<p>The counts in this lesson are bounded ints. A larger reusable interface may use size_t and a separate success result. The important design requirement is that an unsuccessful search cannot accidentally be treated as a valid element access.</p>
+
+<h2 id="how-it-works">Preserve a candidate interval</h2>
+
+<p>The iterative binary helper uses a <dfn>half-open interval</dfn> [low, high). low is included; high is excluded. Initially low is zero and high is count, so the interval contains every element. When low equals high, no candidates remain.</p>
+
+<p>Calculate middle as low plus half of high minus low. If values[middle] equals the key, return that index. If the middle value is smaller, all earlier values are also too small. Set low to middle plus one. Otherwise set high to middle, excluding that too-large midpoint and everything after it.</p>
+
+<table class="ref"><caption>Search for 63 in 8, 11, 25, 40, 63, 77</caption><thead><tr><th scope="col">low</th><th scope="col">high</th><th scope="col">middle</th><th scope="col">Decision</th></tr></thead><tbody><tr><td>0</td><td>6</td><td>3, value 40</td><td>Keep [4,6)</td></tr><tr><td>4</td><td>6</td><td>5, value 77</td><td>Keep [4,5)</td></tr><tr><td>4</td><td>5</td><td>4, value 63</td><td>Return 4</td></tr></tbody></table>
+
+<p>The <dfn>invariant</dfn>, a condition preserved by every step, is that any not-yet-found match must lie in the candidate interval. Sorted order justifies every discard. The interval length strictly decreases after a failed midpoint check, guaranteeing termination.</p>
+
+<p>This half-open design differs from the inclusive recursive search in the recursion lesson. Both are correct when their base condition and endpoint updates are consistent. Do not combine the empty test from one design with the update rules from the other.</p>
+
+<h2 id="examples">Check absence and duplicate behavior</h2>
+
+<h3>Find the first matching unsorted roll</h3>
+
+<p>The first 11 is at index 1. The absent 99 produces -1 after all five elements are checked.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Halve a sorted roll list</h3>
+
+<p>The found index is 4. Searching below the smallest element eventually leaves an empty interval.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Find the first duplicate with lower bound</h3>
+
+<p>Equality keeps the left interval rather than returning immediately. The boundary finishes at the first 4, index 1.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Count binary-search midpoint probes</h3>
+
+<p>The intervals have lengths 8, 4, 2 and 1. Four midpoint probes locate the insertion position for missing key 2.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The midpoint-probe example searches for an insertion boundary rather than returning on equality. Its four interval lengths are eight, four, two and one. The printed count measures inspected midpoints, not the number of individual machine comparisons in each branch.</p>
+
+<p>The lower-bound example deliberately keeps searching left after a value at least as large as the key. This produces the first possible insertion position. If that position is inside the array and equals the key, it is the first matching occurrence.</p>
+
+<h2 id="edge-cases">Sortedness is a precondition, not a reward</h2>
+
+<p>Binary search does not sort its input. Searching an unsorted list can miss a present value because its discard rule becomes false. The guarded practice checks each adjacent pair and reports Unsorted before searching a decreasing sequence.</p>
+
+<p>Checking sortedness takes O(n) time. If you perform that full check before every single binary search, the whole operation remains O(n). A maintained sorted collection can be checked or constructed once and then searched many times. State which work is included when claiming a speed improvement.</p>
+
+<p>An empty interval is valid at the start for count zero. Both search helpers can fail without reading any element. A one-element list should either match at zero or become empty after one failed probe. These cases quickly expose an interval update that makes no progress.</p>
+
+<p>For duplicates, ordinary binary search promises some matching index. If a problem asks for the first duplicate, use lower bound or another explicitly modified search. Returning the midpoint immediately does not establish that no equal value appears earlier.</p>
+
+<p>Lower bound can return count when every element is smaller than the key. That is a valid insertion position at the end, but not a readable element index. Check position less than count before evaluating values[position]. The short-circuit logical operator helps express this safely.</p>
+
+<h2 id="comparison">Compare search costs fairly</h2>
+
+<p>Linear search has O(n) worst-case time and O(1) extra storage. It works on unsorted arrays and is often appropriate for a small list or a one-time lookup. Its best case is one check when the first element matches.</p>
+
+<p>Binary search has O(log n) worst-case time and O(1) extra storage in its iterative form. Each step removes about half the candidates. For a million sorted elements, only about twenty interval reductions are needed, though exact probe counts depend on the chosen path and convention.</p>
+
+<p>Sorting an unsorted array also has a cost. It may change the original order and the meaning of returned indices. If the application needs the original position, preserve that relationship explicitly rather than sorting silently before the lookup.</p>
+
+<p>For linked structures without direct indexed access, finding a midpoint can itself require walking through nodes. The array binary-search cost relies on efficient indexed access. Do not transfer its timing claim to every collection solely because its values are sorted.</p>
+
+<h2 id="common-mistakes">Exclude a midpoint already proved wrong</h2>
+
+<h3>Updating low to middle instead of middle plus one</h3>
+
+<p>With a one-element half-open interval, middle equals low. Reusing it leaves the interval unchanged. Exclude the tested midpoint when its value is too small.</p>
+
+<h3>Using count as an included high index</h3>
+
+<p>In this design high is excluded. Reading values[high] can step outside the array when high equals count. Choose one interval convention and label it in a trace.</p>
+
+<h3>Calculating the midpoint with an overflowing sum</h3>
+
+<p>The expression (low + high) divided by two can overflow for large bounds. Using low plus half their nonnegative difference avoids that sum under the interval's valid index assumptions.</p>
+
+<h3>Reading a result of minus one</h3>
+
+<p>The failure value is a status result, not an index to access. Check it before looking up a matched entry. Treat lower bound's end position with the same care.</p>
+
+<h2 id="best-practices">Test both boundaries and the gaps</h2>
+
+<p>Check the first value, the last value and a missing value between neighbors. Also try a key below the minimum and above the maximum. Include duplicates when the interface claims first-occurrence behavior.</p>
+
+<p>For a small sorted array, compare binary-search success with a linear scan. A returned index must be inside the range and contain the key. For absence, verify that no element matches. These properties are stronger than expecting one particular midpoint among duplicates.</p>
+
+<h2 id="version-notes">The interval rules belong to the algorithm</h2>
+
+<div class="callout version"><p>These searches require ordinary C17 loops and array parameters. Their correctness comes from range conventions and sortedness, not a special language feature. A standard-library bsearch alternative exists, but its comparator interface is beyond the introductory helpers here.</p></div>
+
+<h2 id="summary">Keep the remaining candidates truthful</h2>
+
+<p>Linear search visits entries directly. Binary search discards ordered intervals while preserving every possible match. Use an explicit failure value and a documented duplicate policy. Continue with <a href="topic:c-sorting-basics">Sorting Basics</a> to create ordered arrays through three elementary algorithms.</p>

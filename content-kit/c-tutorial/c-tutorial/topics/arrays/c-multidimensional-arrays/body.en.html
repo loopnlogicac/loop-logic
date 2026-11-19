@@ -1,0 +1,119 @@
+<h2 id="introduction">Add a coordinate when the data needs one</h2>
+
+<p class="lead">A table of room temperatures needs room and hour coordinates. If you keep a separate table for each day, day becomes a third coordinate. A <dfn>three-dimensional array</dfn> groups those tables into layers under one name.</p>
+
+<p>The dimensions describe the meaning of an element. In readings[day][room][hour], the order says how to locate one measurement. Consistent dimension order is more useful than imagining every array as a physical cube. A two-day, two-room, three-hour record is rectangular rather than cubic.</p>
+
+<p>C supports further dimensions by nesting more array types. Each extra coordinate also increases the number of bounds to track. Use another dimension when it expresses a real independent category, not merely because a larger declaration looks convenient.</p>
+
+<h2 id="syntax">Read dimensions from outside inward</h2>
+
+<pre><code class="language-c">int readings[2][2][3] = {
+    {{21, 22, 23}, {24, 25, 26}},
+    {{31, 32, 33}, {34, 35, 36}}
+};</code></pre>
+
+<p>The outer array has two elements, one per day. Each outer element is an array of two room rows. Each room row contains three int readings. The complete object therefore has two times two times three, or twelve, int elements.</p>
+
+<p>The expression readings[1][0][2] selects day one, room zero and hour two. Its value is 33 in this initializer. The outermost braces group the whole object; the next level groups a day's matrix; the innermost braces group one room's readings.</p>
+
+<p>You can omit initializer values and let aggregate initialization supply zeros. The partial-cube example gives only its first scalar value explicitly. Every other scalar element still receives zero. This differs from declaring an automatic cube without any initializer.</p>
+
+<h2 id="how-it-works">The rightmost coordinate moves fastest</h2>
+
+<p>C stores arrays consecutively at every nesting level. Inside one row, consecutive columns are adjacent. After the last column, the next row begins. After every row of a layer, the next layer begins.</p>
+
+<pre class="diagram">a[2][3][4]
+layer 0: row 0 has 4 ints | row 1 has 4 | row 2 has 4
+layer 1: row 0 has 4 ints | row 1 has 4 | row 2 has 4
+
+position of [d][r][c] = (d * 3 + r) * 4 + c
+position of [1][2][3] = (1 * 3 + 2) * 4 + 3 = 23</pre>
+
+<p>The result 23 is an element offset from the beginning. Multiply by sizeof(int) for a byte offset on the current implementation. Do not assume int is always four bytes. The complete two-by-three-by-four object contains twenty-four elements, so its final element offset is twenty-three.</p>
+
+<p>For general dimensions D, R and C, the scalar offset is d*R*C plus r*C plus c. This formula counts complete earlier layers, earlier rows in the selected layer, and earlier columns in that row. It does not change the valid bound of any individual subscript.</p>
+
+<p>Keep traversals within the nested object boundaries. A flat int pointer derived from one inner row must not be marched through unrelated later rows as a portable shortcut. Use the nested indices to express legal access across the complete object.</p>
+
+<h2 id="examples">Inspect totals, offsets and initialization</h2>
+
+<h3>Two days of two-room readings</h3>
+
+<p>Day zero totals 141 and day one totals 201. Three loops name the meaning of each coordinate.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Calculate an element offset</h3>
+
+<p>The last element has offset 23 in a 24-element object. This calculation counts elements rather than assuming an int byte size.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Partial initialization of a cube</h3>
+
+<p>Only element [0][0][0] receives 7. The aggregate initializer initializes every other element to zero.</p>
+
+<div data-example="ex-3"></div>
+
+<p>The reading example starts a fresh total for every day. The room and hour loops contribute only that day's readings. If total were declared and initialized before the day loop, the second line would include day zero as well as day one.</p>
+
+<p>The offset example reports element count rather than an address. Its output stays useful without depending on the size of int or the process's chosen memory addresses. The initializer example lists coordinates explicitly, so you can match the traversal order to the storage picture.</p>
+
+<h2 id="real-world-use">Choose dimensions with clear meanings</h2>
+
+<p>Regular measurement data is a good fit for a dense multidimensional array. A small record might use day, room and sampling hour. A board game might use level, row and column. A basic image model might use row, column and color channel.</p>
+
+<p>A <dfn>dense</dfn> layout reserves an element for every combination of coordinates. This is convenient when most combinations exist and all rows have the same length. If only a few combinations contain useful data, most of the storage can be wasted.</p>
+
+<p><dfn>Sparse</dfn> data contains relatively few meaningful entries among many possible positions. It may be better represented with a list of coordinates and values. Unequal row lengths can also need a different representation. Those alternatives are design decisions, not another way to index a fixed rectangular object.</p>
+
+<p>Higher dimensions multiply storage requirements. A hundred layers, a hundred rows and a hundred columns require a million elements. Even modest-looking bounds can therefore produce a large automatic object. Check the product and consider allocated storage when data size is substantial.</p>
+
+<h2 id="edge-cases">Check every coordinate independently</h2>
+
+<p>For cube[D][R][C], a legal d does not compensate for an illegal r or c. The checks are d less than D, r less than R and c less than C, with all coordinates nonnegative. One dimension of length one still has its only valid index at zero.</p>
+
+<p>A layer maximum must be initialized from an element of that layer. A whole-volume maximum can start from cube[0][0][0] after ensuring all logical dimensions are positive. Initializing either maximum to zero can fail when every reading is negative.</p>
+
+<p>Collapsing layers means summing values with the same row and column across all layers. The output then has only row and column coordinates. Reset the sum for each output cell and let the layer coordinate vary inside that calculation.</p>
+
+<p>The practice programs reserve three by three by three physical storage. Their input dimensions describe only a used subvolume. In that case the physical row width remains three, even if the logical column count is one or two. Use the declaration's dimensions when reasoning about physical offsets.</p>
+
+<p>This distinction matters when exporting a used region. A nested print loop visits only logical entries and naturally skips unused capacity. A raw byte copy of the complete fixed cube would also include unused entries, whose values may not have been initialized.</p>
+
+<h2 id="comparison">Count nested-loop work</h2>
+
+<p>Visiting every logical element takes O(D*R*C) time. Computing per-layer sums uses O(1) extra working storage beyond the input and output stream. Collapsing layers into a separate matrix needs O(R*C) result storage if the complete result must be kept.</p>
+
+<p>Changing loop order can preserve the mathematical result but affect access locality. A traversal with the rightmost index changing fastest follows nearby elements. For larger arrays, that often uses caches better than jumping between distant layers at every inner step.</p>
+
+<p>Use the clearest correct traversal first, then measure performance if it matters. A small educational cube will not reveal the behavior of a large scientific dataset. Correct bounds and meaningful coordinates remain necessary in either case.</p>
+
+<h2 id="common-mistakes">Do not confuse shape with total count</h2>
+
+<h3>Using one bound for every dimension</h3>
+
+<p>A three-dimensional array need not have equal extents. A two-by-three-by-four example exposes a loop that wrongly uses four everywhere. Name and check each bound separately.</p>
+
+<h3>Mixing logical and physical dimensions</h3>
+
+<p>Input dimensions describe the used region in the fixed-capacity practice programs. They do not resize the declared storage. Avoid manually flattening an index using logical bounds when the physical declaration is wider.</p>
+
+<h3>Placing a reset at the wrong nesting level</h3>
+
+<p>A per-layer total resets inside the layer loop but outside both inner loops. A per-cell layer-collapse total resets inside the row and column loops. Choose the reset location by naming exactly what one output value summarizes.</p>
+
+<h2 id="best-practices">Write a coordinate example before coding</h2>
+
+<p>Record one meaning such as readings[1][0][2] means the third hour in room zero on day one. Then create a tiny initializer where that entry has an easily recognized value. This checks your chosen dimension order before any larger calculation.</p>
+
+<p>Keep dimension products bounded and use appropriate size arithmetic for storage calculations. Prefer a structured helper interface once several operations use the same shape. The next lesson explains the row information such helpers need.</p>
+
+<h2 id="version-notes">Additional dimensions still use nested arrays</h2>
+
+<div class="callout version"><p>Fixed three-dimensional arrays are ordinary nested array types in C17. Their rightmost-index-first layout is not a GCC extension. Variable extents introduce separate VLA and allocation concerns; fixed arrays keep their declared extents throughout their lifetime.</p></div>
+
+<h2 id="summary">Let each dimension name a real category</h2>
+
+<p>Multidimensional arrays provide regular indexed storage for layered data. Follow each bound independently and distinguish logical data shape from physical capacity. Continue with <a href="topic:c-arrays-and-functions">Arrays and Functions</a> to pass that storage through clear interfaces.</p>

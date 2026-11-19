@@ -1,0 +1,443 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-variable-length-arrays",
+  "module": "arrays",
+  "order": 8,
+  "kind": "lesson",
+  "title": {
+    "en": "Variable-Length Arrays",
+    "bn": "পরিবর্তনশীল দৈর্ঘ্যের অ্যারে"
+  },
+  "summary": {
+    "en": "Use bounded runtime dimensions with a portable fallback and understand VLA storage risks.",
+    "bn": "চলার সময় জানা মাপে অ্যারে বানাও; সীমা, মেমরির ঝুঁকি ও বিকল্প পদ্ধতি বোঝো।"
+  },
+  "level": "advanced",
+  "estMinutes": 65,
+  "prerequisites": [
+    "c-arrays-and-functions",
+    "c-storage-classes"
+  ],
+  "related": [
+    "c-strings-intro"
+  ],
+  "keywords": [
+    "variable-length arrays",
+    "C programming",
+    "arrays"
+  ],
+  "standards": {
+    "minimum": "c99",
+    "notes": [
+      "C99 introduced VLAs; C11/C17 allow __STDC_NO_VLA__, while C23 narrows that opt-out to automatic VLA objects."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A runtime bound changes the storage decision"
+    },
+    {
+      "id": "syntax",
+      "title": "Declare only after validating the bound"
+    },
+    {
+      "id": "how-it-works",
+      "title": "An extent is fixed for that array instance"
+    },
+    {
+      "id": "examples",
+      "title": "Validate, retain an extent and pass a row width"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Understand the lifetime and storage risk"
+    },
+    {
+      "id": "comparison",
+      "title": "Choose fixed, variable or allocated storage"
+    },
+    {
+      "id": "real-world-use",
+      "title": "A runtime row type preserves matrix structure"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not confuse validation with recovery"
+    },
+    {
+      "id": "best-practices",
+      "title": "Make the portability decision visible"
+    },
+    {
+      "id": "version-notes",
+      "title": "C99, C11, C17 and C23 differ"
+    },
+    {
+      "id": "summary",
+      "title": "Runtime extents require bounded decisions"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "A small runtime-length array with a fixed fallback",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The validated input 4 gives four square values. A C17 implementation advertising no VLA support uses the fixed-capacity branch.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "Changing the bound variable does not resize an array",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The result reports a bound variable of 5 but three array elements. The size was established when the declaration ran.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Pass a runtime row width to a helper",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The VLA branch carries a row width of three into total. The fallback deliberately uses physical row width four in both places.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Use allocated storage when length may grow",
+      "level": "intermediate",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The allocation is checked before any access and released after printing 21. The overflow guard protects the byte-count multiplication.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "easy",
+      "title": "A bounded runtime sum",
+      "statementHtml": "<p>Read n from 1 to 16 and n ints from -100 to 100. Print Bounded length and values: then their sum. Declare a VLA only after validating n, and provide a fixed-capacity branch for __STDC_NO_VLA__.</p>",
+      "hints": [
+        "Do not declare the array before reading its size."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "easy",
+      "title": "Reverse a validated VLA",
+      "statementHtml": "<p>Read n from 1 to 16 and n ints from -100 to 100. Print Bounded length and values: then the values in reverse input order. Include a fixed-capacity fallback when VLA objects are unavailable.</p>",
+      "hints": [
+        "Use a signed counter when counting down through zero."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "difficulty": "medium",
+      "title": "Runtime-sized cumulative totals",
+      "statementHtml": "<p>Read n from 1 to 16 and n ints from -100 to 100. Print Bounded length and values: then overwrite each element with its prefix sum and print the resulting sequence. Use a guarded VLA declaration with fixed fallback.</p>",
+      "hints": [
+        "Preserve the running sum before overwriting each input element."
+      ],
+      "solution": "practice/p-3.c",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-4",
+      "difficulty": "hard",
+      "title": "Allocated alternative with an empty range",
+      "statementHtml": "<p>Read n from 0 to 20 followed by n ints from -100 to 100. Print Allocation length and values: first. For zero, print Empty without allocating. Otherwise allocate n ints, check failure, print their sum, and free on every exit after allocation.</p>",
+      "hints": [
+        "Release the allocation if a later input conversion fails."
+      ],
+      "solution": "practice/p-4.c",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "When is an automatic VLA bound established?",
+      "options": [
+        "When execution reaches its declaration",
+        "At preprocessing regardless of expression",
+        "Only when its last element is read",
+        "Every time a different element is written"
+      ],
+      "answer": 0,
+      "explanation": "The runtime bound is evaluated for the particular array instance at declaration."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must be true of an evaluated VLA bound?",
+      "options": [
+        "It may be any negative int",
+        "It is greater than zero",
+        "It must always equal sixteen",
+        "It must be an unsigned long long"
+      ],
+      "answer": 1,
+      "explanation": "Zero and negative evaluated extents do not declare valid standard VLAs."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "hard",
+      "prompt": "The bound variable changes after VLA creation. Which element count remains?",
+      "options": [
+        "7 7",
+        "7 2",
+        "2 2",
+        "2 7"
+      ],
+      "answer": 1,
+      "explanation": "Changing n does not change the already established two-element extent.",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int n = 2;\n    int a[n];\n    n = 7;\n    printf(\"%d %zu\\n\", n, sizeof a / sizeof a[0]);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Does assigning a larger value to n resize an existing values[n]?",
+      "options": [
+        "Yes, preserving all elements automatically",
+        "Only on a stack",
+        "No",
+        "Only if n stays below capacity"
+      ],
+      "answer": 2,
+      "explanation": "The object's established extent stays fixed for that instance."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Is const int n = 4 necessarily an integer constant expression in C17?",
+      "options": [
+        "Yes in every block",
+        "Only after printf",
+        "Only for an unsigned array",
+        "No"
+      ],
+      "answer": 3,
+      "explanation": "C17 const qualification does not by itself make an expression an integer constant expression."
+    },
+    {
+      "id": "q-6",
+      "type": "output",
+      "difficulty": "easy",
+      "prompt": "A runtime bound of three receives successive squares. Which final element is printed?",
+      "options": [
+        "3",
+        "4",
+        "9",
+        "6"
+      ],
+      "answer": 2,
+      "explanation": "The initialized values are one, four and nine, and the final index is two.",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int n = 3;\n    int a[n];\n    for (int i = 0; i < n; i++) {\n        a[i] = (i + 1) * (i + 1);\n    }\n    printf(\"%d\\n\", a[n - 1]);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which standards make VLA support optional through __STDC_NO_VLA__?",
+      "options": [
+        "C11 and C17",
+        "C89 and C90",
+        "Only C99",
+        "Every standard before C99"
+      ],
+      "answer": 0,
+      "explanation": "C99 introduced required VLA support, while C11 and C17 permit the opt-out macro."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can a huge automatic VLA declaration return NULL so the caller can recover?",
+      "options": [
+        "Yes, like malloc",
+        "No",
+        "Only with int elements",
+        "Only after a failed scanf"
+      ],
+      "answer": 1,
+      "explanation": "A VLA declaration has no allocation-result pointer to check. Bound automatic storage deliberately."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "A VLA inside each loop iteration uses the current bound. Which counts appear?",
+      "options": [
+        "1\n1\n1",
+        "3\n3\n3",
+        "0\n1\n2",
+        "1\n2\n3"
+      ],
+      "answer": 3,
+      "explanation": "Each iteration reaches a fresh declaration and creates an instance with that iteration's positive bound.",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    for (int n = 1; n <= 3; n++) {\n        int a[n];\n        printf(\"%zu\\n\", sizeof a / sizeof a[0]);\n    }\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What should be checked before multiplying an arbitrary element count by element size for malloc?",
+      "options": [
+        "That the first element is positive",
+        "That all values are sorted",
+        "That the multiplication fits size_t",
+        "That the count equals sizeof a pointer"
+      ],
+      "answer": 2,
+      "explanation": "A wrapped byte count can request insufficient storage even if malloc returns a non-null pointer."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Who must release a successful malloc allocation?",
+      "options": [
+        "The compiler at every block exit automatically",
+        "va_end",
+        "sizeof",
+        "The code that owns it, using free when done"
+      ],
+      "answer": 3,
+      "explanation": "Allocated storage has explicit cleanup duties, including error paths after allocation."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does a runtime-width array parameter still adjust to?",
+      "options": [
+        "A pointer to a row with the supplied width",
+        "A full copied matrix",
+        "An int double pointer automatically",
+        "A scalar element count"
+      ],
+      "answer": 0,
+      "explanation": "VLA-related parameter syntax retains row type information while ordinary parameter adjustment still applies."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A VLA bound is evaluated when execution reaches its declaration.",
+      "bn": "VLA ঘোষণায় পৌঁছালে তখনকার মান দিয়ে দৈর্ঘ্য ঠিক হয়।"
+    },
+    {
+      "en": "Every evaluated VLA bound must be greater than zero.",
+      "bn": "VLA-র হিসাব করা প্রতিটি দৈর্ঘ্য শূন্যের চেয়ে বড় হতে হবে।"
+    },
+    {
+      "en": "A VLA keeps its original extent even if the bound variable changes.",
+      "bn": "দৈর্ঘ্যের ভেরিয়েবল বদলালেও তৈরি VLA-র মাপ বদলায় না।"
+    },
+    {
+      "en": "C11 and C17 make VLA support optional.",
+      "bn": "C11 ও C17-এ VLA সমর্থন বাধ্যতামূলক নয়।"
+    },
+    {
+      "en": "A large automatic VLA can exhaust execution storage without a failure result.",
+      "bn": "বড় অটোমেটিক VLA মেমরি শেষ করতে পারে, কিন্তু ব্যর্থতার ফল ফেরায় না।"
+    },
+    {
+      "en": "malloc provides checked allocation with explicit cleanup responsibilities.",
+      "bn": "malloc-এর ব্যর্থতা দেখা যায়, তবে পরে মেমরি ছাড়তে হয়।"
+    },
+    {
+      "en": "A parameter written as an array still adjusts to a pointer.",
+      "bn": "অ্যারে হিসেবে লেখা প্যারামিটারও পয়েন্টারে রূপান্তরিত হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Compare a bounded automatic VLA with malloc storage under C17, including failure and lifetime.",
+      "marks": 4,
+      "answerHtml": "<p>A VLA needs positive validated bounds and compiler support, has automatic lifetime and offers no null allocation-failure result. C11 and C17 permit implementations without VLA support. malloc requires safe byte-count arithmetic and a null check; its successful allocation remains until freed, including cleanup on later error paths.</p>"
+    },
+    {
+      "type": "output",
+      "question": "The bound variable changes after VLA creation. Which element count remains?\n\n#include <stdio.h>\n\n\n\nint main(void)\n{\n    int n = 2;\n    int a[n];\n    n = 7;\n    printf(\"%d %zu\\n\", n, sizeof a / sizeof a[0]);\n    return 0;\n}\n",
+      "marks": 3,
+      "answerHtml": "<pre><code class=\"language-c\">#include &lt;stdio.h&gt;\n\n\n\nint main(void)\n{\n    int n = 2;\n    int a[n];\n    n = 7;\n    printf(&quot;%d %zu\\n&quot;, n, sizeof a / sizeof a[0]);\n    return 0;\n}\n</code></pre><pre class=\"output\">7 2</pre><p>Changing n does not change the already established two-element extent.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Read n from 0 to 20 followed by n ints from -100 to 100. Print Allocation length and values: first. For zero, print Empty without allocating. Otherwise allocate n ints, check failure, print their sum, and free on every exit after allocation.",
+      "marks": 7,
+      "answerHtml": "<pre><code class=\"language-c\">#include &lt;stdio.h&gt;\n#include &lt;stdlib.h&gt;\n\n\n\nint main(void)\n{\n    int n;\n    puts(&quot;Allocation length and values:&quot;);\n    if (scanf(&quot;%d&quot;, &amp;n) != 1 || n &lt; 0 || n &gt; 20) {\n        return 1;\n    }\n    if (n == 0) {\n        puts(&quot;Empty&quot;);\n        return 0;\n    }\n    int *values = malloc((size_t)n * sizeof *values);\n    if (values == NULL) {\n        return 1;\n    }\n    int sum = 0;\n    for (int i = 0; i &lt; n; i++) {\n        if (scanf(&quot;%d&quot;, &amp;values[i]) != 1 || values[i] &lt; -100 || values[i] &gt; 100) {\n            free(values);\n            return 1;\n        }\n        sum += values[i];\n    }\n    printf(&quot;%d\\n&quot;, sum);\n    free(values);\n    return 0;\n}\n</code></pre><p>Release the allocation if a later input conversion fails.</p><p>For input <code>0</code>, the program prints:</p><pre class=\"output\">Allocation length and values:\nEmpty\n</pre>"
+    },
+    {
+      "type": "short",
+      "question": "What does a runtime-width array parameter still adjust to? Choose and justify: A pointer to a row with the supplied width; A full copied matrix; An int double pointer automatically; A scalar element count.",
+      "marks": 3,
+      "answerHtml": "<p>A pointer to a row with the supplied width. VLA-related parameter syntax retains row type information while ordinary parameter adjustment still applies.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c/language/array.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

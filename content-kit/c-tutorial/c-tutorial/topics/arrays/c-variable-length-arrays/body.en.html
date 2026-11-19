@@ -1,0 +1,131 @@
+<h2 id="introduction">A runtime bound changes the storage decision</h2>
+
+<p class="lead">Sometimes an array length becomes known only after reading input. A <dfn>variable-length array</dfn>, or VLA, has a bound that is not an integer constant expression. Its extent is determined during execution when control reaches the declaration.</p>
+
+<p>This can make a small mathematical routine convenient. A helper can work with a matrix whose row width is supplied at runtime. However, convenience does not remove size limits or portability concerns. A length taken directly from untrusted input is not automatically a safe allocation size.</p>
+
+<p>Think of reserving seats only after counting visitors. You must finish the count and confirm a reasonable limit before arranging the seats. Similarly, validate a VLA bound before declaring the array, and choose another storage strategy when the possible size is large.</p>
+
+<p>The examples use very small caps and provide a fixed-capacity branch for implementations that advertise no VLA support. They also show an allocated alternative. The goal is to make the storage choice explicit rather than assuming every compiler and machine has identical limits.</p>
+
+<h2 id="syntax">Declare only after validating the bound</h2>
+
+<pre><code class="language-c">int n;
+if (scanf("%d", &amp;n) != 1 || n &lt; 1 || n &gt; 16) {
+    return 1;
+}
+int values[n];</code></pre>
+
+<p>At the declaration, n supplies the extent. Every evaluated array bound must be greater than zero. Reading n later is too late; the declaration has already needed its value. A negative or zero evaluated bound does not create a portable empty VLA.</p>
+
+<p>A local const int is not an integer constant expression in C17 merely because it cannot be assigned again. Therefore <code>const int n = 4;</code> followed by values[n] can still declare a VLA. Use an enum constant, a macro constant or a literal for a fixed array bound.</p>
+
+<p>An ordinary VLA object has automatic storage duration and block scope. It cannot be a file-scope array with a runtime extent. It also cannot be made into a static-duration object by adding static to that variable-length declaration.</p>
+
+<h2 id="how-it-works">An extent is fixed for that array instance</h2>
+
+<p>When execution reaches a VLA declaration, its evaluated bounds determine that instance's size. Changing the variable later does not resize the object. The size example begins with n equal to three, declares the array, and then assigns five to n.</p>
+
+<p>sizeof values still describes three elements. The variable now holds a different number, while the existing object retains the original extent. To create a new VLA instance with another extent, execution must reach an appropriate declaration again under the language's scope rules.</p>
+
+<table class="ref"><caption>Bound value and established array size</caption><thead><tr><th scope="col">Action</th><th scope="col">n</th><th scope="col">Array extent</th></tr></thead><tbody><tr><td>Initialize n</td><td>3</td><td>No array yet</td></tr><tr><td>Reach values[n]</td><td>3</td><td>3 elements</td></tr><tr><td>Assign n = 5</td><td>5</td><td>Still 3 elements</td></tr><tr><td>Leave declaration scope</td><td>Not relevant</td><td>Automatic VLA lifetime ends</td></tr></tbody></table>
+
+<p>For a VLA type, sizeof can require runtime evaluation. For an ordinary fixed array, sizeof is normally an integer constant expression. Avoid side effects in dimension expressions, because they make these evaluation distinctions difficult to reason about.</p>
+
+<p>C17 does not permit an initializer on a VLA object. Declare it, then assign or read each element in a loop. The fixed fallback may use an initializer, but the VLA branch needs explicit element initialization before reading.</p>
+
+<h2 id="examples">Validate, retain an extent and pass a row width</h2>
+
+<h3>A small runtime-length array with a fixed fallback</h3>
+
+<p>The validated input 4 gives four square values. A C17 implementation advertising no VLA support uses the fixed-capacity branch.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Changing the bound variable does not resize an array</h3>
+
+<p>The result reports a bound variable of 5 but three array elements. The size was established when the declaration ran.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Pass a runtime row width to a helper</h3>
+
+<p>The VLA branch carries a row width of three into total. The fallback deliberately uses physical row width four in both places.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Use allocated storage when length may grow</h3>
+
+<p>The allocation is checked before any access and released after printing 21. The overflow guard protects the byte-count multiplication.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The runtime-width matrix helper puts rows and columns before the matrix parameter. That makes the dimension names available when parsing the later array parameter. The parameter still adjusts to a pointer; this syntax does not pass a whole matrix by value.</p>
+
+<p>The fixed fallback uses a four-column row type on both sides of its call. It may use only three columns logically, but its physical row width is four. Matching that width is necessary for correct row stepping. The VLA branch instead has physical width equal to the runtime columns value.</p>
+
+<h2 id="edge-cases">Understand the lifetime and storage risk</h2>
+
+<p>A VLA's lifetime begins at its declaration and ends when execution leaves its scope. A pointer into it becomes unusable after that lifetime ends. Returning such a pointer cannot extend the storage, just as returning a pointer to an ordinary automatic array cannot.</p>
+
+<p>Many implementations place automatic VLAs on a call stack. C does not require that physical arrangement, but execution storage is limited either way. An excessive bound can exhaust the available storage. Unlike malloc, the declaration does not return a null pointer that the program can check.</p>
+
+<p>A fixed small upper bound makes classroom use easier to audit. For real workloads, consider the total byte requirement, other automatic objects and recursion depth together. Several individually moderate arrays can still exceed a thread's available execution storage.</p>
+
+<p>You cannot jump into the scope of a variably modified identifier from outside that scope with goto. A switch case can create related problems if control would bypass a VLA declaration. Introduce a nested block after selecting a branch, then declare and use the bounded array within that block.</p>
+
+<p>A zero logical count needs a different design. Reserve a positive fixed capacity and use zero elements, or skip allocation for an empty input. The allocated practice explicitly handles zero before requesting any storage, so no zero-size allocation behavior is needed.</p>
+
+<h2 id="comparison">Choose fixed, variable or allocated storage</h2>
+
+<table class="ref"><caption>Three storage choices</caption><thead><tr><th scope="col">Choice</th><th scope="col">Useful when</th><th scope="col">Main obligation</th></tr></thead><tbody><tr><td>Fixed local array</td><td>A small maximum is known</td><td>Keep logical length within capacity</td></tr><tr><td>Bounded automatic VLA</td><td>Supported compiler and small runtime extent</td><td>Validate positive bounds and execution-storage use</td></tr><tr><td>malloc allocation</td><td>Size or lifetime needs explicit control</td><td>Check size arithmetic, allocation failure and cleanup</td></tr></tbody></table>
+
+<p><code>malloc</code> returns a pointer to allocated storage, or a null pointer on failure. Include stdlib.h for its declaration. In C, its void-pointer result converts to the required object-pointer type without a cast. Release the successful allocation using free when it is no longer needed.</p>
+
+<p>The allocated example checks whether n times the element size would exceed SIZE_MAX before multiplying. SIZE_MAX, provided here through stdint.h, is the maximum value of size_t. A wrapped byte count could request less storage than the following element loop expects.</p>
+
+<p>The practice allocation has a cap of twenty ints, so its multiplication is already safely bounded. It still checks malloc's result. On an input failure after successful allocation, it frees the memory before returning an error. Cleanup belongs to every path that owns the allocation.</p>
+
+<p>Allocated storage is not automatically resized either. A later reallocation can request another size, but that operation has its own ownership and failure rules. Continue to <a href="topic:c-malloc-calloc">malloc and calloc</a> and <a href="topic:c-realloc-free">realloc and free</a> before building a growing collection.</p>
+
+<h2 id="real-world-use">A runtime row type preserves matrix structure</h2>
+
+<p>A parameter such as <code>int matrix[rows][columns]</code> adjusts to a pointer to a row with columns ints. It lets matrix[r][c] use the supplied physical row width. The function must receive a compatible actual object with enough rows and columns.</p>
+
+<p>This is not the same as int double pointer. A pointer-to-pointer interface usually describes a different representation, often a collection of separately managed row pointers. Mixing these representations without a correct conversion design leads to invalid accesses.</p>
+
+<p>An array parameter's row count is still a contract. Writing it in the brackets does not add automatic bounds checks. The helper uses the explicit rows argument as its traversal limit. The caller must ensure that the storage actually covers that range.</p>
+
+<p>A library that supports many compilers can offer a fixed-width interface, a flat buffer with explicit stride, or allocated row storage instead. Which design is clearest depends on required portability, shapes and ownership. Do not choose a VLA interface solely to shorten one declaration.</p>
+
+<h2 id="common-mistakes">Do not confuse validation with recovery</h2>
+
+<h3>Checking n after declaring values[n]</h3>
+
+<p>The size has already been evaluated. Move every bound check before the declaration. A later if statement cannot repair an invalid object declaration or an exhausted execution stack.</p>
+
+<h3>Expecting a changed n to enlarge storage</h3>
+
+<p>The array retains its established extent. Keep the original size if later code changes the input variable. A loop using the new larger value can run beyond the original object.</p>
+
+<h3>Assuming const makes a fixed C17 bound</h3>
+
+<p>C's integer constant expression rules differ from some other languages. Use an enum or another actual constant expression when fixed storage is intended. Do not classify a declaration solely by whether its value looks predictable to a human.</p>
+
+<h3>Forgetting cleanup in an allocation fallback</h3>
+
+<p>Replacing a VLA with malloc changes ownership rules. Every successful allocation needs a release when its work ends. Input-error exits are easy paths to miss, so inspect them alongside the normal return.</p>
+
+<h2 id="best-practices">Make the portability decision visible</h2>
+
+<p>Use a small documented size cap before automatic storage is requested. Prefer a fixed-capacity array when the cap is already tiny and unused capacity is acceptable. Keep VLA declarations in a narrow block whose exit clearly ends all uses.</p>
+
+<p>Compile and run the fixed fallback as well as the VLA branch when claiming both paths work. Review row widths on each branch independently. A shared logical shape does not mean their physical fixed and variable row types are interchangeable.</p>
+
+<h2 id="version-notes">C99, C11, C17 and C23 differ</h2>
+
+<div class="callout version"><p>C99 introduced VLAs as a required feature. C11 and C17 permit an implementation to define __STDC_NO_VLA__ as 1 and omit VLA and variably modified type support. In C23, that opt-out concerns automatic-duration VLA objects; support for variably modified types and allocated-storage use is required. These programs select a C17-compatible fixed fallback when the macro advertises no support.</p></div>
+
+<h2 id="summary">Runtime extents require bounded decisions</h2>
+
+<p>A VLA uses validated positive runtime bounds and retains its extent for its lifetime. Portability and execution-storage limits can favor fixed or allocated alternatives. The next module begins with <a href="topic:c-strings-intro">Introduction to Strings</a>, where character arrays need room for a terminating zero.</p>

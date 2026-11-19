@@ -1,0 +1,113 @@
+<h2 id="introduction">Visibility and existence answer different questions</h2>
+
+<p class="lead">A classroom notice may be visible only inside one room, while the room itself stays there overnight. A C variable also has two separate properties. Its name may be usable only within a small region. Its storage can exist for a shorter or longer period.</p>
+
+<p><dfn>Scope</dfn> means the region where a name can be used. <dfn>Lifetime</dfn> means the part of execution during which an object exists. C also uses storage duration to describe broad categories of object lifetime. Keeping these ideas separate helps explain nested blocks and persistent counters.</p>
+
+<p>A variable declared inside a function usually has block scope and automatic storage duration. A local static variable also has block scope, but its object survives between calls. These two declarations can look similar while behaving differently during repeated execution.</p>
+
+<h2 id="syntax">Locate the declaration and its braces</h2>
+
+<pre><code class="language-c">int seats = 40;
+
+void count_visitors(void)
+{
+    int today = 0;
+    static int all_days;
+    today++;
+    all_days++;
+}</code></pre>
+
+<p>The name seats has file scope from its declaration onward. today and all_days have scope within the helper's block. today is automatic and is newly initialized on each call. all_days has static storage duration and retains its previous value.</p>
+
+<p>A name's scope generally starts just after its declarator. It does not reach backward to earlier statements. File scope likewise does not mean a name is visible before its declaration. An earlier declaration can make a later-defined object known where needed.</p>
+
+<p>The helper above is a reading fragment. The complete visit example prints both counters so you can observe their different lifetimes. A block can also be nested inside main without defining a new function.</p>
+
+<h2 id="how-it-works">Name lookup chooses the closest visible declaration</h2>
+
+<p><dfn>Shadowing</dfn> happens when an inner declaration hides an outer declaration with the same name. The inner object is separate storage. Hiding the outer name neither changes its value nor destroys it. After leaving the inner scope, the outer declaration becomes visible again.</p>
+
+<table class="ref"><caption>Two objects named mark</caption><thead><tr><th scope="col">Location</th><th scope="col">Visible mark</th><th scope="col">Other object</th></tr></thead><tbody><tr><td>Before inner block</td><td>Outer mark = 70</td><td>Inner mark not yet active</td></tr><tr><td>Inside inner block</td><td>Inner mark = 92</td><td>Outer mark still exists</td></tr><tr><td>After inner block</td><td>Outer mark = 70</td><td>Inner automatic lifetime ended</td></tr></tbody></table>
+
+<p>The inner print therefore uses 92. The final print uses the unchanged 70. If the inner block assigned to mark without declaring another mark, it would update the outer object instead. The declaration is what creates the separate object.</p>
+
+<p>Function calls have their own blocks and parameters. A helper parameter called value does not shadow a caller's value through the call relationship. Each function is a separate lexical region. Scope follows source-code nesting, not the chain of active calls.</p>
+
+<h2 id="examples">Observe names across blocks and calls</h2>
+
+<h3>An inner mark hides an outer mark</h3>
+
+<p>The inner declaration introduces a different object. Leaving its block reveals the outer mark, still 70.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Automatic reset and static persistence</h3>
+
+<p>Each visit prints 1 for automatic. The static counter prints 1, 2 and 3 because it survives the returns.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Local and file-scope names</h3>
+
+<p>main hides the file-scope name locally. show_capacity has no such local declaration and therefore reads 40.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>A label can be used within its function</h3>
+
+<p>The label is visible throughout main. The jump does not carry a block-local object beyond its lifetime.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The capacity program distinguishes a local name from a file-scope object. main prints its own seats variable, representing occupied seats. show_capacity reads the file-scope seats, representing total capacity. Choosing different names would be clearer in everyday code, but the shared spelling makes lookup visible here.</p>
+
+<p>The label example revisits <a href="topic:c-goto">goto</a>. Labels have function scope, so a jump can name a label elsewhere in the same function. Ordinary variable names do not gain function scope just because they appear in a function.</p>
+
+<h2 id="edge-cases">Four scopes and two common durations</h2>
+
+<table class="ref"><caption>Scopes used in C programs</caption><thead><tr><th scope="col">Scope</th><th scope="col">Typical name</th><th scope="col">Region</th></tr></thead><tbody><tr><td>Block</td><td>A local variable or parameter</td><td>Its block or function body, from declaration</td></tr><tr><td>File</td><td>A name declared outside functions</td><td>The rest of its translation unit</td></tr><tr><td>Function</td><td>A label</td><td>The entire containing function</td></tr><tr><td>Function prototype</td><td>A parameter name in a prototype</td><td>That prototype declaration</td></tr></tbody></table>
+
+<p>A prototype parameter name is only a description for that declaration. It does not create a reusable variable for main. A for-loop counter declared in its header has a limited scope covering that loop, including its body. Code after the loop needs a different declaration if it needs a counter.</p>
+
+<p>An ordinary non-VLA automatic object exists during execution of its associated block. Re-entering that block creates a new instance. Recursive calls therefore get separate automatic locals. A local initializer runs again for each execution that reaches it.</p>
+
+<p>A static-duration object exists for the whole program execution. Its constant initializer is established once before normal program work. If no initializer is written, such an object is zero-initialized. Its name may still be hidden outside one small block, as with the persistent visit counter.</p>
+
+<p>A pointer can outlive the automatic object it once selected. After the object's lifetime ends, dereferencing that pointer is invalid. The address does not preserve the former object. Returning the value of a local integer is safe; returning its address for later access is not.</p>
+
+<p>Scope also differs from <dfn>linkage</dfn>, which concerns whether declarations denote the same entity across scopes or translation units. File-scope static names have internal linkage. The next lesson explores that third property without treating it as another word for visibility.</p>
+
+<h2 id="common-mistakes">Do not infer lifetime from indentation</h2>
+
+<h3>Expecting a local counter to remember a call</h3>
+
+<p>An automatic int initialized to zero starts again on the next call. Incrementing it once and returning does not save it. Use a deliberately persistent object when previous calls matter, and consider how that state affects reuse.</p>
+
+<h3>Reading a name after its block ends</h3>
+
+<p>An inner variable cannot be named after its closing brace. Move a result into an outer variable before leaving if it is needed afterward. Do not widen every local scope merely to avoid planning where a result belongs.</p>
+
+<h3>Assuming a hidden object was overwritten</h3>
+
+<p>A shadowing declaration creates a new object. The outer object remains alive unless its own lifetime ends. To modify the outer variable, avoid introducing a same-named inner variable.</p>
+
+<h3>Mixing labels with ordinary identifiers</h3>
+
+<p>A label is a jump destination, not a data object. It has function scope and belongs to a separate name category. Its visibility does not permit jumping into forbidden VLA scopes or accessing expired local storage.</p>
+
+<h2 id="best-practices">Keep local meaning local</h2>
+
+<p>Prefer different names for different concepts, such as capacity and occupied. This removes the need to remember which declaration hides another. Enable an optional compiler warning such as GCC's -Wshadow when checking a larger program.</p>
+
+<p>Declare a temporary near the work that needs it. Narrow scopes reduce accidental reuse, especially for loop counters and subtotals. Use a static local only when retained state is part of the function's intended behavior.</p>
+
+<p>Trace repeated calls with two columns: the new automatic values and the persistent static values. This catches the common mistake of treating every initializer as an action repeated on entry. It also shows why resetting a static counter requires an explicit design.</p>
+
+<h2 id="version-notes">Loop declarations and storage duration</h2>
+
+<div class="callout version"><p>C99 introduced declarations in for headers and mixed declarations with statements. The distinction between block visibility and static storage duration remains in C17. VLAs have additional lifetime rules tied to reaching their declaration.</p></div>
+
+<h2 id="summary">Ask where and when separately</h2>
+
+<p>Scope determines which declaration a name finds. Lifetime determines whether its object still exists. Shadowing changes lookup, while static duration preserves storage across calls. Next, <a href="topic:c-storage-classes">Storage Classes</a> connects these ideas to auto, register, static and extern.</p>

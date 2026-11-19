@@ -1,0 +1,98 @@
+<h2 id="introduction">Keep related values under one name</h2>
+
+<p class="lead">Suppose you need the marks of forty students. Forty separately named variables would make input, totals and updates difficult to write. An <dfn>array</dfn> stores several values of one element type under a single name. An index selects which element you want.</p>
+
+<p>Think of numbered lockers arranged in a row. Each locker has its own position, and every locker stores the same kind of item. In C, the numbering starts at zero. A four-element array therefore has positions zero, one, two and three.</p>
+
+<p>Arrays combine naturally with loops. A counter selects an element during each repetition. You can change one element directly or visit every element in order. The type and declared size describe the available storage; the loop decides which elements to use.</p>
+
+<h2 id="syntax">Choose a size and initializer</h2>
+
+<pre><code class="language-c">int marks[4] = {65, 72, 81, 59};
+int rolls[] = {11, 15, 23};
+int totals[4] = {0};
+int selected[4] = {[2] = 7};</code></pre>
+
+<p>The first declaration reserves four int elements and gives every element a value. In the second, the initializer determines a size of three. The third initializes every element to zero, not only the first. The fourth uses a designated initializer to place seven specifically at index two.</p>
+
+<p>An initializer that supplies fewer values than the array size initializes the remaining elements to zero. This rule also applies to an automatic local array when it has an initializer. An automatic array declared without any initializer instead has indeterminate element values, which must not be read as useful numbers.</p>
+
+<p>The expression <code>marks[1]</code> accesses the second element. It can be read in a calculation or written with an assignment. Changing marks[1] does not shift other elements or change the array's size.</p>
+
+<h2 id="how-it-works">Match positions to consecutive elements</h2>
+
+<pre class="diagram">index       0       1       2       3
+marks    [ 65 ]  [ 72 ]  [ 81 ]  [ 59 ]
+                   |
+marks[1] = 75      v
+marks    [ 65 ]  [ 75 ]  [ 81 ]  [ 59 ]</pre>
+
+<p>Elements are stored consecutively, with no gaps between complete elements. The address of element i is the array's start plus i element widths. The width is sizeof the element type. It is not always four bytes merely because the type is int.</p>
+
+<p>A loop that visits this array uses i less than four. The last valid index is three. Using i less than or equal to four would attempt a fifth access. The size counts elements, while the last index is one less than that count.</p>
+
+<p>For an actual array in the current scope, <code>sizeof marks / sizeof marks[0]</code> gives its element count. Both sizes use the same byte unit, so the quotient is independent of the host's int width. The result type of sizeof is size_t, printed with %zu.</p>
+
+<h2 id="examples">Read different initialization forms</h2>
+
+<h3>Initialize, read and replace marks</h3>
+
+<p>Index 1 selects the second mark, which becomes 75. The loop visits exactly indices 0 through 3.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Compare array initializer forms</h3>
+
+<p>The inferred array has three elements. Omitted elements in partial and selected are initialized to zero.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Compute the element count without assuming int size</h3>
+
+<p>The quotient is 5 regardless of how many bytes this implementation uses per int. rolls is still an actual array here.</p>
+
+<div data-example="ex-3"></div>
+
+<p>The inferred initializer example prints a real last element from its three-element array. It also reads an omitted initializer position, which is zero. This contrasts with reading an uninitialized automatic element, where no reliable initial number exists.</p>
+
+<p>The size example uses the array object itself. Do not replace rolls with a pointer and expect the same quotient. The later <a href="topic:c-arrays-and-functions">Arrays and Functions</a> lesson explains why an array parameter does not retain the caller's array size.</p>
+
+<h2 id="edge-cases">C does not check each index for you</h2>
+
+<p>An index outside the array is a programming error. C does not automatically reject it with a neat bounds message. Reading or writing outside the valid element range has undefined behavior. The program may crash, corrupt another object or appear to work during one run.</p>
+
+<p>An index equal to the count is already outside the elements. A negative index is also invalid for the simple whole-array accesses here. Validate user-supplied indices before using them, and keep loop bounds tied to the known length.</p>
+
+<p>A fixed-size array has a positive element count in standard C. A zero logical input count is still useful: reserve positive capacity, keep n equal to zero and skip all element accesses. This is different from declaring a standard zero-length array.</p>
+
+<p>A one-element array has both first and last element at index zero. The endpoint practice uses that case to test the last-index rule. An empty range, however, has no first element; do not read values[0] before checking whether the range is nonempty.</p>
+
+<p>Ordinary arrays cannot be assigned wholesale with <code>a = b;</code>. Use a loop to copy corresponding elements. Their size also does not grow automatically when you write beyond the end. Later topics introduce allocated arrays when runtime growth is needed.</p>
+
+<h2 id="common-mistakes">Separate an element count from an index</h2>
+
+<h3>Starting a full traversal at one</h3>
+
+<p>A loop starting at one skips the first element. If it also visits the declared size, it reads past the end. Start at zero and stop before the element count for a complete traversal.</p>
+
+<h3>Assuming every local array starts at zero</h3>
+
+<p>Only the relevant initialization rules supply zero values. Write an initializer or assign each automatic element before reading it. A previous successful run does not establish an initial value for another execution.</p>
+
+<h3>Using a value as though it were a valid position</h3>
+
+<p>An array element might contain 80, but that does not make index 80 valid. Position and content are separate. Frequency tables use contents as indices only after limiting their value domain.</p>
+
+<h2 id="best-practices">Keep capacity and used length visible</h2>
+
+<p>Use a clear positive capacity and validate the number of elements before input. The practice tasks reserve at most twenty elements, then visit only the first n. Input errors should stop before any uninitialized element is used.</p>
+
+<p>Choose names for the data meaning, such as marks, rolls or readings. Use size calculations while the actual array is visible. Pass an explicit length when giving its elements to a helper, rather than expecting a helper to discover it.</p>
+
+<h2 id="version-notes">Initializers across standards</h2>
+
+<div class="callout version"><p>Fixed arrays and partial initialization are available in C89. C99 adds designated initializers and the %zu conversion for size_t. The examples use C17. An empty initializer for an ordinary array is a newer C23 feature, so {0} is used here.</p></div>
+
+<h2 id="summary">Use an index within a known range</h2>
+
+<p>An array groups same-type elements in consecutive storage, with indices beginning at zero. Initialization, logical length and bounds determine which reads are safe. Continue with <a href="topic:c-array-operations">Array Operations</a> to calculate totals and move values within that storage.</p>
