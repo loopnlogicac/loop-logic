@@ -94,8 +94,8 @@ export class WatchService {
         }),
       };
     });
-    const totalSeconds = order.reduce((n, id) => n + getVideo(id)!.seconds, 0);
-    const watchedSeconds = playable.filter((id) => watched.has(id)).reduce((n, id) => n + getVideo(id)!.seconds, 0);
+    const totalSeconds = order.reduce((n, id) => n + (getVideo(id)?.seconds ?? 0), 0);
+    const watchedSeconds = playable.filter((id) => watched.has(id)).reduce((n, id) => n + (getVideo(id)?.seconds ?? 0), 0);
     const nextUp = playable.find((id) => !watched.has(id)) ?? playable[0] ?? null;
     const currentId = current && playable.includes(current) ? current : nextUp;
     const idx = currentId ? playable.indexOf(currentId) : -1;
@@ -174,7 +174,7 @@ export class WatchService {
   /** Total videos and hours across all courses (for the catalog and landing page). */
   static totals() {
     const ids = new Set(allCourses().flatMap((c) => courseVideoOrder(c)));
-    const seconds = [...ids].reduce((n, id) => n + getVideo(id)!.seconds, 0);
+    const seconds = [...ids].reduce((n, id) => n + (getVideo(id)?.seconds ?? 0), 0);
     return { videos: ids.size, hours: Math.round(seconds / 3600) };
   }
 }

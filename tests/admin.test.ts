@@ -98,6 +98,10 @@ test('a paid course shows only its free samples until access is given', async ()
   await admin.grantAccess('boss@example.com', c.id, 'buyer@example.com');
   const after = await watch.view(c.id, 'buyer-1', 'en');
   assert.equal(after.course.owned, true);
+  // saving a second course keeps the first one's videos in the catalog
+  await admin.saveCourse('boss@example.com', { access: 'free', title: { en: 'Another' }, playlist: 'PLother0000001', published: true });
+  assert.equal((await watch.view(c.id, 'buyer-1', 'en')).progress.total, 5);
+  assert.ok(WatchService.totals().videos > 0);
   assert.equal(after.course.locked, 0);
   assert.equal((await store.listDocs('grant')).length, 1);
 });

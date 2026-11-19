@@ -10,7 +10,7 @@ import type { DocRow, Store } from '../store/store.ts';
 import type { TutorialService, CustomTopicDef, CustomTrackDef } from './tutorials.ts';
 import type { WatchService } from './watch.ts';
 import { COURSES, allCourses, isBuiltInCourse, setExtraCourses, SUBJECTS, type Course, type CourseSubject } from '../content/courses.ts';
-import { setExtraVideos, formatDuration, getVideo, type ChannelPlaylist, type ChannelVideo } from '../content/videos.ts';
+import { setExtraVideos, formatDuration, VIDEOS, type ChannelPlaylist, type ChannelVideo } from '../content/videos.ts';
 import { markdownToHtml, markdownText, slugify } from './markdown.ts';
 import { cleanHtml } from './tutorials.ts';
 import { courseVideoOrder } from './watch.ts';
@@ -146,7 +146,7 @@ export class AdminService {
       const shown = (c.videos ?? []).filter((v: Json) => !v.hidden);
       const plId = `admin-${d.id}`;
       playlists.push({ id: plId, title: c.playlistTitle || c.title.en, videoIds: shown.map((v: Json) => v.id) });
-      for (const v of shown) if (!getVideo(v.id)) videos.push({ id: v.id, title: v.title, duration: v.duration, seconds: v.seconds, by: v.by ?? null });
+      for (const v of shown) if (!VIDEOS.has(v.id) && !videos.some((x) => x.id === v.id)) videos.push({ id: v.id, title: v.title, duration: v.duration, seconds: v.seconds, by: v.by ?? null });
       courses.push({
         id: d.id, code: c.code || null, subject: c.subject as CourseSubject, title: c.title, blurb: c.blurb,
         playlists: [{ id: plId, title: c.playlistTitle || c.title.en, videos: shown.length, youtubeId: c.access === 'paid' ? undefined : c.playlistId }],
