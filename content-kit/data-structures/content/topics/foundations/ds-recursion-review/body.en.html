@@ -1,0 +1,72 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A <dfn>recursive function</dfn> solves part of a problem by calling itself on a smaller version. Imagine adding marks from a short register. You can take the last mark and ask for the total of the earlier marks. Once no marks remain, the smaller total is zero.</p>
+<p>The important part is not that the function uses its own name. The important part is that each call has a clear meaning and moves toward a stopping condition. Without that progress, the chain of calls can continue until the program runs out of call-stack space.</p>
+<p>Recursion fits linked structures because a list contains a smaller list after its first node. A tree contains smaller subtrees below its root. You can use these shapes to choose smaller inputs naturally, rather than inventing an unrelated loop counter.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>The <dfn>base case</dfn> handles an input small enough to answer directly. In prefix sum, length zero returns zero. The recursive case adds the final value to sum(values,n-1). Require n to be nonnegative and no greater than the number of available values.</p>
+<pre><code class="language-c">if (n == 0) {
+    return 0;
+}
+return values[n - 1] + sum(values, n - 1);</code></pre>
+<p>This definition gives each call a precise promise: return the total of the first n values. The recursive call has the same promise for n-1 values. Combining its result with values[n-1] produces the requested answer. The earlier call does not continue until the smaller call returns.</p>
+<p>A <dfn>stack frame</dfn> holds information needed by one active function call. You can picture a frame as a note recording its arguments and where execution should resume. Actual machine layouts vary, but separate waiting calls must preserve their own state.</p>
+<p>For list counting, the base input is NULL. A non-null head contributes one plus the count of head->next. This assumes an acyclic chain. For a tree, an absent child is a NULL subtree. A recursive traversal can process the left subtree and the right subtree separately.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Trace sum([12,24,36],3). The first call needs 36 plus sum(...,2). The second needs 24 plus sum(...,1). The third needs 12 plus sum(...,0). The base call returns zero, allowing the waiting expressions to finish from the smallest call outward.</p>
+<pre class="diagram">Growing call stack, newest call at top:
+sum(values,0) --&gt; returns 0
+sum(values,1) --&gt; waiting to add 12
+sum(values,2) --&gt; waiting to add 24
+sum(values,3) --&gt; waiting to add 36
+
+Return chain: 0 --&gt; 12 --&gt; 36 --&gt; 72</pre>
+<p>The descend example prints before and after its smaller call. Enter messages go 3,2,1,0. Leave messages go 0,1,2,3. Each caller resumes after the call site, so returning naturally reverses that order. This is useful when you want to print a list backward without modifying its links.</p>
+<pre class="diagram">List before recursive count:
+head --&gt; [72|next] --&gt; [85|next] --&gt; [91|NULL]
+
+Pending results:
+count(72) = 1 + count(85)
+count(85) = 1 + count(91)
+count(91) = 1 + count(NULL)
+count(NULL) = 0
+
+After count: the same nodes and links remain.</pre>
+<p>Returning a result and changing a structure are different tasks. Recursive count only reads nodes. Recursive reversal, taught later, changes links while calls return. Keep that distinction clear when drawing the state before and after a call.</p>
+<pre class="diagram">Tree preview before leaf counting:
+       root
+       /  \
+   left    right
+   leaf    leaf
+Each missing child --&gt; NULL
+
+After counting: the same boxes remain; leaves(root) returns 2.</pre><p>A tree node can hold separate left and right child pointers. Counting leaves combines the two child answers, rather than adding one for every node. This is a preview of <a href="topic:ds-tree-terminology">tree terminology</a>; no tree storage is changed during the count.</p>
+<h2 id="examples">Examples</h2>
+<h3>Watch calls return in reverse order</h3>
+<p>Enter messages move from 3 to 0. Leave messages run from 0 to 3 because each caller waits for its smaller call.</p>
+<div data-example="ex-1"></div>
+<h3>Sum a shrinking prefix</h3>
+<p>The empty prefix contributes zero. Each waiting call adds one last value, producing 72 without reading outside the prefix.</p>
+<div data-example="ex-2"></div>
+<h3>Count nodes recursively</h3>
+<p>Every non-null node contributes one. Reaching NULL ends the chain of calls; this method assumes there is no cycle.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>An empty prefix and an empty list should reach their base cases immediately. A singleton makes one recursive node call followed by the base call. Check these cases before tracing a longer input; they expose many missing stopping rules.</p>
+<p>Counting n list nodes takes Theta(n) time because each node contributes one step. The recursive version can require O(n) auxiliary stack space. An iterative traversal uses O(1) extra pointers. Both still read the same n nodes and leave their memory layout unchanged.</p>
+<p>A tree walk often uses O(h) call depth, where h is the tree height. A balanced tree may have logarithmic height, while a chain-shaped tree has linear height. The total number of visited nodes and maximum waiting depth are different measures.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Making a call without progress</h3>
+<p>Calling count(head) again with the same non-null head repeats the same problem forever. Move to head->next so a finite acyclic chain gets closer to NULL.</p>
+<h3>Using a value as an accidental stopping rule</h3>
+<p>A node whose mark is zero is still a real node. Stop a structural walk at NULL unless the problem explicitly defines a value-based sentinel.</p>
+<h3>Accessing a field before the base check</h3>
+<p>Reading head->next before checking head==NULL crashes on empty input. Handle the missing node before reading any member.</p>
+<h3>Assuming unlimited call depth</h3>
+<p>C programs have practical stack limits. A recursive walk that works for ten nodes may fail for a huge chain. Prefer an iterative version when depth can grow without a small bound.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Write the meaning of a call in one sentence. Identify a nonnegative quantity that gets smaller, such as prefix length or remaining chain length. Then trace the smallest valid input and one ordinary input. This gives a concrete termination argument.</p>
+<p>For a tree preview, draw a root with two leaf children. The empty-child calls return immediately, while the parent combines the two answers. A leaf-count function returns one for a node with no children, rather than counting every node as a leaf.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>Recursion is supported in C17 and earlier C versions. The standard does not guarantee tail-call optimization, so do not assume recursive list traversal uses constant stack space. The examples keep their input lengths small and use integer sums within the stated bounds.</p></div>
+<h2 id="summary">Summary</h2>
+<p>A sound recursive solution combines a direct stopping case with a smaller call of the same meaning. Count waiting frames as extra space. Next, see adjacent storage in <a href="topic:ds-array-adt">Array as a Data Structure</a>.</p>

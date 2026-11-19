@@ -1,0 +1,59 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A linked structure becomes easier when you can explain each arrow as an address stored in a variable. Think of a node as a small card containing a mark and a direction to another card. The direction does not contain the other card. It tells your program where that card lives.</p>
+<p>A <dfn>pointer</dfn> stores an address. Reading through that address is called dereferencing. Before you dereference a pointer, it must identify a live object of the right type. A pointer containing NULL identifies no object and cannot be used to read a value.</p>
+<p>This review connects familiar C syntax to the diagrams used in later lessons. You will distinguish a node, a pointer to that node and the address of the pointer itself. Those are three different things, and confusing them causes many lost-list bugs.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>A node type combines fields with struct. The value field holds the mark. The next field has type struct Node *, so it can identify another node of the same kind. The structure cannot contain a complete copy of itself as a direct member. Such a definition would never finish determining its size.</p>
+<pre><code class="language-c">typedef struct Node {
+    int value;
+    struct Node *next;
+} Node;</code></pre>
+<p>The typedef gives the existing type the shorter name Node. It does not allocate a node. A declaration such as Node item creates an object, while Node *head creates only a pointer variable. You still need a live node before using head->value.</p>
+<p>For a valid pointer cur, cur->value means (*cur).value. The arrow selects a member of the pointed-to struct. Parentheses matter in the expanded form because member access binds more tightly than unary dereferencing.</p>
+<p>A function receiving Node *head gets a copy of that pointer value. It can modify the node through the copy. Assigning a different address to its local head does not replace the caller’s head. Pass Node **head and call with &amp;head when the function must change the caller’s pointer. Return a new head is another valid interface.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Start with a local node containing 72. Set cur=&amp;node, then execute cur->value += 5. Both names refer to the same node object, so printing node.value gives 77. Copying an address creates an alias, which means another route to the same storage.</p>
+<pre class="diagram">Local variables before:
+cur --&gt; node [value=72 | next=NULL]
+
+After cur-&gt;value += 5:
+cur --&gt; node [value=77 | next=NULL]</pre>
+<p>malloc requests storage whose lifetime continues until free. Ask for sizeof *node, because that expression measures the complete pointed-to type. sizeof node would measure only the pointer variable. The result may be NULL when allocation fails. Check that result before assigning fields.</p>
+<p>Initialize both fields after allocation. malloc does not set value or next for you. In the allocation example, a compound literal supplies {85,NULL}. The node is then safe to inspect and its next link has a defined end marker.</p>
+<p>For head insertion, the function receives the address of the caller’s pointer. First allocate the new node. Next set its value and link it to *head. Finally assign *head=node. This order preserves the old chain and publishes a fully initialized node.</p>
+<pre class="diagram">Before:
+parameter head --&gt; caller head --&gt; [85|NULL]
+
+Prepare node: [72|next] --&gt; [85|NULL]
+After *head=node:
+caller head --&gt; [72|next] --&gt; [85|NULL]</pre>
+<h2 id="examples">Examples</h2>
+<h3>Change a node through a pointer</h3>
+<p>cur points at node, so cur-&gt;value changes the original object. The pointer itself holds no separate copy of the mark.</p>
+<div data-example="ex-1"></div>
+<h3>Allocate, use and release one node</h3>
+<p>malloc reserves room for the complete Node. Clearing this owner after free helps avoid accidental reuse, but other aliases would still need care.</p>
+<div data-example="ex-2"></div>
+<h3>Replace the caller’s head</h3>
+<p>The function receives &amp;head. Writing *head changes the caller’s pointer, so the second node becomes the new first node.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Ownership means deciding which part of your program must release an allocation. A list owner releases every node exactly once. A temporary traversal pointer can visit nodes without owning them. Document this distinction when a function returns or accepts a node pointer.</p>
+<p>free ends an allocated object’s lifetime. It does not erase every pointer that once identified that object. Setting one owner to NULL reduces accidental reuse through that variable, but aliases still require care. Never read a member after its node has been freed.</p>
+<p>An empty list has head=NULL and needs no allocation. free(NULL) is permitted. A singleton has one allocation whose next is NULL. Destruction walks the chain, saving the successor before free, and then advances to the saved address. That routine uses O(n) time and O(1) extra pointers.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Allocating the size of a pointer</h3>
+<p>Writing malloc(sizeof head) can reserve too few bytes for a node. Use sizeof *head so the expression follows the node type if fields change later.</p>
+<h3>Losing an allocation during replacement</h3>
+<p>Changing the only owner before connecting or releasing its old object makes that object unreachable. During prepend, preserve the old head in node->next before updating head.</p>
+<h3>Reading a released next field</h3>
+<p>The sequence free(cur); cur=cur->next is invalid. Save next first, free cur second, and move to next third. The order protects the information needed for the remaining walk.</p>
+<h3>Expecting pointer assignment to copy a list</h3>
+<p>Node *copy=head creates another pointer to the same first node. It creates no independent nodes. Freeing through one owner can leave the other pointer dangling.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Draw variables outside node boxes and fields inside them. Label an arrow with the pointer or field that stores it. Use NULL where no successor exists, rather than drawing an unexplained empty box. This habit makes assignment effects visible.</p>
+<p>Keep allocation checks near allocation calls. On a failed list build, release the prefix already created before returning failure. For short-lived local nodes, do not call free at all; free accepts dynamically allocated storage, not ordinary local objects.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The code targets C17. Typedef names and pointer-to-struct access are older features. Compound literals and declarations inside for headers require C99 or later. C17 keeps manual allocation and release; it does not provide an automatic garbage collector for these nodes.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Treat every pointer as a route to a particular live object. Match each allocation with one owner and one eventual release. Next, follow waiting calls in <a href="topic:ds-recursion-review">Recursion Review</a>.</p>

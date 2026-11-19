@@ -1,0 +1,65 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A matrix organizes values by row and column. Think of marks for several students across several courses. One index chooses the student, and another chooses the course. A rectangular C array represents this table as an array whose elements are complete row arrays.</p>
+<p>The screen shows a rectangle, but memory is a sequence of bytes. To answer address questions correctly, you must know which direction is stored first. C stores rows one after another, a layout called <dfn>row-major order</dfn>. Other systems may use column-major order, so an exam must specify the intended layout.</p>
+<p>You will connect these layouts to transposition, addition and multiplication. You will also store a mostly zero matrix more compactly by recording only its nonzero cells. The coordinate information then becomes part of the representation.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>For a zero-based R by C rectangle, row-major element offset is r*C+c. There are r complete rows before row r, and each has C elements. Multiply that offset by the element width w and add the base address B: B+w*(r*C+c).</p>
+<p>In <dfn>column-major order</dfn>, columns are consecutive instead. The corresponding formula is B+w*(c*R+r). The number multiplying the outer coordinate changes because a complete column contains R elements. For nonzero lower bounds, first subtract the row and column lower bounds from their respective indices.</p>
+<pre class="diagram">Matrix:                 C row-major cells:
+[1 2 3]                 [1][2][3][4][5][6]
+[4 5 6]                  row 0    row 1
+
+Hypothetical column-major:
+[1][4][2][5][3][6]
+ col 0 col 1 col 2</pre>
+<p>Matrix addition needs equal shapes and combines corresponding cells. Transposition places matrix[row][col] at transposed[col][row], exchanging the dimensions. Multiplication of R by K with K by C produces R by C. Its result cell sums K products from one row of the left matrix and one column of the right matrix.</p>
+<p>A <dfn>sparse matrix</dfn> contains many zeros. A triplet stores row, column and value for one nonzero cell. Keep the original row count, column count and nonzero count as shape information. An all-zero matrix still has dimensions even though it has no term triplets.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Consider a[3][4] with an illustrative base of 2000 and two-byte elements. For a[2][1], the row-major offset is 2*4+1=9 elements. The byte offset is eighteen, so the address is 2018. In hypothetical column-major order, the offset is 1*3+2=5 elements, giving 2010. The difference comes from traversal order, not different cell values.</p>
+<p>For transposition, follow the six cells of [[1,2,3],[4,5,6]]. The first column 1,4 becomes the first output row. The next columns become 2,5 and 3,6. Every source cell appears once, and the output has three rows with two columns.</p>
+<pre class="diagram">Before transpose:        After transpose:
+[1][2][3]                [1][4]
+[4][5][6]                [2][5]
+                         [3][6]</pre>
+<p>For multiplication, take [[1,2],[3,4]] and [[5,6],[7,8]]. The upper-left output is 1*5+2*7=19. Its upper-right neighbor is 1*6+2*8=22. Continue with the second left row to get 43 and 50. The practice solution uses three loops because it chooses an output row, an output column and a product position.</p>
+<pre class="diagram">Sparse input:             Stored nonzero triples:
+[0][7][0]                 (row=0, col=1, value=7)
+[9][0][5]                 (row=1, col=0, value=9)
+                          (row=1, col=2, value=5)
+Shape: 2 rows, 3 columns; 3 stored entries</pre>
+<p>The sparse example visits cells in row order, so its triplets also have row order. Any coordinate not listed has value zero. Reconstructing a dense matrix would begin by filling every cell with zero, then assigning each stored triplet value.</p>
+<pre class="diagram">Addition before: A=[12 24;36 48], B=[1 2;3 4]
+Addition after:  result=[13 26;39 52]; A and B unchanged
+
+Multiplication before: A=[1 2;3 4], B=[5 6;7 8]
+Multiplication after:  result=[19 22;43 50]; inputs unchanged</pre>
+<h2 id="examples">Examples</h2>
+<h3>Transpose a two-by-three matrix</h3>
+<p>Each source row becomes a destination column. The result has three rows and two columns, with 4 beside 1 in its first row.</p>
+<div data-example="ex-1"></div>
+<h3>Add two small matrices</h3>
+<p>Addition pairs cells with equal row and column indices. It needs matching dimensions and visits all four pairs.</p>
+<div data-example="ex-2"></div>
+<h3>Store only nonzero cells as triplets</h3>
+<p>The header records the original shape and three nonzero entries. Triplets retain coordinates, so zeros can be reconstructed without storing them individually.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Dense addition and transposition each take Theta(R*C) time. A separate transposed result uses O(R*C) storage. Basic multiplication takes Theta(R*K*C) time and O(R*C) result space. Fixed loop variables add only O(1) auxiliary storage beyond the matrices.</p>
+<p>Converting a dense matrix to triplets still scans every cell, taking Theta(R*C) time. Storing t nonzero entries needs O(t) triplets plus shape fields. Each triplet has three pieces of information, so sparse storage helps only when enough zeros outweigh that extra coordinate cost.</p>
+<p>A one-by-one matrix works with the same loops. An all-zero matrix emits no value triplets. A rectangular transpose changes shape, so allocate the destination dimensions in the opposite order. A square shape alone does not make multiplication commutative: A times B can differ from B times A.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Using the row count in the row-major multiplier</h3>
+<p>The complete earlier rows each contain C columns. Use r*C, not r*R. Check a rectangular example because a square example can hide this mistake.</p>
+<h3>Adding when multiplication was requested</h3>
+<p>Matrix multiplication is a row-column dot product. Multiplying only matching coordinates gives elementwise multiplication, which is a different operation.</p>
+<h3>Forgetting the output shape</h3>
+<p>A two-by-three transpose needs a three-by-two destination. Keeping the old dimensions can write beyond the allocated row width.</p>
+<h3>Discarding dimensions in sparse storage</h3>
+<p>Triplets alone cannot distinguish a two-by-three all-zero matrix from a ten-by-ten one. Preserve dimensions even when the nonzero list is empty.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Write the shape beside each matrix and the element width beside each address calculation. Substitute coordinates only after choosing row-major or column-major order. Keep element offsets and byte offsets on separate lines to avoid multiplying twice.</p>
+<p>Use small asymmetric matrices when checking a transformation. Values 1 through 6 in a two-by-three rectangle reveal exchanged indices more clearly than an all-equal square. For multiplication, verify one row-column dot product by hand before inspecting the entire result.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>C17 retains row-major rectangular arrays. The examples use fixed small dimensions, so they do not rely on optional variable-length-array support. Memory-size formulas use a stated element width; the teaching values do not assume a universal size for int.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Matrix operations depend on both shape and layout. Keep coordinates explicit, and store shape information even when most values are omitted. Next, let the reserved storage grow in <a href="topic:ds-dynamic-array">Dynamic Arrays</a>.</p>

@@ -1,0 +1,76 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Creating a list gives you a chain. A useful list also needs insertion at a chosen position, deletion, search and counting. Picture a row of connected cards where one card must be removed. The safe task is to reconnect the surviving cards before throwing the selected card away.</p>
+<p>The key idea is an <dfn>owning link</dfn>: the pointer field that currently leads to a node. For the first node, that field is head. For an interior node, it is the predecessor’s next field. A pointer-to-pointer lets one function work with either kind of owner.</p>
+<p>This lesson uses zero-based positions and removes the first matching value when duplicates exist. These conventions are part of the interface. Without them, two correct-looking implementations could disagree about which node should change.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>Start an owner walk with Node **link=&amp;head. The expression *link identifies the current node. To move onward, use link=&amp;(*link)->next. The address in link now names a different pointer field, while the chain itself remains unchanged.</p>
+<p>Insertion at position p advances through p owner fields. Position zero names head. Position equal to size names the final NULL next field. Reject a negative position or a position beyond that final gap. Once the owner is found, allocate node, set node->next=*link and publish *link=node.</p>
+<p>Deletion needs an actual node, not a gap. Deleting at position equal to size must fail. After locating the owner, save victim=*link. Redirect *link=victim->next while victim is alive, then free victim. The saved successor remains part of the live chain.</p>
+<pre><code class="language-c">Node *victim = *link;
+*link = victim-&gt;next;
+free(victim);</code></pre>
+<p>Deletion by value follows owners until *link is NULL or its value matches the target. A NULL result means the target is absent. A match uses the same three-step removal. Only the first matching node is removed by erase_value; later duplicates stay unless the caller requests another deletion.</p>
+<p>These functions keep only head as persistent state. The animation displays tail as a visual endpoint and repairs it when needed. If an application stores tail itself, its deletion function must also maintain that field. Do not leave a stored tail referring to a released node.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Insert 64 at position one into [72,85,91]. Begin with link naming head. Advance once so link names the first node’s next field. Prepare a new node whose next is the current *link, which identifies 85. Replacing *link then connects 72 to 64 without losing 85.</p>
+<pre class="diagram">Before:
+head --&gt; A[72|next] --&gt; B[85|next] --&gt; C[91|NULL]
+          link names A.next
+
+Prepare: N[64|next] --&gt; B
+After:   A.next --&gt; N --&gt; B --&gt; C --&gt; NULL</pre>
+<p>Delete the first 85 from [72,85,85,91]. Give the equal-valued nodes different names B and C. The search stops at B, and link names A.next. Redirect A.next to C. B is no longer owned by any live-chain link and can be freed. C remains because the operation promises first-match deletion.</p>
+<pre class="diagram">Before: head --&gt; A[72] --&gt; B[85] --&gt; C[85] --&gt; D[91] --&gt; NULL
+Bypass: head --&gt; A[72] -----------&gt; C[85] --&gt; D[91] --&gt; NULL
+                              B is detached
+After:  free B; the surviving chain is [72,85,91]</pre>
+<p>Head deletion follows exactly the same owner rule. The owner is the caller’s head field rather than a node’s next field. Assigning that owner to victim->next changes the start of the chain. For a singleton, the successor is NULL, so the new head is empty.</p>
+<pre class="diagram">Before singleton removal: head --&gt; A[72|NULL]
+Redirect owner:           head --&gt; NULL
+Release:                 free A</pre>
+<p>Searching and counting are read-only walks. Search keeps a current index and returns when the desired value first appears. Count continues to NULL. A combined function can remember the first matching index while continuing to obtain the full count.</p>
+<p>Whole-list release repeatedly saves the successor, frees the current node and advances. Clearing the caller’s head afterward prevents that variable from retaining a stale address. A clear function accepting Node **head can perform both release and owner reset inside one interface.</p>
+<h3>Trace the operation</h3>
+<pre><code class="language-text">link = address of head
+while *link != NULL and (*link).value != target: advance link to next field
+if *link == NULL: report absent and stop
+victim = *link; *link = victim.next
+if victim was drawn as tail: move that endpoint to its predecessor
+free victim; finish</code></pre>
+<div data-lab="sll-delete"></div>
+<h2 id="examples">Examples</h2>
+<h3>Delete the first matching value</h3>
+<p>The pointer-to-pointer identifies the field that owns the matching node. Redirecting that field works for the head and for interior nodes.</p>
+<div data-example="ex-1"></div>
+<h3>Insert and delete by position</h3>
+<p>Position zero accepts insertion even when the list is empty. Deleting position one removes the old head when it exists.</p>
+<div data-example="ex-2"></div>
+<h3>Find an index and count nodes</h3>
+<p>The index counts links from head. Continuing after the first match is necessary because this example also needs the total node count.</p>
+<div data-example="ex-3"></div>
+<h3>Release every node and clear the owner</h3>
+<p>destroy saves next before freeing each node. The caller clears head because passing head by value cannot clear the caller’s pointer.</p>
+<div data-example="ex-4"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Insertion at position p takes O(p+1) traversal and O(1) link work, with one new node of storage. In the worst case, reaching the final gap costs O(n). Delete-by-position and delete-by-value also take O(n) worst-case time. Once an owning link is already known, bypass and free take O(1).</p>
+<p>Search and count each need O(n) time in the general case. All these iterative routines use O(1) auxiliary pointers. The list occupies O(n) node storage. Destruction releases n allocations in O(n) time under the usual constant-cost allocation model used here.</p>
+<p>Check empty input first. Insertion at zero can succeed; deletion and search report no node. A singleton supports head deletion. A missing value must leave the sequence unchanged. A request beyond size must fail rather than silently appending. Negative positions must not be treated as zero.</p>
+<p>Deleting all copies by repeatedly searching from head can cost O(n squared). A one-pass owner walk is faster: after removal, keep the same owner field and inspect its new target. After retaining a node, advance to its next owner. Each original node is then examined at most once.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Advancing after every deletion</h3>
+<p>When removing consecutive matches, advancing immediately can skip the new node reached by the same owner. Recheck that owner after bypassing a victim. Advance only when its current node is retained.</p>
+<h3>Freeing before redirecting</h3>
+<p>Reading victim->next after free uses dead storage. Obtain or assign the successor while the victim remains alive. Then release only the detached node.</p>
+<h3>Deleting a gap</h3>
+<p>Position size is useful for insertion but contains no node. Test *link before removal so empty and end-gap requests fail safely.</p>
+<h3>Keeping a stale stored endpoint</h3>
+<p>A program that separately retains tail must replace it when removing the final node. If the list becomes empty, clear both endpoints. The fact that head still prints correctly does not prove tail is valid.</p>
+<p>An owner field remains valid only while the object containing that field remains alive. If link names a predecessor’s next member, do not free that predecessor while continuing to use link. The deletion routine frees the target of the owner, leaving the owner itself available. This distinction explains why the same owner can inspect a replacement successor safely after removal.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>For each update, draw the owner field with a label. A diagram that names only cur can hide the crucial predecessor relationship. Owner-based code makes that relationship an explicit variable.</p>
+<p>Test deletion of the head, a middle node, the tail and an absent value. Add a duplicate run and specify whether one or all matches should disappear. These cases check different promises rather than repeating the same ordinary deletion.</p>
+<p>Keep read-only tasks separate from ownership changes when that improves clarity. Counting never needs to free a node. A destruction routine should avoid printing or searching decisions that distract from the save-next, free, advance sequence.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The owner-pointer technique uses ordinary C17 pointer semantics. C passes pointers by value, so Node ** is needed to replace the caller’s head directly. free does not repair list fields or clear aliases; all live links must be updated by the program.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Interior operations become easier when you locate the field that owns the target node. Preserve the successor before release and respect position conventions. Next, turn every edge in <a href="topic:ds-reverse-linked-list">Reversing a Linked List</a>.</p>

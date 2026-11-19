@@ -1,0 +1,71 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A polynomial can have a high largest exponent but only a few nonzero terms. For example, 3x squared plus 2x plus 5 needs three meaningful contributions. A <dfn>term list</dfn> stores one node for each nonzero contribution instead of reserving a coefficient for every possible exponent.</p>
+<p>Picture each node as a card carrying a coefficient and an exponent. The coefficient tells you how much of that power exists. The exponent identifies which power of x the term belongs to. Links arrange the cards from larger powers to smaller powers, making equal powers easy to compare during addition.</p>
+<p>You will normalize input terms, add two ordered polynomials and see the idea behind multiplication. Memory ownership remains part of the mathematics: canceling a term means removing its node, and creating a result means deciding who will eventually release it.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>A Term contains coefficient, exponent and next. Exponents are nonnegative integers in these examples. The canonical representation has descending exponents, no duplicate exponents and no zero coefficients. NULL represents the zero polynomial because it has no nonzero terms.</p>
+<pre><code class="language-c">typedef struct Term {
+    int coefficient;
+    int exponent;
+    struct Term *next;
+} Term;</code></pre>
+<p>The pair (3,2) represents 3x squared, not 2x cubed. A constant such as five has exponent zero. A negative coefficient is allowed. The printed Terms: format uses coefficient/exponent pairs so the exact representation remains visible without needing special mathematical typography.</p>
+<p>add_term walks an owning link while existing exponents are larger than the requested exponent. If the exponent already exists, add coefficients. A zero combined coefficient removes that node. Otherwise allocate a new term and link it at the found gap. This function normalizes unordered input and combines repeated powers.</p>
+<p>add_poly uses two forward cursors on canonical inputs. A larger current exponent is copied to the result. Equal exponents produce one combined coefficient and advance both inputs. A result tail owner attaches each new term directly without rescanning. The inputs remain owned by their original heads, while result owns newly allocated terms.</p>
+<p>multiply forms every pair of input terms. Multiply their coefficients, add their exponents and insert the product through add_term. Equal resulting powers combine as they arrive. This is an easy implementation to understand, although repeatedly searching the result can add substantial work.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Represent P=3x squared+2x+5 and Q=-3x squared+4x as descending chains. Their first terms have equal exponent two. The coefficients sum to zero, so no exponent-two result node is created. Both cursors advance to exponent one.</p>
+<pre class="diagram">P --&gt; [3,2] --&gt; [2,1] --&gt; [5,0] --&gt; NULL
+Q --&gt; [-3,2] --&gt; [4,1] --&gt; NULL
+
+Compare exponent 2: 3 + (-3) = 0; skip
+Compare exponent 1: 2 + 4 = 6; append [6,1]
+Q ends: append remaining P term [5,0]
+
+Result --&gt; [6,1] --&gt; [5,0] --&gt; NULL</pre>
+<p>The result means 6x+5. P and Q still contain their original nodes because add_poly copies term values into a separate result. The caller destroys all three owners independently. That differs from the in-place list merge in the previous lesson, which transferred existing nodes into one owner.</p>
+<p>Normalization has its own link updates. Suppose input contains (2,0), (3,2), (-3,2), (4,1). Inserting (3,2) places it before the constant. Adding (-3,2) cancels that node, so its owner bypasses it before free. Adding (4,1) then inserts before the remaining constant.</p>
+<pre class="diagram">After first two terms: head --&gt; [3,2] --&gt; [2,0] --&gt; NULL
+Cancel exponent 2:     head ------------&gt; [2,0] --&gt; NULL
+Release [3,2]
+Insert exponent 1:     head --&gt; [4,1] --&gt; [2,0] --&gt; NULL</pre>
+<p>The canonical rules make addition a merge-like walk. At each iteration, the larger front exponent is the largest remaining power in either input. Equal fronts belong to the same power and must combine. The already-built result therefore stays descending and complete for every exponent it has passed.</p>
+<p>For multiplication, expand (x+1)(x+1). Pair the first x with x and then with one. Pair the first constant with x and then with one. The four products are x squared, x, x and one. Combining the two exponent-one products gives coefficient two.</p>
+<pre class="diagram">Input A: [1,1] --&gt; [1,0]
+Input B: [1,1] --&gt; [1,0]
+Products: (1,2), (1,1), (1,1), (1,0)
+Result:   [1,2] --&gt; [2,1] --&gt; [1,0] --&gt; NULL</pre>
+<p>The nested product loops do not change the inputs. Each call to add_term either updates one result coefficient, cancels a result node or allocates a new result node. If allocation fails partway through, the caller releases the partial result and both input chains before returning failure.</p>
+<h2 id="examples">Examples</h2>
+<h3>Add polynomials in descending exponent order</h3>
+<p>Equal exponents combine their coefficients. The x-squared terms cancel here, leaving only the linear and constant terms.</p>
+<div data-example="ex-1"></div>
+<h3>Normalize unordered and repeated terms</h3>
+<p>add_term finds the exponent position before linking. Repeated exponents merge, and a zero coefficient removes the term altogether.</p>
+<div data-example="ex-2"></div>
+<h3>Multiply terms and collect equal powers</h3>
+<p>Each pair multiplies coefficients and adds exponents. Combining the two x terms gives the familiar expansion x-squared plus 2x plus 1.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>With canonical lengths m and n, merge-style addition takes O(m+n) time. Each input cursor advances once per term, and the result tail avoids repeated scans. The output contains at most m+n nonzero terms, so output storage is O(m+n). Extra traversal pointers beyond that output take O(1) space.</p>
+<p>Normalization through repeated add_term calls can take O(t squared) time for t raw terms because each insertion may scan an increasingly long list. A sorted input could instead be built in one pass, but the small general input reader prioritizes clear handling of repeated and unordered terms.</p>
+<p>Multiplication considers m*n term pairs. If the result currently has at most k terms, each sorted add_term can take O(k), giving O(m*n*k) time for this simple method. Do not call the whole implementation O(m*n) merely because it has two visible loops. Result lookup is work too.</p>
+<p>The input reader permits at most eight terms with coefficient magnitude at most nine and exponent at most nine. Combining raw terms keeps each canonical coefficient magnitude at most 72. A product coefficient is therefore bounded by 5184, and the total contribution magnitude is also safely bounded by the raw pair products. Product exponents are at most eighteen. These small bounds keep int arithmetic safe here; unrestricted polynomials would need overflow handling.</p>
+<p>Adding zero copies the other polynomial into the independent result. Multiplying by zero produces an empty result. Complete cancellation also yields NULL. A single constant term has exponent zero and works through the same addition and multiplication rules.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Combining different powers</h3>
+<p>Three x-squared terms and four x terms cannot become seven of one power. Compare exponents first. Only equal exponents permit coefficient addition.</p>
+<h3>Adding exponents during addition</h3>
+<p>Exponent addition belongs to multiplication of powers. Polynomial addition keeps the shared exponent unchanged and combines coefficients alone.</p>
+<h3>Keeping zero nodes</h3>
+<p>A canceled term contributes nothing. Bypass and release its node so the canonical representation stays sparse and unique. A zero polynomial should print no term pairs.</p>
+<h3>Claiming linear time for a rescanning result builder</h3>
+<p>A result tail gives constant-time attachment during ordered addition. Calling sorted insertion from the beginning for each output term could make construction quadratic. Match the cost claim to the actual helper being called.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Write one coefficient/exponent pair above every mathematical term before building the chain. Keep exponent order consistent in diagrams, input descriptions and comparisons. That prevents swapping the meaning of the two integer fields.</p>
+<p>Trace equal powers, unequal powers and complete cancellation separately. Then multiply a small binomial so repeated product exponents appear. These cases test the representation rules that ordinary all-distinct terms would miss.</p>
+<p>Use independent result ownership for addition in this lesson. It keeps input polynomials available for later operations and makes failure cleanup straightforward. If you later design a destructive polynomial merge, document that ownership change rather than assuming callers will infer it from the return type.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The term programs use C17 integers and dynamic allocation. Their stated bounds keep all sums and products within int range even on the minimum conforming range. Larger coefficients or long unrestricted inputs require explicit arithmetic-range checks or a wider numerical representation.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Ordered term nodes connect sparse storage with familiar polynomial rules. Compare powers, combine like coefficients and release canceled terms. Continue with restricted access at one end in <a href="topic:ds-stack-array">Stack Using an Array</a>.</p>

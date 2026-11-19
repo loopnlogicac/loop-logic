@@ -1,0 +1,102 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Several list problems look as though they need an array of node addresses. Often, two moving pointers carry enough information instead. Think of two walkers on the same path. Their speed or their fixed separation can reveal a middle position, an endpoint distance or a repeated route.</p>
+<p>This lesson combines five techniques: middle selection, Floyd cycle detection, merging sorted chains, removing sorted duplicates and selecting a node from the end. The challenge is choosing a precise invariant for each task. Equal-looking pointer loops can have different meanings and boundary rules.</p>
+<p>Assume ordinary acyclic lists except in the cycle-detection example, where a tail link may deliberately point backward. Sorted algorithms require ascending values. Merge requires disjoint input chains. These conditions are part of correctness; a loop cannot repair a violated ownership assumption by itself.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>For middle selection, start slow=head and fast=head. While fast and fast->next exist, move slow one link and fast two links. When fast reaches an end, slow is at the middle. With this exact condition, even-length lists choose the later of the two middle nodes. Empty input returns NULL.</p>
+<p>For Floyd detection, start both pointers the same way but compare their addresses only after moving. If slow==fast after a round, a cycle exists. Reaching NULL proves the chain is acyclic. Checking equality before moving would incorrectly report a cycle at the shared starting head.</p>
+<p>For the nth node from the end, n is one-based: n=1 asks for the final node. Advance fast by n links, rejecting the request if the chain ends too soon. Then move slow and fast one link together. When fast becomes NULL, slow identifies the requested node.</p>
+<pre><code class="language-c">for (int i = 0; i &lt; n; i++) {
+    if (fast == NULL) {
+        return NULL;
+    }
+    fast = fast-&gt;next;
+}
+while (fast != NULL) {
+    slow = slow-&gt;next;
+    fast = fast-&gt;next;
+}</code></pre>
+<p>Merge compares the front values of two sorted chains. Attach the smaller current node to a result tail and advance that input. A local dummy node supplies a convenient first owning link. Once one input ends, attach the whole remaining suffix. Return dummy.next, never the address of the local dummy itself.</p>
+<p>Sorted duplicate removal keeps one current node and compares it with cur->next. Equal values mean the successor can be bypassed and freed. After deletion, stay at cur because another duplicate may now follow it. When the values differ, advance cur. Unsorted duplicate removal needs a different strategy because equal values may be separated.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>For [12,24,36,48], middle selection begins at index zero. After one round, slow is at index one and fast at index two. After another, slow is at index two while fast is NULL. The returned value is 36, the later middle. On five nodes, the same loop returns the unique third node.</p>
+<pre class="diagram">Length four:
+start:   slow=A, fast=A       A --&gt; B --&gt; C --&gt; D --&gt; NULL
+round 1: slow=B, fast=C
+round 2: slow=C, fast=NULL
+middle: C</pre>
+<p>For the second node from the end of five nodes, create a two-link lead. Fast starts its paired walk at C while slow is A. Moving them together preserves that separation. Fast reaches NULL after three paired moves, leaving slow at D. The gap is measured against the end boundary rather than against the final node itself.</p>
+<pre class="diagram">A --&gt; B --&gt; C --&gt; D --&gt; E --&gt; NULL
+slow        fast                 initial two-link lead
+          slow        fast       after two paired moves
+                slow        fast=NULL
+answer: D, the second node from the end</pre>
+<p>Floyd uses a changing relative separation. Inside a cycle of length L, fast gains one node on slow per round. Consider their positions modulo L. Adding one repeatedly must eventually produce a zero difference. Therefore they meet within at most L rounds after both enter the cycle. The non-cyclic prefix also takes only linear time to enter.</p>
+<pre class="diagram">A --&gt; B --&gt; C --&gt; D
+      ^           |
+      +-----------+
+
+slow takes one edge; fast takes two.
+Compare addresses after the moves, even when values repeat.</pre>
+<p>The cycle example takes an entry index. Minus one means no cycle. An index outside the current sequence also leaves the chain acyclic, which lets the lab accept a short sequence without requiring another form field adjustment. A valid entry redirects the tail’s next to that indexed node. The C example saves tail so it can restore tail->next=NULL before destruction.</p>
+<p>Duplicate marks do not create a cycle. Three separate nodes containing seven still form an acyclic chain if the final next is NULL. The lab’s duplicate preset makes the distinction visible: identity determines whether a route repeats, while values are ordinary payloads.</p>
+<p>For merge, take [1,3,5] and [2,3,6]. Attach 1, then 2, then the first chain’s 3 because the comparison uses &lt;=. Next attach the other 3, then 5, then the remaining suffix [6]. The result is [1,2,3,3,5,6]. The code reuses nodes rather than allocating a copied result.</p>
+<pre class="diagram">Before: A1 --&gt; A3 --&gt; A5 --&gt; NULL
+        B2 --&gt; B3 --&gt; B6 --&gt; NULL
+
+After:  A1 --&gt; B2 --&gt; A3 --&gt; B3 --&gt; A5 --&gt; B6 --&gt; NULL
+One result owner now releases all six nodes.</pre>
+<p>The merge loop preserves a useful invariant: the completed result prefix is sorted and contains the smallest already-selected input nodes. Each choice extends it with the smallest remaining front. Because the inputs are sorted, no hidden later node can be smaller than both current fronts. Attaching the final suffix therefore preserves sorted order.</p>
+<p>Removing duplicates from that merged result bypasses B3 after A3. Keep A3, redirect its next to A5, and free B3. Continue from A3 until its next has a distinct value. Each removal reduces the chain while preserving the first node of every equal run.</p>
+<pre class="diagram">Before unique: [1] --&gt; [2] --&gt; A[3] --&gt; B[3] --&gt; [5] --&gt; [6]
+After bypass:  [1] --&gt; [2] --&gt; A[3] ----------&gt; [5] --&gt; [6]
+Release B; all retained nodes keep their values.</pre>
+<h3>Trace the operation</h3>
+<pre><code class="language-text">slow = head; fast = head
+while fast != NULL and fast.next != NULL
+    slow = slow.next
+    fast = fast.next.next
+    if slow == fast: report cycle and stop
+report no cycle if fast reaches the end</code></pre>
+<div data-lab="floyd-cycle"></div>
+<h2 id="examples">Examples</h2>
+<h3>Detect a cycle by node identity</h3>
+<p>slow moves one link and fast moves two. Equal pointers after moving prove a cycle; equal stored marks alone would prove nothing.</p>
+<div data-example="ex-1"></div>
+<h3>Find the middle and second node from the end</h3>
+<p>For four nodes, middle returns the third node. A two-link lead places slow at the second node from the end when fast reaches NULL.</p>
+<div data-example="ex-2"></div>
+<h3>Merge two disjoint sorted chains</h3>
+<p>The dummy node simplifies attaching the next smallest node. Both original chains transfer ownership to the merged chain, which is freed once.</p>
+<div data-example="ex-3"></div>
+<h3>Remove adjacent duplicates from sorted input</h3>
+<p>After deleting one duplicate, cur stays in place to catch a third equal value. This algorithm needs sorted input to group duplicates.</p>
+<div data-example="ex-4"></div>
+<h3>Distinguish duplicate values from a cycle</h3>
+<p>Three equal marks live in three different nodes. The chain still ends at NULL, so Floyd correctly reports no cycle.</p>
+<div data-example="ex-5"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Middle selection takes O(n) time and O(1) extra space. The nth-from-end walk has the same bounds and rejects n&lt;1 or n larger than the length. Even-middle conventions can be changed, but the loop start and condition must change consistently with the promised result.</p>
+<p>Floyd takes O(n) time when n counts distinct reachable nodes before repetition, and O(1) auxiliary space. It does not free anything. Detection alone does not supply a safe NULL-based destruction path. The example breaks the particular tail edge it created; a general cycle-removal routine would first locate the cycle relationship.</p>
+<p>Merging lengths m and n takes O(m+n) time and O(1) auxiliary link storage. The result contains existing nodes, so do not separately destroy the old input heads afterward. Both inputs must be disjoint. If they share a suffix, selecting the same allocation through two paths can create invalid ownership or cycles.</p>
+<p>Sorted duplicate removal takes O(n) time and O(1) extra space, releasing each discarded node once. All-equal input becomes one node. Empty input stays empty. A singleton remains unchanged. An unsorted sequence such as [7,8,7] keeps both sevens under this adjacent-only algorithm, which is why sortedness is required.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Comparing values in Floyd</h3>
+<p>Equal payloads do not identify the same node. Compare slow and fast pointers. The two pointers can pass through distinct equal-valued nodes without finding a cycle.</p>
+<h3>Dereferencing fast before guarding it</h3>
+<p>Use fast!=NULL and fast->next!=NULL before a two-link move. The second check is safe only because the first check prevents reading a field through NULL.</p>
+<h3>Mixing zero-based and one-based end positions</h3>
+<p>The nth-from-end interface uses one for the final node. A lead of n-1 with the same termination condition gives the wrong result. State the convention before deriving the gap.</p>
+<h3>Destroying old merge inputs separately</h3>
+<p>Merge transfers their nodes into one result chain. Releasing through both old heads can free the same node twice. Keep one final owner and release it once.</p>
+<h3>Advancing past a run of duplicates</h3>
+<p>After bypassing one equal successor, inspect the replacement successor from the same cur. Otherwise three equal values can leave an extra duplicate behind.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Give each two-pointer technique its own invariant. Middle uses a two-to-one speed relationship. Floyd uses relative movement inside a cycle. End selection uses a fixed lead. Naming the invariant prevents copying a loop whose condition answers a different question.</p>
+<p>For sorted transformations, write the precondition beside the drawing. Check an empty chain, a singleton, duplicates and one input ending before the other. For cycle detection, include an acyclic duplicate list and a singleton self-cycle.</p>
+<p>When a routine consumes input ownership, say so in the interface explanation. A returned node pointer from middle is only a borrowed view into the existing list. A returned merged head owns nodes from both inputs. These return types look alike in C, but their lifetime responsibilities differ.</p>
+<p>The output questions include small index models so you can isolate movement arithmetic. Use the complete examples and the lab for actual node links. A model of positions helps count steps, but it does not replace allocation, pointer-identity checks or ownership reasoning in a real chain.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>These routines target C17. Pointer equality between live Node objects is appropriate for identity checks. No ordering comparison of unrelated node addresses is needed. The cycle example restores its constructed wrap edge before using the ordinary list release helper.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Pointer speeds, fixed gaps and sorted fronts each encode a different relationship. Choose the invariant before writing the loop. Next, attach mathematical meaning to nodes in <a href="topic:ds-polynomial-linked-list">Polynomials with Linked Lists</a>.</p>

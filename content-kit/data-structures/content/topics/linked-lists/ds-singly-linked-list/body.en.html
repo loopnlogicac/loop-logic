@@ -1,0 +1,82 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A <dfn>singly linked list</dfn> stores an ordered sequence in separate nodes. Each node contains a value and the address of its successor. Picture a chain of cards: you reach the next card by reading the direction on the current one. The cards do not have to lie beside one another.</p>
+<p>This representation is useful when adding near the front should not move existing values. An array front insertion shifts a suffix. A linked front insertion changes only a few relationships after allocating one node. The tradeoff appears when you want a numbered position: the chain has no direct index calculation.</p>
+<p>You will create an ordinary acyclic list, print it, insert at head and attach at tail. You will also see why keeping a tail pointer changes repeated append cost. Every allocated node remains owned by the list until destruction releases it.</p>
+<h2 id="syntax">Representation and rules</h2>
+<p>The Node type contains value and next. The head pointer identifies the first node, or NULL for an empty list. In an ordinary non-circular chain, the final node’s next is NULL. These rules make the traversal stopping condition clear.</p>
+<pre><code class="language-c">typedef struct Node {
+    int value;
+    struct Node *next;
+} Node;
+
+Node *head = NULL;</code></pre>
+<p>Printing begins with cur=head. While cur is not NULL, print cur->value and advance cur=cur->next. The traversal variable is a temporary route through the chain. Moving it does not move head, change values or transfer ownership.</p>
+<p>Prepend accepts Node **head because it may replace the caller’s first pointer. It allocates node, checks for failure, sets node->value, sets node->next=*head and finally updates *head=node. Its success result tells the caller whether the new node joined the list.</p>
+<p>The append helper also accepts an owning-link address. It walks until *head is NULL, advancing its local link address to &amp;(*head)->next each time. At the stopping point, *head names the final empty next field, or the original caller head for an empty list. Assigning through that address attaches one node in either situation.</p>
+<p>A stored tail provides another interface. It keeps the last node’s address available between operations. For a nonempty list, tail->next must be NULL. For an empty list, both head and tail are NULL. These additional state rules must remain true after every update.</p>
+<h2 id="how-it-works">Follow the memory</h2>
+<p>Create [72,85,91] by attaching values in input order. The first append allocates a node and places its address in head. The second finds the first node’s empty next field and fills it. The third does the same at the new final field. Each completed chain has one clear beginning and one clear end.</p>
+<pre class="diagram">Empty: head --&gt; NULL
+After 72: head --&gt; [72|NULL]
+After 85: head --&gt; [72|next] --&gt; [85|NULL]
+After 91: head --&gt; [72|next] --&gt; [85|next] --&gt; [91|NULL]</pre>
+<p>For insertion at head, begin by preparing a separate node containing 64. Its next must refer to the old head before head changes. Once prepared, publishing the new head makes every old node reachable through the new first node.</p>
+<pre class="diagram">Before prepend:
+head --&gt; A[72|next] --&gt; B[85|NULL]
+
+Prepare N:
+N[64|next] --&gt; A[72|next] --&gt; B[85|NULL]
+head still points at A
+
+Publish:
+head --&gt; N[64|next] --&gt; A[72|next] --&gt; B[85|NULL]</pre>
+<p>The lab uses mode zero for head insertion and mode one for tail insertion, matching the first C example. It shows a tail endpoint so you can see the last node. Its tail-insertion walk still follows the helper’s traversal: the first example does not retain a working tail pointer between calls.</p>
+<pre class="diagram">Before tail insertion:
+head --&gt; [72|next] --&gt; [85|NULL]
+new --&gt; [91|NULL]
+
+After changing the final next:
+head --&gt; [72|next] --&gt; [85|next] --&gt; [91|NULL]</pre>
+<p>In the stored-tail example, attach directly through tail->next. Then set tail=node. The first attachment has no old tail, so set head=node instead and finish by setting tail=node. The new singleton is both the first and final node.</p>
+<p>Destruction walks forward as printing does, but saves next before calling free. The saved pointer is the only safe route onward after the current object’s lifetime ends. When destruction returns, the caller must stop using its former node pointers.</p>
+<h3>Trace the operation</h3>
+<pre><code class="language-text">allocate node and set node.value
+if mode == 0: node.next = head; head = node
+    if list was empty: tail = node
+if mode == 1: walk cur from head to tail
+    node.next = NULL; link after tail or set head if empty
+    tail = node</code></pre>
+<div data-lab="sll-insert"></div>
+<h2 id="examples">Examples</h2>
+<h3>Insert a new head or tail</h3>
+<p>Mode 0 links the new node to the old head before publishing it. Mode 1 walks to the last next field and attaches the node.</p>
+<div data-example="ex-1"></div>
+<h3>Create and print an empty sequence</h3>
+<p>No node exists when the input count is zero. Both printing and destruction stop immediately at NULL.</p>
+<div data-example="ex-2"></div>
+<h3>Track a tail for repeated appends</h3>
+<p>A stored tail removes the traversal needed by append. The first insertion must set head as well as tail.</p>
+<div data-example="ex-3"></div>
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Head insertion takes O(1) time and allocates one node. Tail insertion without a retained tail takes O(n) to find the end, then O(1) to attach. Repeatedly building n nodes with that helper can take O(n squared) total time. Keeping tail makes n successive attachments O(n) overall.</p>
+<p>Printing and destruction each take Theta(n) time and O(1) extra working pointers. The list itself uses O(n) nodes, including one next pointer per value. Allocator bookkeeping and struct padding can add bytes beyond the field sizes you draw.</p>
+<p>An empty prepend and an empty append both create one first node. A singleton has next=NULL. Allocation failure must preserve the old chain. There is no array-style full state, but memory availability or an application limit can still prevent insertion.</p>
+<p>Finding index k takes O(k+1) visited nodes. A list therefore sacrifices direct random access. Local link changes are cheap once the relevant location is known; the search needed to reach that location must still appear in a complete cost claim.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Publishing head before saving the old chain</h3>
+<p>If head becomes node before node->next records the old address, you can lose every previous node. Initialize the new node’s fields before connecting it to the owner.</p>
+<h3>Assuming adjacent allocations</h3>
+<p>Adding one to a Node pointer does not mean following the next list node. Separate allocations have no array relationship. Use cur->next for list movement.</p>
+<h3>Leaving next uninitialized</h3>
+<p>A newly allocated final node needs next=NULL. An uninitialized next field can send printing or destruction into unrelated memory.</p>
+<h3>Freeing through two aliases</h3>
+<p>Two pointer variables can identify the same chain. They do not own two copies. Choose one destruction path and invalidate or stop using the other aliases afterward.</p>
+<p>Consider building four values with the scanning append helper. The walks inspect zero, one, two and three existing nodes. That is six visited nodes before counting allocation or attachment. A stored-tail builder avoids these repeated prefix visits. This difference becomes larger with longer input, even though both builders produce exactly the same printed sequence. Choose the version that fits how the list will be constructed and updated.</p>
+<h2 id="best-practices">Working habits</h2>
+<p>Name your endpoint convention before writing insert code. If only head is stored, document that append walks. If head and tail are stored, keep their empty and singleton rules together in every update. A faster operation usually brings another state obligation.</p>
+<p>Try the input counts zero, one and several. Include repeated marks to confirm that links, rather than value uniqueness, determine the sequence. While drawing a build, label each node with an identity such as A or B so equal values remain distinguishable.</p>
+<p>For a list that only grows at tail during construction, keep a tail or an owning link to the final NULL field. That turns creation into one pass. The simpler scanning helper remains useful for learning where ownership lives, but it is not the fastest bulk builder.</p>
+<h2 id="version-notes">C version notes</h2>
+<div class="callout version"><p>The list programs are compiled as C17. Their compound-literal node initialization is available from C99. malloc returns suitably aligned storage, but does not initialize fields. Each normal run releases all allocated nodes; pointer values themselves are never printed as stable output.</p></div>
+<h2 id="summary">Summary</h2>
+<p>A singly linked chain gets its order from next fields. Preserve reachability when attaching nodes and keep ownership clear when releasing them. Next, update interior positions in <a href="topic:ds-linked-list-operations">Linked List Operations</a>.</p>
