@@ -1,0 +1,75 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Different number problems often reuse the same small loop ideas. A product grows through factors, a pair of values advances through a sequence, and a working number loses one digit at a time. The challenge is to choose a state that explains what has already been completed.</p>
+<p>A <dfn>loop invariant</dfn> is a fact that remains true at a chosen point on every iteration. It helps you argue that the result is correct, rather than only recognizing a familiar program. For each problem below, connect the initialized state, the update and the stopping rule. Then test the smallest allowed input before trying a larger demonstration.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">/* Product pattern */
+result = 1;
+for (int factor = 2; factor &lt;= n; factor++) {
+    result *= factor;
+}
+/* Digit pattern */
+while (working &gt; 0) {
+    digit = working % 10;
+    working /= 10;
+}</code></pre><p>These fragments describe recurring patterns. The complete examples supply declarations, bounded inputs, output calls and the correct types for their own tasks.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>For factorial, before multiplying by factor, result holds the product of all earlier positive factors. Starting from one represents the empty product. This proves zero factorial is one without a special multiplication by zero. Unsigned long long can hold twenty factorial on every implementation with its required minimum range, but twenty-one factorial exceeds a common 64-bit range.</p>
+<p>The lesson bounds n at twenty.</p>
+<p>For Fibonacci, keep a as the next term to print and b as the following term. The update shifts the pair to b and a+b. Start from zero and one. Save the sum before replacing either operand, or the second update will use the wrong old values.</p>
+<p>A prime number is an integer at least two with no divisor other than one and itself. If n has a nontrivial divisor, one member of its factor pair is at most its square root. Test d only while <code>d &lt;= n / d</code>. This avoids overflow in d*d while expressing the same bound for positive n.</p>
+<p>A prime-range loop repeats that test for each candidate.</p>
+<p>Euclid's GCD loop replaces (a,b) with (b,a%b). Their common divisors stay the same, and the nonnegative remainder decreases below the old second value. When the second value becomes zero, the first is the GCD. For nonzero GCD, LCM is (a/GCD)*b.</p>
+<p>Divide before multiplying and widen the product. This lesson defines GCD(0,0) and LCM involving zero as zero.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Factorial with its zero case</h3>
+<p>Starting from one, the product becomes two, six, twenty-four and one hundred twenty. No multiplication is needed for n zero or one, so the same initialization gives the correct empty product. The input bound twenty prevents unsigned long long overflow.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A Fibonacci pair</h3>
+<p>The pair starts at zero and one. Each printed a is followed by a simultaneous-style pair advance using a saved next value. The eight terms end at thirteen. The bound used in the exercises keeps even the extra computed next term inside unsigned long long.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Prime check with a division bound</h3>
+<p>Twenty-nine survives candidate divisors two through five. Six would exceed the positive square-root bound expressed by n/d, so no further divisor is needed. Starting prime from n >= 2 rejects zero and one before the loop can wrongly accept them.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Primes in a small range</h3>
+<p>The outer loop tests each candidate from one through fifteen. The inner loop rejects composite values, while one is excluded by definition. The resulting primes are separated by one space. A found flag also lets the program name an empty result explicitly.</p>
+<div data-example="ex-4"></div>
+
+<h3 id="example-5">Euclid GCD and a safe LCM product</h3>
+<p>The pair changes from forty-eight/eighteen to eighteen/twelve, twelve/six and six/zero. The GCD is six. Dividing forty-eight by six before multiplying by eighteen gives LCM one hundred forty-four. The widened product avoids an unnecessary int intermediate.</p>
+<div data-example="ex-5"></div>
+
+<h3 id="example-6">A palindrome keeps its original</h3>
+<p>The reversal takes the digits from the right and builds another integer. The saved original stays 1221 while n becomes zero. Comparing the reversed result with that original gives one. The do-while also handles zero as a valid one-digit case.</p>
+<div data-example="ex-6"></div>
+
+<h3 id="example-7">Armstrong uses the actual digit count</h3>
+<p>The first digit pass counts four positions. Each digit is then multiplied into an integer power four times. The fourth-power sum equals 1634, so the output is one. A fixed cube would give the wrong answer for this four-digit candidate.</p>
+<div data-example="ex-7"></div>
+
+<h3 id="example-8">A perfect-number divisor sum</h3>
+<p>The loop checks divisors through three and adds one, two and three. Their sum equals six, so the predicate is true. The extra n > 1 guard excludes one, whose empty proper-divisor sum cannot make it perfect.</p>
+<div data-example="ex-8"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>A palindrome number equals its reversed digits. Preserve the original before division consumes a working copy. Numeric reversal ignores leading zero formatting. Zero is a palindrome under this lesson's definition.</p>
+<p>An Armstrong number equals the sum of each decimal digit raised to the number of digits. The exponent is the digit count, not always three. For 153, the sum is one cubed plus five cubed plus three cubed, which is 153. For 1634, use fourth powers.</p>
+<p>Count zero as one digit, and compute powers with bounded integer multiplication rather than floating pow.</p>
+<p>A perfect number equals the sum of its positive proper divisors, excluding itself. For six those divisors are one, two and three. One is not perfect because its proper-divisor sum is zero. The straightforward example checks through n/2; a factor-pair method can reduce work for larger bounds.</p><h3 id="complexity-check">Explain the work before increasing bounds</h3><p>Factorial and a list of n Fibonacci terms use a number of updates proportional to n. The straightforward prime check uses at most about the square root of the candidate divisor tests. Checking a whole interval repeats that cost for every candidate, so a later sieve is better when many primes are needed. The <a href="topic:c-arrays-intro">array lessons</a> provide storage tools for such improvements.</p><p>Digit extraction uses one iteration per decimal digit. Armstrong checking also performs one short power loop per digit. For the six-digit bound, each digit power is at most nine to the sixth, and the sum is at most six times that value. That bound fits the stated GCC host int.</p>
+<p>Raising the input range would require a new bound argument and possibly a wider type.</p><p>Euclid uses only a pair of working integers and repeatedly reduces the second value. The LCM result can be much larger than either input, which is why its product uses long long. Extra storage remains constant for these small number algorithms. Outputting a Fibonacci sequence does not require storing every term when only the current pair is needed.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Starting every accumulator at zero</h3>
+<p>A sum starts at zero, while a product starts at one. Multiplying a zero factorial accumulator would keep it zero forever. State the meaning of the initial state before the first iteration.</p>
+<h3 id="mistake-2">Using a cube for every Armstrong candidate</h3>
+<p>The required power is the number of decimal digits. Include a four-digit candidate to reveal the shortcut. Keep each intermediate power and the complete sum within a proven bound.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>What initial product makes zero factorial correct?</td><td>1. The product of no factors is one.</td></tr><tr><td>Why save the next Fibonacci value before replacing a?</td><td>Both old pair values are needed. Overwriting one too early loses part of the sum.</td></tr><tr><td>Why can primality testing stop at the square root?</td><td>A nontrivial factor pair has a member at most that bound. If neither factor were small, their product would exceed n.</td></tr><tr><td>What quantity stays the same in Euclid replacement?</td><td>The set of common divisors. Replacing a by its remainder preserves common divisibility.</td></tr><tr><td>Why divide before multiplying in LCM?</td><td>It reduces the intermediate product size. The equivalent formula is safer when the GCD is nonzero.</td></tr><tr><td>Which power belongs in an Armstrong test?</td><td>The number of decimal digits. Four-digit candidates require fourth powers.</td></tr><tr><td>Which divisors belong in a perfect-number sum?</td><td>Positive divisors smaller than the number. Proper divisors exclude the number being tested.</td></tr></tbody></table>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The algorithms use C17 and long long from C99. No example depends on integer overflow or a floating approximation to an exact digit power. The chosen input bounds are part of the correctness argument.</p></div>
+<h2 id="summary">Summary</h2>
+<p>An invariant explains completed work at every step. Factorial starts with an empty product of one. Next, build reusable solutions in <a href="topic:c-functions-intro">Functions in C</a>.</p>

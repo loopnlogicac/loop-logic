@@ -1,0 +1,60 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine a row of small switches, each recording whether one lab device is ready. Instead of storing a separate integer for every switch, you can store several flags in the bits of one unsigned integer. <dfn>Bitwise operators</dfn> combine or move those individual binary digits. A bit is one binary digit, either zero or one.</p>
+<p>Use unsigned operands while learning these operations. They make the representation and shift rules easier to reason about. The examples display ordinary decimal results alongside small binary diagrams. The diagram shows only the low four bits; an unsigned int normally has more bits.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">both = a &amp; b;
+either = a | b;
+different = a ^ b;
+flipped = ~a;
+left = a &lt;&lt; 1;
+right = a &gt;&gt; 1;</code></pre><pre class="diagram">a       1100  (12)
+b       1010  (10)
+a AND b 1000  ( 8)
+a OR b  1110  (14)
+a XOR b 0110  ( 6)</pre>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>AND puts a one in a result position only when both input bits are one. OR uses one when either bit is one. XOR, exclusive OR, uses one when the input bits differ. Work through the diagram one column at a time from the low bit.</p>
+<p>The decimal output then confirms the binary calculation.</p>
+<p>A <dfn>mask</dfn> is an integer whose selected bits identify positions of interest. For bit position two, counting from zero, <code>1U &lt;&lt; 2</code> makes a mask with value four. OR with that mask sets the bit. AND with the complemented mask clears the bit.</p>
+<p>XOR with the mask toggles it. AND with the original mask checks whether it is present; compare the result with zero for a normalized truth value.</p>
+<p>Complement flips every bit of the promoted operand type, not only the four bits drawn on paper. To display a four-bit complement, mask the result with 15U. Without that mask, complementing a small unsigned int produces a much larger value. The number of meaningful bits in your task is separate from the width of the C type.</p>
+<p>Unsigned left shift moves bits toward higher positions and fills low positions with zero. Unsigned right shift moves toward lower positions and fills high positions with zero. The shift count must be nonnegative and smaller than the width of the promoted left operand. A count equal to that width is invalid, even if you expect the result to be zero.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Combine two bit patterns</h3>
+<p>The low-bit diagram predicts eight for AND, fourteen for OR and six for XOR. Check each output by lining up the two binary operands. The operators act on matching positions; they do not combine the decimal digits twelve and ten.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Set, clear, toggle and test</h3>
+<p>Starting from two, setting bit two gives six. Clearing the bit represented by two leaves four. Toggling bit two turns it off and leaves zero. The final check is false.</p>
+<p>Following each stored update explains why the flag disappears.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Limit complement to four bits</h3>
+<p>Ten has low bits 1010. Complementing and retaining four positions gives 0101, or five. A left shift gives twenty and a right shift gives five. All shift counts are one, safely below the unsigned int width.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Parity and a distinct-object XOR swap</h3>
+<p>The low bit of five is one, indicating odd parity. Three separate XOR assignments exchange a and b. The objects are distinct, and each update completes before the next begins. This demonstrates the identity; a temporary variable would communicate the swap more directly.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>Do not shift negative signed values as a shortcut for multiplication or division. In C17, left shifting a negative signed value is undefined, and right shifting a negative signed value is implementation-defined. Signed left shifts of nonnegative values also have representability restrictions. Use unsigned values and bounds that suit the intended bit operation.</p>
+<p>The low bit identifies parity for a nonnegative unsigned number: <code>n &amp; 1U</code> is zero for even values and one for odd values. Parenthesize a bitwise test before comparing it, because equality has higher precedence than bitwise AND. The intended test is <code>(flags &amp; mask) != 0U</code>.</p>
+<p>XOR can swap two distinct integer objects using three statements. The identity works because XORing a value with the same mask twice restores it. However, using the same object for both names would destroy the value. A temporary-variable swap is easier to read and is usually the better choice in ordinary code.</p><h3 id="mask-invariants">Reason about unchanged positions</h3><p>A useful check for setting a bit is that every other position stays unchanged. OR with a one-bit mask has zeroes elsewhere, so each unrelated input bit OR zero keeps its old value. Clearing uses ones elsewhere in the complemented mask, so those positions survive AND. Toggling uses zeroes elsewhere, which also preserve the old bits under XOR.</p><p>These statements are stronger than checking one decimal result. Draw the before and after rows for zero, an already-set bit, and all low bits set. The same position rule explains all three. If two unrelated positions change, inspect the mask rather than the decimal output format.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Using logical AND for a mask</h3>
+<p>Logical AND asks whether both whole operands are nonzero. It produces only zero or one and cannot preserve the selected bit pattern. Use a single ampersand for bit intersection.</p>
+<h3 id="mistake-2">Forgetting integer promotion</h3>
+<p>An unsigned char operand can promote to int before complement or shift. Do not assume every operation stays eight bits wide. Choose an unsigned calculation type and mask the intended low bits explicitly.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>Which operation sets selected bits?</td><td>OR with the mask. A one in the mask forces an OR result bit to one.</td></tr><tr><td>Which operation clears a selected bit?</td><td>AND with the complemented mask. Complement puts a zero at the selected position.</td></tr><tr><td>What does XOR with a one-bit mask do?</td><td>Toggle that bit. A differing mask bit reverses the input bit.</td></tr><tr><td>Which type is preferable for beginner bit shifts?</td><td>unsigned int. Unsigned shifts have clearer bit-filling and arithmetic rules.</td></tr><tr><td>Is shifting by the full operand width valid?</td><td>No. The count must be strictly less than the promoted type width.</td></tr><tr><td>What does ~ flip?</td><td>Every bit of the promoted operand type. An explicit low-bit mask limits the displayed result.</td></tr><tr><td>Why is XOR swapping the same object twice unsafe?</td><td>The first self-XOR clears it. The identity requires two distinct objects with their values preserved through the sequence.</td></tr></tbody></table>
+
+<h3 id="bit-numbering">Name a position before making its mask</h3><p>Number the least significant bit as position zero. Its value is one. Position one has value two, position two has value four, and position three has value eight. A mask for position three is therefore eight, rather than the number three.</p>
+<p>Confusing a position with its mask often changes several unintended bits.</p><p>For a value with low bits 1010, checking position one gives a nonzero intersection of value two. That result says the bit is present, but it is not normalized to one. Comparing the intersection with zero produces an int flag of one. Keep the raw mask result when you need bits; normalize it when you need a yes-or-no answer.</p>
+<p>The two forms serve different purposes even though both can act as a true condition.</p><p>When serializing a flag field, define its bit positions as part of the data format. Do not assume a C object's byte layout is automatically a portable external format.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>All six bitwise operators exist in C89. These examples use C17 and hexadecimal or decimal masks; binary 0b literals become standard in C23. C17 negative signed right shifts remain implementation-defined.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Bitwise operators combine integer bit positions. OR sets, AND with complement clears, and XOR toggles. Continue with <a href="topic:c-assignment-operators">Assignment Operators</a>.</p>

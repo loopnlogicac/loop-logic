@@ -1,0 +1,75 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine filling a marks-sheet row: the values are ready, but you still need headings, spacing and decimal places. <dfn>printf</dfn> writes that formatted report. Its format string mixes ordinary text with places for values. You control how a roll number or CGPA looks without changing what the variable stores.</p>
+<p>Think of a marks-sheet row: the data values are separate from the printed layout. You might store a double value of 3.75 but display it with two fractional digits in one report and more digits in a diagnostic trace. Formatting controls presentation rather than changing the stored object.</p>
+<p>Include stdio.h so the compiler can check the declared interface. Use literal format strings in beginner code, because warning-enabled compilers can then detect many type and argument-count mistakes before the program runs.</p>
+
+<p>A <dfn>pointer</dfn> is a value referring to an object or other permitted target. See <a href="topic:c-pointers-intro">Introduction to Pointers</a>. For string output, it identifies the character data to read until the null terminator.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>The first argument supplies the format string. Each ordinary conversion consumes a corresponding later argument in order. The special sequence %% emits a percent sign without consuming a value.</p>
+<pre><code class="language-c">printf("Roll=%d CGPA=%.2f\n", roll, cgpa);
+/* General conversion: %[flags][width][.precision][length]specifier */</code></pre>
+<table class="ref"><caption>Common output conversions</caption><thead><tr><th scope="col">Conversion</th><th scope="col">Argument meaning</th><th scope="col">Example use</th></tr></thead><tbody><tr><td>%d</td><td>int, signed decimal</td><td>Whole-number marks</td></tr><tr><td>%u</td><td>unsigned int, decimal</td><td>A nonnegative count</td></tr><tr><td>%ld / %lld</td><td>long / long long</td><td>Larger integer values</td></tr><tr><td>%f</td><td>double</td><td>A decimal measurement</td></tr><tr><td>%c</td><td>int holding a character code</td><td>A grade character</td></tr><tr><td>%s</td><td>A pointer to terminated character data</td><td>A room label</td></tr><tr><td>%zu</td><td>size_t</td><td>An object size</td></tr></tbody></table>
+<p>A <dfn>conversion specifier</dfn> is the final letter selecting the conversion. The optional pieces before it refine width, precision, flags or length. A detailed type-based table appears in <a href="topic:c-format-specifiers">Format Specifiers Reference</a>.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>printf scans the format string from left to right. It copies ordinary characters, interprets each conversion, obtains the next matching argument and writes the resulting text. The format does not dynamically convert any arbitrary supplied type into the expected one.</p>
+<p>In the student-row example, %d consumes roll and %.2f consumes cgpa. Supplying the values in the opposite order would be a type mismatch rather than an automatic rearrangement. The compiler can warn because it sees a constant format string and the argument expressions.</p>
+<p>A <dfn>field width</dfn> is a minimum number of output characters for the field. %5d pads a short integer on the left, while %-5d pads on the right. A value needing more than five characters is not truncated to five.</p>
+<table class="ref"><caption>Read the flag example</caption><thead><tr><th scope="col">Format</th><th scope="col">Effect for 7</th></tr></thead><tbody><tr><td>%5d</td><td>Four spaces before 7</td></tr><tr><td>%-5d</td><td>Four spaces after 7</td></tr><tr><td>%05d</td><td>00007</td></tr><tr><td>%+d</td><td>+7</td></tr></tbody></table>
+<p>The vertical bars in the example are literal text marking the field boundaries. They make otherwise invisible padding easy to inspect in the real output. A newline appears only where the format requests one. Printf does not append one automatically.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">A labeled record</h3>
+<p>%d consumes the int, and %.2f formats the double with two digits after the decimal point.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Widths and flags</h3>
+<p>The vertical bars reveal padding: right alignment, left alignment, leading zeroes and an explicit plus sign.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Count the characters written</h3>
+<p>Lab plus its newline is four characters, so the second line reports Count=4.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Literal percent and character output</h3>
+<p>%% consumes no argument. Putchar writes a character and puts appends a newline. Character literals avoid assuming a numeric character encoding.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="precision">Precision depends on the conversion</h3>
+<p>For %f, precision gives the number of digits after the decimal point. %.2f therefore formats a value to two fractional digits, rounding the displayed representation as required. It does not change the double object or make binary floating arithmetic exact.</p>
+<p>For an integer conversion, precision has a different role: it sets a minimum digit count rather than fractional places. For %s, precision can limit the number of characters written from a string. Consult the conversion's rule rather than assuming a dot always means decimal places.</p>
+<h3 id="return-value">The output call also returns a result</h3>
+<p>On success, printf returns the number of characters written. The count includes spaces, punctuation and newline characters, not only visible digits. The Lab example writes three letters and one newline, so its returned count is four.</p>
+<p>A negative return value signals an output or encoding error. In a real reporting tool, checking that value can help detect failure to write a result. In these small terminal examples the successful result is captured and printed by a separate call so you can observe the count directly.</p>
+<p>The return value belongs to one call, not the whole output history. The practice task counting a Roll line must not include the earlier Input prompt in its count. This is the same separation between a function result and emitted text that you saw with main's return status.</p>
+<h3 id="other-output-functions">When puts or putchar fits</h3>
+<p>puts writes a string and appends a newline. Use it for a plain message when you do not need format conversions. A percent sign in a string passed to puts has no formatting role.</p>
+<p>putchar writes one character supplied as an int value representing an unsigned char value, and returns the written character or EOF on error. A <dfn>character literal</dfn> such as 'A' is useful here because it avoids guessing an encoding-specific number. The final normal example uses putchar for a character and a separate newline.</p>
+<p>These functions are not interchangeable in return-value questions. puts returns a nonnegative value on success, not a guaranteed character count like printf. Choose a function by its contract, then reason about its result using that function's own rules.</p>
+
+
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>For the character-count exercise, draw a box around exactly one printf call. Count the letters, punctuation, digits and newline written by that call. The earlier input prompt belongs to another call, so it is excluded from this return value. The number itself comes from <a href="topic:c-scanf">scanf</a>, whose formats describe input destinations.</p>
+<p>A checked read with <a href="topic:c-if-statement">if</a> prevents formatting an unassigned value. Now change the roll from one digit to three digits and predict the new count. A field width may keep the count steady until the roll needs more characters than the width.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="percent-literal">Trying to print a percent with one percent sign</h3><p>A lone percent begins a conversion, so write %% when the message needs a literal percent. It consumes no argument. Adding an unused argument does not repair an invalid format sequence.</p>
+<h3 id="width-truncation">Treating width as a maximum</h3><p>%3d can print four digits when the value requires them. Width pads short results rather than clipping long numbers. If a task requires a bounded roll, validate the range independently from the output format.</p>
+
+<h3 id="diagnostic-5">Mistake: too few format arguments</h3>
+<p>The second %d has no matching argument, so the compiler warns. Running the call would have undefined behavior.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Match each conversion against the actual promoted argument type.</li><li>Use literal format strings and keep compiler warnings enabled.</li><li>Choose width and precision separately.</li><li>Use %% for a percent and a newline for each completed report line.</li><li>Use puts for a plain line when formatting is unnecessary.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>printf, puts and putchar predate C99. C99 added length modifiers such as z for size_t and ll for long long. In the C17 baseline, float is promoted to double in printf calls, and %lf is equivalent to %f for output. Input rules differ.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>printf converts matching typed arguments into controlled text and returns a count of characters written. Width, precision and flags shape the report without changing the stored data. Next, receive values safely in <a href="topic:c-scanf">Input with scanf</a>.</p>

@@ -1,0 +1,47 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A lab entry rule may require both a valid roll and enough attendance. Another rule may allow either of two room numbers. <dfn>Logical operators</dfn> let you combine questions. Logical AND, written <code>&amp;&amp;</code>, requires both sides.</p>
+<p>Logical OR, written <code>||</code>, requires at least one side. Logical NOT, written <code>!</code>, reverses a truth value.</p>
+<p>C treats scalar zero as false and a nonzero scalar as true. The logical result is still exactly int zero or one. Thus combining two numbers does not preserve their magnitudes. Logical operators answer yes-or-no questions; arithmetic operators calculate quantities.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">valid = mark &gt;= 0 &amp;&amp; mark &lt;= 100;
+choice = room == 201 || room == 202;
+missing = !present;</code></pre><table class="ref"><caption>Logical truth table</caption><thead><tr><th>A</th><th>B</th><th>A &amp;&amp; B</th><th>A || B</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>0</td><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>0</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>1</td><td>1</td></tr></tbody></table>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>Start by evaluating the left operand. For AND, a false left operand already makes the whole answer false. C skips the right operand. For OR, a true left operand already makes the whole answer true, so C skips the right operand.</p>
+<p>This behavior is <dfn>short-circuit evaluation</dfn>. The left evaluation is sequenced before the right evaluation when the right side is needed.</p>
+<p>Use that order to guard a dangerous operation. In <code>divisor != 0 &amp;&amp; total / divisor &gt; 2</code>, the first question prevents division by zero. Reversing the operands loses the protection. A guard must come before the operation it protects, not afterward on the same line.</p>
+<p>NOT binds more tightly than comparisons and AND. The expression <code>!marks == 40</code> compares the normalized result of NOT with forty. To negate a comparison, write <code>!(marks == 40)</code>, or use <code>marks != 40</code>. AND groups more tightly than OR; parentheses make a mixed attendance rule easier to read.</p>
+<p>You can trace short-circuiting with a separate counter increment on the right. If the left side decides the answer, the counter never changes. This is useful for understanding execution, but avoid burying important work in conditions. A condition is easiest to review when it mostly asks questions.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Check a marks interval</h3>
+<p>Both comparisons are true, so AND produces one. A mark below zero or above one hundred would fail one side. The expression describes a closed interval without using a mathematical chained comparison.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Skip an unnecessary update</h3>
+<p>The left zero decides the false result. C never evaluates the prefix increment on the right. Both printed fields are zero. This demonstrates skipped execution rather than an increment whose result was discarded.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Guard a division</h3>
+<p>Count is zero, so the first comparison fails. The division is skipped completely, leaving a safe result of zero. Switching the two operands would attempt the division before its guard.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>Logical AND is different from bitwise AND. One ampersand combines integer bits and evaluates both operands; two ampersands combine truth values and may skip one operand. Likewise, one vertical bar is bitwise OR and two are logical OR. Their precedence groups also differ.</p>
+<p>For a range, join the lower and upper comparisons with AND. For alternatives, repeat the entire comparison on each side of OR. Writing <code>room == 201 || 202</code> is always true because the literal 202 is nonzero. The computer does not fill in the missing comparison from English context.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Forgetting to repeat the comparison</h3>
+<p>Write <code>room == 201 || room == 202</code>. A bare second room number is treated as true, so it admits every room.</p>
+<h3 id="mistake-2">Putting the safety check second</h3>
+<p>Division happens too early in <code>total / count &gt; 2 &amp;&amp; count != 0</code>. Check count first. Parentheses around the existing operands do not change that order.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>When does logical AND skip its right operand?</td><td>When the left operand is false. A false left side already fixes the result at zero.</td></tr><tr><td>When does logical OR skip its right operand?</td><td>When the left operand is true. A true left side already makes the result one.</td></tr><tr><td>Which value does !(-5) produce?</td><td>0. Negative five is nonzero and therefore true; NOT reverses it.</td></tr><tr><td>Which binds more tightly: ! or &amp;&amp;?</td><td>!. NOT is unary and has higher precedence.</td></tr><tr><td>Which expression safely guards division by count?</td><td>count != 0 &amp;&amp; total / count &gt; 2. AND checks the guard first and can skip division.</td></tr><tr><td>Why is room == 201 || 202 always true?</td><td>The bare nonzero 202 is true. Each side must contain the full intended question.</td></tr><tr><td>What distinguishes &amp; from &amp;&amp;?</td><td>&amp; works on bits and does not short-circuit. The bitwise and logical operations have different meanings.</td></tr></tbody></table>
+
+<h3 id="guard-order-trace">Trace the guard before the guarded action</h3><table class="ref"><thead><tr><th>Count</th><th>count != 0</th><th>Division evaluated?</th><th>Reason</th></tr></thead><tbody><tr><td>0</td><td>false</td><td>No</td><td>AND is already false</td></tr><tr><td>2</td><td>true</td><td>Yes</td><td>The second question is needed</td></tr><tr><td>5</td><td>true</td><td>Yes</td><td>The quotient determines the final answer</td></tr></tbody></table><p>The order can protect more than arithmetic. Later array lessons use a bounds check before accessing an element. The same reasoning applies: the left condition must establish that the right operation is valid. If a required action must always happen, do not hide it in an operand that short-circuiting may skip.</p>
+<p>Perform it in a separate statement and name its result before combining the truth questions.</p>
+<p>For a room alternative, test an allowed first room, an allowed second room, and a room in neither category. For an AND rule, test each requirement failing independently. These cases distinguish a correct combination from an expression that happens to accept one ordinary example.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>Logical operators and their short-circuit rules apply throughout C89 to C23. C17 needs no Boolean header for integer truth expressions. stdbool.h can provide more readable flag declarations.</p></div>
+<h2 id="summary">Summary</h2>
+<p>AND requires both questions to be true. OR accepts at least one true question. Continue with <a href="topic:c-bitwise-operators">Bitwise Operators</a>.</p>

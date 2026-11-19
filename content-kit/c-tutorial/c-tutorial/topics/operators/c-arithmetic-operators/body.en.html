@@ -1,0 +1,51 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Suppose thirteen students need transport, with five seats in each row. Division tells you how many complete rows are filled; remainder tells you how many students remain. <dfn>Arithmetic operators</dfn> express calculations such as these. C provides addition, subtraction, multiplication, division and integer remainder.</p>
+<p>The symbols look familiar, but the operand types control the answer. Integer division keeps a whole-number quotient. Floating division can keep a fraction. You should decide which meaning the task needs before writing the expression.</p>
+<p>A double variable on the left cannot restore a fraction already lost by integer division.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">sum = a + b;
+difference = a - b;
+product = a * b;
+quotient = a / b;
+remainder = a % b;</code></pre><p>Percent is the remainder operator in an expression. Inside a printf format it begins a conversion instead. The multiplication sign is a star, not the letter x.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>For integers in C17, division truncates toward zero. Thus <code>13 / 5</code> gives 2 and <code>-13 / 5</code> gives -2. Remainder fits the identity <code>a == (a / b) * b + a % b</code> whenever the quotient is representable. For negative thirteen, the identity becomes negative thirteen equals negative two times five plus negative three.</p>
+<p>A nonzero remainder has the same sign as the dividend, the value before percent. Changing the divisor's sign changes the quotient's sign, but not that remainder sign. Try all four sign combinations on paper. You will see that C remainder is not always the nonnegative modulo operation used in mathematics.</p>
+<p>The percent operator accepts integer operands only. For a floating remainder, include math.h and use <code>fmod</code>. A function is a named operation; this one returns a floating remainder with the dividend's sign. On many Unix toolchains you link the mathematics library with <code>-lm</code>.</p>
+<p>The floating example compares fmod with ordinary integer percent so their separate types remain visible.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Complete rows and remaining students</h3>
+<p>Thirteen divided by five fills two complete groups. Three students remain because two times five plus three is thirteen. The quotient is useful for complete rows; the remainder describes the unfinished row. Both operands are int, so no fractional quotient is produced.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Negative quotients and remainders</h3>
+<p>Both quotients are negative two, but the remainders differ. Negative thirteen leaves negative three; positive thirteen leaves positive three. The dividend controls the remainder sign. Substituting each pair into the quotient-remainder identity verifies the result without guessing a sign rule.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Keep a fractional average</h3>
+<p>The first division computes two. The second converts total to double before dividing, producing 2.60 in the report. Two decimal places describe output formatting. They do not force the first integer division to preserve its missing fraction.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Remainder for a measured quantity</h3>
+<p>fmod removes three whole multiples of two from seven and a half, leaving one and a half. This is a library function for double operands, not an overloaded percent operator. The source includes math.h and the build links with the mathematics library.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>A zero divisor is invalid for integer division and remainder. The signed minimum divided by negative one is another dangerous case when the positive result cannot fit. Signed overflow is undefined behavior: C promises no resulting wrapped value. Bound inputs before the calculation, and choose a suitable type for intermediate products.</p>
+<p>For a marks average, compare <code>(double)total / count</code> with <code>(double)(total / count)</code>. The first changes an operand before division; the second converts a whole quotient afterward. See <a href="topic:c-type-conversion">casting</a> for the conversion rules. Keep price calculations in whole small units when exact integer amounts are sufficient.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Using percent with a double</h3>
+<p>An expression such as <code>5.5 % 2.0</code> violates the operand rule. Use fmod for floating operands. Converting both operands to int would change the problem by discarding their fractions.</p>
+<h3 id="mistake-2">Widening only the destination</h3>
+<p>A long long destination does not force an int multiplication to use long long. Convert an operand first, then check that the wider product fits. The important type is the type at the operation itself.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>What is the type rule for the % operator?</td><td>Both operands must have integer type. Remainder is an integer operator; fmod is the floating alternative.</td></tr><tr><td>In C17, which direction does -13 / 5 truncate?</td><td>Toward zero. The quotient is -2.</td></tr><tr><td>Which sign does a nonzero integer remainder have?</td><td>The dividend sign. The quotient-remainder identity determines that sign with truncation toward zero.</td></tr><tr><td>Which expression retains 13 divided by 5 as a fractional value?</td><td>(double)13 / 5. Changing an operand makes the division floating-point.</td></tr><tr><td>Which library function gives a double remainder?</td><td>fmod. fmod is declared in math.h.</td></tr><tr><td>What must you do before integer division by a variable?</td><td>Ensure the divisor is nonzero and the quotient fits. Zero division and an unrepresentable signed quotient are invalid.</td></tr><tr><td>What does ordinary signed integer overflow guarantee?</td><td>No result is prescribed by C. Its behavior is undefined, even if one machine appears to wrap.</td></tr></tbody></table>
+
+<h3 id="row-rounding">When a remainder changes the final task</h3><p>The transport task asks for complete rows, but a booking task may ask for enough rows to seat everyone. For thirteen students and five seats, two complete rows are insufficient. Add one extra row when the remainder is nonzero. For zero students, no extra row is needed.</p>
+<p>This distinction comes from the task's meaning, not a different division operator. State whether the required answer is a quotient, a remainder, or a rounded-up capacity before writing code.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>C99 specified truncation toward zero for signed integer division. The examples use that rule in C17. Earlier C editions allowed more variation for negative quotients; do not generalize an old textbook remainder table.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Integer division truncates toward zero. A nonzero remainder follows the dividend sign. Continue with <a href="topic:c-increment-decrement">Increment and Decrement Operators</a>.</p>

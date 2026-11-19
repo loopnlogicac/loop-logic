@@ -1,0 +1,73 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A marks sheet uses different kinds of entries: whole marks, a grade letter and a fractional CGPA. C gives you different <dfn>data types</dfn> for those jobs. A type describes which values fit and which operations apply. Choose it from the meaning and range of your data before choosing how to print it.</p>
+<p>A marks sheet stores whole-number marks and may also show a fractional average. C distinguishes integer arithmetic from floating-point arithmetic. Using a floating type does not automatically make every earlier operation floating-point. The operand types still matter.</p>
+<p>This lesson measures sizes on GCC on 64-bit Linux. A typical 64-bit computer is a helpful example, not a replacement for the C standard's minimum guarantees. Code should state when a displayed size is specific to its implementation.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>The common basic choices here are char for a character value, int for a bounded whole number, float or double for approximate real arithmetic, and _Bool for a Boolean truth value. In C17, stdbool.h provides bool as a convenient macro name for _Bool.</p>
+<pre><code class="language-c">char grade = 'A';
+int marks = 85;
+double cgpa = 3.75;
+/* bool ready = true; needs stdbool.h in C17. */</code></pre>
+<table class="ref"><caption>Typical GCC 64-bit Linux values, not universal sizes</caption><thead><tr><th scope="col">Type</th><th scope="col">Typical bytes</th><th scope="col">Range or precision picture</th></tr></thead><tbody><tr><td>char</td><td>1</td><td>Often -128 to 127 or 0 to 255, depending on signedness</td></tr><tr><td>int</td><td>4</td><td>Often -2147483648 to 2147483647</td></tr><tr><td>float</td><td>4</td><td>Commonly about 6 reliable decimal digits</td></tr><tr><td>double</td><td>8</td><td>Commonly about 15 reliable decimal digits</td></tr><tr><td>_Bool</td><td>1</td><td>Stored values 0 and 1</td></tr></tbody></table>
+<p>A <dfn>byte</dfn> in C is the unit measured by sizeof, and sizeof(char) is always one. CHAR_BIT from limits.h gives the number of bits per byte, which is at least eight. Four C bytes therefore mean thirty-two bits only on an implementation with eight-bit bytes.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>The first example keeps each field in a suitable type and passes matching arguments to printf. %c prints the grade as a character, %d prints the integer and %.2f formats the double to two fractional digits. Formatting changes the displayed text rather than the stored value.</p>
+<p>The sizeof operator yields a size_t value, an unsigned integer type used for object sizes. Use %zu to print it instead of assuming size_t is int. The second example reports the actual sizes for this build and can differ on another target.</p>
+<p>Boolean conversion maps scalar zero to false and nonzero to true. The example initializes bool ready from 7 and prints 1, showing normalization rather than preservation of seven. A Boolean flag is suitable for a yes-or-no state, not for storing an arbitrary count.</p>
+<ol><li>Decide whether the value is a character, count, measurement or flag.</li><li>Choose a type with the needed range and precision.</li><li>Initialize it with an appropriate value.</li><li>Use a matching output conversion.</li><li>Inspect limits or sizeof when a platform assumption matters.</li></ol>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Different types in one record</h3>
+<p>The grade is one character, marks an integer and CGPA a decimal approximation. Formats match the promoted arguments.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Measure this implementation</h3>
+<p>These sizes are bytes on this compiler, not universal guarantees. Char is always one C byte, whose bit count is CHAR_BIT.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Boolean normalization</h3>
+<p>C17 bool from stdbool.h names _Bool. Assigning a nonzero scalar produces the stored value 1.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">Inspect decimal approximation</h3>
+<p>On this IEEE binary64 implementation the result prints 0.30000000000000004 because decimal tenths are not exactly representable.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="range-and-precision">Range and precision answer different questions</h3>
+<p><dfn>Range</dfn> describes how small or large a representable value can be. <dfn>Precision</dfn> describes how finely distinct values are represented. A floating type can cover very large magnitudes while losing the ability to distinguish neighboring large integers.</p>
+<p>Within its range, an integer type represents whole numbers exactly. A binary floating type represents a finite set of fractions and exponents, so many decimal fractions require approximation. A decimal value looking short on paper does not imply an exact binary representation.</p>
+<p>The last normal example prints 0.1 + 0.2 with seventeen fractional digits. On the recorded binary64 implementation it reveals 0.30000000000000004. This is not a broken addition instruction: the decimal constants and the result are represented using nearby binary values.</p>
+<p>Printing two decimal places can hide that approximation in the displayed result, but it does not make the stored arithmetic exact. For whole taka or small fixed-unit counts, an integer model may be more appropriate. For measured quantities, choose a suitable floating type and define the tolerance the task permits.</p>
+<h3 id="character-and-flag">Characters and Boolean flags are not counts</h3>
+<p>char is an integer type used to store character codes, but plain char can be signed or unsigned depending on the implementation. Do not assume a byte read as char is always nonnegative. When numeric byte ranges matter, later lessons introduce explicitly unsigned or fixed-width choices.</p>
+<p>In printf calls, float undergoes promotion to double, and small integer types generally undergo integer promotion. That is why a float value can be printed with %f and a Boolean can be printed as an integer with %d. Input functions have different destination rules, covered in <a href="topic:c-scanf">Input with scanf</a>.</p>
+<p>An <dfn>integer promotion</dfn> converts smaller integer types to int when its range is sufficient, otherwise to unsigned int. See <a href="topic:c-type-conversion">Type Conversion and Casting</a>. Promotion rules depend on types, not on whether you wrote a short variable name.</p>
+
+
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>The typed student row combines three input jobs. Read the roll as an integer, the grade as a character, and the CGPA as a double. <a href="topic:c-scanf">scanf</a> needs the address of each variable and a matching conversion. Its return count tells whether all three values arrived.</p>
+<p>A later <a href="topic:c-if-statement">if</a> handles a failed read. A successful conversion still does not prove that a CGPA belongs to the intended academic range. Type range and task range answer different questions. For a Boolean exercise, ask whether you need to remember a number or only whether it was zero.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="assuming-fixed-size">Assuming every int is four bytes</h3><p>Use the table as a labeled example, not an absolute language rule. Consult limits.h for integer ranges and sizeof for storage size. Portable decisions follow the required value range rather than an operating-system marketing label.</p>
+<h3 id="format-type">Choosing output by appearance alone</h3><p>A double holding 3.0 still requires a floating output conversion. It is not an int merely because the value has no visible fraction. A format mismatch can be undefined behavior. Match the expression's type before deciding how many digits to display.</p>
+
+<h3 id="diagnostic-5">Mistake: format and type disagree</h3>
+<p>The compiler warns that %d expects int, while cgpa supplies double. A format mismatch can cause undefined behavior if run.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Prefer int for bounded whole-number tasks and double for ordinary decimal measurements.</li><li>Use size_t with %zu when working with sizes.</li><li>Label observed sizes as implementation facts.</li><li>Keep flags separate from counts.</li><li>Do not confuse display precision with exact stored arithmetic.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>_Bool and stdbool.h were added in C99. In C17, bool, true and false are header macros. In C23 they are language keywords. The course's Boolean example uses the C17 header form.</p>
+<p>Basic integer and floating type sizes remain implementation-dependent.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Choose a type by the task's range, precision and meaning, then match its I/O conversions. Size and numeric representation can depend on the implementation. Next, refine ranges and inspect limits in <a href="topic:c-type-modifiers">Type Modifiers and limits.h</a>.</p>

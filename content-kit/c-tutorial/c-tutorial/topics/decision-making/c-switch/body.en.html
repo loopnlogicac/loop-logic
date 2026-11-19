@@ -1,0 +1,54 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A small menu asks you to type one for a balance and two for help. These choices are exact values, rather than intervals such as marks at least forty. A <dfn>switch statement</dfn> selects a starting label by matching an integer expression with a case constant.</p>
+<p>Think of a row of labeled starting points. Switch jumps to the matching label, then ordinary execution continues from there. A break tells it to leave the switch. Without that break, control can continue through later labels.</p>
+<p>Understanding both selection and continued execution is essential to reading switch correctly.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">switch (choice) {
+    case 1:
+        puts("Balance");
+        break;
+    case 2:
+        puts("Help");
+        break;
+    default:
+        puts("Unknown choice");
+        break;
+}</code></pre><p>The controlling expression has integer type, including character and enum types after the appropriate promotions. Each case needs an integer constant expression. A variable value is not a valid case label.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>Switch evaluates its controlling expression once, then looks for a matching case. If none matches, a default label provides the optional fallback. If there is no match and no default, control skips the body. Default may appear at different source positions, but placing it last usually makes the menu easier to read.</p>
+<p>Case labels do not end preceding cases. After a matching label, statements run until a break, return or another control transfer changes the path. Reaching another case label during ordinary execution does not perform a new comparison. This continued execution is <dfn>fall-through</dfn>.</p>
+<p>Intentional fall-through is useful for sharing one action between labels. Put cases one and two together before a common statement when both menu options mean the same thing. Accidental fall-through happens when an independent case forgets its break and unexpectedly performs the next case's work. Mark intentional behavior clearly and keep unrelated actions separated.</p>
+<p>For a calculator, a character such as '+' is a valid integer constant expression. Switch on the operation character and perform the matching arithmetic. Division still needs a zero-divisor check inside its case. Switch selects an operation; it does not validate the operation's operands for you.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">An exact menu selection</h3>
+<p>Choice two starts at case two, prints Help and leaves through break. The source order of case one does not make its message print first. Switch selection jumps directly to the matching label.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Two labels share one action</h3>
+<p>Cases six and seven intentionally share the same statement. There is no work between their labels to fall through accidentally. Other values select the default class plan. The labels describe this lesson scheduling example, rather than a universal calendar policy.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">A small character calculator</h3>
+<p>Input selects subtraction with a character case label. The code subtracts four from nine and prints five. Each arithmetic case ends with break, and the division case checks zero separately. Unknown operation characters reach the default message.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>Use an else-if ladder for ranges, floating comparisons, or unrelated Boolean questions. Switch fits exact integer choices. Strings cannot be used as switch values in C, and a C17 const int object is not generally an integer constant expression for a case label. An enum constant is suitable when it fits the required case rules.</p>
+<p>Duplicate case values are invalid even if spelled in different bases. A case labeled ten and another labeled hexadecimal 0xA refer to the same integer value. A switch can contain at most one default. If a case needs local declarations in C17, put those statements inside a braced block after the label.</p>
+<p>The block also keeps temporary names local to that case.</p>
+<p>A break leaves the nearest enclosing loop or switch. If a switch sits inside a loop, its break normally leaves only the switch, so the loop may continue. The <a href="topic:c-break-continue">break and continue lesson</a> traces that nesting separately.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Expecting labels to stop execution</h3>
+<p>Labels name entry points. Add break after an independent action to leave the switch. Trace a middle case and observe whether it accidentally reaches later case actions.</p>
+<h3 id="mistake-2">Using a runtime variable as a case constant</h3>
+<p>A case value must meet integer constant-expression rules in C17. Use a literal, suitable enum constant, or a macro that expands to such an expression. Use if for a changing comparison value.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>What kind of controlling expression does C switch accept?</td><td>Integer type. Character and enum values fit through integer rules.</td></tr><tr><td>What must a case label contain?</td><td>An integer constant expression. The label values are determined during translation.</td></tr><tr><td>What happens after a case action without a control transfer?</td><td>Execution continues through following labels. Case labels do not block fall-through.</td></tr><tr><td>Which statement normally ends one independent case?</td><td>break. Break leaves the nearest switch or loop.</td></tr><tr><td>What selects default?</td><td>No matching case value. Default is an optional unmatched-value fallback.</td></tr><tr><td>Which is better for mark intervals?</td><td>An else-if ladder. Ranges naturally use comparison conditions.</td></tr><tr><td>May case 10 and case 0xA coexist in one switch?</td><td>No, their values duplicate. Case uniqueness is based on converted integer values.</td></tr></tbody></table>
+
+<h3 id="menu-audit">Check an unmatched choice too</h3><p>A menu can look correct when you test only its listed choices. Also try a value absent from every case. That run should reach default, or skip the switch when no default exists. Include a middle case to catch accidental fall-through into the next action.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The C17 examples use conventional case labels and comments for intended shared cases. C23 adds facilities such as standardized fallthrough attributes and permits more label placements. Those additions do not make accidental fall-through a good menu design.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Switch matches one integer controlling value. Case labels require integer constant expressions. Continue with <a href="topic:c-goto">goto Statement</a>.</p>

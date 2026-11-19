@@ -1,0 +1,8 @@
+#include <stdio.h>
+
+int main(void)
+{
+    printf("%d %d\n", -13 / 5, -13 % 5);
+    printf("%d %d\n", 13 / -5, 13 % -5);
+    return 0;
+}

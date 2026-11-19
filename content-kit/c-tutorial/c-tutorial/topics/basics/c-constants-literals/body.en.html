@@ -1,0 +1,73 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A classroom has eight seats in each row. Giving eight the name seats_per_row makes the calculation easier to understand and update. A <dfn>literal</dfn> writes a value directly in source. A named constant gives a fixed value a useful name.</p>
+<p>You will compare several ways of naming values, because they have different language rules.</p>
+<p>For a lab capacity calculation, seats_per_row explains what the fixed number eight means. Repeating eight throughout a program makes later changes harder to review. Naming it keeps the assumption visible while preserving the distinction between source substitution and a typed object.</p>
+<p>This lesson compares const objects, macros and enum constants, then reads literal bases and suffixes. Keep the C17 baseline in mind: a compiler extension accepting a new literal form does not make that form portable C17.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>A <dfn>const-qualified object</dfn> cannot be modified through that object after initialization. A macro substitutes preprocessing tokens before compilation. An enum constant names an integer constant. Enumerations are developed in <a href="topic:c-enums">Enumerations</a>.</p>
+<pre><code class="language-c">const int seats_per_row = 8;
+#define LAB_FEE 5
+enum { LAB_DAYS = 2 };</code></pre>
+<table class="ref"><caption>Three ways to name a fixed value</caption><thead><tr><th scope="col">Form</th><th scope="col">Typed object?</th><th scope="col">Important distinction</th></tr></thead><tbody><tr><td>const int object</td><td>Yes</td><td>Nonmodifiable object, not generally a C17 integer constant expression</td></tr><tr><td>#define macro</td><td>No</td><td>Textual token substitution, with type determined after expansion</td></tr><tr><td>enum constant</td><td>No object</td><td>A named integer constant usable in constant-expression contexts</td></tr></tbody></table>
+<p>A <dfn>constant expression</dfn> is an expression meeting language rules for places needing translation-time values. C17 does not generally treat a const int variable like an enum constant for that purpose. The word const expresses nonmodifiability, not every possible compile-time property.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>The seats example reads rows from a typed const object and uses a macro for seats per row. Both contribute to the result 24, but they arrive through different mechanisms. The macro disappears through substitution, while the object belongs to the ordinary type and object model.</p>
+<p>Integer literal prefixes select the written number base. Decimal uses ordinary digits without a leading base marker. A leading zero gives octal, and 0x or 0X gives hexadecimal. The base example writes the same value twenty-six in three forms.</p>
+<table class="ref"><caption>Read the value, not the appearance</caption><thead><tr><th scope="col">Literal</th><th scope="col">Base</th><th scope="col">Decimal value</th></tr></thead><tbody><tr><td>26</td><td>10</td><td>26</td></tr><tr><td>032</td><td>8</td><td>26</td></tr><tr><td>0x1a</td><td>16</td><td>26</td></tr><tr><td>0b1010U</td><td>2, C23</td><td>10</td></tr></tbody></table>
+<p>A <dfn>suffix</dfn> follows a literal to help select its type. U requests an unsigned integer family, L a long family, and LL a long long family. Combinations such as ULL are available. For floating literals, F selects float, no suffix normally gives double, and L selects long double.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">A const object and a macro</h3>
+<p>rows is a typed nonmodifiable object, while the macro substitutes 8 tokens before compilation.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Different spellings of the same integer</h3>
+<p>Decimal 26, octal 032 and hexadecimal 0x1a all denote the integer value 26.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Character, string and enum constants</h3>
+<p>The character is one code value, the string is a terminated character array, and LAB_DAYS is an integer constant.</p>
+<div data-example="ex-3"></div>
+
+<h3 id="example-4">C23 binary literal</h3>
+<p>Binary integer literals are standard in C23. This example explicitly uses c2x mode, not the C17 baseline.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="literal-types">Literal type depends on more than one character</h3>
+<p>An integer literal's type depends on its value, base and suffix according to the standard's candidate-type rules. Do not assume every unsuffixed integer fits int. Write a suitable suffix when a large value or signedness requirement would otherwise be unclear.</p>
+<p>The minus sign is normally a unary operator applied to a numeric literal, rather than part of the literal token itself. This matters near signed minimum limits because the positive magnitude may not fit the intended signed type. Prefer the appropriate limits.h macro when you need the implementation's exact boundary.</p>
+<h3 id="character-versus-string">Character constants and string literals</h3>
+<p>An ordinary character constant such as 'A' has type int in C. You can use it to initialize a char when the value is representable. A string literal such as "A" has array type and includes a terminating null character, so it is not interchangeable with that single character constant.</p>
+<p>A <dfn>null character</dfn> has value zero and marks the end of a C string. See <a href="topic:c-strings-intro">Introduction to Strings</a>. The string "lab" therefore has four array elements: three visible characters and a terminator. A string literal must not be modified, even though its ordinary C array type is not spelled with const.</p>
+<p>The mixed example prints a grade with %c, a string with %s and an enum constant with %d. Matching the categories matters more than matching how short the text looks. A one-character string still needs a string-compatible use rather than a character conversion.</p>
+<h3 id="constant-choice">Choose the mechanism for the job</h3>
+<p>Use a const object when a typed value with ordinary scope is appropriate. Use a small enum constant when a C17 integer constant expression is needed and the enum model fits. Macros remain useful for preprocessing decisions, but they lack ordinary object typing and must be designed carefully.</p>
+<p>A function-like macro can duplicate expressions or interact with operator precedence. Those risks are covered in <a href="topic:c-macros">Macros</a>. This lesson uses only object-like macros holding fixed literals. Avoid adding a semicolon to a macro value, because the semicolon would become part of every replacement.</p>
+
+
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>In the fare exercise, separate the changing passenger count from the fixed fare. The count needs a variable. The fare needs a clear name and unit. <a href="topic:c-scanf">scanf</a> stores the typed count through its address, while an <a href="topic:c-if-statement">if</a> checks success.</p>
+<p>A macro substitutes source tokens before those runtime steps. A const object is instead a typed part of your program. Try finding all uses of the fixed fare when the amount changes. If you must edit several unrelated numeric literals, the original name has not captured the rule well enough.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="octal-surprise">Adding a leading zero for appearance</h3><p>Writing 010 means octal eight in C17, not decimal ten. Use output width formatting when you want leading zeroes in a displayed roll number. A literal's source base and a formatted number's appearance are separate choices.</p>
+<h3 id="const-expression">Treating every const object as an enum</h3><p>A const int remains an object and is not generally an integer constant expression in C17. Select the correct mechanism for a context needing a constant expression. Do not infer the rule from another language that uses the same const spelling.</p>
+
+<h3 id="diagnostic-5">Mistake: assigning to a const object</h3>
+<p>A const-qualified object cannot be assigned after initialization. Initialize a new value or use a modifiable variable.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Name fixed assumptions such as units, prices and capacities.</li><li>Choose const, macros and enums for their actual roles.</li><li>Check a literal's base and suffix before tracing arithmetic.</li><li>Use straight single quotes for a character and double quotes for a string.</li><li>Keep C23-only literal syntax explicitly marked.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>C17 supports decimal, octal and hexadecimal integer literals. Binary literals with 0b became standard in C23, so the binary example is built with GCC option -std=c2x. C23 also adds constexpr. That feature is separate from the C17 const object rules taught here.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>Literals describe written values, while named constants express fixed assumptions through different language mechanisms. Read bases, suffixes and quote forms carefully. Next, control how values become text in <a href="topic:c-printf">Output with printf</a>.</p>

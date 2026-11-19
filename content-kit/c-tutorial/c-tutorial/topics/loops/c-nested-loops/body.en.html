@@ -1,0 +1,51 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A classroom has several rows of seats. To label every seat, you visit each row and then each column in that row. A <dfn>nested loop</dfn> puts one loop inside another. The outer counter often identifies a row; the inner counter identifies a position within it.</p>
+<p>Think of reading a table from left to right, then moving down to the next row. The inner loop completes its own run before the outer loop advances. You can use this structure for multiplication grids, coordinate pairs and patterns. Start with tiny dimensions so the order stays visible.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">for (int row = 1; row &lt;= rows; row++) {
+    for (int column = 1; column &lt;= columns; column++) {
+        /* one cell */
+    }
+    /* one completed row */
+}</code></pre><pre class="diagram">row 1: column 1, column 2, column 3
+row 2: column 1, column 2, column 3</pre>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>With two rows and three columns, the outer loop first sets row to one. The inner declaration starts column at one. Its three iterations visit the first row's cells. Only after the inner test fails does the outer update set row to two.</p>
+<p>The inner declaration then starts a fresh column counter at one again.</p>
+<p>There are two useful places for output. A print inside the inner body happens once per cell. A newline after the inner loop happens once per row. Putting the newline inside the inner body would produce a column of values instead of a grid.</p>
+<p>Putting it after both loops would join all rows into one line.</p>
+<p>For a rectangular grid with n rows and m columns, the inner body runs n times m times. If both dimensions double, the number of cells becomes four times larger. This gives an early time-cost intuition: a straightforward rectangular traversal is proportional to n*m. The counters themselves need only a small fixed amount of extra storage.</p>
+<p>Not every nested loop has a rectangular count. If the inner bound equals row, the number of visits is one plus two through n. This triangular total is n*(n+1)/2. The outer loop still resets the inner counter every time, but each later row permits more inner iterations.</p>
+<p>Derive the count from the actual bounds rather than multiplying two unrelated maximum values blindly.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Visit coordinate pairs</h3>
+<p>The first row prints three pairs with row one, then the second row starts column again at one. The newline is outside the inner loop, producing exactly two output lines. Six cells confirm the product two times three.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A multiplication grid</h3>
+<p>Each cell multiplies its row number by its column number. Width three aligns the small products. The final row contains three, six and nine. The nine body executions fill a three-by-three grid.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">A growing inner range</h3>
+<p>The inner loop runs one, two, three and four times on successive rows. Their total is ten. Treating every row as four visits would overcount; the row-dependent bound is the key difference from a rectangle.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>If either rectangular dimension is zero, the inner body runs zero times. The outer loop may still perform row-level work when columns is zero. Decide whether empty rows should produce blank lines for your particular output format. These examples specify small positive grid dimensions except where zero is an explicit practice edge case.</p>
+<p>Use different counter names. Updating row inside the column loop can skip rows or break the outer stopping rule. Declare the column counter in its own for header so its reset is obvious and it cannot be used after the inner loop by mistake.</p>
+<p>A break inside the inner loop leaves only that inner loop. The outer loop can then begin another row. Exiting both requires an outer condition, a flag, or a carefully named exit, explained in <a href="topic:c-break-continue">break and continue</a>. Indentation alone cannot change which loop owns a break.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Failing to reset the inner counter</h3>
+<p>A counter declared and initialized before both loops may already be beyond its bound after the first row. Put the inner initialization inside the outer body so each row begins at column one.</p>
+<h3 id="mistake-2">Printing a row newline per cell</h3>
+<p>Follow the unit of work. A value belongs to one cell; a newline belongs to one completed row. Place each output at the loop level that matches that unit.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>When does the inner for initialization run?</td><td>Each time the outer body reaches that loop. A new row starts the inner progression again.</td></tr><tr><td>How many cell visits occur for 3 rows and 4 columns?</td><td>12. Each of three rows has four visits.</td></tr><tr><td>Where should a row-ending newline go?</td><td>After the inner loop inside the outer body. It must happen once per completed row.</td></tr><tr><td>What changes when the inner bound is row?</td><td>Different rows have different visit counts. The total becomes a sum of row lengths.</td></tr><tr><td>How does doubling both rectangle dimensions affect cell count?</td><td>It multiplies the count by four. The count is the product of both dimensions.</td></tr><tr><td>Which loop does an inner break leave?</td><td>Only the nearest enclosing loop. A separate outer exit condition is needed to stop both.</td></tr><tr><td>Why use separate row and column names?</td><td>To keep each progression and role clear. Mixing updates can corrupt the traversal.</td></tr></tbody></table>
+
+<h3 id="small-grid">Trace a tiny rectangle before a large one</h3><p>A two-by-two grid has four cell visits but only two row completions. Mark the cell action and row action in different columns on paper. Their counts explain where output statements belong more clearly than staring at indentation alone.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>Nested loops are ordinary loops used inside a body. C99 permits the header-local counters shown here. C17 adds no special reset rule: the inner initialization runs again because control reaches its declaration again.</p></div>
+<h2 id="summary">Summary</h2>
+<p>The inner loop finishes for each outer value. Reset the inner counter for every new row. Continue with <a href="topic:c-break-continue">break and continue</a>.</p>

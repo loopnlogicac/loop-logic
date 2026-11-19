@@ -1,0 +1,45 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A comma can separate items in a list, but C also has a comma operator with its own value and execution order. The surrounding grammar decides which job a comma performs. You will compare those roles before using sizeof, an operator that asks how much storage a type or object occupies.</p>
+<dfn>sizeof</dfn> reports a size in C bytes, not the number of visible characters in a value. It is useful when code must adapt to an array or a type. The result has type size_t, an unsigned integer type; print it with <code>%zu</code>.
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">result = (first_expression, second_expression);
+size_t bytes = sizeof(int);
+size_t count = sizeof values / sizeof values[0];</code></pre><p>Include stddef.h when you explicitly need the size_t declaration and no other included header provides it. stdio.h also declares size_t for its interfaces. Parentheses are required around a type name after sizeof; they are optional around an ordinary expression.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>The comma operator evaluates its left expression, completes its side effects, then evaluates its right expression. The whole expression has the right expression's value and type. In <code>(counter++, counter * 2)</code>, the increment is complete before multiplication. If counter starts at three, the expression supplies eight and counter ends at four.</p>
+<p>A comma separating declarations is different. In <code>int a = 1, b = 2;</code>, it separates two declarators. A comma separating printf arguments is also a separator. It does not impose the comma operator's left-before-right evaluation rule on those arguments.</p>
+<p>Do not use separate arguments to establish an order between counter updates.</p>
+<p>For an ordinary non-variable-length type, sizeof obtains size without evaluating its operand. Thus <code>sizeof count++</code> does not increment count when count has type int. The operator asks about the operand's type, not its current numeric value. A sizeof expression can usually be an integer constant expression in this case.</p>
+<p>An array's size is its number of elements times the size of one element. Dividing <code>sizeof values</code> by <code>sizeof values[0]</code> therefore gives its element count in the scope where values really has array type. This is different from the number of elements currently meaningful to your task. An array with capacity ten can still contain only three entered marks.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">A sequenced comma expression</h3>
+<p>The increment completes before multiplication because this comma is an operator. Counter becomes four, then four times two supplies eight. The parentheses keep the low-precedence comma inside the assignment right-hand side.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A size question does not increment</h3>
+<p>Count remains five because its int operand is not evaluated. The comparison prints one because the queried expression also has int type. This checks the rule without assuming how many bytes an int occupies.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Count a fixed array</h3>
+<p>The numerator is storage for four int elements; the denominator is storage for one int. Their ratio is four regardless of the implementation int size. The array is local here, so sizeof still sees the real array type.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>Variable-length arrays, introduced in C99, have runtime bounds. sizeof a VLA can therefore be evaluated at runtime. VLA support is optional for some C11/C17 implementations. This lesson's running examples use fixed arrays so the result is easy to trace, and the variable-length case is explained separately.</p>
+<p>An array <dfn>parameter</dfn> in a function is adjusted to a pointer type. sizeof on that parameter measures the pointer, not the original array. Pass the element count separately when writing a function that processes an array. The <a href="topic:c-arrays-intro">array module</a> develops this storage picture. Do not infer a universal byte width from one host's observed int size.</p><h3 id="array-storage-picture">Separate storage size from contents</h3><p>Draw five equal boxes for an int array. Each box occupies the same sizeof(int) bytes, even if its current value is zero. sizeof asks about those boxes rather than the number of nonzero entries. Replacing all the marks with smaller numbers therefore does not shrink the array. A string introduces another count: its visible length ends at the first null character, while its array capacity can be larger.</p><p>For a local variable-length array, the bound is determined when its declaration is reached. A later change to the variable that supplied the bound does not resize that existing array. This is one reason to store an explicit count alongside data. Fixed arrays are easier to use in early lessons, and later dynamic-memory topics provide a more deliberate model for changing capacities.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Treating every comma as an ordering operator</h3>
+<p>Look at its grammatical role. A comma between function arguments separates them and does not order their evaluation. Add separate statements when important changes must happen in sequence.</p>
+<h3 id="mistake-2">Using sizeof(pointer) to recover array length</h3>
+<p>A pointer value identifies a location; it does not carry a general array length. Keep the array count separately. The array-size division works only while the expression still has the actual array type.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>What value does (a, b) supply?</td><td>The value of b. The left result is discarded after its evaluation.</td></tr><tr><td>Does a comma between printf arguments order their evaluation?</td><td>No. It is a separator rather than the comma operator.</td></tr><tr><td>What is sizeof measured in?</td><td>C bytes. A C byte has CHAR_BIT bits, and sizeof(char) is one.</td></tr><tr><td>Which conversion prints a size_t result?</td><td>%zu. The z modifier follows the size_t type rather than a guessed width.</td></tr><tr><td>Does sizeof i++ increment an ordinary int i?</td><td>No. Its expression operand is not evaluated for this non-VLA case.</td></tr><tr><td>When may sizeof require a runtime bound?</td><td>For a variable-length array type. VLA sizes can depend on values known during execution.</td></tr><tr><td>Why can sizeof on an array parameter be misleading?</td><td>The parameter is adjusted to pointer type. The original array size is not carried by the adjusted parameter.</td></tr></tbody></table>
+
+<h3 id="vla-time">Distinguish a fixed array from a runtime-sized array</h3><p>For a fixed array declared as ten ints, the type records ten elements. Its size can be known during translation. For a VLA whose bound is a validated variable, the implementation determines that array's size when execution reaches the declaration. Querying its size can therefore depend on runtime state, even though the sizeof spelling is identical.</p><p>A useful mental picture is reserving a row of boxes when the declaration runs. Once that row exists, changing the bound variable does not rearrange its boxes. The current value of the bound variable and the size of the existing VLA can differ afterward. Avoid introducing side effects in VLA size expressions; their evaluation rules have details beyond the ordinary unevaluated-int examples.</p><p>Size is also different from address. sizeof a pointer tells you how much storage the pointer object needs, while the pointer value identifies a location. Neither fact reveals how much storage belongs to a separate allocation. Programs that manage variable-sized data should preserve both a pointer and an explicit capacity. This makes later bounds checks possible without guessing information from sizeof.</p>
+<p>A string literal also has an array size that includes its final null character. Thus sizeof a short literal is not the same count as its visible letters. Later string-length functions answer that different question.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>C89 includes comma and sizeof. C99 added variable-length arrays and the z output length modifier. C11/C17 implementations may omit VLA support. Ordinary sizeof on int does not evaluate a counter increment in any of these examples.</p></div>
+<h2 id="summary">Summary</h2>
+<p>The comma operator supplies its right operand value. A separator comma does not order function arguments. Continue with <a href="topic:c-operator-precedence">Operator Precedence and Associativity</a>.</p>

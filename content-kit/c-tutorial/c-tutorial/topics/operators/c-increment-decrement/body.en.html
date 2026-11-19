@@ -1,0 +1,49 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine numbering students as they enter a lab. After giving one student a number, you advance the counter for the next student. <dfn>Increment</dfn> adds one to a modifiable value; decrement subtracts one. C writes them as <code>++</code> and <code>--</code>.</p>
+<p>Placement matters when the expression's value is also used. Prefix updates first and supplies the new value. Postfix supplies the old value while still scheduling the update as part of that expression. Both leave a standalone counter one step higher or lower.</p>
+<p>Use a separate statement when you only need to change the counter.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<pre><code class="language-c">++count;  /* prefix */
+count++;  /* postfix */
+--count;
+count--;</code></pre><p>The operand must identify a modifiable object of a permitted type. You cannot increment a numeric literal or a const-qualified counter. These examples use integers with values safely away from their limits.</p>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>Trace <code>int used = count++;</code> with count initially four. The expression supplies four to initialize used. By the next statement, count is five. For <code>int used = ++count;</code>, the expression instead supplies five, and count is also five afterward.</p>
+<p>The prefix/postfix difference concerns the supplied value, not whether the counter eventually changes.</p>
+<p>A <dfn>side effect</dfn> is a change to program state. Both forms modify the operand. A full expression, such as a standalone assignment statement, completes before the next full expression begins. Older explanations call certain boundaries sequence points.</p>
+<p>Modern C also describes one evaluation as sequenced before another. You need not memorize every formal rule to use a safe habit: perform one counter update per statement.</p>
+<p>Writing <code>i = i++;</code> is undefined behavior in C17. The assignment and postfix side effect modify i without the required sequencing between them. There is no portable final value to predict. Parentheses do not introduce the missing sequencing.</p>
+<p>Likewise, avoid reading and updating the same counter in different printf arguments. C does not specify their evaluation order in a way that makes that pattern safe.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Use the current ticket first</h3>
+<p>Postfix supplies the current ticket, four, to issued. The update leaves ticket at five before printf runs. This matches giving out a number and preparing its successor. Two different variables make the old and new values visible.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Advance before assigning</h3>
+<p>Prefix adds one before supplying the expression value. Both fields are five because issued receives the updated value. Compare this with the previous example: the counter ends the same way, while the assigned value differs.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Compare two decrements</h3>
+<p>Postfix decrement supplies eight and leaves a at seven. Prefix decrement leaves b at seven and supplies seven. The four printed fields separate each expression value from its operand after the full statement. None of the updates are combined unsafely.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>For a standalone <code>count++;</code>, prefix and postfix have the same final effect for an integer counter. Choose the form that makes your intention clear. When assigning a ticket number, deliberately choose whether the current ticket or the following ticket should be used.</p>
+<p>Decrement follows the same old-value/new-value distinction. If an unsigned counter is zero, decrement wraps it to the maximum value. That is defined unsigned arithmetic, but rarely the intended seat count. A signed counter at its minimum must not be decremented because that would overflow.</p>
+<p>Check the task's boundaries rather than treating the short operator as automatically safe.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Predicting a result for i = i++</h3>
+<p>The expression has undefined behavior in C17. Split the intended actions into separate statements and decide which value each statement should use. A compiler warning is useful evidence, but silence would not make the expression valid.</p>
+<h3 id="mistake-2">Assuming postfix waits until the next statement</h3>
+<p>In <code>used = count++;</code>, count has already changed by the next statement. The old value is supplied to used, not kept in count. Trace the two variables in separate columns.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>For int n = 4; int x = ++n;, which value initializes x?</td><td>5. Prefix supplies the value after incrementing.</td></tr><tr><td>What does postfix n++ supply to its surrounding expression?</td><td>The value before increment. The operand changes, but the expression supplies its earlier value.</td></tr><tr><td>When is n changed after x = n++; finishes?</td><td>Before the next statement. The side effect completes within that full expression.</td></tr><tr><td>Which operand can be incremented here?</td><td>A modifiable int variable. Increment needs an appropriate modifiable operand.</td></tr><tr><td>Why is i = i++ invalid to predict in C17?</td><td>Its modifications lack required sequencing. Undefined behavior means no portable final value exists.</td></tr><tr><td>How should you pass old and new counter values to printf safely?</td><td>Save and update in earlier separate statements. Separate full expressions establish the needed order.</td></tr><tr><td>What does decrementing unsigned zero do?</td><td>Wrap to the maximum unsigned value. Unsigned arithmetic wraps; the task may still consider that a mistake.</td></tr></tbody></table>
+
+<h3 id="counter-table">Keep two columns for a consumed value</h3><table class="ref"><thead><tr><th>Statement with count initially 4</th><th>Saved value</th><th>Count afterward</th></tr></thead><tbody><tr><td>saved = count++;</td><td>4</td><td>5</td></tr><tr><td>saved = ++count;</td><td>5</td><td>5</td></tr><tr><td>saved = count--;</td><td>4</td><td>3</td></tr><tr><td>saved = --count;</td><td>3</td><td>3</td></tr></tbody></table><p>Reset count to four before comparing these rows. They are separate experiments, not four consecutive statements. When they become consecutive, each row must instead begin from the previous row's final count. This small bookkeeping difference explains many incorrect counter traces.</p>
+<p>The saved ticket and the next ticket have separate purposes. Keep both names when the current value must be reported after the counter has advanced.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>Prefix and postfix integer updates have long existed in C. C11 introduced the modern sequencing terminology used here. Under the C17 baseline, i = i++ remains undefined; do not transfer rules from a different programming language.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Prefix supplies the updated value. Postfix supplies the old value. Continue with <a href="topic:c-relational-operators">Relational Operators</a>.</p>

@@ -1,0 +1,76 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A lab report is easier to read when its heading, method and results have clear places. Your C source benefits from the same care. Its <dfn>structure</dfn> tells a reader where declarations and actions belong. The compiler also needs names declared before they are used.</p>
+<p>You will arrange a small marks program and follow how its functions work together.</p>
+<p>Think of a lab report with a heading, assumptions, method and results. C does not require those exact report sections, but organizing the source serves a similar purpose. A student checking your marks calculation should not have to search the whole file to discover its maximum score.</p>
+<p>This lesson introduces helper functions before their full module. A helper is a named function that performs one task and may return a result. See <a href="topic:c-functions-intro">Functions in C</a>. For now, read the declaration as a contract and the definition as the implementation of that contract.</p>
+
+<h2 id="syntax">Syntax and vocabulary</h2>
+<p>A typical teaching layout starts with documentation, then preprocessing directives, file-scope declarations, main and helper definitions. A <dfn>prototype</dfn> declares a function's name, result type and parameter types without supplying its body. A definition includes the body.</p>
+<pre><code class="language-c">/* Purpose and important assumptions. */
+#include &lt;stdio.h&gt;
+int total_marks(int theory, int lab);
+/* main definition follows; helper definition may come later. */</code></pre>
+<table class="ref"><caption>Source regions</caption><thead><tr><th scope="col">Region</th><th scope="col">What belongs there</th></tr></thead><tbody><tr><td>Documentation</td><td>Purpose, units and important limits</td></tr><tr><td>Preprocessor</td><td>Includes and needed macro definitions</td></tr><tr><td>File scope</td><td>Shared declarations and helper prototypes</td></tr><tr><td>main</td><td>The entry sequence for this hosted program</td></tr><tr><td>Helper definitions</td><td>Named pieces of the work</td></tr></tbody></table>
+<p>A <dfn>statement</dfn> expresses an action in a function body. A pair of braces forms a <dfn>block</dfn>, which groups statements and provides a region for local names. A declaration may also occur within that block before a name is used.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<p>The compiler reads declarations according to their visibility in the source. When main calls total_marks, a preceding prototype supplies enough type information to check the call. The later helper definition must agree with that prototype and provide the actual work.</p>
+<ol><li>The include directive makes printf's declaration available.</li><li>The prototype declares the helper before main uses its name.</li><li>main calls the helper with the two mark values.</li><li>The helper adds its parameters and returns the result.</li><li>printf writes the returned integer and main finishes.</li></ol>
+<p>A <dfn>parameter</dfn> is a local name used by a function to receive an argument value. In total_marks, theory and lab are parameters, while the 60 and 25 in the call are arguments. Parameters make the same calculation reusable without sharing every local variable between functions.</p>
+<pre class="diagram">main --call with 60,25--&gt; total_marks
+main &lt;--result 85------- total_marks</pre>
+<p>The annotated seats example shows all major regions in one complete source: a purpose comment, an include, a file-scope constant, a helper definition and main. Because the helper is defined before main, a separate prototype is unnecessary there. Both arrangements are valid when the name and type are known before the call.</p>
+
+<p>The keyword <code>const</code> qualifies an object so it cannot be modified through that object after initialization. See <a href="topic:c-constants-literals">Constants and Literals</a>. The seats example uses this rule for its shared row capacity.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">The smallest useful structure</h3>
+<p>The header supplies declarations, main supplies the entry block, and the return statement ends execution.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">A declaration before a call</h3>
+<p>A prototype tells the compiler the helper accepts two ints and returns an int. The later definition supplies its body.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">A global constant and an annotated helper</h3>
+<p>The file-scope constant is visible to the helper. Main calls the helper after its definition.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">Details and comparisons</h2>
+<h3 id="scope-and-order">Scope explains where names work</h3>
+<p>A <dfn>scope</dfn> is the region where an identifier can be used to refer to its declaration. A name declared inside main normally belongs to that block. A helper cannot automatically use main's local marks variable merely because both functions appear in one file.</p>
+<p>A declaration outside every function has file scope. Its name becomes available from its declaration onward, subject to the language's visibility rules. The shared seats-per-row constant is placed before the helper that uses it for that reason.</p>
+<p>File-scope data is useful for a small shared constant, but making all variables global is not good organization. A parameter makes a helper's required input visible at the call. Keeping a temporary total local also prevents unrelated functions from changing it accidentally.</p>
+<h3 id="punctuation">Statements, blocks and whitespace</h3>
+<p>Expression statements such as printf calls end with semicolons. A function definition ends with its closing brace and does not need a trailing semicolon as part of the definition. A prototype has no body and does end with a semicolon.</p>
+<p>Several statements can be written on one source line, but that makes debugging locations harder to read. Blank lines and indentation separate ideas for people. Braces and semicolons determine the grammar. Moving a brace changes structure, while adding an ordinary blank line normally does not.</p>
+<p>Four-space indentation shows which statements belong to a function or nested block. This is a style rule for these files rather than a magic instruction to the compiler. The compiler does not treat indentation as a substitute for braces.</p>
+<h3 id="review-a-file">Read from contract to result</h3>
+<p>When reviewing a larger source, first read its purpose and input assumptions. Then inspect the function interfaces, follow main's sequence and check each helper against its stated task. This reading order keeps you from confusing source order with execution order: a helper written last can execute in the middle of main.</p>
+
+
+
+<h3 id="try-it-yourself">Try a small change</h3>
+<p>Try reading the organized marks report without starting at the first calculation. Find main, then identify the helper it calls. A helper is a named piece of work. Its parameters receive the values passed in the call.</p>
+<p>Trace those values into the helper and the result back to main. Input uses <a href="topic:c-scanf">scanf</a>, which stores typed values at the addresses supplied after the format. An <a href="topic:c-if-statement">if statement</a> stops a failed read. The useful organizing question is where each value enters, where it changes, and where it is printed.</p>
+<p>Put the declarations close to those roles.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+
+<h3 id="prototype-body-confusion">Replacing a definition with a prototype</h3><p>A prototype describes a helper but does not implement it. If the call is compiled and no matching definition is linked, the final build fails. Add the required body rather than assuming the declaration performs the calculation.</p>
+<h3 id="local-sharing">Using another function's local variable</h3><p>A local variable belongs to its scope and is not automatically visible in a separate function. Pass the needed value as a parameter. Duplicating the same name in a different function creates a different local object.</p>
+
+<h3 id="diagnostic-4">Mistake: using a local name before declaration</h3>
+<p>The name marks is not declared at its first use. Move its declaration before the printf call.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="best-practices">Best practices</h2>
+<ul><li>Place declarations before their first use.</li><li>Keep main's overall sequence readable.</li><li>Use helper parameters to make data flow explicit.</li><li>Document units and limits rather than decorating every line.</li><li>Use braces and one clear indentation style throughout the file.</li></ul>
+
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>C89 required declarations before statements within a block. C99 permits mixed declarations and statements, as used in the practice code. Modern C requires proper function declarations before calls. Do not rely on old implicit-function conventions.</p>
+<p>The examples are built as C17.</p></div>
+
+<h2 id="summary">Summary</h2>
+<p>A clear program separates interface declarations, shared constants and executable function bodies. Names must be visible before use, and a prototype cannot replace an implementation. Next, follow the build stages in <a href="topic:c-compilation-process">How C Code Is Compiled</a>.</p>

@@ -1,0 +1,56 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Read a marks formula containing addition and multiplication. You need to know which values belong together before calculating the result. <dfn>Precedence</dfn> gives that grouping rule. An operator with higher precedence binds its operands more tightly.</p>
+<p>Parentheses let you request an explicit grouping.</p>
+<p>When operators share a precedence level, <dfn>associativity</dfn> determines grouping among them. These are grammar rules. They do not generally decide which function call runs first. Keeping grouping separate from evaluation order prevents many misleading answers to output questions.</p>
+<h2 id="syntax">Syntax and reading guide</h2>
+<table class="ref"><caption>C17 precedence from tightest to loosest</caption><thead><tr><th>Level</th><th>Operators</th><th>Association</th></tr></thead><tbody>
+<tr><td>1</td><td>() [] . -&gt; postfix ++ --, compound literals</td><td>left</td></tr>
+<tr><td>2</td><td>prefix ++ --, + - ! ~, casts, * &amp;, sizeof, _Alignof</td><td>right</td></tr>
+<tr><td>3</td><td>* / %</td><td>left</td></tr><tr><td>4</td><td>+ -</td><td>left</td></tr>
+<tr><td>5</td><td>&lt;&lt; &gt;&gt;</td><td>left</td></tr><tr><td>6</td><td>&lt; &lt;= &gt; &gt;=</td><td>left</td></tr>
+<tr><td>7</td><td>== !=</td><td>left</td></tr><tr><td>8</td><td>&amp;</td><td>left</td></tr>
+<tr><td>9</td><td>^</td><td>left</td></tr><tr><td>10</td><td>|</td><td>left</td></tr>
+<tr><td>11</td><td>&amp;&amp;</td><td>left</td></tr><tr><td>12</td><td>||</td><td>left</td></tr>
+<tr><td>13</td><td>?:</td><td>right</td></tr><tr><td>14</td><td>= += -= *= /= %= &amp;= ^= |= &lt;&lt;= &gt;&gt;=</td><td>right</td></tr>
+<tr><td>15</td><td>,</td><td>left</td></tr></tbody></table>
+<h2 id="how-it-works">Follow the values and decisions</h2>
+<p>For <code>2 + 3 * 4</code>, multiply three by four as one subexpression, then add two: the value is fourteen. In <code>(2 + 3) * 4</code>, explicit parentheses make the sum an operand of multiplication, giving twenty. The same symbols and numbers now express a different formula.</p>
+<p>Subtraction and division associate left to right. Therefore <code>20 - 6 - 3</code> groups as <code>(20 - 6) - 3</code>, giving eleven. It is not twenty minus the difference of six and three. For integer division, left grouping also means truncation can happen at an intermediate step before later division.</p>
+<p>Assignment associates right to left. The chain <code>a = b = 8</code> stores in b and then supplies that stored value to a. Conditional expressions also associate right to left, but long nested choices are hard to read. Split them or parenthesize the intended nesting.</p>
+<p>Logical NOT binds more tightly than comparisons. Bitwise AND binds less tightly than equality. Thus a bit test should explicitly use <code>(flags &amp; mask) != 0U</code>. Without the parentheses, the equality subexpression may become the operand of bitwise AND.</p>
+<p>A compiler warning may reveal this, but readable grouping is the first defense.</p>
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-1">Compare two groupings</h3>
+<p>The unparenthesized product binds first and gives fourteen overall. The parenthesized sum gives five before multiplication, making twenty. The example demonstrates grouping without depending on side effects or unspecified operand evaluation order.</p>
+<div data-example="ex-1"></div>
+
+<h3 id="example-2">Subtraction associates left</h3>
+<p>The first expression groups the two left operands, giving fourteen and then eleven. The second subtracts the parenthesized three from twenty, giving seventeen. The changed parentheses alter the mathematical expression itself.</p>
+<div data-example="ex-2"></div>
+
+<h3 id="example-3">Make bit and logical grouping explicit</h3>
+<p>The mask intersection is performed before comparing with zero. The parenthesized OR group is true because two is less than three. AND combines that truth with ready. The displayed pair is one and one.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Boundaries and alternatives</h2>
+<p>The full table includes pointer dereference, member access, casts and compound literals, which later topics teach. You can use the table as a reference without putting all those operators in an early program. Recognize their positions when reading an unfamiliar expression, then consult the linked topic for their meaning.</p>
+<p>Precedence does not make the left operand of addition execute before the right operand. If those operands call functions with visible side effects, their order may be unspecified. It also does not repair two unsequenced modifications of one object. Avoid such expressions rather than calculating an imaginary answer.</p>
+<p>Logical AND, logical OR, comma and conditional selection have specific sequencing rules; ordinary multiplication does not inherit those rules.</p><h3 id="parse-tree-method">A paper method for difficult expressions</h3><p>First copy every explicit parenthesized group as a box. Inside each box, find the highest remaining precedence level and combine those operands. Resolve equal-level operators by their associativity. Keep the resulting expression tree separate from any notes about execution order.</p>
+<p>Only after the tree is clear should you apply types, conversions and arithmetic.</p><p>Try this method with <code>4 + 12 / 3 * 2</code>. Division and multiplication share a level and group left, so twelve divided by three gives four, then four times two gives eight. Adding four produces twelve. If a task expected twenty, changing the output format cannot help; the source would need a different grouping or formula.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3 id="mistake-1">Calling left associativity left-to-right execution</h3>
+<p>Associativity tells you how to parenthesize a grammar tree. Only particular operators establish evaluation sequencing. Put important side effects in separate full expressions.</p>
+<h3 id="mistake-2">Relying on a memorized trick instead of clear parentheses</h3>
+<p>A mask check or mixed logical rule should show its intended grouping. Parentheses reduce review time and prevent small operator changes from silently changing the formula.</p>
+
+<h2 id="reference">Questions to ask while reading</h2>
+<table class="ref"><thead><tr><th>Question</th><th>Rule and reason</th></tr></thead><tbody><tr><td>What does precedence determine?</td><td>How operands group. It describes the expression grammar.</td></tr><tr><td>What does left associativity make a - b - c mean?</td><td>(a - b) - c. Same-level subtraction groups left.</td></tr><tr><td>Which level binds more tightly: multiplication or addition?</td><td>Multiplication. The product forms a subexpression before addition.</td></tr><tr><td>How does assignment associate?</td><td>Right to left. Chains group around the right assignment.</td></tr><tr><td>Which has lower precedence: bitwise AND or equality?</td><td>Bitwise AND. A bit test therefore needs explicit grouping before comparing.</td></tr><tr><td>Do parentheses fix i = i++ in C17?</td><td>No. Grouping cannot introduce missing sequencing.</td></tr><tr><td>Why use parentheses in a mixed logical eligibility rule?</td><td>To show the intended subconditions. They make the rule easier to verify against the requirement.</td></tr></tbody></table>
+
+<h3 id="type-pass">Make a second pass for expression types</h3><p>Once the grouping tree is clear, write the type beside each leaf. Apply integer promotions where required, then determine the common arithmetic type at each operator. A perfectly grouped expression can still use integer division when the intended answer needs a fraction. Grouping and type reasoning solve separate parts of the problem.</p><p>For <code>(a + b) / 2</code> with two int marks, the numerator is correctly grouped but the division remains integer. Replacing two with 2.0 makes the division floating-point. However, if adding a and b can overflow int, that earlier addition must also be widened. Fixing the last operator does not retroactively change an invalid intermediate result.</p><p>A third pass checks side effects and safety conditions. Look for division by zero, invalid shifts, and repeated updates to one object. Parentheses describe the intended tree, while separate statements and the language's sequencing rules describe ordering. Neither replaces input bounds.</p>
+<p>A robust reading method therefore asks three questions in order: what groups together, what types the operations use, and which evaluations are valid.</p><p>For exam work, show intermediate values rather than writing only a final number. An intermediate quotient or normalized comparison result makes the reasoning checkable. If the source has undefined behavior, explain the violated rule instead of pretending that a longer arithmetic trace supplies a portable output.</p>
+<p>Compound assignment sits below conditional selection in the table. For <code>total += ready ? 5 : 2</code>, the selected amount becomes the right-hand operand of the update. Writing <code>total += (ready ? 5 : 2)</code> makes that intended choice obvious without changing its value. Do not infer that the table alone makes a complex left operand evaluate twice; compound assignment has its own single-evaluation rule for that operand. Use an ordinary named total here and reserve complex destinations for later array and pointer lessons.</p>
+<h2 id="version-notes">Version notes</h2>
+<div class="callout version"><p>The reference table describes C17. Compound literals were added in C99 and _Alignof in C11. The basic arithmetic precedence levels are older. Newer keyword spellings do not make grouping and execution order the same concept.</p></div>
+<h2 id="summary">Summary</h2>
+<p>Precedence groups operators of different levels. Associativity groups operators on one level. Continue with <a href="topic:c-if-statement">if Statement</a>.</p>
