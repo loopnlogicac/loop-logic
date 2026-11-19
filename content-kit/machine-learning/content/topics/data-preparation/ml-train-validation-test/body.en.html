@@ -1,0 +1,39 @@
+<h2 id="introduction">Keep one envelope sealed</h2>
+<div class="callout story"><p>Mina makes fruit cards for Tuktuk's next challenge. Rafi puts some cards in an envelope and writes final exam on it. Mina keeps opening it to choose a better rule. Nana takes out a second envelope. They need one set for advice and another whose answers cannot guide their choices.</p></div>
+<p>Training examples teach a rule. Validation examples help choose among rules and settings. Test examples estimate how the chosen system performs on unseen data.</p>
+<p>You will build reproducible partitions, preserve class shares when appropriate, and recognise when random splitting asks the wrong real-world question.</p>
+<h2 id="intuition">Three jobs need separate evidence</h2>
+<p>A <dfn>training set</dfn> fits model and preparation parameters. A <dfn>validation set</dfn> helps choose settings. A <dfn>test set</dfn> provides a final evaluation after those choices are fixed.</p>
+<table><caption>Ten labelled cards; two coordinates per card</caption><thead><tr><th>Cards</th><th>x coordinates</th><th>y coordinates</th><th>Label</th></tr></thead><tbody><tr><td>1 to 7</td><td>1,2,3,4,5,6,7</td><td>1,2,3,4,1,2,3</td><td>0</td></tr><tr><td>8 to 10</td><td>8,9,10</td><td>4,1,2</td><td>1</td></tr></tbody></table>
+<p>The lab uses these ten cards to compare two 70/30 training/test allocations. This tiny comparison demonstrates class balance; it does not replace the separate validation role. The real-data example later creates all three partitions.</p>
+<p>Stratification allocates each class a share of the partitions. It helps a small minority remain visible. It cannot manufacture minority examples, and tiny class counts may make an exact ratio or even presence in every partition impossible.</p>
+<h2 id="how-it-works">Allocate whole cards from fractional quotas</h2>
+<p>Three of ten cards belong in test. Label 0 has seven cards, so its ideal test quota is 7 times 3 divided by 10, or 2.1. Label 1 has three cards, giving quota 0.9.</p>
+<p>Take integer parts first: two and zero. One test place remains. The remainder 0.9 exceeds 0.1, so give the extra place to label 1. Test counts become two and one; training counts become five and two.</p>
+<pre class="diagram">shuffle indices with a declared seed
+random test = first round(0.3*n) shuffled indices
+stratified test:
+    compute class quotas and allocate largest remainders
+    shuffle within each class and take its quota
+compare source, training and test class shares</pre>
+<div data-lab="stratified-split"></div>
+<p>The teaching shuffle uses Fisher–Yates swaps driven by a documented linear congruential generator. Its seed stream is intentionally different from scikit-learn's. Equal seeds only reproduce results within the same algorithm, data order and implementation.</p>
+<p>The bars show class-1 shares for both methods. In the selected plot, colour represents training or test; each point's label still states its original class. A seed that gives a balanced random split does not prove random splitting always preserves balance.</p>
+<h2 id="try-it-yourself">Shuffle labels without losing track</h2>
+<p>Switch between random and stratified display with the same seed. Then change the seed and compare the class-share bars. Give every point label 0. The absent class cannot appear in either partition.</p>
+<div class="callout unplugged"><p>Make seven plain cards and three striped cards. Shuffle and draw three without looking. Repeat several times. Then allocate two plain and one striped card deliberately. Discuss what changes and what still depends on which individual cards you select.</p></div>
+<p>For student records repeated across several dates, keep a student's rows together if evaluation concerns new students. A random row split could let the model recognise the same person on both sides.</p>
+<h2 id="examples">Make the allocation reproducible</h2>
+<p>The first program prints counts from the lab's exact recurrence. It uses whole-row quotas, handles an absent class and keeps every row in exactly one partition.</p><div data-example="ex-1"></div>
+<p>The NumPy-label version cross-checks the same counting procedure. Neither teaching program claims to reproduce scikit-learn's private random stream.</p><div data-example="ex-2"></div>
+<p>The shared study example first reserves 20% for the final test. It then reserves one quarter of the remaining 80% for validation. The final shares are 60% training, 20% validation and 20% test.</p><div data-example="ex-3"></div>
+<p>train_test_split uses random_state=0 for reproducibility and stratify=y for class proportions. Two small trees compete using validation accuracy. The smaller depth wins a tie. Preparation medians are fitted on training rows only, and the final test is evaluated after selection.</p>
+<p>You may later refit a frozen configuration on training plus validation before one final test evaluation. In that workflow, refit all preparation steps on the combined development set too. Do not revisit configuration choices after reading the final test result.</p>
+<h2 id="common-mistakes">Leakage can travel through preparation</h2>
+<ul><li>Choosing a seed because it gives the best test score selects a lucky exam. Fix the splitting rule before model comparison.</li><li>Learning medians, vocabulary or scaling on all rows leaks held-out information. Fit every learned preparation step inside training.</li><li>Shuffling future events into past training predicts with knowledge from tomorrow. Keep chronological order for forecasting.</li><li>Assuming stratification fixes bias ignores missing groups and collection problems. Check what the labels and population represent.</li></ul>
+<h2 id="going-deeper">Optional: what a score estimates</h2>
+<div class="callout deeper"><p>A held-out score estimates performance under the data-generating conditions represented by the held-out rows. If future homes, schools or seasons differ, the estimate may not transfer. Splitting design should reflect the intended deployment population.</p><p>For time-ordered data, train on earlier observations, validate on later observations, and test on the latest period. Ensure features use only information available at each prediction time. A rolling average computed using future rows leaks information even when the row partitions are chronological.</p></div>
+<p>Exact stratification requires feasible class counts and partition sizes. Scikit-learn may raise an error when the least populated class has too few members. Collect more data, change the evaluation design, or explain the uncertainty; do not silently duplicate minority rows into both parts.</p>
+<h2 id="summary">Match the split to the prediction</h2>
+<ul><li>Training fits parameters and preparation statistics.</li><li>Validation chooses configurations without opening the final exam.</li><li>Test estimates the chosen system's unseen performance.</li><li>Stratification approximates source class proportions with whole rows.</li><li>Seeds reproduce a stated algorithm, not every library's stream.</li><li>Group and time boundaries matter when deployment changes people or dates.</li></ul>
+<p>Next, <a href="topic:ml-eda">explore training data with questions and pictures</a> while keeping final evaluation protected.</p>

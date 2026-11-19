@@ -1,0 +1,37 @@
+<h2 id="introduction">Taka can drown out rooms</h2>
+<div class="callout story"><p>Tuktuk searches for a home like Mina's drawing. The drawing records rooms and a monthly budget. A one-room difference barely moves the robot, while a hundred-taka difference sends it running. Nana asks why a small money change matters more than an entire room. Tuktuk has been adding raw numeric gaps without thinking about their units.</p></div>
+<p>Distance calculations see numbers, not the importance of their units. Large numeric ranges can dominate smaller ones. Scaling changes how features contribute.</p>
+<p>You will compare range scaling with standardisation, fit their values on training rows, and watch an actual nearest-neighbour choice change.</p>
+<h2 id="intuition">Give both axes a deliberate measuring stick</h2>
+<p><dfn>Min-max scaling</dfn> maps a training column's minimum to zero and maximum to one. <dfn>Standardisation</dfn> subtracts a training mean and divides by its standard deviation. A <dfn>scaler</dfn> stores these fitted values so later rows receive the same conversion.</p>
+<table><caption>Six training points; query is (3,800)</caption><thead><tr><th>Row</th><th>x</th><th>y</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>100</td></tr><tr><td>2</td><td>2</td><td>900</td></tr><tr><td>3</td><td>3</td><td>300</td></tr><tr><td>4</td><td>3</td><td>680</td></tr><tr><td>5</td><td>5</td><td>500</td></tr><tr><td>6</td><td>6</td><td>600</td></tr></tbody></table>
+<p>Before calculating, compare rows 2 and 4. Row 2 differs by one x unit and one hundred y units. Row 4 matches x but differs by 120 y units. Raw distance therefore favours row 2. Would that preference survive a deliberate change of scale?</p>
+<p>The lab gives raw and transformed points separate views. Each view uses one common display multiplier for both axes. This preserves its Euclidean neighbour ranking. Arrows match records across views; they are not distances used by the model.</p>
+<h2 id="how-it-works">Subtract an offset, divide by a spread</h2>
+<p>For x, the training minimum is 1 and range is 6 minus 1, or 5. For y, the minimum is 100 and range is 900 minus 100, or 800. A transformed value is its original value minus the minimum, divided by the range.</p>
+<pre class="diagram">fit each column's offset and divisor on training rows
+measure raw distances from the separate query
+transform training points and query using fitted values
+measure distances again in transformed coordinates
+choose the nearest; ties keep the earlier input row</pre>
+<div data-lab="feature-scaling"></div>
+<p>The query becomes (0.4,0.875). Row 2 becomes (0.2,1); row 4 becomes (0.4,0.725). Their transformed distances are about 0.236 and 0.150. Row 4 is now nearer. The original y gap no longer overwhelms the difference along x. Changing scale has changed what similar means.</p>
+<p>For standardisation, use z=(value minus mean) divided by standard deviation. Here z is the converted value. StandardScaler uses population variance, dividing the squared-gap sum by n. It does not use pandas' default sample standard deviation.</p>
+<p>A constant column has no spread. Both library scalers effectively use divisor one for such a column after subtracting its offset. All its training values become zero. This avoids division by zero without inventing information.</p>
+<h2 id="try-it-yourself">Change one unit and follow the links</h2>
+<p>Start with min-max, then choose standardisation. Record the fitted offsets, divisors and transformed query. Move a training point and predict which fitted statistic will change.</p>
+<div class="callout unplugged"><p>Draw six points on squared paper. Give one axis centimetres and the other metres. Convert both to a consistent intended scale before asking friends to vote for the nearest card. Say why you chose that scale.</p></div>
+<p>Move the query beyond the training maximum. Min-max conversion can produce a value above one. That is expected when the future value lies outside the fitted range. Refitting to squeeze the query back inside would change the meaning of all earlier coordinates.</p>
+<h2 id="examples">Match explicit arithmetic and fitted transformations</h2>
+<p>The first program exposes the fitted minima, ranges and transformed distances. It keeps the query outside the fitting data and prints the same result as the default lab.</p><div data-example="ex-1"></div>
+<p>MinMaxScaler supplies the identical transformation for the same table. The squared-distance comparison selects row 4 after transformation. If points are exact duplicates, our earliest-row rule keeps the result reproducible. Do not round intermediate distances before comparing them.</p><div data-example="ex-2"></div>
+<p>The study example uses KNN, which predicts by voting among nearby training rows. The pipeline first fills missing measurements, then standardises them, then learns the neighbour lookup.</p><div data-example="ex-3"></div>
+<p>KNN and SVM depend on distances or margins. Gradient-based training is often more stable with comparable feature scales. Ordinary decision trees split one feature at a time; positive linear rescaling preserves possible row partitions, so trees generally do not require scaling.</p>
+<h2 id="common-mistakes">Fit once on the right partition</h2>
+<ul><li>Fitting a scaler before splitting reveals held-out extrema or means. Split first and fit on training rows.</li><li>Refitting separately on test data makes identical measurements mean different coordinates. Call transform with the fitted training scaler.</li><li>Assuming standardisation removes outliers confuses scale with validity. Extreme observations still need investigation.</li><li>Normalising a target and forgetting to invert predictions changes the reported units. Keep target and feature transformations explicit.</li></ul>
+<h2 id="going-deeper">Optional: scaling chooses a distance geometry</h2>
+<div class="callout deeper"><p>After division by a feature scale s, that feature's squared distance contribution is its original squared gap divided by s squared. Scaling therefore weights coordinates; it is not a neutral cosmetic change. If one feature matters more for a domain reason, a validated weighting may be justified.</p><p>Min-max scaling is sensitive to extreme training values because they set the range. Mean and standard deviation are also sensitive to extremes. No automatic scaling choice guarantees the most useful similarity measure.</p></div>
+<p>State the fitted population, denominator convention, constant-column policy and tie rule in an exam explanation. Rounding printed coordinates must not change the values used for distance calculations.</p>
+<h2 id="summary">One fitted ruler for future data</h2>
+<ul><li>Large numeric ranges can dominate raw distance.</li><li>Min-max scaling uses training extrema.</li><li>Standardisation uses a training mean and population spread.</li><li>Constant columns need an explicit safe divisor.</li><li>Reuse fitted values for validation, test and future queries.</li><li>Check model sensitivity and numerical ties.</li></ul>
+<p>Next, <a href="topic:ml-train-validation-test">separate learning, choosing and final evaluation</a> with honest partitions.</p>

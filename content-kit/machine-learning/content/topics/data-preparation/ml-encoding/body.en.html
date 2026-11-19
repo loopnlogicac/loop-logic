@@ -1,0 +1,38 @@
+<h2 id="introduction">Three districts do not make a ranking</h2>
+<div class="callout story"><p>Rafi asks Mina to turn three district names into numbers for Tuktuk. Mina writes Badda as zero, Mirpur as one and Uttara as two. Tuktuk says Uttara is twice Mirpur. Nana laughs at the robot's imaginary geography. The names need a numeric representation that does not pretend to measure distance.</p></div>
+<p>Many models calculate sums, products or distances, so raw names need preparation. The conversion must preserve what the category actually means.</p>
+<p>You will build indicator columns, recognise when ordered codes are appropriate, and decide how a fitted encoder should handle an unfamiliar name.</p>
+<h2 id="intuition">Give each name its own switch</h2>
+<p><dfn>One-hot encoding</dfn> creates one on/off column per category. <dfn>Ordinal encoding</dfn> assigns numbers that represent an intended order. A <dfn>vocabulary</dfn> is the set of category names an encoder learned during training.</p>
+<table><caption>Six district names with three independent switches</caption><thead><tr><th>District</th><th>Badda</th><th>Mirpur</th><th>Uttara</th></tr></thead><tbody><tr><td>Badda</td><td>1</td><td>0</td><td>0</td></tr><tr><td>Mirpur</td><td>0</td><td>1</td><td>0</td></tr><tr><td>Uttara</td><td>0</td><td>0</td><td>1</td></tr><tr><td>Badda</td><td>1</td><td>0</td><td>0</td></tr><tr><td>Mirpur</td><td>0</td><td>1</td><td>0</td></tr><tr><td>Uttara</td><td>0</td><td>0</td><td>1</td></tr></tbody></table>
+<p>Read across the Mirpur row. Only its own switch is on. All three names receive equal treatment as nominal categories. The columns do not claim that one district is larger, better or farther away.</p>
+<p>Ordered service levels are different. Low, medium and high have an intended sequence. Codes 0, 1 and 2 preserve that sequence, but a distance-based model may also assume equal spacing. Check whether that extra assumption is justified.</p>
+<h2 id="how-it-works">Fix columns before transforming rows</h2>
+<p>Start with the six names shown above as training observations. Sort the three unique names alphabetically to obtain Badda, Mirpur and Uttara. This order is a reproducible column convention, not a geographical order.</p>
+<pre class="diagram">fit categories from training rows
+fix one output column for each fitted category
+for each new row:
+    compare its name with every fitted category
+    write 1 for a match and 0 otherwise
+    apply a declared policy if no category matches</pre>
+<div data-lab="one-hot"></div>
+<p>Six known rows create six ones across eighteen cells. The first row becomes [1,0,0]. The code letters B, M and U stand for the three names. In the lab, the training vocabulary is already fixed; the input string supplies rows to transform.</p>
+<p>Enter a question mark for an unseen name. Under ignore, its row is all zeros. Under error, the row is marked ERROR to explain rejection. A real OneHotEncoder using the error policy raises an exception instead of returning numeric cells for that row.</p>
+<p>Keeping the entire vocabulary makes an all-zero vector distinguishable from each known category. If you drop one indicator column, all zeros can also mean the dropped baseline. Document that ambiguity when handling unknowns.</p>
+<h2 id="try-it-yourself">A class acts as an indicator table</h2>
+<p>Try BMUBMU first, then replace the second letter with ?. Explain why no existing column should quietly change its meaning. Now choose the rejecting policy and find the exact row that cannot be transformed.</p>
+<div class="callout unplugged"><p>Place three district cards on classroom desks. Each student holds three paper switches and turns on only the matching district. Give one student a fourth district name. Agree on an unknown-name rule before letting the student answer.</p></div>
+<p>Discuss a spelling variation such as an extra space. Decide whether the source means a different district or merely inconsistent text. Apply a fixed, documented spelling rule before fitting categories; do not merge names because their targets happen to look similar.</p>
+<h2 id="examples">Explicit switches and fitted encoders</h2>
+<p>The first program loops over the fitted names and creates zeros and ones directly. Trace its first two rows to check the column order.</p><div data-example="ex-1"></div>
+<p>OneHotEncoder performs the same conversion. sparse_output=False gives a visible dense array for this tiny example. On large tables, sparse output stores mostly the nonzero entries and can save memory.</p><div data-example="ex-2"></div>
+<p>The rent example reserves test rows before fitting the district vocabulary. A fixed Missing token keeps an absent name separate from observed district names. The same encoder then transforms every held-out row.</p><div data-example="ex-3"></div>
+<p>Pandas get_dummies is useful for exploration. Calling it separately on training and test tables can produce different columns or column orders. Reindex test columns to the training columns with fill_value=0, or use one fitted encoder throughout.</p>
+<h2 id="common-mistakes">Names do not justify arithmetic</h2>
+<ul><li>Feeding arbitrary district integers into KNN invents distances. Use nominal indicators or a justified representation.</li><li>Using LabelEncoder on unordered input columns hides a modelling assumption. It is primarily for target labels; use OneHotEncoder for nominal inputs.</li><li>Learning categories from the combined train and test table uses held-out information. Fit the vocabulary on training data.</li><li>Silently treating every unknown as a familiar district invents membership. Choose an unknown policy and monitor how often it occurs.</li></ul>
+<h2 id="going-deeper">Optional: geometry and many categories</h2>
+<div class="callout deeper"><p>For k categories, a complete one-hot vector has length k with one entry equal to one. Two different known categories have squared Euclidean distance two: one switch turns off and another turns on. Arbitrary integer codes cannot preserve that equal treatment for three or more names.</p><p>Thousands of unique names can create thousands of columns. Consider grouping rare categories using training counts, supported encoder frequency options, or a domain-defined grouping. Never group by test outcomes. Sparse storage reduces memory, but it does not remove the statistical difficulty of rare groups.</p></div>
+<p>With an intercept, all k indicators are linearly dependent because their sum is one. Some unregularised linear models drop a baseline column to avoid redundant coefficients. This is a modelling choice, not a universal rule for trees or distance methods.</p>
+<h2 id="summary">Keep a stable vocabulary</h2>
+<ul><li>Use nominal indicators when category order has no meaning.</li><li>Use ordinal codes only with an explicit order and spacing caveat.</li><li>Fit category names and column order on training data.</li><li>Transform future rows with those same columns.</li><li>Declare how missing and unseen names are represented.</li><li>Watch memory use and rare categories as vocabularies grow.</li></ul>
+<p>Next, <a href="topic:ml-feature-scaling">compare features measured on different numeric scales</a>.</p>
