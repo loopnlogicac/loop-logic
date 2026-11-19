@@ -1,0 +1,75 @@
+<h2 id="introduction">এক শিক্ষার্থীর ডেটা একসঙ্গে</h2>
+<p class="lead">Student record-এ roll আর marks লাগে। ফাংশনে আলাদা পাঠানো যায়, কিন্তু প্রোগ্রাম বাড়লে সম্পর্ক বোঝা কঠিন। <dfn>ক্লাস</dfn> সম্পর্কিত ডেটা আর তার operation-সহ অবজেক্টের নকশা। ওই ক্লাসের নির্দিষ্ট একটি অবজেক্ট <dfn>instance</dfn>।</p>
+<p>ক্লাস marks card-এর design ভাবো। প্রতিটি card একই design-এ নিজস্ব marks রাখে। দ্বিতীয়টি বানালে প্রথমটি মোছা চলবে না। Position সবসময় মিলিয়ে রাখতে হয় এমন কয়েক list-এর বদলে ক্লাস সরাসরি আলাদা record বোঝায়।</p>
+<p>কয়েক ফাংশন একই মানের দল নিয়ে কাজ করলে ক্লাস ভালো। প্রতিটি ছোট হিসাবে বাধ্যতামূলক নয়: square(number) ফাংশনই থাকুক। Student বা balance-এর মতো স্পষ্ট অবজেক্টে ব্যাখ্যা সহজ হলেই ক্লাস বাছো।</p>
+
+<h2 id="syntax">বাইরে থেকে ক্লাস সংজ্ঞা পড়ো</h2>
+<p>class-এর পরে CapWords নাম। Indented body-তে method আর কখনো class attribute। <dfn>Method</dfn> ক্লাসে যুক্ত ফাংশন। Student(12, 75) instance বানিয়ে argument দিয়ে initialize করে।</p>
+<pre><code class="language-python">class Student:
+    school = "Campus"
+
+    def __init__(self, roll, marks):
+        self.roll = roll
+        self.marks = marks
+
+    def passed(self):
+        return self.marks &gt;= 40</code></pre>
+<p>self প্রচলিত নাম, reserved keyword নয়। পাঠক আশা করে বলে রাখো। self.roll = roll-এ বামটি instance attribute, ডানটি কলের parameter। নাম এক হলেও storage এক নয়।</p>
+<p>__init__-এর দুই underscore বিশেষ method চেনায়। Construction-এ Python ডাকে, আগেই তৈরি instance প্রস্তুত করে, instance ফেরায় না। Implicit None রাখো; অন্য মানে TypeError। বিশেষ construction পরে, সাধারণ record-এ নয়।</p>
+
+<h2 id="how-it-works">Reference আর attribute lookup</h2>
+<p>student.passed()-এ Python method খুঁজে student-কে প্রথম argument bind করে। বাড়তি self দেবে না। ধারণায় Student.passed(student) একই ordinary call। ফল ওই instance-এর marks থেকে।</p>
+<p><dfn>Instance attribute</dfn> সাধারণত এক অবজেক্টের। first.marks = 80-তে second.marks 55 থাকতে পারে। <dfn>Class attribute</dfn> ক্লাসে, override না করা instance পায়। school এমন shared তথ্য।</p>
+<p>এই plain ক্লাসে read আগে instance, পরে class। instance.school assign সাধারণত Student.school ঢেকে নিজের attribute বানায়, class বদলায় না। Student.school বদলালে override নেই এমন instance-এর fallback বদলায়।</p>
+<pre class="diagram">first  ----&gt; Student instance: roll=12, marks=80
+alias  ----&gt; একই instance
+second ----&gt; Student instance: roll=25, marks=55
+Student ---&gt; school="Campus"</pre>
+<p>Assignment পুরো student নয়, reference copy। alias = first-এর পরে alias.marks update first-এও দেখা যায়। স্বাধীন state চাইলে আলাদা Student। Collection-এ একই reference আবার থাকতে পারে, তাই নাম আর অবজেক্ট আলাদা গুনো।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>Instance C struct আর তার ফাংশনের মতো ভাবা যায়। Method binding self দেয়। Pointer parameter ঘোষণা বা manual free লাগে না, তবে alias একই mutable state দেখতে পারে।</p></div>
+
+<h2 id="examples">বানাও, বদলাও, ownership তুলনা</h2>
+<p>বদলানো attribute কোন অবজেক্টের আগে চেনো। প্রথমে আলাদা student, পরে state বদলানো method, class fallback আর shared-list ফাঁদ। সব পরিবর্তন ইচ্ছা করে, Python-এ নির্ধারিত।</p>
+
+<h3>দুই স্বাধীন marks card</h3>
+<p>দুই কলে আলাদা marks। passed self.marks পড়ে, তাই roll 12 pass, roll 25 নয়।</p>
+<div data-example="ex-1"></div>
+
+<h3>Method-এ balance update</h3>
+<p>deposit existing wallet বদলায়। দুই নাম একই wallet পায়, তাই returned balance আর alias-এর মান 125।</p>
+<div data-example="ex-2"></div>
+
+<h3>Class default ঢেকে দাও</h3>
+<p>first-এর নিজের room B। second class fallback-এ যায়, যার room এখন C। ক্লাসও C দেয়।</p>
+<div data-example="ex-3"></div>
+
+<h3>Shared আর independent list</h3>
+<p>a 75 append করলে shared class list b দিয়েও দেখা যায়। Separate y-এর নতুন list করে, সেটি empty।</p>
+<div data-example="ex-4"></div>
+
+<h2 id="designing-state">প্রতি অবজেক্টের দায় স্পষ্ট</h2>
+<p>নিজস্ব list __init__-এ, যেমন self.marks = []। প্রতি construction-এ fresh। Class body-তে marks = [] এক shared list। Instance attribute বদলে না নিলে যেকোনো instance-এর append একই list বদলায়।</p>
+<p>স্থির shared setting-এ class attribute ভালো। সবার নিয়ম একই হলে Student-এ pass threshold। Course-ভেদে হলে input বা instance-এর নিজস্ব মান। ডেটার অর্থ থেকে ownership ঠিক করো।</p>
+<p>Method deposit বা passed-এর মতো অর্থপূর্ণ কাজ বলবে। অপ্রত্যাশিতভাবে সম্পর্কহীন অবজেক্ট edit এড়াও। ফল return করলে caller দেখানো, রাখা বা তুলনা বাছে। সব method-এ print ডেটার আচরণ আর presentation মেশায়।</p>
+<p>Validation-এর স্পষ্ট boundary চাই। Nonnegative balance বললে invalid শুরু আর update একইভাবে reject। Exception পাঠে failure জানানো আসবে। আপাতত domain বলো, উদাহরণ তার ভেতর। Documented rule না হলে negative নীরবে সারিও না।</p>
+
+<h2 id="tracing-the-contract">আরেক method-এর আগে change trace</h2>
+<p>দুই student আর প্রথমের alias-এর প্রতিটি নাম থেকে অবজেক্টে তির আঁকো। Alias-এ marks বদলাও। শুধু প্রথমটি বদলায়, দ্বিতীয় instance আলাদা। নাম গুনে আন্দাজের চেয়ে ছোট reference ছবি নির্ভরযোগ্য।</p>
+<p>self.method()-এ একই অবজেক্টের আরেক method চলে। Interface নতুন value না চাইলে প্রতি update-এ replacement object কোরো না। Counter increment সাধারণত নিজের state বদলায়, report নতুন text ফেরাতে পারে।</p>
+<p>Attribute name অর্থপূর্ণ: student-এ x অস্পষ্ট, roll আর marks সম্পর্ক দেখায়। Plain function আর method তুলনায় method self-এ receiver স্পষ্ট করে, caller ছোট bound call নেয়।</p>
+
+<h2 id="common-mistakes">নাম কোন অবজেক্ট পায় দেখো</h2>
+<h3>Method-এ self বাদ</h3>
+<p>Instance call নিজে instance দেয়। First parameter না থাকলে নিতে পারে না। Argument-count error পড়ে instance লাগলে self যোগ করো।</p>
+<h3>Attribute-এর বদলে local name</h3>
+<p>Method-এ marks = 90 local বানায়, self.marks বদলায় না। কল শেষে মান থাকতে হলে dotted রূপ।</p>
+<h3>ভুলে shared list</h3>
+<p>Mutable class attribute instance-জুড়ে থাকে। __init__-এ বানালে আলাদা list। ভুল level copy-তে nested মান shared থাকতে পারে, যেমন <a href="topic:py-lists">list</a> পাঠে।</p>
+<h3>Attribute-কে method-এর মতো কল</h3>
+<p>student.roll integer হলে student.roll() integer call করে ব্যর্থ। বন্ধনী call, শুধু dot attribute। আগে interface পড়ো।</p>
+
+<h2 id="version-notes">Python version-জুড়ে সাধারণ ক্লাস</h2>
+<p>class, __init__ আর method Python 3.10–3.12-তে চলে। এখানে সাধারণ instance dictionary। Property আর slot আচরণ বদলাতে পারে, তাই সহজ lookup শুধু plain class-এর। এক underscore private access enforce করে না।</p>
+
+<h2 id="summary">নকশা আর প্রতিটি record আলাদা</h2>
+<p>ক্লাস মানের দলকে দরকারি interface দেয়। __init__-এ নিজস্ব state, self-এ access, ইচ্ছাকৃত sharing-এ class attribute। পরের <a href="topic:py-inheritance-polymorphism">ইনহেরিট্যান্স আর পলিমরফিজম</a>-এ কয়েক type এক operation দেয়।</p>

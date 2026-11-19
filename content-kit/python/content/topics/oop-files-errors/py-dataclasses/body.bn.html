@@ -1,0 +1,74 @@
+<h2 id="introduction">Routine method না লিখে record বোঝাও</h2>
+<p class="lead">Course record-এ code, credits আর readable display চাই। Ordinary class-এ initializer-repr পরিচিত pattern বারবার। <dfn>Data class</dfn> declared field থেকে তা বানায়। সংজ্ঞা ছোট, সাধারণ method-ও থাকে।</p>
+<p>dataclasses standard library-তে, নতুন install নয়। সংজ্ঞার ওপরে @dataclass। এটি class process করা decorator; <a href="topic:py-decorators">decorator</a> পাঠে notation বিস্তারিত।</p>
+<p>Named value-তে অর্থ এমন record-এ মানায়। সব class-এর বদলি বা database নয়। Network connection-এ field equality-র বদলে নিয়ন্ত্রিত আচরণ লাগতে পারে। Object-এর অর্থ দেখে নাও।</p>
+
+<h2 id="syntax">Field আর optional default</h2>
+<p>credits: int = 3 annotated assignment default-সহ field। Default নেই মানে initializer-এ required argument। সাধারণ initializer-এ required আগে default পরে, তাই Course("CSE212") স্পষ্ট।</p>
+<pre><code class="language-python">from dataclasses import dataclass, field
+
+@dataclass
+class Course:
+    code: str
+    credits: int = 3
+    rolls: list[int] = field(default_factory=list)</code></pre>
+<p>Generated __init__ code, credits, rolls নেয়। credits বাদে 3, rolls বাদে list কল করে fresh empty list। Explicit rolls দিলে সেই reference, automatic copy নয়। Ownership তখনও জরুরি।</p>
+<p>Annotation intended type, string integer করে না বা construction-এ wrong type বাদ দেয় না। Static tool usage দেখে, যেমন <a href="topic:py-type-hints">type hint</a> পাঠে। Domain-এ লাগলে explicit runtime validation।</p>
+
+<h2 id="how-it-works">কী তৈরি হয় জানো</h2>
+<p>Default-এ initializer, readable repr আর equality বানায়। Repr-এ class-field name। Equality declaration order-এ participating field মেলায়, matching concrete class চায়। আলাদা matching record equal, একই object না হলেও।</p>
+<p>Ordering default off; order=True-তে generated order। Field order tuple-like key। roll আগে marks দিলে উল্টো declaration থেকে ভিন্ন sort। এক report-এর order চাইলে sorted(records, key=...) পরিষ্কার হতে পারে।</p>
+<p>সাধারণ total() বা passed(), custom __str__ লিখতে পারো। Generated routine অংশ, নিজের method domain behavior। পড়ে caller-এর operation বোঝা চাই।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>Generated initialization-comparison helper-সহ struct-এর মতো। Field এখনও Python object reference। Annotation fixed C integer slot allocate বা C-style convert করে না।</p></div>
+<p>repr=False generated display-তে field লুকায়, access control নয়। compare=False generated comparison বাদ দেয়। Helper cache যেন logical identity না হয়, তখন কাজে লাগে।</p>
+
+<h2 id="examples">Record আর independent default দেখো</h2>
+<p>Generated initializer-display, তারপর আলাদা record তুলনা। Roster-এ factory callable কেন দেখো। Frozen-এ assignment বাদ, কিন্তু ভেতরের list mutation চলে।</p>
+
+<h3>Initializer আর representation বানাও</h3>
+<p>Course generated initializer আর repr পায়। credits না দিলে default তিন।</p>
+<div data-example="ex-1"></div>
+
+<h3>প্রতি roster-এ আলাদা list</h3>
+<p>Factory a আর b-তে আলাদা চলে। a append-এ b empty, identity-তেও list আলাদা।</p>
+<div data-example="ex-2"></div>
+
+<h3>Data record তুলনা আর order</h3>
+<p>Declaration-এ marks প্রথম key, roll tie-breaker। Matching field equal।</p>
+<div data-example="ex-3"></div>
+
+<h3>Frozen-এর shallow সীমা</h3>
+<p>Generated rule label assignment বাদ দেয়। Existing list-এ append field binding না বদলে contained list বদলায়, তাই চলে।</p>
+<div data-example="ex-4"></div>
+
+<h3>Initialization-এর পরে validate</h3>
+<p>Generated initializer marks বসায়, __post_init__ domain দেখে। Zero valid, 101-এ explicit ValueError।</p>
+<div data-example="ex-5"></div>
+
+<h2 id="defaults-and-validation">ঠিক সময়ে mutable default</h2>
+<p>Class definition-এ বানানো mutable list সাধারণত shared হতো। Dataclass list-সহ প্রচলিত unhashable default reject করে। প্রতি instance-এ fresh চাইলে field(default_factory=list)। list নিজে, list() নয়, callable চাই।</p>
+<p>Factory dictionary, set বা custom helper-ও বানায়। Zero-argument ফাংশন বিশেষ শুরুর মান দিতে পারে। Construction-এ default দরকার হলেই চলে; caller value দিলে সেটি।</p>
+<p>Generated initializer field বসানোর পরে __post_init__। Mark validate বা derived field হিসাব চলে। 0..100-এর বাইরে ValueError domain rule স্পষ্ট করে; int annotation এই পরীক্ষা করে বলবে না।</p>
+<p>Validation predictable রাখো। Input list সরাসরি রাখলে caller পরে বদলে check পাশ কাটায়। Initialization-এ copy alias কমায়, তবে outer list copy deep নয়। Record কোন object own করে বোঝাও।</p>
+
+<h2 id="frozen-records">Frozen-এর boundary বোঝো</h2>
+<p>frozen=True initialization-এর পরে normal field assignment reject। point.x = 9-এ AttributeError-এর subclass FrozenInstanceError। Value-like record-এর সাধারণ attribute স্থির রাখে; API rule, absolute security barrier নয়।</p>
+<p>Frozen shallow। List field-এর append নতুন field assign না করে list বদলায়। উদাহরণ ইচ্ছা করে দেখায়। Deeply stable record চাইলে immutable element-এর tuple-এর মতো মান।</p>
+<p>Equality-সহ frozen সাধারণত generated hash পায়, সব field hashable করে না। List-সহ record hash করলে participating field-এর hash ব্যর্থ। Error সরাতে unsafe_hash নেবে না।</p>
+<p>Frozen value update-এ dataclasses.replace(record, field=new_value) নতুন record। না বদলানো field reference একই, deep copy নয়। পুরোনো রেখে course plan-এর নতুন version-এ মানায়।</p>
+
+<h2 id="common-mistakes">সুবিধা আর নিশ্চয়তা আলাদা</h2>
+<h3>default_factory=list() লেখা</h3>
+<p>Function-এর বদলে বানানো list যায়। বন্ধনী ছাড়া list। Factory construction-এ fresh object দেয়।</p>
+<h3>Annotation text reject করবে ভাবা</h3>
+<p>Explicit validation ছাড়া Course("CSE212", "three") তৈরি হতে পারে। Runtime correctness type-range চাইলে __post_init__ বা input boundary check।</p>
+<h3>Frozen মানে nested সব স্থির</h3>
+<p>Frozen wrapper-এ mutable object থাকে। Logical stability চাইলে immutable field। Nested mutation আর reassignment আলাদা test।</p>
+<h3>ভুল field order-এ sort</h3>
+<p>Generated order declaration মেনে। order=True-এর আগে পড়ো বা sorted-এ explicit key। দরকারে non-identity helper comparison বাদ দাও।</p>
+
+<h2 id="version-notes">Supported field option বুঝে নাও</h2>
+<p>Dataclass Python 3.7-এ এসেছে। এখানে 3.10–3.12, পরের-only option নেই। Mutable-default rejection 3.11-এ বিস্তৃত, তবে পুরো range-এ field(default_factory=list) intended portable pattern। Generated repr persistent interchange format নয়।</p>
+
+<h2 id="summary">Record সংজ্ঞা সৎ রাখো</h2>
+<p>Data class routine method কমায়, ordinary behavior থাকে। Independent mutable default-এ factory; frozen shallow assignment rule। পরের <a href="topic:py-exceptions">exception</a>-এ invalid operation reject আর উপযুক্ত boundary-তে recovery।</p>
