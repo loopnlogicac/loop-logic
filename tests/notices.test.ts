@@ -58,7 +58,7 @@ test('notice endpoints reject guests and ignore caller-supplied learner IDs', as
 
 test('notices persist through the Supabase generic docs interface', async () => {
   const docs = new Map<string, any>();
-  const fakeFetch = async (url: string, init: any) => { const u = new URL(url), id = u.searchParams.get('id')?.slice(3); if (init.method === 'POST') { const d = JSON.parse(init.body); docs.set(d.id, d); return new Response(null, { status: 201 }); } return Response.json(id ? docs.has(id) ? [docs.get(id)] : [] : [...docs.values()]); };
+  const fakeFetch = async (url: string, init: any) => { const u = new URL(url), id = u.searchParams.get('id')?.slice(3); if (init.method === 'POST') { const d = JSON.parse(init.body); docs.set(d.id, d); return new Response(null, { status: 201 }); } return Response.json(id ? docs.has(id) ? [docs.get(id)] : [] : [...docs.values()].slice(Number(u.searchParams.get('offset') ?? 0))); };
   const notices = new NoticeService(new SupabaseStore('https://test.invalid', 'test', fakeFetch as any));
   await notices.emit('a', 'assignment', 'one', { title: 'Quiz' }); assert.equal((await notices.list('a', 'en')).unread, 1); await notices.readAll('a'); assert.equal((await notices.list('a', 'en')).unread, 0);
 });
