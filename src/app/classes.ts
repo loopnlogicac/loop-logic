@@ -6,6 +6,7 @@
 // when fewer than `minGroup` students contribute, as on the old instructor page.
 // Questions asked to the AI are never shown as text, only counted by page.
 
+import { masteryPairs } from './mastery.ts';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { AppError } from './service.ts';
 import type { DocRow, ReadingEventRow, Store } from '../store/store.ts';
@@ -234,6 +235,12 @@ export class ClassService {
       };
     }).sort((a, b) => a.email.localeCompare(b.email));
 
+    const pairs = masteryPairs(events).filter((p) => !cls.track || p.track === cls.track);
+    const masteryGain = [...new Set(pairs.map((p) => `${p.track}:${p.topic}`))].map((key) => {
+      const rows = pairs.filter((p) => `${p.track}:${p.topic}` === key);
+      const p = rows[0]!;
+      return { track: p.track, topic: p.topic, title: this.tutorials.pageInfo(p.track, p.topic, lang)?.topicTitle ?? p.topic, students: rows.length, gain: Math.round(rows.reduce((n, r) => n + r.gain, 0) / rows.length * 100) / 100 };
+    }).filter((r) => r.students >= this.minGroup);
     const enough = ids.size >= this.minGroup;
     // Quiz results: weakest topics, and the questions most often answered wrong.
     const topicScores = new Map<string, { sum: number; n: number; who: Set<string> }>();
@@ -297,7 +304,7 @@ export class ClassService {
         needHelp: roster.filter((r) => r.reasons.length).length, delivered,
       },
       pending: mine.filter((e) => e.data.status === 'pending').map((e) => ({ learnerId: e.data.learnerId, email: e.data.email, at: e.data.joinedAt })),
-      roster, hardTopics, hardQuestions, asks, heat, labs, videoQuizzes,
+      masteryGain, roster, hardTopics, hardQuestions, asks, heat, labs, videoQuizzes,
       assignments: myAssignments.map((a) => ({ id: a.id, ...a.data, items: a.data.items.map((it: Json) => ({ ...it, title: titleOf.get(it.topic) ?? it.topic })), submitted: roster.filter((r) => r.assignments.find((x) => x.id === a.id && x.done === x.of)).length })),
       posts: posts.filter((p) => p.data.classId === classId).map((p) => ({ id: p.id, ...p.data })).sort((a, b) => Number(b.pinned) - Number(a.pinned) || String(b.at).localeCompare(String(a.at))),
       track: track ? { id: track.id, title: track.title, modules: track.modules.map((m: Json) => ({ id: m.id, title: m.title, topics: m.topics.filter((t: Json) => t.available).map((t: Json) => ({ id: t.id, title: t.title, labs: t.labs })) })) } : null,

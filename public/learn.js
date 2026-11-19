@@ -1,3 +1,4 @@
+import { masteryStrings, topicChecks } from './mastery.js';
 // Tutorials: track list → topic list → topic page (lesson, runnable examples, labs,
 // quiz graded on the server, practice with solutions, exam questions).
 import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
@@ -23,6 +24,7 @@ const T = {
     results: (n, s) => `${n} topics match “${s}”`, noResults: (s) => `No topic matches “${s}” yet. Try another word, or browse the tutorials below.`,
     noBn: 'The full Bangla version of this lesson is coming. You are reading the English text; key points and quiz help are in Bangla where available.',
     bnAvail: 'This lesson is also available in Bangla. Switch with the EN · বাংলা button.', course: 'Video course', notReady: 'not yet written',
+    ...masteryStrings.en,
   },
   bn: {
     ...savedStrings.bn,
@@ -39,6 +41,7 @@ const T = {
     results: (n, s) => `“${s}”-এর সঙ্গে ${n}টি টপিক মিলেছে`, noResults: (s) => `“${s}”-এর সঙ্গে এখনো কোনো টপিক মেলেনি। অন্য শব্দে খোঁজো, অথবা নিচের টিউটোরিয়াল দেখো।`,
     noBn: 'এই পাঠের পূর্ণ বাংলা সংস্করণ আসছে। এখন ইংরেজি লেখা দেখছ; মূল কথা আর কুইজের সাহায্য যেখানে আছে বাংলায় পাবে।',
     bnAvail: 'এই পাঠ বাংলাতেও আছে। EN · বাংলা বোতাম দিয়ে বদলাও।', course: 'ভিডিও কোর্স', notReady: 'এখনো লেখা হয়নি',
+    ...masteryStrings.bn,
   },
 };
 const t = () => T[getLang()];
@@ -123,6 +126,7 @@ async function renderTopic() {
     runnerStatus(),
   ]);
   RUN = rs;
+  const checks = await topicChecks(d.track.id, d.topic.id, L);
   document.title = `${d.topic.title} · ${d.track.title}`;
   const body = el('article', { class: `tut-body lang-${d.topic.bodyLang}`, lang: d.topic.bodyLang });
   body.innerHTML = d.topic.bodyHtml; // sanitised on the server (tag and attribute whitelist)
@@ -179,7 +183,7 @@ async function renderTopic() {
             d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
             d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
           el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
-        langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, quiz, practice, exam, videos, refs, pager)));
+        checks.before, langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, checks.after, quiz, practice, exam, videos, refs, pager)));
   fillAdSlots();
   api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
   main.querySelector('.tut-title').after(savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L));

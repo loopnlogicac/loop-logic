@@ -9,7 +9,7 @@ export interface ReadingEventRow {
   learnerId: string;
   lessonId: string;
   blockId: string | null;
-  type: 'view' | 'active_time' | 'select' | 'help' | 'quiz' | 'feedback' | 'scroll_back' | 'setting' | 'lab_check' | 'video' | 'video_quiz' | 'ask';
+  type: 'view' | 'active_time' | 'select' | 'help' | 'quiz' | 'feedback' | 'scroll_back' | 'setting' | 'lab_check' | 'video' | 'video_quiz' | 'ask' | 'pre_check' | 'post_check';
   payload: Record<string, unknown>;
   at: string;
 }
