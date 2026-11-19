@@ -1,61 +1,80 @@
-# Python – Batch 1 review notes
+# Python – Batch 2 review notes
 
-Package version: **0.1.0**. Format: **1.1**. Track: **python**.
+Package version: **0.2.0**. Format: **1.1**. Track: **python**.
 
-This delivery contains all 13 topics in `basics` and `control-flow`, in curriculum order.
-The remaining 32 topics belong to later batches. No point in this batch's `covers`
-lists is intentionally omitted. No extra topics are proposed.
+Batch 2 adds all 13 topics in `data-structures` and `functions`. The manifest is
+cumulative: it retains the 13 Batch 1 topics in `basics` and `control-flow`, for
+**26 of 45** curriculum topics. The remaining 19 topics belong to Batches 3 and 4.
+No curriculum point in this batch is intentionally omitted. No additional topics
+are proposed. All repository changes are inside `content-kit/python/content/`.
 
-## Scope and teaching decisions
+## Teaching decisions
 
-- English lesson bodies explain programming from zero. Each body contains a specific
-  “If you know C” callout. Titles, summaries and key points include natural Bangla.
-  Full Bangla lesson bodies are not included; the manifest records `bn-partial`.
-- `py-introduction` retains the curriculum's `theory` kind. Its four worked written
-  exercises and ten concept questions avoid requiring syntax not yet taught.
-- Setup and first-program lessons each have two runnable text exercises and two
-  written debugging/environment exercises. Their brief `input()` previews link to
-  the full input/output lesson. Remaining lessons use runnable practice throughout.
-- Imported standard-library tools, tuples, lists, f-strings and early decisions are
-  explained when first previewed and linked to the appropriate deeper topic.
-- All programs use the standard library only. They do not need pip installations.
-- Videos are intentionally empty: no video is linked merely because it mentions Python.
-- Example programs that read input include prompts. Practice solutions follow their
-  stated output formats and omit interactive prompts.
-- There are no compile-only or nondeterministic examples, suppressed warnings,
-  intentionally failing programs, network calls or dependencies on user files.
-- The main guard is not introduced early: the curriculum teaches it in
-  `py-modules-packages` in Batch 2. Batch 1 programs are ordinary top-level scripts.
+- English lessons assume only earlier Python topics. Each new lesson includes an
+  “If you know C” callout explaining a useful difference. Titles, summaries and
+  key points contain Bangla. Full Bangla bodies remain outside this delivery;
+  the manifest continues to record `bn-partial`.
+- Definitions and real calculations replace abstract stand-in code. Small previews
+  of dictionaries, generators, decorators and files are explained where used and
+  link to their dedicated lessons. No student-facing production commentary is added.
+- Example, practice and quiz counts vary with scope. Every new lesson meets its
+  body-depth target and contains at least three runnable output questions.
+- Aliasing, nested mutable values and shallow copying are demonstrated explicitly.
+  A tuple's immutability is distinguished from deep immutability and hashability.
+- Set output is sorted when displayed. Dictionary insertion order is distinguished
+  from an explicitly sorted report. Anagram examples preserve letter multiplicity.
+- String algorithms state their normalization policy. Practice tasks specify ASCII
+  or English inputs where that controls exact behavior. Unicode case folding is
+  not presented as complete Unicode normalization or grapheme segmentation.
+- The shared mutable-default example deliberately demonstrates defined but usually
+  unwanted behavior, then supplies the `None`-based alternative. No failing program
+  or nondeterministic output is used.
+- Recursion includes termination arguments, stack traces, bounded input domains,
+  cache memory costs and iterative alternatives. `lru_cache` is introduced through
+  a short decorator preview linked to the later decorators topic.
+- Main guards are used in all executable examples, practice solutions and output
+  quizzes from `py-modules-packages` onward, including the neighboring billing
+  module. Earlier lessons retain the ordinary script style used before that topic.
+- All programs use the standard library. pip/venv commands are instructional shell
+  commands; running this package requires no third-party installations. Videos
+  remain empty rather than linking a video without a verified topic match.
 
-## Coverage guide
+## Curriculum coverage guide
 
-| Topic | Curriculum coverage and where to look |
+| Topic | Coverage and reviewer entry points |
 | --- | --- |
-| `py-introduction` | Uses and limitations in worked scenarios; source → bytecode → interpreter diagram; typical compiled C workflow; Python 2 end of life, Python 3 and major/minor/patch versions; C comparison table. |
-| `py-setup` | Windows/macOS/Linux installation guidance; executable names and PATH; terminal versus REPL; saved `.py` files; VS Code interpreter selection; Jupyter kernel and cell order; pip paragraph and managed-environment guidance. |
-| `py-first-program` | `print`, arguments, literal text and comments; indentation and blocks using an explained `if True` preview; running saved files; SyntaxError, NameError and reading error locations. |
-| `py-variables-types` | Dynamic typing and rebinding; int/float/bool/str/None; `type()` and readable type names; identity comparison with `id()`; naming rules, snake_case and built-in shadowing; object binding diagram. |
-| `py-numbers-math` | `/`, `//`, `%`, `**`, precedence and signed examples; quotient–remainder relation; growing integers and practical resource limits; float approximation, nearest-even rounding and display; `math.isqrt`, `sqrt`, `ceil`, `floor`, `isclose`. |
-| `py-strings-basics` | Quotes, escapes, concatenation/repetition; positive/negative indexing and start/stop/step slicing; clipping versus IndexError; immutability; `len`, `strip`, `upper`, `lower`, `replace`, `startswith`; Unicode code points versus visible letters. |
-| `py-input-output` | `input()` returns str and removes a newline; int/float conversion and ValueError; prompts, blank input and EOF; `print` sep/end; f-strings, width, alignment, precision and percentage formatting. |
-| `py-operators` | Comparison chaining and middle evaluation; and/or/not precedence and operand return; short-circuit guards; equality versus identity and `is None`; substring membership; common incomplete-comparison mistake. |
-| `py-if-statements` | Branch syntax and indentation; first-match execution trace; truthiness; nested conditions and else ownership; conditional expressions; domain validation and threshold ordering. |
-| `py-match-case` | Python 3.10 requirement; literal, wildcard, OR and capture patterns; tuple shape matching and guards; guard failure and no fall-through; unreachable cases and capture-name pitfalls; when if/elif is clearer. |
-| `py-while-loop` | Counter and sentinel loops with traces; initial false condition; explicit progress; sentinel exclusion; while-else with/without break; while True and a reachable exit; continue's skipped-update risk. |
-| `py-for-loop` | Direct sequence iteration; all range argument forms and direction; compact range representation; enumerate and pair unpacking; zip truncation and strict mode; for-else and empty input; break/continue and nested-loop behavior. |
-| `py-loop-problems` | Primality proof and inclusive square-root boundary; factorial invariant and empty product; Fibonacci simultaneous updates; Euclid invariant and trace; digit sums/counts with signs and zero; star and nested digit patterns; C comparisons and realistic complexity. |
+| `py-lists` | Creation, indexing and clipping slices; append/insert/pop/remove/sort; alias versus outer copy; independently created nested rows and shared inner rows. |
+| `py-list-comprehensions` | Basic transformation, trailing filters and conditional expressions; nested loop order, flattening and transposition; independent rows, result-size costs and readability limits. |
+| `py-tuples` | Fixed slots versus mutable contained values; packing, exact and starred unpacking; singleton commas; hashable coordinate keys and the dictionary preview. |
+| `py-sets` | Uniqueness and hashability; union, intersection, directional and symmetric differences; subset/proper subset/disjointness; frozenset teams, updates and membership costs. |
+| `py-dictionaries` | Key-value lookup and replacement; get/items/keys/values and live views; comprehensions; frequency counting and grouping repeated values; insertion order and missing-key policies. |
+| `py-strings-advanced` | split/join/strip/replace/find; width, alignment, precision and percentage formatting; normalization, palindrome, anagram and word-count algorithms. |
+| `py-functions` | def, parameter/argument distinction, return and docstrings; multiple results packed into tuples; implicit/bare return of None and caller-side handling. |
+| `py-function-arguments` | Positional and keyword binding; definition-time defaults and mutable-default repair; *args/**kwargs collection and call expansion; keyword-only parameters. |
+| `py-scope-lambda` | LEGB, shadowing and local-binding errors; global/nonlocal; closures, single-expression lambdas and loop late binding with default capture. |
+| `py-recursion` | Base cases and shrinking measures; descent/unwinding; recursion limits and absence of tail-call elimination; functools.lru_cache, cache bounds, clearing and purity concerns. |
+| `py-higher-order-functions` | Function values and callable contracts; map/filter iterator consumption; sorted key functions and stability; factories returning configured closures. |
+| `py-modules-packages` | Explicit import forms and namespaces; real two-file billing example; main guard and import initialization; conventional packages, relative imports and -m; venv and interpreter-specific pip use. |
+| `py-standard-library` | math, local random.Random, fixed dates/aware datetimes; Counter/defaultdict/deque; chain/product/combinations/count/islice; os.listdir and pathlib, including a temporary filesystem example. |
 
 ## Verification
 
-Actual authoring toolchain: **Python 3.12.14**, **Node.js v24.22.1**.
-The checker also detects GCC in the environment, but this package contains only Python.
+Actual execution toolchain: **Python 3.12.14**, **Node.js v24.22.1**.
+The checker also detects GCC; this package contains Python programs only.
 
-Every example was executed as isolated UTF-8 Python code. Every practice solution
-was run for each recorded input. All `.out` files were written from captured real
-execution output, never from manually typed expected results. Output quiz programs
-were separately executed and their selected answers compared with their results.
-All executions also used `-W error`. The package checker independently parses code
-with warnings as errors and reruns the examples, practice cases and output quizzes.
+All 62 new examples and all 134 new practice execution cases were run using
+`python3 -I -X utf8 -W error`. Every `.out` file was captured from execution.
+The 40 new output-quiz programs were separately run to populate their correct
+answers. The full checker independently parses and executes the cumulative
+package, including Batch 1. It also checks repeated prose, quiz prompts, Bangla,
+HTML, curriculum metadata and counts.
+
+All 121 new Python files, including `billing.py`, parse with Python 3.10 grammar.
+The 40 new output-quiz programs were checked against that grammar as well.
+Runtime verification uses Python 3.12.14; no claim of execution on a 3.10 runtime
+is made. Import smoke checks confirm that the guarded source files do not print
+or request input when loaded under a non-main name. Short Python examples in the
+new exam answers are also executed independently.
 
 Run from `content-kit/`:
 
@@ -63,32 +82,55 @@ Run from `content-kit/`:
 node tools/check.mjs python/content --report python/content/CHECK_REPORT.txt
 ```
 
-The delivery contains 50 examples, 54 practice exercises (46 code and 8 written),
-114 practice execution cases, 134 quiz questions (40 output questions) and 42 exam
-questions. All 96 Python files and all output-quiz programs also parse using
-Python 3.10 grammar; runtime verification uses Python 3.12.14.
+Final result: **0 errors, 0 warnings** across all **26** delivered topics. The
+initial depth warnings were resolved by adding subject-specific explanations.
+The committed `CHECK_REPORT.txt` records the final full run.
 
-The committed `CHECK_REPORT.txt` is the final result. All 13 topics must report
-zero errors; the final delivery also has zero warnings.
+| Content | Batch 2 | Cumulative |
+| --- | ---: | ---: |
+| Topics | 13 | 26 |
+| Examples | 62 | 112 |
+| Practice exercises | 58 code | 104 code + 8 written |
+| Practice execution cases | 134 | 248 |
+| Quiz questions | 145 | 279 |
+| Output quiz questions | 40 | 80 |
+| Exam questions | 39 | 81 |
+| Python source files | 121 | 217 |
 
-Cases include immediate sentinels, empty strings, empty ranges, exact threshold
-endpoints, invalid marks, negative arithmetic, singleton strings, unequal zip
-lengths, factorial zero, Fibonacci zero, perfect-square composites, zero GCD
-operands and signed digit input. Practice statements define the accepted domain;
-reference solutions assume syntactically valid input in that domain.
+Practice cases include empty inputs and rows, missing members and keys, repeated
+rolls and words, singleton tuples and lists, equal-key sorting, no recursion
+steps, zero factorial/power/staircase inputs, absent binary-search targets,
+leap-year and year-boundary arithmetic, empty queues and files without suffixes.
+Statements define valid input domains; solutions assume syntactically valid input
+within those domains rather than adding unrelated interactive validation.
 
-## Reviewer attention
+## Environment and reviewer attention
 
-- Check the English teaching flow and the Bangla wording for the intended audience.
-- The demonstrated marks labels are examples, not an institution's official grade scale.
-- Installation screens and supported Python release lists change over time. The text
-  deliberately targets 3.12 without claiming it is the newest release.
-- `id()` values are never printed; only stable identity comparisons are shown.
-- Float examples distinguish stored approximations from formatted text. Rounding uses
-  nearest even for exact ties, and the discussion notes inexact decimal inputs.
-- Unicode lengths count code points, not grapheme clusters, encoded bytes or columns.
-- `match` captures are distinguished from literal-value tests; bindings are not
-  presented as case-local, and guards are not presented as type validation.
-- Loop `else` includes initially empty iteration and is bypassed by `break`.
-- Big integers avoid fixed-width overflow, but not resource or decimal-conversion limits.
-- Topic review status remains `draft` until human content review, as required.
+- Review English teaching flow and Bangla wording for the intended audience. Topic
+  status stays `draft` until human content review.
+- `py-modules-packages/examples/billing.py` is a real companion module, listed as
+  `workdirFiles` for ex-4. That example sets `tryNow: false` because it needs both
+  files. Isolated Python omits the script folder from sys.path, so the example
+  explicitly exposes its known source directory before importing billing. The
+  lesson distinguishes this from normal sibling imports. The other module example
+  uses runpy to demonstrate the guard; it does not claim runpy is import caching.
+- The filesystem example creates and removes a temporary folder, closes the file
+  with `with`, and prints only stable names/content. It needs no existing user file.
+- Fixed calendar inputs avoid current-clock and locale variation. A fixed UTC+06:00
+  offset is distinguished from a historical regional timezone rule.
+- Random output uses a local seeded generator and random(), with repeatability and
+  display rounding explained. It does not rely on set order or shuffle order.
+- Float formatting is not presented as decimal-exact arithmetic. isqrt handles
+  exact integer boundaries, while isclose handles approximate float comparison.
+- Installation/activation commands depend on shell and OS packaging. The lesson
+  includes direct environment-interpreter invocation when activation is unavailable.
+- Cache hit/miss counts are for a fresh cache and the exact demonstrated call order.
+  Memoisation does not remove recursion depth or big-integer arithmetic costs.
+- Batch 1 lesson source remains unchanged. Its original theory/written exercises
+  and earlier main-guard teaching boundary are retained in the cumulative package.
+
+- Some `.in` and `.out` fixtures intentionally contain trailing spaces or final
+  blank lines. They exercise whitespace normalization, empty rows, empty separators
+  and blank queue reports. Preserve those bytes; whitespace-only diff diagnostics
+  for these data fixtures are expected. Source, HTML, JSON and notes pass the
+  whitespace diff check.

@@ -1,0 +1,80 @@
+<h2 id="introduction">Reach for a tested tool before rebuilding it</h2>
+<p class="lead">Counting words, adding calendar days and serving a queue are common tasks. Python includes modules for these jobs in its <dfn>standard library</dfn>, the collection distributed with the interpreter. You can import them without installing a third-party package.</p>
+<p>The useful skill is choosing a tool with the right contract. A float square root and an integer square root answer different questions. A list and a queue also differ in which operations are efficient. Read the expected input, result and edge cases before adopting a function.</p>
+<p>This tour links familiar Python data structures to practical library tools. The examples keep inputs small and fixed so you can inspect each result. More advanced applications still need validation and appropriate resource limits.</p>
+
+<h2 id="syntax">Import the module or select a tool</h2>
+<pre><code class="language-python">import math
+from collections import Counter, deque
+from datetime import date, timedelta
+from pathlib import Path</code></pre>
+            <p>Module-qualified names such as math.isqrt make the origin visible. Selected imports are convenient for frequently used classes such as Counter. Import only the names needed, and avoid assigning new meanings to those names in the same scope.</p>
+            <table class="ref"><caption>Match a task to a library area</caption><thead><tr><th scope="col">Task</th><th scope="col">Tools</th></tr></thead><tbody>
+            <tr><td>Exact integer roots and GCD</td><td>math.isqrt, math.gcd</td></tr><tr><td>Repeatable pseudo-random draws</td><td>random.Random</td></tr><tr><td>Calendar dates and intervals</td><td>datetime.date, timedelta</td></tr><tr><td>Counts, groups and queues</td><td>Counter, defaultdict, deque</td></tr><tr><td>Iterator combinations</td><td>itertools</td></tr><tr><td>Filesystem names and operations</td><td>os, pathlib</td></tr></tbody></table>
+
+<h2 id="how-it-works">Choose representation before operation</h2>
+<p>Use exact integer tools when an answer must remain an integer. math.isqrt avoids converting a large integer to an approximate float. For ordinary real-valued calculations, sqrt and trigonometric functions return floats. isclose compares approximate values using stated relative and absolute tolerances.</p>
+<p>A date represents a calendar day, while a datetime also has a time of day. A timedelta represents a duration. An aware datetime carries usable timezone information; a naive one does not identify its offset by itself. Do not guess that a naive value is automatically UTC.</p>
+<p>Paths are objects too. Constructing a Path describes a location without creating anything there. Reading, writing and checking existence are separate operations. Pure path classes let you parse path syntax without accessing the filesystem at all.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>Many tasks need separate C libraries or custom structures. Python ships high-level dates, queues and path objects, but representation choices still affect cost. deque is useful for front removal, while a list remains better for repeated direct indexing.</p></div>
+
+<h2 id="examples">Use fixed data and bounded work</h2>
+<p>The examples avoid current-clock output and machine-specific absolute paths. The file example uses a temporary folder that cleans itself up. Its with statements manage resource lifetimes; <a href="topic:py-file-handling">file handling</a> later explains text files in depth.</p>
+
+<h3>Choose mathematical tools for the number type</h3>
+<p>isqrt gives an exact integer square root, while sqrt returns a float. floor moves toward negative infinity and ceil toward positive infinity. isclose compares approximate floats using tolerances instead of requiring exact binary equality.</p>
+<div data-example="ex-1"></div>
+
+<h3>Use a local seeded random generator</h3>
+<p>A local Random object owns its generator state. A second generator with the same seed repeats the first random() value. The displayed draws lie from zero inclusive to one exclusive; formatting only rounds their display.</p>
+<div data-example="ex-2"></div>
+
+<h3>Calculate with fixed calendar dates</h3>
+<p>Date arithmetic crosses the February boundary correctly. Subtraction returns a timedelta of three days. The aware datetime represents one instant in UTC, then displays that same instant at a fixed plus-six-hour offset.</p>
+<div data-example="ex-3"></div>
+
+<h3>Count values and group observations</h3>
+<p>Counter builds a frequency mapping and returns zero for a missing count. defaultdict(list) calls list to create a fresh group when bracket access first reaches a missing room. Room A collects rolls 12 and 25.</p>
+<div data-example="ex-4"></div>
+
+<h3>Operate on both ends of a queue</h3>
+<p>appendleft gives roll 5 front priority and popleft serves it. Rotating moves 25 to the front of the remaining queue. A bounded deque retains only the newest two values when extended past its capacity.</p>
+<div data-example="ex-5"></div>
+
+<h3>Combine and limit iterators</h3>
+<p>chain visits inputs consecutively, product makes every ordered choice across groups, and combinations chooses position groups without repeating their order. count is unbounded, so islice deliberately limits this report to four values.</p>
+<div data-example="ex-6"></div>
+
+<h3>Work with paths in a temporary directory</h3>
+<p>Path joins components without manual separator guessing. TemporaryDirectory creates a private working folder and removes it afterward. The file is closed by with before it is read. Only stable filenames and content are printed, so temporary absolute paths do not enter the report.</p>
+<div data-example="ex-7"></div>
+
+<h2 id="random-dates-and-collections">Understand state and missing values</h2>
+<p>A pseudo-random generator evolves internal state to produce a sequence. A seed selects an initial state. Using a local Random object keeps one experiment from resetting unrelated code's generator. A fixed seed supports repeatability, while individual random-module algorithms can change between Python versions.</p>
+<p>The random() method returns a float from zero inclusive to one exclusive. Other methods choose integers, samples or shuffled sequences. These are simulation tools, not password-generation tools; security-sensitive randomness uses different facilities.</p>
+<p>Date arithmetic handles month and leap-year boundaries. Adding three days to February 27, 2026 reaches March 2. An aware UTC instant can be displayed at a fixed plus-six offset without changing the instant. A fixed offset does not model historical daylight-saving rules; named regional zones need zoneinfo.</p>
+<p>Counter is a dictionary-like frequency tool. Reading a missing count returns zero without adding that key. Equal counts in most_common preserve first-encounter order, so use explicit sorting if a report demands an alphabetic tie rule.</p>
+<p>defaultdict calls a factory when missing bracket access needs a value, then stores the result. defaultdict(list) creates independent group lists. Passing list() instead of list is wrong because the constructor needs a callable factory. get does not trigger this missing-key factory.</p>
+<p>deque supports efficient appending and removal at both ends. A list's front removal shifts later references, while deque.popleft avoids that shift. Indexing into the middle of a deque is less suitable for frequent random access. Choose the container based on the operations your program repeats.</p>
+
+<h2 id="iterators-and-paths">Bound combinations and keep filenames portable</h2>
+<p>itertools.chain joins iterable streams consecutively. product generates every combination across input groups, while combinations selects positions without repeating their order. These tools return iterators, so you can consume a result without first building the complete output list.</p>
+<p>Laziness does not make a huge result cheap. A product of groups of sizes a and b has a times b results. Some itertools tools also retain input pools internally. count supplies an unending arithmetic sequence, so limit it with islice or another finite stopping rule.</p>
+<p>Path's slash operator joins components using path rules. name gives the final filename, stem removes its final suffix and suffix gives that suffix. Joining an absolute component can discard earlier components, so validate externally supplied names when a location matters.</p>
+<p>The os module offers lower-level operating-system functions such as listdir and environ. Directory listing order is not a sorting guarantee, so the example sorts filenames. Avoid printing environment variables indiscriminately; inspect only the specific setting a program actually needs.</p>
+<p>The temporary-file example writes known text using an explicit UTF-8 encoding. with closes the file before it is read. TemporaryDirectory removes the working folder after the block, keeping the demonstration independent of preexisting user files.</p>
+
+<h2 id="common-mistakes">Inspect the tool’s exact behavior</h2>
+<h3>Turning an infinite iterator into a list</h3><p>list(count()) keeps requesting values without a natural end. Apply a finite bound first. The same caution applies to a very large finite Cartesian product: count the output size before collecting it.</p>
+<h3>Assuming a missing group is already stored</h3><p>defaultdict inserts only when its missing-key machinery is invoked by bracket access. Checking membership or calling get does not create a group. This difference matters when measuring how many groups exist.</p>
+<h3>Confusing path parsing with a file check</h3><p>A filename can have a .csv suffix even if no file exists. Use is_file or another explicit filesystem operation when existence matters. A relative path is interpreted from the working directory, which may differ from the script directory.</p>
+<h3>Using the wrong empty-queue operation</h3><p>popleft raises IndexError on an empty deque. Check whether the queue contains an item when an empty state is normal. A bounded deque also discards old items automatically, so it is suitable only when that loss is intentional.</p>
+
+<h2 id="version-notes">Keep version-sensitive details explicit</h2>
+
+
+<div class="callout version"><p>All APIs shown are available on Python 3.10–3.12. Seeded random() has documented reproducibility support with compatible seeding, while other random algorithms can evolve. Path suffix examples use ordinary filenames without newer-version trailing-dot behavior.</p></div>
+
+<h2 id="summary">Use a small library tool with a clear contract</h2>
+<p>The standard library provides useful building blocks without external installation. Choose exact versus approximate numbers, bounded versus unbounded iteration and lexical versus real filesystem work deliberately. The next module begins with <a href="topic:py-classes-objects">classes and objects</a> for organizing your own state and behavior.</p>

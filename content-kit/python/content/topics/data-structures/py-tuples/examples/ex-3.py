@@ -1,0 +1,5 @@
+record = (12, [70, 80])
+record[1].append(90)
+print(record)
+print(record[0])
+print(record[1][-1])

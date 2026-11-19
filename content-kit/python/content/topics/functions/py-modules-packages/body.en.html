@@ -1,0 +1,72 @@
+<h2 id="introduction">Reuse definitions beyond one file</h2>
+<p class="lead">A billing function may be useful in several small programs. Copying it into each file makes later corrections harder. A <dfn>module</dfn> is a unit of Python code with its own namespace that other code can import.</p>
+<p>A simple module is a .py file. A <dfn>package</dfn> groups related modules under a dotted name, such as tools.billing. Standard-library modules come with Python. Third-party distributions are installed separately and may provide one or several importable packages.</p>
+<p>Organizing code this way lets callers use a clear public interface while implementation details stay together. Keep reusable definitions separate from interactive startup work so that importing a calculation does not unexpectedly ask for input.</p>
+
+<h2 id="syntax">Choose names at the import boundary</h2>
+<pre><code class="language-python">import math
+import statistics as stats
+from math import isqrt</code></pre>
+            <p>import math binds the module name, so calls use math.factorial. An alias binds another local name for the module. A from import binds selected names directly. Prefer an explicit form that makes each tool's origin easy to recognize.</p>
+            <p>Avoid star imports because they can hide which names entered the module and can overwrite existing names unexpectedly. A short explicit import list is easier to search, review and understand when two libraries have similarly named tools.</p>
+            <p>Ordinary packages commonly contain an __init__.py file. A small project might have a tools directory with __init__.py and billing.py, then import tools.billing from a script in the project root. Namespace packages can omit __init__.py, but a conventional package is clearer while learning.</p>
+
+<h2 id="how-it-works">Import initializes; a guard chooses the entry path</h2>
+<p>On a normal first import, Python finds the module, creates its namespace and executes its top-level statements. Definitions create function objects without executing their bodies. The initialized module is normally cached, so later imports reuse it rather than repeating its initialization.</p>
+<p>The special name __name__ is __main__ for a directly executed script. For an ordinary import, it is the module's import name. The condition if __name__ == "__main__" therefore selects the direct-entry path.</p>
+<p>Put interactive work in a main function and call it under that guard. Constants and reusable function definitions remain importable. Unguarded print or input calls still execute during import; the guard does not magically protect the entire file.</p>
+<p>runpy can execute source with a chosen name and return its namespace. The second example uses it to make the guard's decision visible. runpy is execution, not ordinary import caching, so do not treat that example as a replacement for importing your libraries.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>An import is not a textual #include. Python executes a module initialization and binds objects in namespaces, normally caching the initialized module. You do not write a C-style linker command for ordinary Python modules, but search paths and installed environments still determine what is found.</p></div>
+
+<h2 id="examples">Run scripts and import a neighboring file</h2>
+<p>The neighboring module is <code>billing.py</code>, placed beside the last program. Its total function returns quantity times unit price, and its CURRENCY constant is BDT. Running billing.py directly prints its own short demonstration; importing it leaves that guarded demonstration inactive.</p>
+
+<h3>Choose clear import forms</h3>
+<p>import math keeps tools under the math namespace. from math import isqrt binds one selected function directly. The alias stats is another name for statistics. Each import form changes which names the caller writes.</p>
+<div data-example="ex-1"></div>
+
+<h3>Run the same source with a different name</h3>
+<p>Direct execution gives the source the name __main__ and calls main. runpy then executes the same source with the explicit name billing_library. Its guard stays false, so definitions load without repeating the entry message. The returned namespace supplies total.</p>
+<div data-example="ex-2"></div>
+
+<h3>Inspect the active Python environment</h3>
+<p>sys.executable identifies the active interpreter, while prefix and base_prefix help identify an environment. This program checks their types rather than printing machine-specific paths. In a normal venv, prefix differs from base_prefix.</p>
+<div data-example="ex-3"></div>
+
+<h3>Import a real neighboring module in isolated Python</h3>
+<p>billing.py contains a constant and a documented total function. Both import forms use the same module. Its guarded demonstration does not run during import, so the output contains only BDT and 60. The explicit folder addition supports isolated execution; ordinary local scripts normally find sibling modules already.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="environments-and-pip">Keep dependencies with the project</h2>
+<p>A <dfn>virtual environment</dfn> gives a project its own installed package area. Create it from the interpreter version you intend to use. On a typical Linux or macOS shell, the following commands create and activate it:</p>
+            <pre><code class="language-bash">python3 -m venv .venv
+source .venv/bin/activate
+python -m pip --version</code></pre>
+            <p>On Windows PowerShell, create it with py -m venv .venv and activate with .venv\Scripts\Activate.ps1. If activation is unavailable, run the environment interpreter directly, such as .venv/bin/python on Linux or .venv\Scripts\python.exe on Windows. Activation changes shell command lookup; it is not required to use the interpreter.</p>
+            <p>Install a needed third-party distribution using the selected interpreter, for example python -m pip install requests. This lesson's programs need no third-party installation. Use python -m pip show requests to inspect an installed distribution, and python -m pip uninstall requests when deliberately removing it from that environment.</p>
+            <p>Follow the project's documented dependency versions. A requirements file can record installation requirements, and python -m pip install -r requirements.txt reads them. A captured pip freeze list describes installed versions, but it may include more packages than a carefully maintained direct-dependency list.</p>
+            <p>Do not commit the .venv directory into a source project. Recreate it from documented dependencies instead. Use deactivate to leave an activated shell environment. An environment does not isolate your process from ordinary filesystem access or provide protection against untrusted code.</p>
+            <p>Distribution names and import names can differ. Installing a distribution makes files available to an interpreter; it does not automatically execute an import in your source. If an import fails after installation, compare the interpreter used for execution with the interpreter used for pip.</p>
+
+<pre class="diagram">project/
+    report.py
+    tools/
+        __init__.py
+        billing.py</pre>
+<p>In this conventional layout, report.py can import tools.billing when started from the project setup described above. Inside the tools package, an explicit relative import such as from .billing import total refers to a sibling module. A leading dot refers to package context, not an arbitrary filesystem search.</p>
+<p>Run a module within its package using a command such as python -m tools.billing from the project root. This supplies the package context needed for relative imports. Directly running a package member by its file path can lose that context and make a relative import fail.</p>
+
+<h2 id="common-mistakes">Find the intended module and interpreter</h2>
+<h3>Shadowing a library filename</h3><p>A file named math.py or random.py can mask the intended module in ordinary local execution. Choose project-specific names such as billing.py. Also check for a same-named directory when an import reaches unexpected code.</p>
+<h3>Expecting isolated execution to find sibling files automatically</h3><p>The -I option omits the script directory from the import search path and ignores user environment settings. The final example explicitly adds its known source directory to demonstrate the neighboring import in that mode. Normal local scripts usually do not need this addition.</p>
+<h3>Running startup code during import</h3><p>Input at module level can block a caller that only wants a function. Keep startup actions behind main and the guard. Avoid hidden changes to external state during module initialization.</p>
+<h3>Mixing environments</h3><p>A plain pip command may target a different interpreter from the one running your program. Inspect python -m pip --version and sys.executable when troubleshooting. Prefer a project environment over forcing installation into a system-managed interpreter.</p>
+
+<h2 id="version-notes">Use the interpreter that owns the environment</h2>
+
+
+<div class="callout version"><p>The import, main-guard, venv and pip invocation patterns shown apply to Python 3.10–3.12. Some Linux installations require a separately installed venv component; use the operating system package guidance rather than forcing system-wide pip changes.</p></div>
+
+<h2 id="summary">Make reuse predictable</h2>
+<p>Explicit imports identify tools, a main guard protects startup behavior, and venv keeps project dependencies organized. Next, <a href="topic:py-standard-library">the standard library tour</a> explores useful modules already included with Python.</p>

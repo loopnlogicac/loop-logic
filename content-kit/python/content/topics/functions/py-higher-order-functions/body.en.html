@@ -1,0 +1,75 @@
+<h2 id="introduction">Supply a rule as a value</h2>
+<p class="lead">One report sorts words by length; another sorts students by marks. The sorting process is reusable, while the comparison rule changes. A <dfn>higher-order function</dfn> receives a function as an argument or returns a function as its result.</p>
+<p>Python functions are objects. You can store them in variables, place them in containers and pass them to other functions. A function name without parentheses refers to the object. Parentheses request a call and produce that call's result instead.</p>
+<p>This distinction lets you separate an operation from the time it runs. A helper can receive a calculation and decide when or how often to use it. Keep these agreements simple so that the flexibility improves readability.</p>
+
+<h2 id="syntax">Pass the function, then call it where needed</h2>
+<pre><code class="language-python">def double(number):
+    return number * 2
+
+def apply_twice(function, value):
+    return function(function(value))
+
+result = apply_twice(double, 5)</code></pre>
+            <p>The parameter function receives the callable object double. The body first applies it to value and then applies it again to the intermediate result. There is no special declaration for a function-valued parameter in this ordinary Python syntax.</p>
+            <p>A <dfn>callable</dfn> is an object that can be called with parentheses. Functions are the main examples here. The receiving helper still needs an agreement about arguments and results. apply_twice expects a one-argument callable whose result is suitable for another call.</p>
+            <p>Passing double(5) would supply an integer instead of a callable. The helper would then try to call that integer and raise TypeError. Read the receiving function's expected role before deciding whether parentheses belong at the call site.</p>
+
+<h2 id="how-it-works">Separate the reusable process from the rule</h2>
+<p>A higher-order design has two responsibilities. The outer process decides traversal, repetition or ordering. The supplied function decides a per-item calculation or test. For a marks filter, traversal belongs to filter and the pass threshold belongs to the predicate.</p>
+<p>A <dfn>predicate</dfn> is a callable whose result is used as a truth test. A Boolean return makes its intention especially clear. The predicate can contain a normal def body when the rule needs explanation, or a short lambda when the complete rule is brief.</p>
+<p>Do not hide input or printing inside a key function merely because it can be called there. Sorting should produce comparison keys predictably. Functions with clear inputs and stable results are easier to pass safely between reusable tools.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>Passing a Python function resembles passing a C function pointer, but Python needs no pointer syntax here. A closure can carry enclosing settings along with its behavior, reducing the need for global variables or a manually passed context structure.</p></div>
+
+<h2 id="examples">Transform, select, rank and configure</h2>
+<p>The programs demonstrate different contracts for supplied functions. map uses returned values, filter tests returned truth values, and sorted uses returned keys while preserving original items. A closure factory returns a new configured rule for later use.</p>
+
+<h3>Pass a calculation without calling it first</h3>
+<p>saved and double name the same function object. apply_twice receives that object and chooses when to call it. Passing double(5) would instead supply the integer 10, which is not the intended callable.</p>
+<div data-example="ex-1"></div>
+
+<h3>Transform values with a lazy map</h3>
+<p>map supplies squared results when consumed. After list consumes it once, the same iterator is exhausted. With two input iterables, this Python version stops at the shorter one, producing 11 and 22.</p>
+<div data-example="ex-2"></div>
+
+<h3>Filter values with a predicate</h3>
+<p>A predicate is a function used for a yes-or-no test. filter retains original values whose predicate result is true. Passing None uses each value’s truthiness instead. The comprehension expresses the same pass-selection rule.</p>
+<div data-example="ex-3"></div>
+
+<h3>Sort records with a meaningful key</h3>
+<p>The key function transforms each record into its comparison value without replacing the returned records. Equal marks keep their source order because sorting is stable. The original records list remains in its original order.</p>
+<div data-example="ex-4"></div>
+
+<h3>Return a reusable threshold predicate</h3>
+<p>Each factory call returns a closure with its own enclosing limit binding. The returned function can be passed to filter later. No global setting is needed, and the two predicates keep different thresholds.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="map-filter-and-keys">Understand laziness and stable ordering</h2>
+<p>The map function applies a callable to corresponding items from one or more iterables. With several iterables, the callable needs that many arguments. On Python 3.10–3.12, iteration ends when the shortest iterable is exhausted.</p>
+<p>map returns an iterator rather than an already stored list. An <dfn>iterator</dfn> supplies successive items and remembers how far it has advanced. Converting it to a list consumes the remaining items. Converting the same exhausted iterator again gives an empty list.</p>
+<p>filter also returns an iterator. It yields the original items whose predicate results are true. With None instead of a predicate, it keeps truthy values. That form removes zero and empty strings too, so use it only when all false values should be excluded.</p>
+<p>A comprehension is often clearer for a small transformation and filter together. map is convenient when an existing named function already expresses the transformation, such as int for parsing. Neither spelling automatically improves an expensive algorithm.</p>
+<p>The key parameter of sorted supplies a function called once per input item to obtain a comparison key. The resulting list still contains the original items. For several criteria, return a tuple whose components follow priority order.</p>
+<p>Python sorting is stable: equal keys keep their relative input order, including with reverse=True. Stability is useful when a prior meaningful order should survive ties. Use an explicit secondary key if the requirement specifies a different tie rule.</p>
+
+<h2 id="closures">Return a rule with remembered settings</h2>
+<p>A factory such as at_least creates a nested function that reads the enclosing limit. Returning accepts without parentheses returns that function itself. The caller can save it and pass it to filter later.</p>
+<p>The closure keeps access to its defining bindings even after the factory finishes. Separate factory calls have separate enclosing bindings. A pass threshold and a distinction threshold can therefore coexist without changing a global variable before every use.</p>
+<p>Closures can also retain references to mutable objects. If the object changes, later calls can observe the change. A closure is not automatically a frozen snapshot. State clearly whether the configured rule should read live state or hold independent copied values.</p>
+
+<p>Lazy transformations also delay errors. Creating map(int, tokens) may succeed even if a later token is not a valid integer. The conversion fails when a consumer requests that token. Keep the consumer near the transformation while learning so the timing of work and errors remains easy to trace.</p>
+<p>For repeated use, choose intentionally between saved data and a saved recipe. A collected list stores results already computed. A function that creates a new map stores a recipe for recomputation. The right choice depends on memory, changing inputs and whether repeating the work is acceptable.</p>
+
+<h2 id="common-mistakes">Respect each callable contract</h2>
+<h3>Consuming an iterator twice</h3><p>If several reports need the same transformed values, collect them in a list once or create a fresh iterator for each report. Reusing an exhausted map silently gives no values, which can look like a missing-data error.</p>
+<h3>Confusing accepted values with predicate results</h3><p>Filtering marks with a pass predicate returns marks such as 40 and 79, not a list of True values. Use map if you actually want one Boolean result for every input mark.</p>
+<h3>Using an unreadable key expression</h3><p>A short tuple key is useful, but a long expression full of special cases deserves a named function. A meaningful name and docstring can explain missing values, units and tie behavior much better than a crowded lambda.</p>
+
+<h2 id="version-notes">Iterator behavior on the chosen baseline</h2>
+
+
+<div class="callout version"><p>The map, filter and sorted forms shown work on Python 3.10–3.12. map and filter return iterators, so consuming them changes which results remain available.</p></div>
+
+<h2 id="summary">Reuse the process and name the changing rule</h2>
+<p>Functions as values let map, filter, sorting and closure factories share useful work. Match each callable's expected arguments and result. Next, <a href="topic:py-modules-packages">modules and packages</a> organize reusable functions beyond one source file.</p>
