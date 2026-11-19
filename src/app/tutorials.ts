@@ -293,7 +293,21 @@ export class TutorialService {
     };
   }
 
-  async gradeQuiz(trackId: string, topicId: string, learnerId: string, answers: unknown, lang: Lang) {
+  /** Grade only the persisted check questions. Answer keys stay on the server. */
+  gradeCheck(trackId: string, topicId: string, ids: string[], answers: unknown, lang: Lang) {
+    const { x } = this.topicOr404(trackId, topicId, lang);
+    const given = answers && typeof answers === 'object' && !Array.isArray(answers) ? answers as Record<string, unknown> : {};
+    let score = 0;
+    for (const id of ids) {
+      const q = (x.json.quiz ?? []).find((q: Json) => q.id === id);
+      const c = given[id];
+      if (!q || !Number.isInteger(c) || Number(c) < 0 || Number(c) >= (q.options ?? []).length) throw new AppError('bad_input', 400, lang === 'bn' ? 'সব প্রশ্নের উত্তর দাও।' : 'Answer every question.');
+      if (c === q.answer) score++;
+    }
+    return { score, total: ids.length };
+  }
+
+  async gradeQuiz(trackId: string, topicId: string, learnerId: string, answers: unknown, lang: Lang, review = false) {
     const { x } = this.topicOr404(trackId, topicId, lang);
     const given = (answers && typeof answers === 'object' ? answers : {}) as Record<string, unknown>;
     const results: Record<string, { chosen: number | null; correct: boolean; answer: number; explanation: string }> = {};
@@ -309,8 +323,16 @@ export class TutorialService {
       correctById[q.id] = correct;
       results[q.id] = { chosen, correct, answer: q.answer, explanation: String(q.explanation ?? '') };
     }
-    if (answered) await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: `tutorial:${trackId}:${topicId}`, blockId: null, type: 'quiz', payload: { score, answered, total: (x.json.quiz ?? []).length, correct: correctById }, at: new Date().toISOString() }]);
+    if (answered) await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: `tutorial:${trackId}:${topicId}`, blockId: null, type: 'quiz', payload: { score, answered, total: (x.json.quiz ?? []).length, correct: correctById, ...(review ? { review: true } : {}) }, at: new Date().toISOString() }]);
     return { score, answered, total: (x.json.quiz ?? []).length, results };
+  }
+
+  /** Grade one server-selected adaptive question; never trust a client answer key. */
+  gradeAnswer(trackId: string, topicId: string, id: string, choice: unknown, lang: Lang) {
+    const { x } = this.topicOr404(trackId, topicId, lang);
+    const q = (x.json.quiz ?? []).find((q: Json) => q.id === id);
+    if (!q || !Number.isInteger(choice) || Number(choice) < 0 || Number(choice) >= q.options.length) throw new AppError('bad_input', 400, lang === 'bn' ? 'একটি উত্তর বেছে নাও।' : 'Choose an answer.');
+    return { correct: choice === q.answer, answer: q.answer, explanation: String(q.explanation ?? '') };
   }
 
   /** A learner opened a topic, or ran one of its labs (for their instructor's class view). */

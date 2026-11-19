@@ -1,0 +1,62 @@
+<h2 id="introduction">নির্দিষ্ট পছন্দ আর ডেটার মান আলাদা করো</h2>
+<p class="lead">লোন REGULAR বা SHORT হতে পারে। আবার পরীক্ষার ফলে রোল আর নম্বর একসঙ্গে থাকে। প্রথমটিতে নির্দিষ্ট কয়েকটি পছন্দ, দ্বিতীয়টিতে ছোট ডেটার মান দরকার। Java-তে <dfn>enum</dfn> নামসহ নির্দিষ্ট পছন্দ দেয়। <dfn>record</dfn> প্রকাশ্য component-সহ ডেটার দল দেয়।</p>
+<p>enum শুধু int কনস্ট্যান্টের তালিকা নয়। প্রতিটি মান সেই টাইপের ইনস্ট্যান্স; লোনের ধরনে ভুল করে দিনের কোড চলে আসে না। record-ও শুধু ছোট ফিল্ড ঘোষণা নয়। component দিয়ে public ডেটার চুক্তি আর মানভিত্তিক অপারেশন তৈরি হয়।</p>
+<p>আগে অর্থ বাছো। কলার পুরো ডেটার কাঠামো দেখবে হলে record মানাতে পারে। public ইন্টারফেস না বদলে ভেতরের স্টোরেজ বদলাতে চাইলে সাধারণ ক্লাস ভালো। মডেলে পছন্দগুলো নির্দিষ্ট হলে enum-এ সীমাটি সরাসরি বোঝাও।</p>
+<h2 id="syntax">নাম আর component-কে টাইপ দাও</h2>
+<pre><code class="language-java">enum LoanKind {
+    REGULAR(2), SHORT(5);
+    private final int dailyRate;
+    LoanKind(int dailyRate) { this.dailyRate = dailyRate; }
+    int fee(int days) { return dailyRate * days; }
+}
+record Mark(int roll, int score) { }</code></pre>
+<p>enum কনস্ট্যান্ট আগে আসে, কমা দিয়ে আলাদা হয়। ফিল্ড আর মেথড থাকলে মাঝে সেমিকোলন। কনস্ট্রাক্টর প্রতিটি কনস্ট্যান্টের স্টেট বসায়। কলার new দিয়ে বাড়তি LoanKind বানাতে পারে না।</p>
+<p>record header-এ component ঘোষণা করো। Mark নিজে থেকে private final component ফিল্ড, roll() আর score() accessor, canonical constructor, equals, hashCode আর toString পায়। accessor-এর নাম component-এর মতো; getRoll বা getScore নিজে থেকে হয় না।</p>
+<p>record-এ বাড়তি মেথড আর static মেম্বার চলে। component-এর বাইরে ইচ্ছেমতো ইনস্ট্যান্স ফিল্ড যোগ করা যায় না। record নিজে থেকেই final, java.lang.Record-কে extends করে; নিজের superclass নেওয়া যায় না। Comparable-সহ ইন্টারফেস ইমপ্লিমেন্ট করা যায়।</p>
+<h2 id="how-it-works">তৈরি আর যাচাইয়ের ধাপ দেখো</h2>
+<p>ক্লাস initialization-এ enum-এর নামসহ কনস্ট্যান্টগুলো তৈরি হয়। LoanKind.REGULAR আর LoanKind.SHORT সেগুলো চেনে। লোড হওয়া ক্লাসের প্রসঙ্গে প্রতি কনস্ট্যান্ট এক ইনস্ট্যান্স, তাই == দিয়ে সমতা দেখা চলে।</p>
+<p>record কনস্ট্রাক্টর component-এর মান পায়। compact constructor-এ আলাদা প্যারামিটার তালিকা লাগে না; মান যাচাই বা normalize করতে পারো। বডি স্বাভাবিকভাবে শেষ হলে কম্পাইলার প্যারামিটারগুলো ফিল্ডে বসায়। throw হলে বৈধ record তৈরি হয়ে ফেরে না।</p>
+<table class="ref"><thead><tr><th scope="col">অপারেশন</th><th scope="col">উদাহরণের অর্থ</th></tr></thead><tbody>
+<tr><td>LoanKind.values()</td><td>ঘোষণার ক্রমে কনস্ট্যান্টের নতুন অ্যারে</td></tr>
+<tr><td>LoanKind.valueOf("SHORT")</td><td>হুবহু এই নামের কনস্ট্যান্ট</td></tr>
+<tr><td>new Mark(7,80)</td><td>রোল 7, নম্বর 80-এর মান</td></tr>
+<tr><td>mark.score()</td><td>score component পড়া</td></tr>
+</tbody></table>
+<p>valueOf বড়-ছোট অক্ষর আলাদা করে। অজানা নামে IllegalArgumentException হয়। null নামও চলে না। ইনপুটে বাদ দেবে, case ঠিক করবে, না স্থির বাইরের কোড মেলাবে তা ঠিক করো। অজানা ধরনকে চুপচাপ প্রথম কনস্ট্যান্ট কোরো না।</p>
+<h2 id="examples">রেট, শাখা আর মান মডেল করো</h2>
+<h3>ধরনের কাজ ধরনের সঙ্গেই রাখো</h3>
+<p>দৈনিক রেট enum-এ একবার থাকে। তিন দিনে 6 আর 15 হয়। লুপ ঘোষণার ক্রম মানে। এখানে দিন শূন্য বা বেশি ধরা হয়েছে। public লাইব্রেরির API-তে কলার মনে রাখবে ধরে না নিয়ে যাচাই করো।</p>
+<div data-example="ex-1"></div>
+<h3>টাইপযুক্ত switch expression নাও</h3>
+<p>DayType-এ LECTURE আর LAB। switch expression দুটো ঢেকে ঘণ্টা দেয়। arrow case পরের case-এ গড়ায় না। expression-কে প্রতিটি গ্রহণযোগ্য পছন্দে মান দিতে হয়; statement-এর শাখা আলাদা কাজও করতে পারে।</p>
+<div data-example="ex-2"></div>
+<h3>তৈরির সময় record যাচাই</h3>
+<p>Mark-এর compact constructor শূন্য বা ঋণাত্মক roll আর 0..100-এর বাইরের score বাদ দেয়। একই component-এর আলাদা valid record সমান হয়। রেফারেন্স আলাদা হলেও generated equals true দেয়। accessor-এ component-এর ক্রম দেখো।</p>
+<div data-example="ex-3"></div>
+<h3>collection component রক্ষা করো</h3>
+<p>Plan কনস্ট্রাক্টর ইনপুট রেফারেন্সে List.copyOf-এর ফল বসায়। পরে মূল list-এ MAT যোগ হলেও plan বদলায় না। accessor কপি করা unmodifiable list দেয়। এটি shallow copy, অর্থাৎ বাইরের list-ই কপি হয়। String immutable বলে এখানে যথেষ্ট।</p>
+<div data-example="ex-4"></div>
+<h2 id="record-contract">তৈরি করে দেওয়া কাজেও ডিজাইন ভাবতে হয়</h2>
+<p>generated equals একই record টাইপ আর component-এর মান মেলায়। রেফারেন্স component-এর নিজের equals চলে। অ্যারে সাধারণত পরিচয় মেলায়। তাই একই এলিমেন্টের দুটি আলাদা অ্যারে থাকলেই দুই record সমান হয় না।</p>
+<p>generated hashCode component ধরে equals-এর সঙ্গে মেলে। ঠিক কোন সংখ্যার ফর্মুলা আসে তা স্টোরেজ ফরম্যাট নয়। toString ডায়াগনস্টিকে ভালো, স্থায়ী ফাইল হিসেবে parse কোরো না। নিজের version আর escaping-সহ আলাদা format দাও।</p>
+<p>List component-সহ record নিজে থেকে deeply immutable নয়। final রেফারেন্স স্থির রাখে; অন্য রেফারেন্স বা accessor দিয়ে list বদলাতে পারে। কনস্ট্রাক্টরে কপি আগের রেফারেন্স থেকে রক্ষা করে। unmodifiable কপি ফেরত পাওয়া list-এ সরাসরি কাঠামোর পরিবর্তন আটকায়।</p>
+<p>এলিমেন্ট mutable হলে List.copyOf তাদের freeze করে না। প্রতিটি এলিমেন্ট কপি, immutable টাইপ বা নথিবদ্ধ shared ownership বাছো। record কীওয়ার্ড এই সিদ্ধান্ত নেয় না।</p>
+<p>তৈরি Object মেথড ওভাররাইড করা যায়। তবে পাঠকের প্রত্যাশিত স্বচ্ছ value contract বদলায়। মানানসই সমতার component নাও। বিশেষ মেথড লাগলে equals/hashCode-এর নিয়ম মানো, সাধারণ সমতা কেন চলে না বলো।</p>
+<h2 id="storage-and-evolution">ঘোষণার অবস্থানের বদলে অর্থ রাখো</h2>
+<p>Enum.ordinal শূন্য থেকে ঘোষণার অবস্থান দেয়। আগে নতুন constant ঢুকলে পরের ordinal বদলায়। ফাইলে শুধু সংখ্যা রাখলে আপডেটে অর্থ চুপিচুপি বদলায়। স্থির explicit code বা migration policy-সহ নথিবদ্ধ নাম রাখো।</p>
+<p>কনস্ট্যান্টের নাম বদলালে সংরক্ষিত নামও অবৈধ হয়। অজানা নামে importer কী করবে, পুরোনো alias চলবে কি না বলো। ছোট উদাহরণে সঠিক নাম ধরা যায়; বাস্তব স্টোরেজে পরিবর্তনের নিয়ম লাগে।</p>
+<p>সব enum ঢেকে switch expression লিখলে নতুন constant-এর পরে আবার কম্পাইলে অনুপস্থিত শাখা চোখে পড়ে। default দিলে ভবিষ্যতের মানও নিয়ে সংকেত লুকাতে পারে। সত্যিই একই fallback চাইলে তবেই default দাও।</p>
+<p>enum ইন্টারফেস ইমপ্লিমেন্ট করতে পারে, প্রতি constant-এর নিজস্ব method body-ও থাকতে পারে। কাজ স্বাভাবিকভাবে constant-এর হলে switch-এর বিকল্প। শুধু রেট আলাদা হলে সহজ ফিল্ড আর মেথডই রাখো।</p>
+<h2 id="common-mistakes">ছোট সিনট্যাক্সে বেশি নিশ্চয়তা ধরে নিও না</h2>
+<h3>record-এ setter আশা করা</h3>
+<p>record তৈরির পরের component মান বোঝায়; setter দেয় না। বদলানো মানে নতুন record বানাও। চলতি স্টেট পরিবর্তনই মূল হলে সাধারণ mutable ক্লাস নাও।</p>
+<h3>enum-এর সব ফিল্ড immutable ভাবা</h3>
+<p>enum-এ mutable ফিল্ড সম্ভব, কিন্তু সবাই একই constant শেয়ার করে। প্রতি ব্যবহারকারীর লোন balance, LoanKind.REGULAR-এ রেখো না। ধরনের configuration আর ব্যক্তির স্টেট আলাদা রাখো।</p>
+<h3>শুধু টাইপিং কমাতে record নেওয়া</h3>
+<p>record component-কে মডেলের প্রকাশ্য অংশ করে। সেগুলো গোপন রাখতে সাধারণ ক্লাস বেশি স্বাধীনতা দেয়। চুক্তির সঙ্গে মিললেই ছোট সিনট্যাক্স উপকারী।</p>
+<h2 id="best-practices">পছন্দ আর মানের চুক্তি ঠিক রাখো</h2>
+<ul><li>অর্থহীন category int-এর বদলে enum প্যারামিটার নাও।</li><li>তৈরির সময় component যাচাই করো।</li><li>স্পষ্ট মালিকানার নিয়মে mutable component কপি করো।</li><li>স্থায়ী স্টোরেজে স্থির external code রাখো।</li><li>ডায়াগনস্টিক লেখা আর আদানপ্রদানের format আলাদা রাখো।</li></ul>
+<h2 id="version-notes">enum, switch expression আর record</h2>
+<div class="callout version"><p>enum Java 5-এ এসেছে। switch expression Java 14-এ, record Java 16-এ স্থায়ী হয়েছে। উদাহরণ Java 17-এ preview ছাড়া চলে। পরের Java-র record pattern এখানে নেই।</p></div>
+<h2 id="summary">অর্থের সঙ্গে ঘোষণার ধরন মেলাও</h2>
+<p>enum কাজসহ নির্দিষ্ট নামের পছন্দ দেয়। record component-এর স্বচ্ছ মান আর তৈরি অপারেশন দেয়। দুটোতেই যাচাই আর মালিকানা ভাবতে হয়। এবার <a href="topic:oop-file-io">ফাইল ইনপুট-আউটপুটে</a> মেমরির বাইরে ডেটা রাখো।</p>

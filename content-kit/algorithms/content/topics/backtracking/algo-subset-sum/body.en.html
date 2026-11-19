@@ -1,0 +1,70 @@
+<h2 id="introduction">Every item gets a yes-or-no choice</h2>
+<p class="lead">Suppose you have several vouchers and want a total of five taka. You may use each voucher once. With values [2,3,5], either take the five-taka voucher or take the two smaller vouchers. Subset sum asks which choices reach a target exactly.</p>
+<p>A subset has no ordering, but input indices still distinguish items. Two vouchers worth two taka are separate objects. Choosing the first and choosing the second are different indexed subsets, even though their displayed values agree.</p>
+<p>The simplest generator makes one binary decision per index: exclude it or include it. After n decisions, you have one complete subset. There are 2^n possible indexed subsets, including the empty subset. Its sum is zero, which matters whenever the target is zero.</p>
+<p>We will compare recursive generation, a bitmask loop and a small reachability table. They answer related questions but retain different information. The first two count indexed subsets. The table only records whether a total is reachable; it does not preserve every choice.</p>
+
+<h2 id="syntax">Track an index and a partial sum</h2>
+<p>The function subsets(pos,sum) means that every index before pos has a fixed include-or-exclude decision. The chosen array records those decisions, and sum equals the selected values in that prefix. The target stays unchanged.</p>
+<p>The recursive code uses nonnegative values. It rejects sum&gt;target before exploring further because additional values cannot decrease the sum. It handles equality only after pos reaches n. This detail preserves choices of zero-valued items after the target has already been reached.</p>
+<p>Printing selected indices avoids ambiguity when values repeat. Exclusion comes first, so the singleton at index two precedes indices zero and one for [2,3,5]. A different branch order changes output order without changing the mathematical answer set.</p>
+<pre><code class="language-text">subsets(pos, sum):
+    if sum &gt; target: return  // nonnegative values only
+    if pos == n: report if sum == target; return
+    chosen[pos] = 0; subsets(pos + 1, sum)
+    chosen[pos] = 1; subsets(pos + 1, sum + values[pos])
+    chosen[pos] = 0</code></pre>
+
+<h2 id="how-it-works">Pruning depends on the input domain</h2>
+<p>With values [2,3,5] and target five, selecting two and then three reaches five. The final index must still be excluded to complete that particular subset. Selecting the five as well would exceed the target and be rejected.</p>
+<p>Now change the values to [7,-2]. Selecting seven temporarily exceeds five, but selecting minus two repairs the sum. The nonnegative pruning rule would lose this valid answer. Sorting does not solve the reasoning problem; the signs of remaining values determine which bounds are safe.</p>
+<p>A stronger bound for nonnegative values stores the suffix total. If sum plus all remaining values is below the target, the branch cannot succeed. For mixed signs, safe lower and upper bounds can use remaining negative and positive totals. Each bound needs its own argument.</p>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Print all nonnegative target subsets</h3>
+<p>The first program prints indices 2 and then indices 0 1 for target five. Its count is two. The empty indexed set is printed as Indices: with nothing after the colon.</p>
+<div data-example="ex-1"></div>
+<h3>Enumerate masks with signed values</h3>
+<p>The second program accepts negative values and tries every mask. For [-2,0,2] at target zero, it counts four subsets. It applies no overshoot prune, so cancellation remains possible.</p>
+<div data-example="ex-2"></div>
+<h3>Merge equal reachability states</h3>
+<p>The last program marks reachable totals for [2,3,5]. Downward totals prevent one item from being reused in the same iteration. This Boolean table lists totals, not the subsets that achieve them.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Read the mask as an index set</h2>
+<p>Bit i means whether values[i] is included. With three items, masks zero through seven cover all subsets exactly once. The numeric mask order differs from the recursive exclude-first order because the mask treats index zero as its least significant bit.</p>
+<p>The table includes every candidate rather than only successful ones. This makes it clear that the empty set is a real candidate and that each item is used at most once.</p>
+<table class="ref"><caption>All masks for [2,3,5]</caption><thead><tr><th scope="col">Mask</th><th scope="col">Selected indices</th><th scope="col">Sum</th><th scope="col">Target five?</th></tr></thead><tbody><tr><td>0</td><td>none</td><td>0</td><td>No</td></tr><tr><td>1</td><td>0</td><td>2</td><td>No</td></tr><tr><td>2</td><td>1</td><td>3</td><td>No</td></tr><tr><td>3</td><td>0,1</td><td>5</td><td>Yes</td></tr><tr><td>4</td><td>2</td><td>5</td><td>Yes</td></tr><tr><td>5</td><td>0,2</td><td>7</td><td>No</td></tr><tr><td>6</td><td>1,2</td><td>8</td><td>No</td></tr><tr><td>7</td><td>0,1,2</td><td>10</td><td>No</td></tr></tbody></table>
+
+<h2 id="correctness">One path for each indexed subset</h2>
+<p>The recursion invariant states that sum equals the selected values before pos. Excluding an item leaves it unchanged. Including the item adds exactly values[pos]. Both branches advance pos, so they cannot select the same index twice.</p>
+<p>Each indexed subset defines a unique sequence of include-or-exclude choices. The full recursion follows that sequence. On nonnegative input, a subset reaching the target never has a prefix sum above the target, so the prune cannot discard its route. At a complete leaf, equality decides precisely whether it is reported.</p>
+<p>A mask gives the same uniqueness argument through its bits. Distinct masks differ at an index and therefore represent distinct indexed subsets. Equal values do not merge those indices. If you instead want distinct value multisets, you need an additional duplicate-handling rule and a different counting specification.</p>
+
+<h2 id="complexity">Listing and deciding have different costs</h2>
+<p>There are 2^n masks and each scans n positions, giving O(n*2^n) time. The recursion visits O(2^n) nodes before pruning, but printing a subset may take O(n), so the same upper bound covers all output. Recursion and its chosen array need O(n) extra space.</p>
+<p>For nonnegative integer target T, a Boolean DP can decide reachability in O(nT) time and O(T) memory. That may beat enumeration when T is moderate. It may be worse when numeric values are huge and n is small.</p>
+<p>The O(nT) bound is pseudo-polynomial: binary encoding stores T in about log2(T) bits. A table of size T can be exponential in that length. This distinction will matter when you study NP-completeness. It does not make the practical table useless.</p>
+
+<h2 id="edge-cases">Zeros and repeated values are real choices</h2>
+<p>For [0,0] and target zero, the answer count is four: empty, first zero, second zero and both. Returning immediately at sum==target would fail to inspect the remaining zero choices.</p>
+<p>An empty array has one subset. It succeeds only for target zero. A positive target with all values larger than it has no solution, while a repeated value can appear twice only if two distinct input positions provide it.</p>
+<p>The mask example accepts at most sixteen items. This keeps 1u&lt;&lt;n within the width guaranteed for unsigned int and keeps enumeration manageable. Increasing n without checking the shift width can introduce undefined behaviour as well as an impractical runtime.</p>
+
+<h2 id="common-mistakes">Do not borrow an invalid prune</h2>
+<p>Using the overshoot test with negative inputs confuses a temporary sum with a permanent lower bound. Remove the prune or prove a valid remaining-sum bound for that domain.</p>
+<p>Another error begins masks at one. That silently removes the empty set and produces wrong counts for zero targets. Start at zero and decide whether the task explicitly excludes empty subsets.</p>
+<p>Ascending totals in a one-array 0/1 reachability DP can reuse a value during the same item pass. Descending totals preserve the previous-item meaning. The recurrence and loop direction must agree about whether an item is reusable.</p>
+
+<h2 id="best-practices">Separate witnesses from totals</h2>
+<p>Write whether answers are indexed subsets, value combinations or only a Boolean decision. A printed witness should name enough information to check item multiplicities.</p>
+<p>For a small nonnegative case, compare the recursive count with the mask count. Add zero values and duplicate values before increasing input size. These cases expose specification mistakes more quickly than a long list of unrelated positive numbers.</p>
+
+<h2 id="version-notes">Use bounded integer sums</h2>
+<p>The recursive examples allow sixteen values of at most one hundred, so every sum fits int. The signed mask example bounds each value between minus one hundred and one hundred. C17 gives no automatic overflow check; wider input ranges require a justified sum type.</p>
+
+<h2 id="summary">Choose each index once</h2>
+<p>Subset enumeration is a binary state-space search. Nonnegative values support useful monotone pruning, while signed values require more care. Bitmasks provide a direct independent enumeration, and DP merges repeated reachability states when numeric bounds permit it.</p>
+
+<p>Revisit the connected idea:</p>
+<p><a href="topic:algo-backtracking-intro">Backtracking Intro</a></p>

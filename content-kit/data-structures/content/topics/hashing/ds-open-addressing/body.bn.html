@@ -1,0 +1,55 @@
+<h2 id="introduction">Collision হলে আরেক ঘর খোঁজো</h2>
+<p class="lead">ছোট reading room-এ নির্দিষ্ট seat আছে ভাবো। তোমার seat ভরা হলে নির্দিষ্ট নিয়মে অন্যটি দেখো। <dfn>Open addressing</dfn> প্রতিটি key সরাসরি table অ্যারে-তে রাখে, সম্ভাব্য অবস্থান খুঁজতে <dfn>probe sequence</dfn> ব্যবহার করে।</p>
+<p>নিয়ম আবার একইভাবে চালানো যেতে হবে। Search insertion-এর একই home bucket আর sequence ধরে। মিল, কখনো ব্যবহার না হওয়া empty cell বা attempt limit পর্যন্ত key তুলনা করে। এগারো-slot table-এ ইনপুট শূন্যে linear, একে quadratic আর দুইয়ে double hashing।</p>
+<p>প্রতি slot-এ key আর state field। State শূন্য মানে কখনো ব্যবহৃত নয়, এক occupied, দুই deleted। Deleted slot tombstone: পরে insert করা যায়, কিন্তু খোঁজা key নেই তা প্রমাণ করে না। Occupancy key নয় state বলে integer শূন্য বৈধ ডেটা।</p>
+<h2 id="syntax">পুরো probe formula লেখো</h2>
+<p>সব পদ্ধতিতে normalized h1(k)=k mod 11, attempt i শূন্য থেকে। Linear (h1+i)%11, quadratic (h1+i*i)%11, double hashing (h1+i*h2)%11, যেখানে h2=1+(k mod 10), এখানেও remainder normalized। প্রতিবার আসল home bucket থেকে হিসাব; আগের probe নতুন home নয়।</p>
+<p>Linear step এক বলে সব slot visit করে। দুর্বলতা primary clustering: পাশাপাশি লম্বা occupied run আরও key টানে। Run-এর ভেতর যেকোনো home-এর key-কে শেষ পর্যন্ত যেতে হয়। সম্পর্কহীন home-ও একই ভিড়ে পড়ে।</p>
+<p>Quadratic শুরুতে attempt ছড়ায়, কিন্তু coverage প্রমাণ দরকার। Modulo এগারোতে i squared মাত্র ছয় distinct residue পায়। কোড সর্বোচ্চ এগারো attempt করে, reachable free slot না পেলে exhaustion। তাই কিছু slot ফাঁকা থাকলেও insert ব্যর্থ হতে পারে। এই সরল quadratic rule-এর standard prime-capacity নিশ্চয়তায় table অর্ধেকের কম ভরা চাই।</p>
+<p>Double hashing প্রতি key-র জন্য আলাদা step বাছে। Full cycle পেতে gcd(step,capacity)=1 চাই। Prime এগারো আর এক থেকে দশ step-এ শর্ত সবসময় মেলে। একই home-এর key আলাদা route ধরতে পারে, shared clustering কমে। তবু collision হতে পারে, স্বাভাবিক comparison আর stopping rule লাগবে।</p>
+<h2 id="how-it-works">Deletion পেরিয়ে খোঁজো, duplicate বানিও না</h2>
+<p>Linear probing-এ 1,12,23,34 দাও। সবার home এক, তাই slot এক থেকে চার নেয়। 12 সরিয়ে slot দুই কখনো ব্যবহার না হওয়া empty করা যাবে না। করলে 34 search খুব আগে থেমে ভুল absent বলবে।</p>
+<pre class="diagram">Deletion-এর আগে:
+slot       0     1     2     3     4     5
+state    empty  [1]  [12]  [23]  [34]  empty
+12 মুছলে:
+state    empty  [1]   [†]  [23]  [34]  empty
+34 search: home 1 -&gt; tombstone 2 -&gt; slot 3-এ 23 -&gt; slot 4-এ মিল</pre>
+<p>Insertion প্রথম tombstone মনে রেখেও সমান key খোঁজে। Never-used empty cell এলে ওই sequence-এ equality আর নেই। তখন মনে রাখা tombstone-এ, তা না থাকলে empty cell-এ key বসায়। সব allowed probe শেষ হলেও মনে রাখা tombstone ব্যবহার করা যায়।</p>
+<p>প্রথম উদাহরণ সব ইনপুট key insert করে, এক key মুছে অন্যটি খোঁজে। চতুর্থটি 12 মুছে duplicate 23 চেষ্টা করে, তারপর নতুন 34 ঢোকায়। Duplicate tombstone খালি রাখে। নতুন key পরে সেটি নেয়, আগের 23-ও পৌঁছানো যায়।</p>
+<div data-lab="hash-open-addressing"></div>
+<p>Lab-এ একই চার initial key নিয়ে পদ্ধতি বদলাও। Quadratic reachable position শেষ না হলে শেষ membership মেলার কথা। Collision আলাদাভাবে মেটায় বলে slot layout আলাদা হতে পারে। Insertion status list duplicate আর exhausted attempt আলাদা দেখায়।</p>
+<h2 id="examples">অবস্থান আর tombstone-এর আচরণ তুলনা</h2>
+<h3>Probe পদ্ধতি বেছে search বাঁচাও</h3>
+<p>Linear colliding key পরপর ঘরে রাখে। 12 মুছলে tombstone থাকে, তাই পরের search 34 পায়।</p>
+<div data-example="ex-1"></div>
+<h3>Quadratic-এর reachable cell শেষ হতে পারে</h3>
+<p>সাত colliding key modulo এগারোতে মাত্র ছয় distinct quadratic offset চায়। অন্য slot ফাঁকা থাকলেও শেষ insertion -1 দেয়।</p>
+<div data-example="ex-2"></div>
+<h3>Double-hash cycle দেখো</h3>
+<p>দ্বিতীয় hash step তিন দেয়। এগারো prime বলে শুরুতে ফেরার আগে sequence সব slot দেখে।</p>
+<div data-example="ex-3"></div>
+<h3>Duplicate দেখে tombstone আবার ব্যবহার</h3>
+<p>প্রথম চেষ্টা tombstone-এর পরে 23 পেয়ে কিছু যোগ করে না। পরে নতুন 34 একই tombstone নেয়, 23-কে আড়াল করে না।</p>
+<div data-example="ex-4"></div>
+<h2 id="comparison">Load আর probe coverage দুটোই জরুরি</h2>
+<p>Expected constant-time বলতে কম load আর উপযুক্ত distribution মডেল চাই। Live occupancy capacity-র কাছে গেলে free slot খোঁজা কঠিন। Tombstone live key না হলেও search লম্বা করে। ভালো implementation live count আর used-or-deleted count দুটো দেখে দরকারে rebuild করে।</p>
+<p>Capacity m হলে bounded operation worst case-এ O(m) slot দেখে, কাজের জায়গা O(1)। অ্যারের মোট storage O(m)। Insertion আলাদা allocated node যোগ করে না। Linked chain ধাওয়ার তুলনায় locality ভালো হতে পারে, তবে free capacity আর সাবধান deletion rule লাগে।</p>
+<p>Never-used empty slot absence প্রমাণ করে, কারণ একই sequence-এ insertion আগে সেখানেই থামত। যুক্তি ধরে capacity বা hash rule rebuild ছাড়া বদলায়নি। Tombstone deletion-কে কখনো key না পেরোনো slot থেকে আলাদা করে যুক্তি রাখে।</p>
+<p>আমাদের capacity আর step-এ double hashing full cycle নিশ্চিত। Quadratic-এর সীমা আলাদা, দ্বিতীয় উদাহরণে স্পষ্ট। দুই failure-কে table full বলো না: একটিতে সব slot ভরা, অন্যটিতে বাছা sequence শেষ।</p>
+<h2 id="edge-cases">প্রতিটি attempt লুপ সীমিত করো</h2>
+<p>ফাঁকা table-এ প্রথম probe-ই empty। Home occupied হলে মেলে বা আরেক probe লাগে। Full linear বা double-hash table সর্বোচ্চ এগারো attempt-এ failure। শুধু occupied আর tombstone থাকা table-এ absent key search-ও ওই সীমায় থামে।</p>
+<p>Duplicate set-এর নিয়মে status শূন্য দেয়। Negative key-তে h1 আর h2 দুটো normalize। -1-এ h1 দশ, h2 দশ, তাই double-hash step nonzero। Reduction-এর পরে arithmetic এখানকার int expression-এর জন্য যথেষ্ট ছোট।</p>
+<p>Capacity কখনো শূন্য নয়; remainder-এ positive divisor দরকার। Capacity বাড়ালে home আর step বদলাতে পারে, তাই reinsertion চাই। শুধু শেষে ফাঁকা cell যোগ করলে search-এর route পুরোনো placement-এর সঙ্গে মিলবে না।</p>
+<p>এগারো-slot অ্যারে empty state আর নিরীহ key শূন্য দিয়ে initialize। Stored key বোঝার আগে state পরীক্ষা। Tombstone reuse-এ state occupied হয়। Absent deletion state বদলায় না, সফল deletion ঠিক এক tombstone রাখে।</p>
+<h2 id="common-mistakes">Search-এর ইতিহাস মুছো না</h2>
+<h3>Tombstone-এ থামা</h3>
+<p>Collision target-কে ওই slot-এর পরে ঠেলতে পারে। মিল, never-used empty slot বা bounded attempt limit পর্যন্ত চলো।</p>
+<h3>প্রথম tombstone-এই সঙ্গে সঙ্গে insert</h3>
+<p>একই key পরে থাকতে পারে। Reusable অবস্থান রেখে duplicate check শেষ করে তবেই insert করো।</p>
+<h3>সব step পুরো table ঘোরে ধরা</h3>
+<p>Capacity বারোতে step চার মাত্র তিন distinct cell দেখে। Double hashing-এ coprimality, quadratic formula-তে load guarantee দেখো।</p>
+<h2 id="version-notes">C17 slot state</h2>
+<div class="callout version"><p>Probing প্রোগ্রামে integer key-কে empty marker না বানিয়ে স্পষ্ট int state field আছে। সীমিত offset int-এ ধরে, negative-remainder adjustment C17 arithmetic মানে।</p></div>
+<h2 id="summary">Lookup-এ placement rule-ও লাগে</h2>
+<p>Open addressing বাইরের list-এর বদলে আবার অনুসরণযোগ্য অ্যারে sequence দেয়। Deletion-এর পরে slot state search-এর অর্থ রাখে। পরের পাঠে occupancy বাড়লে <a href="topic:ds-rehashing">কখন আর কীভাবে rebuild</a> করবে দেখাবে।</p>

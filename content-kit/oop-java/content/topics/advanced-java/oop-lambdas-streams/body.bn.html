@@ -1,0 +1,68 @@
+<h2 id="introduction">অপারেশনকে মান হিসেবে পাঠাও</h2>
+<p class="lead">এক রিপোর্টে bonus যোগ, অন্যটিতে পাসের নম্বর রাখা, আরেকটিতে যোগফল লাগে। প্রতি কাজে নতুন নামের ক্লাস না লিখেও অপারেশন দিতে পারো। <dfn>Lambda</dfn> হলো ফাংশনের মতো expression, যা functional interface-এর অপারেশন পূরণ করে।</p>
+<p><dfn>Stream</dfn> মানের ওপর ধাপে ধাপে কাজের পরিকল্পনা। filter দিয়ে বাদ দাও, map দিয়ে রূপ বদলাও, তারপর collect বা reduce করো। রিপোর্ট যেন কয়েকটি কাজের ডেস্ক ঘুরছে, প্রতিটিতে এক স্পষ্ট কাজ।</p>
+<p>lambda আর stream আলাদা ফিচার। stream ছাড়াও button listener বা comparator-এ lambda চলে। আবার stream-এ inline lambda না লিখে আগের method reference চলে। চেইন ছোট করার আগে অপারেশনের টাইপ আর চুক্তি বোঝো।</p>
+<p>উদাহরণে সীমিত নম্বরের ডেটা আছে। ইনপুট না বদলে transformation-এ ফল বানানো হয়। কয়েক callback থেকে বাইরের accumulator বদলানোর চেয়ে source থেকে ফলের সম্পর্ক সহজে দেখা যায়।</p>
+<h2 id="syntax">লক্ষ্য ইন্টারফেস অপারেশনের কাঠামো বলে</h2>
+<pre><code class="language-java">IntUnaryOperator bonus = mark -&gt; mark + 2;
+Predicate&lt;Integer&gt; passing = mark -&gt; mark &gt;= 40;
+Function&lt;String, Integer&gt; length = String::length;
+Consumer&lt;String&gt; display = System.out::println;</code></pre>
+<p><dfn>Functional interface</dfn>-এ public Object মেথডের সমতুল্য ঘোষণা বাদ দিয়ে একটি abstract অপারেশন থাকে। default আর static থাকতে পারে। লক্ষ্য টাইপ প্যারামিটারের সংখ্যা আর রিটার্ন বলে দেয়।</p>
+<p>IntUnaryOperator একটি primitive int নিয়ে int দেয়। Predicate&lt;T&gt; থেকে boolean, Function&lt;T,R&gt; থেকে R আসে। Consumer&lt;T&gt; মান নেয়, ফল ফেরায় না। Supplier&lt;T&gt; আর্গুমেন্ট ছাড়া T দেয়। দরকার হলে primitive-specialized ইন্টারফেস boxing বাঁচায়।</p>
+<p>এক expression-এর lambda চুক্তি অনুযায়ী তার মান ফেরায়। block lambda-তে braces আর স্পষ্ট return লাগে। প্যারামিটার infer হতে পারে। একাধিক প্যারামিটার বা স্পষ্ট টাইপ হলে বন্ধনী লাগে। উদ্দেশ্য দেখা যায় এমন ছোট বডি রাখো।</p>
+<h2 id="how-it-works">lazy pipeline অনুসরণ করো</h2>
+<table class="ref"><thead><tr><th scope="col">ইনপুট নম্বর</th><th scope="col">অন্তত 40-এর filter</th><th scope="col">দুই যোগের map</th><th scope="col">ফলে থাকবে?</th></tr></thead><tbody>
+<tr><td>35</td><td>বাদ</td><td>পৌঁছায় না</td><td>না</td></tr>
+<tr><td>40</td><td>থাকে</td><td>42</td><td>হ্যাঁ</td></tr>
+<tr><td>75</td><td>থাকে</td><td>77</td><td>হ্যাঁ</td></tr>
+</tbody></table>
+<p>stream source traversal বানায়। filter আর map intermediate অপারেশন; সাধারণত terminal অপারেশন ফল না চাওয়া পর্যন্ত কাজের বর্ণনা রাখে। একে lazy বলে। collect, reduce, count, forEach terminal। short-circuiting terminal-এ সব এলিমেন্ট নাও দেখতে পারে।</p>
+<p>এক এলিমেন্ট কয়েক ধাপ পেরিয়ে তারপর পরেরটি আসতে পারে। প্রতি ধাপে আলাদা list তৈরি হয় ধরে নিও না। sorted-এর মতো কিছু অপারেশনে অবশ্য ফল দেওয়ার আগে মান জমাতে হয়।</p>
+<p>collection বারবার ব্যবহারের স্টোরেজ। stream একবারের traversal পরিকল্পনা। terminal-এর পরে অন্য হিসাবের জন্য source থেকে নতুন stream নাও। পুরোনোটি আবার নিলে IllegalStateException হতে পারে।</p>
+<h2 id="examples">বদলানো, বাছাই আর মোট হিসাবে ফাংশন দাও</h2>
+<h3>স্থির bonus capture করো</h3>
+<p>lambda চার যোগ করে সর্বোচ্চ 100 রাখে। 70 আর 99 থেকে 74 আর 100 আসে। লোকাল bonus effectively final; lambda পড়তে পারে, বাইরের কোড আবার অ্যাসাইন করতে পারে না।</p>
+<div data-example="ex-1"></div>
+<h3>বদলানোর আগে filter</h3>
+<p>35 বাদ দিয়ে বাকি নম্বরে দুই যোগ করলে [42, 77] আসে। ধাপ উল্টালে অন্য নিয়ম: 39 বেড়ে পাস করতে পারত। ধাপের ক্রম business contract-এর অংশ।</p>
+<div data-example="ex-2"></div>
+<h3>identity দিয়ে reduce</h3>
+<p>যোগে শূন্য identity, অর্থাৎ যোগ করলেও মান বদলায় না। খালি stream-এর যোগ শূন্য; 3, 5, 7-এর যোগ 15। Integer::sum দুই প্যারামিটারের lambda ছাড়াই static যোগের মেথড বোঝায়। দেখানো ছোট মানে নিরাপদ।</p>
+<div data-example="ex-3"></div>
+<h3>আগের ইনস্ট্যান্স মেথড ব্যবহার করো</h3>
+<p>String::toUpperCase প্রতিটি String-এ চলে। System.out::println নির্দিষ্ট receiver-এর মেথড ডাকে। বড় অক্ষরের ফল আলাদা unmodifiable list। পরে source প্রিন্টে দেখা যায় মূল String-গুলো বদলায়নি।</p>
+<div data-example="ex-4"></div>
+<h2 id="method-references">চার ধরনের reference চেনো</h2>
+<p>Integer::sum static ক্লাস মেথড। System.out::println নির্দিষ্ট receiver-সহ bound reference। String::length unbound instance reference; আসা আর্গুমেন্টই receiver। ArrayList::new constructor reference; কল হলে অবজেক্ট বানায়।</p>
+<p>লক্ষ্য ইন্টারফেস প্যারামিটার আর ফলের টাইপ মেলায়। একই নামের ওভারলোড থাকতে পারে, তাই প্রসঙ্গের টাইপ জরুরি। reference তৈরি মানেই সঙ্গে সঙ্গে মেথড চলে না।</p>
+<p>আগের মেথডের নাম কাজ বোঝালে reference নাও। বাড়তি শর্ত বা কয়েক কাজ যোগ করলে lambda নাও। অক্ষর কমাতে পড়ার মতো lambda অস্পষ্ট reference-এ বদলিয়ো না।</p>
+<p>lambda বাইরের this রাখে; anonymous ক্লাসের নতুন this নয়। capture করা লোকাল final বা effectively final হতে হয়। লক্ষ্য অবজেক্ট mutable হতে পারে, তাই capture-এর নিয়মেই callback thread-safe হয় না।</p>
+<h2 id="reduction-and-collection">ফলের চুক্তি বেছে নাও</h2>
+<p>reduce associative অপারেশনে মান এক করে। associative মানে grouping বদলালেও ফল এক। নির্দিষ্ট সীমায় পূর্ণসংখ্যার যোগ চলে। বিয়োগে 10-3-2-এর grouping বদলালে ফল বদলায়।</p>
+<p>identity দিয়ে combine করলে মান একই থাকতে হবে। যোগে শূন্য, দশ নয়। দশ থেকে sequential যোগ দেখতে কাজ করলেও parallel partition-এ প্রত্যেকে ভুল identity পেতে পারে। শূন্য থেকে যোগ করে একবারের adjustment পরে দাও।</p>
+<p>identity ছাড়া reduce Optional ফেরায়, কারণ খালি stream-এ ফেরানোর এলিমেন্ট নেই। Optional মান থাকা বা না থাকা বোঝায়। স্পষ্ট fallback বা branch রাখো; ফল আছেই ধরে নিও না।</p>
+<p>collect নির্দিষ্ট protocol মেনে container গড়ে। Collectors.toList নির্দিষ্ট concrete ক্লাস বা mutability নিশ্চিত করে না। Stream.toList স্পষ্টভাবে unmodifiable list দেয়। পরে বদলাতে হলে Collectors.toCollection(ArrayList::new) চাও।</p>
+<p>mapToInt boxed মান থেকে IntStream দেয়। তার sum খালি হলে শূন্য। বড় ডোমেইনে গুণ বা জমার আগে mapToLong করো, নইলে মাঝের int হিসাবেই overflow হবে।</p>
+<h2 id="side-effects">বাইরের বদলানো স্টেট থেকে pipeline আলাদা রাখো</h2>
+<p>stream ফাংশন সাধারণত stateless হবে, source বদলাবে না। filter-এর ভেতর source list থেকে বাদ দিলে traversal ভাঙে। বাইরের counter বদলালে দৃশ্যমান reduction-এর বদলে callback কখন কীভাবে চলল তার ওপর ফল নির্ভর করে।</p>
+<p>parallel stream-এ আরও শর্ত লাগে। parallel forEach থেকে একই সাধারণ ArrayList বদলালে race হয়। উপযুক্ত collector নিজের protocol-এ অংশের ফল মেলায়। ভাগ, synchronization আর merge-এর খরচ আছে; parallel মানেই দ্রুত নয়।</p>
+<p>source ক্রম দিলে encounter order পাও। list stream-এ ক্রম থাকে, HashSet সাজানো রিপোর্টের ক্রম দেয় না। নির্দিষ্ট ক্রমে sorted নাও। parallel forEach অন্য ক্রমে action চালাতে পারে; forEachOrdered-এর encounter-order চুক্তি আছে।</p>
+<p>Files.lines-এর মতো I/O stream বন্ধ করতে হয়; collection stream-এ প্রায়ই লাগে না। resource-backed stream try-with-resources-এ রাখো। ছোট pipeline রিসোর্সের মালিকানা বা checked ব্যর্থতার সিদ্ধান্ত সরায় না।</p>
+<h2 id="pipeline-boundaries">খালি রিপোর্ট আর সীমার মান দেখো</h2>
+<p>passing-total অনুশীলনে খালি list চলে। filter আর mapToInt কিছু পায় না, sum শূন্য দেয়। সব নম্বর 40-এর নিচে হলেও ফল শূন্য, তবে তখন মানগুলো দেখা আর বাদ দেওয়া হয়েছে।</p>
+<p>ঠিক 40 filter পার হবে। greater than 40 লিখলে ভুল করে বাদ পড়ে। 39 পরে বেড়ে পাস হতে পারে বলে এখন রাখা চলবে না। predicate বা ধাপ বদলালে এই সীমার মানগুলো দেখো।</p>
+<p>অনন্য রুমের লেবেলে পুনরায় lab, sort-এর আগে একটি মান হয়। সাজানো ফল প্রিন্টে gate, hall, lab আসে। equals ডুপ্লিকেট ঠিক করে; ordering দেখানোর ক্রম ঠিক করে। আলাদা কাজের আলাদা ধাপ।</p>
+<h2 id="common-mistakes">চেইনের আড়ালে নিয়ম বদলে ফেলো না</h2>
+<h3>ছেড়ে দেওয়া pipeline কাজ করবে ভাবা</h3>
+<p>terminal ছাড়া map সাধারণত ঘোরে না। lazy transformation-এ বাধ্যতামূলক business side effect রেখো না। অর্থপূর্ণ ফল ফেরাও বা ব্যবহার করো।</p>
+<h3>একই stream আবার ব্যবহার</h3>
+<p>count stream শেষ করে। পরে একইটিতে collect চলে না। source list রাখো বা নতুন stream বানানোর supplier রাখো।</p>
+<h3>unmodifiable ফল বদলানো</h3>
+<p>toList-এর ফলে add করলে UnsupportedOperationException হয়। পরের ধাপে এডিট লাগলে collect-এর সময় mutable destination চাও।</p>
+<h2 id="best-practices">ডেটার পথ পড়তে সহজ করো</h2>
+<ul><li>জটিল predicate-কে নাম দাও; অনেক শর্ত inline-এ ঢুকিয়ো না।</li><li>গ্রহণের সীমার কাছের মানে ধাপের ক্রম দেখো।</li><li>combine অপারেশনের মানানসই identity নাও।</li><li>আগে বের হওয়া বা স্টেটের কাজ লুপে পরিষ্কার হলে লুপ নাও।</li><li>বাস্তব বহুভাষার টেক্সট বদলাতে locale ঠিক করো।</li></ul>
+<h2 id="version-notes">lambda আর আধুনিক stream ফল</h2>
+<div class="callout version"><p>lambda, method reference আর stream Java 8 থেকে। Stream.toList Java 16 থেকে। Java 17-এ তার unmodifiable চুক্তি আর Collectors.toList-এর সীমিত নিশ্চয়তা আলাদা। উদাহরণে parallel execution লাগে না।</p></div>
+<h2 id="summary">রূপ বদলানো আর ফলের চুক্তি বোঝাও</h2>
+<p>lambda functional চুক্তি পূরণ করে। stream বাছাই, রূপ বদলানো আর হিসাবের traversal পরিকল্পনা জোড়ে। স্টেট আর রিসোর্সের lifetime স্পষ্ট রাখো। এবার <a href="topic:oop-enums-records">enum আর record</a> দিয়ে নির্দিষ্ট পছন্দ আর স্বচ্ছ ডেটা মডেল করো।</p>

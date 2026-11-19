@@ -6,6 +6,7 @@
 // when fewer than `minGroup` students contribute, as on the old instructor page.
 // Questions asked to the AI are never shown as text, only counted by page.
 
+import { masteryPairs } from './mastery.ts';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { AppError } from './service.ts';
 import { csv } from './csv.ts';
@@ -15,6 +16,7 @@ import { QuestionBankService } from './question-bank.ts';
 import { getCourse } from '../content/courses.ts';
 import { getVideo } from '../content/videos.ts';
 import { courseVideoOrder } from './watch.ts';
+import { NoticeService } from './notices.ts';
 import type { VideoExtrasService } from './video-extras.ts';
 
 type Json = Record<string, any>;
@@ -33,9 +35,11 @@ export class ClassService {
   private readonly extras: VideoExtrasService;
   private readonly minGroup: number;
   private readonly now: () => Date;
+  private readonly notices: NoticeService;
 
-  constructor(store: Store, tutorials: TutorialService, extras: VideoExtrasService, opts: { minGroup?: number; now?: () => Date } = {}) {
+  constructor(store: Store, tutorials: TutorialService, extras: VideoExtrasService, opts: { minGroup?: number; now?: () => Date; notices?: NoticeService } = {}) {
     this.store = store;
+    this.notices = opts.notices ?? new NoticeService(store);
     this.tutorials = tutorials;
     this.extras = extras;
     this.minGroup = opts.minGroup ?? 3;
@@ -124,7 +128,11 @@ export class ClassService {
     const key = `${classId}:${learnerId}`;
     const e = await this.store.getDoc('enrol', key);
     if (!e) throw new AppError('not_found', 404, 'No such request.');
-    if (ok) await this.put('enrol', key, { ...e.data, status: 'active' });
+    if (ok) {
+      await this.put('enrol', key, { ...e.data, status: 'active' });
+      const c = await this.classOr404(classId, staff);
+      await this.notices.emit(learnerId, 'join_approved', classId, { title: c.data.name, classId });
+    }
     else await this.store.deleteDoc('enrol', key);
     await this.audit(staff.email, ok ? 'class.approve' : 'class.remove', classId, { student: e.data.email });
     return { ok: true };
@@ -146,6 +154,7 @@ export class ClassService {
     for (const item of items) prepared.push(item.kind === 'custom_quiz' ? await new QuestionBankService(this.store, this.tutorials).prepare(staff, classId, aid, item) : { kind: item.kind, track: item.track, topic: item.topic, lab: item.lab });
     const data = { classId, title, items: prepared, due: due ? new Date(Date.parse(due)).toISOString() : null, marks: Math.max(0, Math.min(1000, Number(body.marks) || 0)), passMark: Math.max(0, Math.min(100, Number(body.passMark ?? 60))), hintsOnly: body.hintsOnly !== false, createdAt: this.iso(), by: staff.email };
     await this.put('assignment', aid, data);
+    if (!id) await this.notices.forClass(classId, 'assignment', aid, title);
     await this.audit(staff.email, id ? 'assignment.update' : 'assignment.create', aid, { classId, title });
     return { id: aid, ...data };
   }
@@ -163,6 +172,7 @@ export class ClassService {
     const id = randomUUID();
     const data = { classId, title, body: text, pinned: body.pinned === true, at: this.iso(), by: staff.email };
     await this.put('classpost', id, data);
+    await this.notices.forClass(classId, 'announcement', id, title);
     await this.audit(staff.email, 'class.post', classId, { title });
     return { id, ...data };
   }
@@ -190,7 +200,7 @@ export class ClassService {
       const t = this.topicOf(e);
       if (!t || (track && t.track !== track)) continue;
       if (e.type === 'view') seen.add(t.topic);
-      if (e.type === 'quiz') { seen.add(t.topic); (e.payload.customQuiz ? customQuizzes : quizzes).set(e.payload.customQuiz ? String(e.payload.customQuiz) : t.topic, { score: Number(e.payload.score) || 0, total: Number(e.payload.total) || 0, at: e.at }); }
+      if (e.type === 'quiz' && !e.payload.review && !(e.payload.adaptive && !e.payload.complete)) { seen.add(t.topic); (e.payload.customQuiz ? customQuizzes : quizzes).set(e.payload.customQuiz ? String(e.payload.customQuiz) : t.topic, { score: Number(e.payload.score) || 0, total: Number(e.payload.total) || 0, at: e.at }); }
       if (e.type === 'lab_check' && e.payload.lab) labs.add(`${t.topic}/${e.payload.lab}`);
     }
     const qs = [...quizzes.values(), ...customQuizzes.values()].filter((q) => q.total);
@@ -260,13 +270,19 @@ export class ClassService {
       };
     }).sort((a, b) => a.email.localeCompare(b.email));
 
+    const pairs = masteryPairs(events).filter((p) => !cls.track || p.track === cls.track);
+    const masteryGain = [...new Set(pairs.map((p) => `${p.track}:${p.topic}`))].map((key) => {
+      const rows = pairs.filter((p) => `${p.track}:${p.topic}` === key);
+      const p = rows[0]!;
+      return { track: p.track, topic: p.topic, title: this.tutorials.pageInfo(p.track, p.topic, lang)?.topicTitle ?? p.topic, students: rows.length, gain: Math.round(rows.reduce((n, r) => n + r.gain, 0) / rows.length * 100) / 100 };
+    }).filter((r) => r.students >= this.minGroup);
     const enough = ids.size >= this.minGroup;
     // Quiz results: weakest topics, and the questions most often answered wrong.
     const topicScores = new Map<string, { sum: number; n: number; who: Set<string> }>();
     const qStats = new Map<string, { wrong: number; n: number; who: Set<string>; topic: string; qid: string }>();
     for (const e of events) {
       const t = this.topicOf(e);
-      if (e.type !== 'quiz' || e.payload.customQuiz || !t || (cls.track && t.track !== cls.track)) continue;
+      if (e.type !== 'quiz' || e.payload.customQuiz || e.payload.review || (e.payload.adaptive && !e.payload.complete) || !t || (cls.track && t.track !== cls.track)) continue;
       const s = topicScores.get(t.topic) ?? { sum: 0, n: 0, who: new Set() };
       if (Number(e.payload.total)) { s.sum += Number(e.payload.score) / Number(e.payload.total); s.n++; s.who.add(e.learnerId); }
       topicScores.set(t.topic, s);
@@ -323,7 +339,7 @@ export class ClassService {
         needHelp: roster.filter((r) => r.reasons.length).length, delivered,
       },
       pending: mine.filter((e) => e.data.status === 'pending').map((e) => ({ learnerId: e.data.learnerId, email: e.data.email, at: e.data.joinedAt })),
-      roster, hardTopics, hardQuestions, asks, heat, labs, videoQuizzes,
+      masteryGain, roster, hardTopics, hardQuestions, asks, heat, labs, videoQuizzes,
       assignments: myAssignments.map((a) => ({ id: a.id, ...a.data, items: a.data.items.map((it: Json) => ({ ...it, title: titleOf.get(it.topic) ?? it.topic })), submitted: roster.filter((r) => r.assignments.find((x) => x.id === a.id && x.done === x.of)).length })),
       posts: posts.filter((p) => p.data.classId === classId).map((p) => ({ id: p.id, ...p.data })).sort((a, b) => Number(b.pinned) - Number(a.pinned) || String(b.at).localeCompare(String(a.at))),
       track: track ? { id: track.id, title: track.title, modules: track.modules.map((m: Json) => ({ id: m.id, title: m.title, topics: m.topics.filter((t: Json) => t.available).map((t: Json) => ({ id: t.id, title: t.title, labs: t.labs })) })) } : null,

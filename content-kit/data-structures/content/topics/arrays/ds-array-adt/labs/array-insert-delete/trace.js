@@ -9,7 +9,8 @@ function trace(input) {
     let shifts = 0;
     const position = input.position;
     emit('note', {vars: {size, capacity: 8, shifts}}, 1,
-        'Check the live range before touching any reserved cell.');
+        'Check the live range before touching any reserved cell.',
+        'কোনো বরাদ্দ ঘরে কাজ করার আগে ব্যবহৃত অংশের সীমা দেখো।');
     if (input.mode === 0 && size < 8 && position <= size) {
         for (let i = size; i > position; i--) {
             array[i] = array[i - 1];
@@ -28,7 +29,8 @@ function trace(input) {
             array[i] = array[i + 1];
             shifts++;
             emit('set', {i, value: array[i], vars: {i, shifts}}, 4,
-                `Move ${array[i]} left to fill the current gap.`);
+                `Move ${array[i]} left to fill the current gap.`,
+                `বর্তমান ফাঁক ভরতে ${array[i]} বামে সরাও।`);
         }
         size--;
         array[size] = null;
@@ -37,10 +39,12 @@ function trace(input) {
             'শেষ ঘরটি এখন ব্যবহার হচ্ছে না, তাই ছবিতে ফাঁকা দেখাও।');
     } else {
         emit('note', {}, 1, 'This position is invalid or storage is full; preserve every live value.',
-            'Position ভুল বা অ্যারে পূর্ণ, তাই মান বদলাবে না।');
+            'পজিশন ভুল বা অ্যারে ভরা, তাই মান বদলাবে না।');
     }
     emit('list', {name: 'live', items: array.slice(0, size)}, 6,
-        'Only the first size cells belong to the collection.');
-    emit('done', {vars: {size, shifts}}, 6, 'The requested update is complete.');
+        'Only the first size cells belong to the collection.',
+        'শুধু প্রথম sizeটি ঘর কালেকশনের অংশ।');
+    emit('done', {vars: {size, shifts}}, 6, 'The requested update is complete.',
+        'চাওয়া আপডেট শেষ; size আর সরানোর সংখ্যা দেখো।');
     return {init, steps};
 }

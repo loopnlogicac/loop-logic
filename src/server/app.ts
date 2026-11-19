@@ -9,22 +9,28 @@ import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts'
 import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
+import type { StudyPlanService } from '../app/study-plan.ts';
 import type { ReadingService } from '../reading/service.ts';
+import type { NoteService } from '../app/notes.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
 import type { WatchService } from '../app/watch.ts';
 import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
+import type { AdaptiveQuizService } from '../app/adaptive-quiz.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
+import type { MasteryService } from '../app/mastery.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { QuestionBankService } from '../app/question-bank.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
+import type { ReportService } from '../app/reports.ts';
 import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, clearAnonCookie, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
 import { allCourses } from '../content/courses.ts';
+import type { NoticeService } from '../app/notices.ts';
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -47,15 +53,21 @@ export interface AppDeps {
   learner: LearnerService;
   labs: LabService;
   watch: WatchService;
+  notes?: NoteService;
   extras: VideoExtrasService;
+  adaptiveQuiz?: AdaptiveQuizService;
   tutorials: TutorialService;
+  mastery?: MasteryService;
   admin?: AdminService;
   classes?: ClassService;
   questionBank?: QuestionBankService;
   orders?: OrderService;
+  reports?: ReportService;
   runner?: RunnerService;
   search?: SearchService;
+  studyPlan?: StudyPlanService;
   store?: Store;
+  notices?: NoticeService;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
   labModelFile: string;
@@ -128,9 +140,17 @@ export function buildRoutes(d: AppDeps): Route[] {
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   const bank = () => { if (!d.questionBank) throw new AppError('unavailable', 503, 'Question bank is unavailable.'); return d.questionBank; };
   const search = d.search ?? (d.search = new SearchService(tutorials, d.admin));
+  const mastery = () => {
+    if (!d.mastery) throw new AppError('unavailable', 503, 'Mastery checks are unavailable.');
+    return d.mastery;
+  };
   const cls = () => {
     if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
     return d.classes;
+  };
+  const reports = () => {
+    if (!d.reports) throw new AppError('unavailable', 503, 'Reports are unavailable.');
+    return d.reports;
   };
   const ord = () => {
     if (!d.orders) throw new AppError('unavailable', 503, 'Buying is not available on this server.');
@@ -140,7 +160,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
     return d.admin;
   };
+  const notesFor = (ctx: Ctx) => {
+    if (!ctx.signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, lang(ctx.query.get('lang')) === 'bn' ? 'সেভ করতে সাইন ইন করো।' : 'Sign in to save.');
+    if (!d.notes) throw new AppError('unavailable', 503, 'Saved items are unavailable.');
+    return d.notes;
+  };
   return [
+    route('GET', '/api/my-notes', (ctx) => notesFor(ctx).list(ctx.learnerId, lang(ctx.query.get('lang'))), 'learner'),
+    route('GET', '/api/my-notes/:key', (ctx) => notesFor(ctx).get(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
+    route('PUT', '/api/my-notes/:key', (ctx) => notesFor(ctx).put(ctx.learnerId, ctx.params.key!, ctx.body ?? {}, lang(ctx.query.get('lang'))), 'learner'),
+    route('DELETE', '/api/my-notes/:key', (ctx) => notesFor(ctx).delete(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
       authMode: d.auth.mode,
@@ -170,6 +199,12 @@ export function buildRoutes(d: AppDeps): Route[] {
     // catalog, dashboard, profile
     route('GET', '/api/courses', ({ query }) => learner.catalog(lang(query.get('lang'))), 'none'),
     route('GET', '/api/courses/:id', ({ params, query, learnerId }) => learner.course(params.id!, learnerId, lang(query.get('lang')))),
+    route('GET', '/api/study-plan', ({ learnerId, query }) => {
+      if (!d.studyPlan) throw new AppError('unavailable', 503, 'Study plans are unavailable.');
+      const track = query.get('track'), topic = query.get('topic');
+      if (Boolean(track) !== Boolean(topic)) throw new AppError('bad_input', 400, 'Provide both track and topic.');
+      return d.studyPlan.plan(learnerId, lang(query.get('lang')), track && topic ? { track, topic } : undefined);
+    }, 'learner'),
     route('GET', '/api/dashboard', ({ query, learnerId }) => learner.dashboard(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile', ({ query, learnerId }) => learner.profileView(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile/export', ({ learnerId }) => learner.exportData(learnerId)),
@@ -201,9 +236,22 @@ export function buildRoutes(d: AppDeps): Route[] {
       const added = await d.store.addWaitlist({ email, plan: body.plan === 'live' ? 'live' : 'pro', lang: L, learnerId: learnerId || null, createdAt: new Date().toISOString() });
       return { ok: true, already: !added };
     }),
+    route('GET', '/api/my-mastery', ({ learnerId, query }) => mastery().learner(learnerId, lang(query.get('lang'))), 'learner'),
+    route('GET', '/api/admin/mastery', () => mastery().overall(), 'admin'),
+    route('GET', '/api/learn/:track/:topic/checks', ({ learnerId, params, query }) => mastery().get(learnerId, params.track!, params.topic!, lang(query.get('lang'))), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase', ({ learnerId, params, body }) => mastery().start(learnerId, params.track!, params.topic!, params.phase!, lang(body.lang)), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
-    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),
+    route('POST', '/api/learn/:track/:topic/adaptive', ({ learnerId, params, body }) => {
+      if (!d.adaptiveQuiz) throw new AppError('unavailable', 503, 'Adaptive quizzes are unavailable.');
+      return d.adaptiveQuiz.start(learnerId, params.track!, params.topic!, lang(body?.lang));
+    }, 'learner'),
+    route('POST', '/api/learn/:track/:topic/adaptive/answer', ({ learnerId, params, body }) => {
+      if (!d.adaptiveQuiz) throw new AppError('unavailable', 503, 'Adaptive quizzes are unavailable.');
+      return d.adaptiveQuiz.answer(learnerId, params.track!, params.topic!, body, lang(body?.lang));
+    }, 'learner'),
+    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang), body.review === true)),
     route('GET', '/api/learn/:track/:topic/practice/:pid', ({ params, query }) => tutorials.solution(params.track!, params.topic!, params.pid!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic/labs/:lab', ({ params, query }) => tutorials.lab(params.track!, params.topic!, params.lab!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/labs/:lab/run', ({ params, body }) => tutorials.runLab(params.track!, params.topic!, params.lab!, body.input, lang(body.lang)), 'none'),
@@ -264,6 +312,9 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/coupons/check', ({ body, email }) => adm().checkCoupon(body.code, String(body.target ?? 'all'), email)),
 
     // admin site (signed in, and an admin)
+    route('GET', '/api/admin/export', async () => new Download(JSON.stringify(await reports().backup(), null, 2), 'application/json; charset=utf-8', 'loop-logic-backup.json'), 'admin'),
+    route('GET', '/api/admin/revenue', ({ query }) => reports().revenue(lang(query.get('lang'))), 'admin'),
+    route('GET', '/api/admin/revenue.csv', async ({ query }) => new Download(await reports().revenueCsv(lang(query.get('lang'))), 'text/csv; charset=utf-8', 'revenue.csv'), 'admin'),
     route('GET', '/api/admin/me', ({ email }) => ({ email, role: adm().roleOf(email), config: adm().config() }), 'admin'),
     route('GET', '/api/admin/overview', () => adm().overview(), 'admin'),
     route('GET', '/api/admin/tutorials', () => adm().tutorialsAdmin(), 'admin'),
@@ -308,6 +359,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('GET', '/api/admin/ai', () => adm().ai(), 'admin'),
     route('GET', '/api/admin/audit', () => adm().auditLog(), 'admin'),
 
+    route('GET', '/api/my-notices', ({ learnerId, signedIn, query }) => {
+      if (!signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, 'Sign in to read notifications.');
+      if (!d.notices) throw new AppError('unavailable', 503, 'Notifications are unavailable.');
+      return d.notices.list(learnerId, lang(query.get('lang')));
+    }, 'learner'),
+    route('POST', '/api/my-notices/read-all', ({ learnerId, signedIn }) => {
+      if (!signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, 'Sign in to read notifications.');
+      if (!d.notices) throw new AppError('unavailable', 503, 'Notifications are unavailable.');
+      return d.notices.readAll(learnerId);
+    }, 'learner'),
     // buying a paid course (bKash / Nagad, checked by an admin)
     route('GET', '/api/buy/:course', ({ params, query, learnerId, email, signedIn }) => ord().page(learnerId, email, Boolean(signedIn) || d.auth.mode === 'supabase', params.course!, lang(query.get('lang')))),
     route('POST', '/api/buy/:course/quote', ({ params, body, learnerId, email }) => ord().quote(learnerId, email, params.course!, body.coupon)),

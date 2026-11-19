@@ -1,0 +1,58 @@
+<h2 id="introduction">পরিচিতি</h2>
+<p class="lead">একটি পথের মানচিত্র ভাবো। সারিতে তোমার বর্তমান কাজ, কলামে পরের সাইন। LL(1) টেবিল পার্সারের জন্য এ কাজই করে। একটি ঘর দেখে তার প্রোডাকশন লাগাও, তারপর আন্দাজ ছাড়াই এগোও।</p>
+<p>প্রথম L মানে বাঁ থেকে ডানে ইনপুট পড়া। দ্বিতীয় L মানে leftmost ডেরিভেশন তৈরি করা। 1 মানে পরের প্রোডাকশন বাছতে একটি lookahead টোকেন দেখা। Terminal মেলার আগ পর্যন্ত lookahead শুধু দেখা হয়, পড়ে এগিয়ে যাওয়া হয় না।</p>
+<p>একটি <dfn>LL(1) গ্রামার</dfn> -এ predictive টেবিলের প্রতিটি ঘরে সর্বোচ্চ একটি প্রযোজ্য প্রোডাকশন থাকে। খালি ঘর মানে ওই nonterminal ও lookahead-এ syntax error। দুটি প্রোডাকশন থাকলে গ্রামারের দ্বন্দ্ব, কোনো নির্দিষ্ট ইনপুট সেই ঘরে না গেলেও। এই কোডে টেবিলের কোথাও দ্বন্দ্ব থাকলে পার্সিং করা হয় না।</p>
+<h2 id="syntax">গ্রামার ও ডেটা রাখার ধরন</h2>
+<pre><code class="language-text">E → T R
+R → + T R | ε
+T → F Q
+Q → * F Q | ε
+F → ( E ) | id</code></pre>
+<p>আগের <a href="topic:cd-first-follow">FIRST/FOLLOW</a> পাঠের বদলে লেখা এক্সপ্রেশন গ্রামার নাও। সারিতে nonterminal E, R, T, Q ও F। কলামে টোকেনের ধরন id, +, *, (, ) ও $। খালি ক্রমের কোনো কলাম নেই, কারণ লেক্সার epsilon টোকেন ফেরায় না।</p>
+<table class="ref"><caption>এক্সপ্রেশনের সম্পূর্ণ LL(1) টেবিল</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">id</th><th scope="col">+</th><th scope="col">*</th><th scope="col">(</th><th scope="col">)</th><th scope="col">$</th></tr></thead><tbody><tr><td>E</td><td>E → T R</td><td>error</td><td>error</td><td>E → T R</td><td>error</td><td>error</td></tr><tr><td>R</td><td>error</td><td>R → + T R</td><td>error</td><td>error</td><td>R → ε</td><td>R → ε</td></tr><tr><td>T</td><td>T → F Q</td><td>error</td><td>error</td><td>T → F Q</td><td>error</td><td>error</td></tr><tr><td>Q</td><td>error</td><td>Q → ε</td><td>Q → * F Q</td><td>error</td><td>Q → ε</td><td>Q → ε</td></tr><tr><td>F</td><td>F → id</td><td>error</td><td>error</td><td>F → ( E )</td><td>error</td><td>error</td></tr></tbody></table>
+<p>প্রতিটি A → α-এর জন্য FIRST(α) বের করো। ওই সেটের প্রতিটি terminal-এর কলামে প্রোডাকশন বসাও। FIRST(α)-তে ε থাকলে FOLLOW(A)-এর প্রতিটি টোকেনের কলামেও বসাও। Python টেবিলের প্রতি ঘরে একটি লিস্ট থাকে, যাতে পরে যোগ করা নিয়ম আগেরটি মুছে না দেয়।</p>
+<table class="ref"><caption>কিছু টেবিলের ঘর পূরণ হওয়ার কারণ</caption><thead><tr><th scope="col">ঘর</th><th scope="col">প্রোডাকশন</th><th scope="col">কারণ</th></tr></thead><tbody><tr><td>M[E,id]</td><td>E → T R</td><td>id হলো FIRST(T R)-এর সদস্য।</td></tr><tr><td>M[F,(]</td><td>F → ( E )</td><td>ডান পাশ terminal ( দিয়ে শুরু।</td></tr><tr><td>M[Q,*]</td><td>Q → * F Q</td><td>ডান পাশ * দিয়ে শুরু।</td></tr><tr><td>M[Q,+]</td><td>Q → ε</td><td>+ হলো FOLLOW(Q)-এর সদস্য।</td></tr><tr><td>M[R,$]</td><td>R → ε</td><td>$ হলো FOLLOW(R)-এর সদস্য।</td></tr><tr><td>M[T,*]</td><td>error</td><td>কোনো টার্ম * দিয়ে শুরু হতে পারে না।</td></tr></tbody></table>
+<h2 id="how-it-works">পার্সার কীভাবে কাজ করে</h2>
+<h3>স্ট্যাকে বাকি কাজের তালিকা রাখো</h3>
+<p>স্ট্যাকের নিচে $, তার ওপরে শুরুর সিম্বল রাখো। ইনপুটের শেষে আলাদা $ যোগ করো। ট্রেসে স্ট্যাক নিচ থেকে ওপরে লেখা, তাই টপ ডান দিকে। প্রতি ধাপে স্ট্যাক বলে বাকি ইনপুটের সঙ্গে আর কী কী মেলাতে হবে।</p>
+<p>স্ট্যাকের টপ terminal হলে lookahead-এর সঙ্গে মিলতেই হবে। Terminal পপ করে ইনপুটে এক টোকেন এগোও। টপ nonterminal A হলে M[A,lookahead] দেখো। A পপ করে বেছে নেওয়া ডান পাশ উল্টো ক্রমে পুশ করো। ε নিয়মে কিছু পুশ হয় না, ইনপুটও পড়া হয় না।</p>
+<table class="ref"><caption>শুরু থেকে শেষ পর্যন্ত id + id * id পার্স করা</caption><thead><tr><th scope="col">স্ট্যাক (টপ ডান দিকে)</th><th scope="col">বাকি ইনপুট</th><th scope="col">অ্যাকশন</th></tr></thead><tbody><tr><td>$ E</td><td>id + id * id $</td><td>E -&gt; T R</td></tr><tr><td>$ R T</td><td>id + id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id + id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id + id * id $</td><td>id মেলাও</td></tr><tr><td>$ R Q</td><td>+ id * id $</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>+ id * id $</td><td>R -&gt; + T R</td></tr><tr><td>$ R T +</td><td>+ id * id $</td><td>+ মেলাও</td></tr><tr><td>$ R T</td><td>id * id $</td><td>T -&gt; F Q</td></tr><tr><td>$ R Q F</td><td>id * id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id * id $</td><td>id মেলাও</td></tr><tr><td>$ R Q</td><td>* id $</td><td>Q -&gt; * F Q</td></tr><tr><td>$ R Q F *</td><td>* id $</td><td>* মেলাও</td></tr><tr><td>$ R Q F</td><td>id $</td><td>F -&gt; id</td></tr><tr><td>$ R Q id</td><td>id $</td><td>id মেলাও</td></tr><tr><td>$ R Q</td><td>$</td><td>Q -&gt; ε</td></tr><tr><td>$ R</td><td>$</td><td>R -&gt; ε</td></tr><tr><td>$</td><td>$</td><td>গ্রহণ করো</td></tr></tbody></table>
+<p>প্রথমে E-এর জায়গায় T R বসে। উল্টো ক্রমে পুশ করলে T ওপরে, R নিচে থাকে। F প্রথম id মেলানোর পরে Q lookahead + দেখে খালি হয়। তারপর R বেছে নেয় + T R। শেষ R lookahead $-এ খালি হওয়ার আগে দ্বিতীয় T দিয়ে id * id পার্স হয়।</p>
+<p>গ্রহণ করতে শেষের দুটি মার্কারই মেলাতে হবে। ইনপুটের মার্কার না পড়ে শুধু গ্রামারের কাজের স্ট্যাক খালি হওয়া যথেষ্ট নয়। একইভাবে সাধারণ সব টোকেন পড়লেই অসমাপ্ত nonterminal বাদ দেওয়া যায় না। id +-এর শেষে lookahead $ হলে T টপে থাকে, তাই অপারেন্ড না থাকায় পার্সার বর্জন করে।</p>
+<h3>দেখতে ঠিক মনে হলেই বিশ্বাস না করে গ্রামার যাচাই করো</h3>
+<table class="ref"><caption>FIRST/FOLLOW দ্বন্দ্ব; স্ল্যাশ দিয়ে দুই বিকল্পই রাখা হয়েছে</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">a</th><th scope="col">$</th></tr></thead><tbody><tr><td>S</td><td>S → A a</td><td>error</td></tr><tr><td>A</td><td>A → a / A → ε</td><td>error</td></tr></tbody></table>
+<p>S → A a ও A → a | ε-এ FIRST(a)-তে a আছে। A খালি হতে পারে বলে তার ε নিয়মও FOLLOW(A) বেছে নেয়, যেখানে a আছে। একটি lookahead দেখে প্রথম a কি A-এর, নাকি পরের terminal, বোঝা যায় না। গ্রামার LL(1) নয়, যদিও একই ভাষার LL(1) বর্ণনা S → a R, R → a | ε আছে।</p>
+<table class="ref"><caption>Predictive সিদ্ধান্তে দুই ধরনের দ্বন্দ্ব</caption><thead><tr><th scope="col">ঘটনা</th><th scope="col">উদাহরণ</th><th scope="col">যেখানে মিলছে</th></tr></thead><tbody><tr><td>FIRST/FIRST</td><td>S → a A | a B</td><td>দুই বিকল্পই a দিয়ে শুরু।</td></tr><tr><td>FIRST/FOLLOW</td><td>A → a | ε, যেখানে FOLLOW(A)-তে a আছে</td><td>a পড়া ও রেখে দেওয়া দুটিই প্রযোজ্য।</td></tr><tr><td>দুটি nullable বিকল্প</td><td>A → B | C, দুটিই nullable</td><td>দুটিই FOLLOW(A) ব্যবহার করে।</td></tr></tbody></table>
+<p>বিকল্প α ও β-এর terminal FIRST সেটে কোনো একই সদস্য থাকা চলবে না। α nullable হলে FIRST(β)-এর সঙ্গে FOLLOW(A)-এরও মিল থাকা চলবে না। β nullable হলে উল্টো শর্তও লাগাও। দুটিই nullable আর FOLLOW(A) খালি না হলে বাছাইয়ের সেটে দ্বন্দ্ব হবে। টেবিল বানালে এই শর্তগুলো সরাসরি যাচাই হয়।</p>
+<h3>বর্তমান সিদ্ধান্তের জায়গায় ভুল ধরো</h3>
+<p>id + * id-এ T যখন * দেখে, তখন id ও + মেলানো শেষ। M[T,*] খালি, তাই সেখানেই অপারেন্ড দরকার বলে জানাও। ( id $-এ পার্সার একসময় ) আশা করে, কিন্তু $ পায়। প্রথমটিতে প্রোডাকশন নেই, দ্বিতীয়টিতে terminal মেলে না।</p>
+<p>এই predictive recogniser প্রথম syntax error-এই থামে। শেখার টুলে স্ট্যাকের টপ, lookahead ও ওই সারির বৈধ কলাম দেখানো যায়। বাস্তব পার্সার ; বা )-এর মতো synchronising টোকেন ধরে ভুলের পরে এগোতে পারে। ভুল নথিভুক্ত না করে নষ্ট স্টেটমেন্টকে সফল বলে ধরা চলবে না।</p>
+<p>টেবিল বানানোর খরচ গ্রামার ও তার FIRST/FOLLOW হিসাবের ওপর নির্ভর করে। নির্দিষ্ট LL(1) গ্রামারের টেবিল তৈরি হয়ে গেলে নির্দিষ্ট দৈর্ঘ্যের ডান পাশ পুশ করা ছাড়া প্রতিটি স্ট্যাক অপারেশনে কনস্ট্যান্ট সময় লাগে। সাধারণ reduced LL(1) গ্রামারে nটি টোকেন পার্স করতে O(n) অ্যাকশন ও সবচেয়ে খারাপ ক্ষেত্রে O(n) স্ট্যাক স্পেস লাগে। নেস্ট করা বন্ধনী দেখায় কেন গভীরতার সঙ্গে স্ট্যাক বাড়তে পারে।</p>
+<p>এই recogniser অঙ্কের মান হিসাব করে না, abstract syntax tree-ও বানায় না। টোকেনের ক্রম গ্রামারে মেলে কি না, সেটিই দেখে। পরে প্রোডাকশনে ট্রি বানানোর অ্যাকশন যোগ করা যায়। তাতে কাঙ্ক্ষিত precedence ও associativity বজায় রাখতে হবে। পার্সিংয়ের ট্রেস আর সংখ্যার হিসাব আলাদা রাখো, যাতে সঠিক মানের আড়ালে ভুল টোকেনের ক্রম চাপা না পড়ে।</p>
+<h2 id="examples">উদাহরণ</h2>
+<h3>Predictive টেবিলের প্রতিটি ঘর তৈরি করা</h3>
+<p>প্রোগ্রামে শুধু বৈধ এন্ট্রি দেখানো হয়। পাঠের টেবিলে error ঘরগুলোও আছে।</p>
+<div data-example="ex-1"></div>
+<h3>স্ট্যাক দিয়ে id plus id times id পার্স করা</h3>
+<p>ডান পাশ উল্টো ক্রমে পুশ হয়, তাই T পরের টপ হয়।</p>
+<div data-example="ex-2"></div>
+<h3>FIRST/FOLLOW দ্বন্দ্ব দেখিয়ে রাখা</h3>
+<p>A → a ও A → ε দুটিই a বেছে নেয়। দুই নিয়মই রাখলে চুপচাপ আগেরটি মুছে যায় না।</p>
+<div data-example="ex-3"></div>
+<h3>অপারেন্ড না থাকলে বর্জন করা</h3>
+<p>* কলামে T-এর ঘর খালি। হারানো অপারেন্ড কোনো প্রোডাকশন দিয়ে শুরু করা যায় না।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">সাধারণ ভুল</h2>
+<h3>প্রোডাকশন সোজা ক্রমে পুশ করা</h3>
+<p>Python লিস্টে ডান প্রান্ত থেকে পপ হয়। আগে T, পরে R পুশ করলে R আগে বাড়বে। বাঁ দিকের গ্রামার সিম্বল আগে সামলাতে reversed(rhs) ব্যবহার করো।</p>
+<h3>দ্বন্দ্ব মুছে ফেলা</h3>
+<p>table[A,a] = rule লিখলে আগের নিয়ম চুপচাপ হারিয়ে যেতে পারে। সব বিকল্প রাখো, একাধিক পছন্দের টেবিল বর্জন করো।</p>
+<h3>Epsilon টোকেন মেলানো</h3>
+<p>ε বিকল্প ইনপুটে না এগিয়ে বাকি কাজ সরায়। সেটি FOLLOW থেকে বাছা হয়, epsilon কলাম থেকে নয়।</p>
+<h3>ইনপুটের শুরুর অংশ মেলালেই গ্রহণ করা</h3>
+<p>id বৈধ বলেই id id বৈধ হয় না। স্ট্যাক ও পুরো টোকেন স্ট্রিমকে একসঙ্গে শেষের মার্কারে পৌঁছাতে হবে।</p>
+<h2 id="version-notes">Python ভার্সন নিয়ে কথা</h2>
+<div class="callout version"><p>এখানকার স্ট্যাক অপারেশন Python 3.12 লিস্টে চলে। ডিকশনারিতে ঢোকানোর ক্রম দিয়ে গ্রামারের সিদ্ধান্ত হয় না; দ্বন্দ্বের ঘরে সব বিকল্প থাকে।</p>
+</div>
+<h2 id="summary">সারকথা</h2>
+<p>Predictive টেবিল গ্রামারের সিদ্ধান্তকে নির্দিষ্ট স্ট্যাক অপারেশনে বদলায়। দ্বন্দ্ব দেখায় ওই গ্রামারের জন্য lookahead যথেষ্ট নয়। <a href="topic:cd-recursive-descent">Recursive descent-এ</a> সাধারণ Python ফাংশন একই ধরনের সিদ্ধান্ত নেয়, এক্সপ্রেশনের মানও হিসাব করতে পারে।</p>

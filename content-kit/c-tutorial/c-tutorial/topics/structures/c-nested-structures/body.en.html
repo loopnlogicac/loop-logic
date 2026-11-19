@@ -1,0 +1,69 @@
+<h2 id="introduction">Put a smaller form inside a larger form</h2>
+<p class="lead">A student form often contains a date section and a result section. Each section groups facts that belong together. A <dfn>nested structure</dfn> places one structure object inside another. You can describe an admission date with day, month, and year, then use that Date type as a member of a student Record.</p>
+<p>Nesting gives the program a useful vocabulary. admitted.day says which day belongs to which date. result.lab says which mark belongs to which result. Compare that with a long list of unrelated variables whose names must repeat the same relationships. The type layout helps preserve the relationships as records are copied or passed around.</p>
+<p>An embedded structure is part of the containing object. It is not an automatically allocated separate block. Creating one Record creates room for its Date and Result members too. There is no extra free call for those embedded records when the containing Record has automatic storage duration.</p>
+<p>Use nesting when the inner group has its own clear meaning. A Date may also appear in a loan record or an exam schedule. A Result can group theory and lab marks. A structure definition is a modeling choice; it does not itself validate dates or impose a grading formula.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>Define an embedded member's complete structure type before the containing type needs its size. Each level uses an ordinary member declaration. With a Record object named student, student.admitted selects a Date object, then .day selects its integer member. Read the dots from left to right as steps through named groups.</p>
+<p>Nested braces make positional initialization easier to follow. The inner braces {5,2,2026} belong to admitted, while {70,20} belong to result. Designated forms can name both outer and inner destinations. Preserve those braces even where C allows brace elision; the grouping is valuable to a human reader.</p><pre><code class="language-c">struct Date { int day; int month; int year; };
+struct Result { int theory; int lab; };
+struct Record {
+    int roll;
+    struct Date admitted;
+    struct Result result;
+};
+
+struct Record student = {.roll = 17, .admitted = {.year = 2026}};
+</code></pre><table class="ref"><thead><tr><th scope="col">Expression</th><th scope="col">Selected type</th></tr></thead><tbody><tr><td>student</td><td>struct Record</td></tr><tr><td>student.admitted</td><td>struct Date</td></tr><tr><td>student.admitted.day</td><td>int</td></tr><tr><td>student.result</td><td>struct Result</td></tr></tbody></table>
+
+<h2 id="how-it-works">Walk the member path one group at a time</h2>
+<p>The nested record layout contains roll, the admitted subrecord, and the result subrecord. The date subrecord in turn contains day, month, and year. The result contains theory and lab. Accessing student.result.lab names the lab integer inside that student's result. No pointer dereference is involved in these dot expressions.</p>
+<p>The first example initializes roll 17 and date 5 February 2026. It prints 17 5-2-2026 by selecting the individual date fields. The date format is a program decision, not a structure feature. The same stored date could be printed year-first or used in a comparison without changing its representation.</p>
+<p>A copied Record includes copies of its embedded Date and Result. In the second example, changing second.result.lab leaves first.result.lab unchanged. Both complete records contain their own inner integer members. The partial date initializer also gives day and month zero, which may be an incomplete date even though it is a defined initialized state.</p><pre class="diagram">student Record
++ roll: 17
++ admitted Date
+|   + day: 5
+|   + month: 2
+|   + year: 2026
++ result Result
+    + theory: 70
+    + lab: 20</pre><p>You can copy a subrecord independently. Assigning old=student.result saves a Result value. Replacing student.result later does not change old. This is useful when editing a form: keep an earlier result, build a replacement, validate it, and then assign the whole subrecord. The outer roll and admission date remain untouched.</p>
+<p>The layout tree describes membership, not exact byte offsets. Alignment may add gaps inside either the inner or outer structure. Nested objects are contained storage, but their bytes still follow the implementation's rules. Use member expressions rather than guessed address arithmetic to reach the data.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>These programs use the same Record type so the differences concern operations rather than new field names. Follow the full path to each printed integer. In particular, distinguish changing an inner lab field from replacing the entire result group. Both operations leave unrelated outer members alone.</p>
+
+<h3>Read an embedded admission date</h3>
+<p>The inner date braces initialize day, month, and year in that order. Printing selects three integers through student.admitted. The record owns those integers directly; no Date pointer or allocation appears. The same path can later be used to validate or replace an individual field. The displayed day-first format is chosen by printf, not by the type itself.</p>
+<div data-example="ex-1"></div>
+
+<h3>Copy an outer record and change one inner field</h3>
+<p>The full Record copy includes both embedded groups. Changing second.result.lab affects only the copy. The year-only date initializer leaves the original day zero. The output 18 25 0 therefore demonstrates two independent rules: nested value copying and omitted-member initialization. A defined zero date component may still need application validation before use as a real date.</p>
+<div data-example="ex-2"></div>
+
+<h3>Replace a complete result group</h3>
+<p>old receives a standalone copy of the student's Result. A C99 compound literal then supplies a new Result with theory 70 and lab 25. The saved old group remains theory 65 and lab 22. Replacing the inner record does not touch the roll or the admission date. The printed totals show the independent old and new values.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Defined values may still describe an invalid record</h2>
+<p>Zero initialization is a memory rule, not an application validation rule. A zero day or zero month does not describe an ordinary admission date. You may use zeros temporarily while filling a form, but establish a valid date before treating the record as complete. The exercises deliberately restrict days to one through twenty-eight to avoid a full calendar validator.</p>
+<p>A date comparison should compare year first, then month, then day. Comparing day first would say 2 January follows 1 December, which is wrong within the same year. A Date structure makes these fields available; you must still write the correct ordering rule. Whole-structure == remains invalid for nested structures too.</p>
+<p>If you need repeated inner records, an array member can be embedded as another grouping choice. For example, a semester could contain several Result objects. That extends the model with both field names and indices. Keep the operations separate in your mind: a dot chooses a named member, and an index chooses an element of an array.</p>
+<p>Deep nesting can make expressions long and confusing. Consider splitting operations into functions that accept a Date or Result rather than repeating the entire outer path. Introduce those helpers after the representation is clear. The <a href="topic:c-structures-and-functions">functions lesson</a> explains passing and returning record values in detail.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Skipping a member level</h3>
+<p>student.lab is invalid because lab belongs to the Result member, not directly to Record. Write student.result.lab. Compiler errors about an absent member often mean that one nesting level was skipped. Read the type selected after each dot to locate the missing step.</p>
+<h3>Assuming zero means valid</h3>
+<p>A partial initializer gives predictable numbers but does not guarantee a valid application state. After {.admitted={.year=2026}}, the day and month remain zero. Validate or complete them before printing a date as if it were an actual admission date. The zero-field example observes initialization rather than claiming a real date.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Group values that share meaning, validation, or reuse. Give the group a specific type such as Date rather than a vague bag of integers. Keep a consistent date field order across definitions, input, and output. Designated initializers are helpful when a group contains several values of the same type.</p>
+<p>Copy a complete subrecord when the entire group changes together. Update one nested member when only that fact changes. Before committing a replacement result, check theory and lab ranges independently. A well-chosen representation helps express invariants, but validation remains code that you must write and test.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Named nested structures work in C89 and later. These programs use designated initializers and a compound literal in the replacement example, both available since C99. C17 does not require an anonymous inner structure for nesting. Named member paths remain explicit and do not depend on compiler extensions or a particular padding layout.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Nested structures group meaningful subrecords inside a larger object. Follow each dot through the selected type, and use nested braces or designators to show initialization clearly. Copying an outer record copies its embedded subrecords. Next, manage many records with <a href="topic:c-array-of-structures">Array of Structures</a>.</p>

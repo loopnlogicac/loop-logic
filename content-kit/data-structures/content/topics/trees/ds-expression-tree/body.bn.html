@@ -1,0 +1,82 @@
+<h2 id="introduction">Child link দিয়ে grouping দেখাও</h2>
+<p class="lead">(8-2)*3 আর 8-(2*3)-তে একই digit আর operator, তবুও উত্তর আলাদা। Grouping ঠিক করে কোন কাজ আগে হবে। <dfn>Expression ট্রি</dfn> সরাসরি সেই grouping রাখে: operand হয় leaf, আর operator হয় যে মান মিলিয়ে কাজ করে তাদের parent।</p>
+<p>Evaluation-এ precedence মুখস্থ করার বদলে link ধরো। প্রতিটি binary operator-এর left আর right operand subtree আছে। বিয়োগে অবস্থান গুরুত্বপূর্ণ। Multiplication node শুধু দুটি digit leaf নয়, দুটি পুরো expression-ও মিলাতে পারে।</p>
+<p>শুরু হবে <a href="topic:ds-postfix-evaluation">postfix evaluation</a>-এ দেখা postfix ইনপুট দিয়ে। এবার স্ট্যাকে হিসাব করা integer-এর বদলে subtree root থাকবে। Child-এর আগে parent হিসাব না করতে <a href="topic:ds-tree-traversals">postorder</a>-এর যুক্তিও কাজে লাগবে।</p>
+
+<h2 id="syntax">ছোট expression language ঠিক করো</h2>
+<p>উদাহরণে space-সহ সর্বোচ্চ পনেরো সিম্বল-এর এক line গ্রহণ করে। Operand এক digit, শূন্য থেকে নয়। Operator binary যোগ, বিয়োগ আর গুণ। এই parser-এ ভেরিয়েবল, বহু digit literal, unary minus বা division নেই।</p>
+<pre><code class="language-text">parse(postfix):
+    digit: create a leaf and push its root
+    binary operator: require two roots
+        right = pop; left = pop
+        create operator with those children; push its root
+    finish only if exactly one root remains</code></pre>
+<pre class="diagram">Input 82-3*:
+8-এর পরে: stack=[8-এর root]
+2-এর পরে: stack=[8,2]
+--এর পরে: stack=[(- যার left=8, right=2)]
+3-এর পরে: stack=[(-),3]
+*-এর পরে: stack=[(*)]
+                 [*]
+                /   \
+              [-]   [3]
+             /   \
+           [8]   [2]</pre>
+<p>Expr record-এ টোকেন আর দুই child পয়েন্টার থাকে। Digit record-এর দুই link NULL। Operator record push করার আগেই দুই child পায়। গ্রহণ করা সব operator binary বলে বৈধ প্রতিটি internal node-এর ঠিক দুই child।</p>
+
+<h2 id="how-it-works">আগে বানাও, পরে হিসাব করো</h2>
+<p>Postfix বাম থেকে ডানে পড়ো। Digit স্বাধীন এক নোডের ট্রি বানায়। Operator সর্বশেষ সম্পূর্ণ হওয়া দুই ট্রিকে বড় এক ট্রিতে মেলায়। Right ট্রি স্ট্যাকের ওপরে, তাই left-এর আগে right pop করো।</p>
+<p>82--এ root 8-এর ওপরে root 2 থাকে। Minus node-এর left 8 আর right 2 দেখাবে। উল্টো assignment-এ 8-2-এর বদলে 2-8 হবে। যোগ আর গুণে operand বদলেও ফল একই বলে এই ভুল লুকাতে পারে।</p>
+<p>স্ট্যাকের invariant: প্রতিটি entry ইতিমধ্যে পড়া অংশের একটি সম্পূর্ণ expression ট্রির মালিক। Entry-গুলোর record আলাদা। Operator দুই entry pop করলে ownership তার দুই child link-এ যায়। নতুন parent push করলে একই record-গুলোর একত্র owner স্ট্যাকে ফেরে।</p>
+<p>Operator allocate করার আগে দুই root আছে দেখো। Allocation ব্যর্থ হলেও দুই operand root-এর owner থাকতে হবে। উদাহরণে pop-এর আগে allocate করে, তাই failure-এ স্ট্যাক ownership বদলায় না। Cleanup তখন স্ট্যাকে থাকা প্রতিটি আংশিক ট্রি ছাড়তে পারে।</p>
+<table class="ref"><caption>82-3* তৈরি</caption><thead><tr><th scope="col">টোকেন</th><th scope="col">ধাপের পরে root-গুলো</th><th scope="col">কারণ</th></tr></thead><tbody><tr><td>8</td><td>8</td><td>Operand leaf</td></tr><tr><td>2</td><td>8, 2</td><td>দ্বিতীয় operand leaf</td></tr><tr><td>-</td><td>(8-2)</td><td>দুই root একত্র</td></tr><tr><td>3</td><td>(8-2), 3</td><td>স্বাধীন operand</td></tr><tr><td>*</td><td>((8-2)*3)</td><td>এক সম্পূর্ণ ট্রি</td></tr></tbody></table>
+<p>Evaluation recursively left আর right মান নিয়ে রাখা operator চালায়। Digit হলে টোকেন থেকে শূন্য character বিয়োগ করে ফেরায়। C decimal digit-এর code পাশাপাশি রাখার নিশ্চয়তা দেয়, তাই conversion portable। দুই operand না পাওয়া পর্যন্ত operator চলতে পারে না।</p>
+<p>প্রথম ট্রির left minus ছয় আর right digit তিন দেয়। Root গুণ করে আঠারো ফেরায়। 823*--এ right subtree-র গুণ ছয় দেয়, root দুই ফেরায়। টোকেন-এর সংখ্যা নয়, আলাদা link ফলের পার্থক্য বোঝায়।</p>
+<p>m ইনপুট সিম্বল parse করতে O(m) সময়, প্রতি non-space টোকেন-এ এক record লাগে। Root স্ট্যাকের জায়গা O(m)। Evaluation প্রতিটি record একবার দেখে O(m) সময় আর O(h+1) রিকার্সিভ space নেয়। Print আর শেষে ছেড়ে দেওয়ার traversal-time-ও একই।</p>
+
+<h2 id="examples">Grouping আর ভুল ইনপুট দেখো</h2>
+<p>প্রথম দুই প্রোগ্রাম একই digit-এর expression-এর আলাদা parenthesized রূপ প্রিন্ট করে। তৃতীয়টি ইচ্ছা করে কম operand দেয়। নেই এমন দ্বিতীয় operand ব্যবহারের বদলে invalid জানিয়ে আগের digit ট্রি ছাড়ে।</p>
+
+<h3>Postfix ট্রি বানিয়ে হিসাব করো</h3>
+<p>আগে pop হওয়া ট্রি right child। Expression (8-2)*3, তাই মান 18।</p>
+<div data-example="ex-1"></div>
+
+<h3>বন্ধনী গঠন ধরে রাখে</h3>
+<p>ট্রিতে বিয়োগের আগে 2*3 হয়। Infix (8-(2*3)) প্রিন্ট করে, preorder দেয় -8*23।</p>
+<div data-example="ex-2"></div>
+
+<h3>দুই child ছাড়া operator বাদ দাও</h3>
+<p>যোগ চিহ্ন শুধু একটা subtree পায়। Parser স্ট্যাক ছাড়িয়ে pop না করে সেটি free করে invalid জানায়।</p>
+<div data-example="ex-3"></div>
+
+<h2 id="variations">Infix, prefix আর postfix প্রিন্ট</h2>
+<p>Inorder walk left expression, operator আর right expression প্রিন্ট করতে পারে। বন্ধনী ছাড়া grouping-এর কিছু তথ্য হারায়। ঠিক binary ট্রি ধরে রাখতে প্রতিটি operator-এর left subtree-র আগে শুরুর বন্ধনী আর right subtree-র পরে শেষ বন্ধনী দাও। Digit leaf-এ বন্ধনী লাগে না।</p>
+<pre class="diagram">Infix print-এর আগে: tree root=*; output ফাঁকা
+* visit: ( প্রিন্ট
+- visit: (8-2) প্রিন্ট
+* আর right leaf 3 প্রিন্ট
+Print-এর পরে: ((8-2)*3); ট্রির link অপরিবর্তিত
+ছাড়ার আগে: root ---&gt; * আর তার নিজের দুই child subtree
+ছাড়ার পরে: পাঁচ record-ই ছাড়া; root আর ব্যবহার হয় না</pre>
+<p>Preorder operand-এর আগে operator প্রিন্ট করে prefix দেয়। Postorder operator-এর আগে operand দিয়ে postfix উদ্ধার করে। এক character টোকেন grammar-এ এসব রূপে separator লাগে না। বহু digit বা named ভেরিয়েবল-এর grammar-এ টোকেন boundary স্পষ্ট করতে হবে।</p>
+<p>পুরো বন্ধনী সাধারণ হাতে লেখা অঙ্কের চেয়ে লম্বা হলেও অস্পষ্ট নয়। শুধু অদরকারি বন্ধনী সরাতে precedence আর associativity rule লাগে। বিয়োগের ডানে একই precedence-এর child expression-এও সাবধানতা চাই। শুরুর printer আন্দাজ না করে সব grouping রাখে।</p>
+<p>প্রতিটি operator-এর দুই child, তাই I operator-এর বৈধ ট্রিতে I+1 operand। পনেরো সিম্বল-এর সীমায় সম্পূর্ণ expression-এ সর্বোচ্চ আট digit হতে পারে। Digit সর্বোচ্চ নয় আর এই তিন operator-এ মধ্যবর্তী মানের magnitude signed long-এর আবশ্যিক সীমায় থাকে। বড় language-এ arithmetic overflow আলাদা যাচাই করো।</p>
+
+<p>শূন্য leaf সাধারণ ডেটা। Missing expression বোঝায় না, সেটি NULL পয়েন্টার দিয়ে বোঝানো হয়। বৈধ এক-টোকেন ইনপুট 0 তাই শূন্য দেয়, তবুও এক allocated record-এর মালিক। পার্থক্যটা রাখলে ফাঁকা expression-কে সফল শূন্য ফল ভাববে না।</p>
+
+<h2 id="edge-cases">ভুল forest বাদ দাও</h2>
+<p>ফাঁকা line পূর্ণ expression নয়, parser invalid জানায়। এক digit বৈধ leaf ট্রি, মান সেই digit। দুই root আসার আগে operator অবৈধ। 82-এর মতো দুই operand root বাকি থাকলেও অবৈধ, যদিও আলাদা প্রতিটি root ঠিক আছে।</p>
+<p>গ্রহণযোগ্য line-এর সীমায় স্ট্যাক full হয় না: চব্বিশ root slot সর্বোচ্চ পনেরো non-space টোকেন-এর বেশি। Parser তবু ওই বলা ইনপুট সীমার ওপর নির্ভর করে। স্ট্যাক capacity আর arithmetic bound না ভেবে ইনপুট line বড় কোরো না।</p>
+<p>মোট line length যাচাইয়ের পরে space বাদ যায়। অচেনা character cleanup চালায়। Allocation failure-ও একই partial-ট্রি release path নেয়। স্ট্যাক entry-গুলোর ট্রি আলাদা বলে প্রতিটি ছাড়লে সব allocated record ঠিক একবার ছাড়া হয়।</p>
+<p>Mirror practice-এ প্রতিটি নোডের দুই child link অদলবদল হয়। Left আর right-এর অর্থ আছে বলে এতে বিয়োগের ফল বদলাতে পারে। কাজটি গঠন পরীক্ষা, বৈধ algebraic simplification নয়। নতুন ট্রি হিসাবের আগে পুরো বন্ধনী-সহ আউটপুট তুলনা করো।</p>
+
+<h2 id="common-mistakes">Operand-এর ক্রম আর ownership মানো</h2>
+<h3>আগে left pop করা</h3><p>ওপরের subtree binary operator-এর ডানে যাবে। Local ভেরিয়েবল-এর নাম right আর left দিলে সিদ্ধান্ত পরিষ্কার। শুধু যোগে চলে বলে বিশ্বাস করার আগে বিয়োগ পরীক্ষা করো।</p>
+<h3>শেষে স্ট্যাক ফাঁকা না হলেই গ্রহণ</h3><p>একাধিক root মানে কয়েকটি expression, জোড়ার operator নেই। ঠিক এক root চাই। বাকি forest বাদ দিলে সব root ছাড়ো।</p>
+<h3>শুধু inorder-কে সমতুল্য অঙ্ক বলা</h3><p>(8-2)*3-এর ট্রি বন্ধনী ছাড়া 8-2*3 হবে, যার grouping আলাদা। রাখা নির্ভরতা বাঁচাতে internal expression বন্ধনী দিয়ে ঘেরো।</p>
+
+<h2 id="version-notes">C17 টোকেন আর long arithmetic</h2>
+<div class="callout version"><p>Expression কোডে C17 character operation আর signed long মান আছে। নির্দিষ্ট grammar আর পনেরো সিম্বল arithmetic সীমিত রাখে। Signed arithmetic overflow-এর সর্বজনীন নিরাপদ ফল C দেয় না, তাই বড় operand-এ checked operation বা বড় সংখ্যার library লাগে।</p></div>
+
+<h2 id="summary">ট্রি আগে করার কাজ ধরে রাখে</h2>
+<p>Postfix স্ট্যাকে সম্পূর্ণ subtree বানায়, evaluation child-এর ফল মেলায়, আর print-এর সময় বন্ধনী grouping রাখে। একই ownership rule ভুল ইনপুটের cleanup নিরাপদ করে। এরপর <a href="topic:ds-b-tree-intro">B-ট্রি আর B+ ট্রি</a> দেখাবে storage device কেন চওড়া node পছন্দ করে।</p>
