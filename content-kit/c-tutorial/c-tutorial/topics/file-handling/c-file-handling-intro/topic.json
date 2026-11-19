@@ -1,0 +1,384 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-file-handling-intro",
+  "module": "file-handling",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Introduction to File Handling",
+    "bn": "ফাইল হ্যান্ডলিংয়ের শুরু"
+  },
+  "summary": {
+    "en": "Keep useful results after a program exits, and distinguish named files, stream objects and the three standard streams.",
+    "bn": "প্রোগ্রাম শেষের পরেও ফল রাখো; ফাইল, স্ট্রিম ও stdin/stdout/stderr-এর আলাদা কাজ বোঝো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "c-functions-intro"
+  ],
+  "related": [
+    "c-file-open-close-modes"
+  ],
+  "keywords": [
+    "file handling",
+    "FILE pointer",
+    "streams",
+    "stdin",
+    "stdout",
+    "stderr"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "These examples use the C17 standard I/O interface and text streams."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Keep a result after the program stops"
+    },
+    {
+      "id": "syntax",
+      "title": "Read the stream handle before the data"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Give a stream one clear lifetime"
+    },
+    {
+      "id": "examples",
+      "title": "Observe named and standard streams"
+    },
+    {
+      "id": "real-world-use",
+      "title": "Separate input, ordinary results and diagnostics"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not confuse a name, a handle and a guarantee"
+    },
+    {
+      "id": "best-practices",
+      "title": "Start with a small, inspectable record"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use the standard I/O interface deliberately"
+    },
+    {
+      "id": "summary",
+      "title": "A file is useful only when each operation is checked"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Save a fee, close it, and read it again",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The first stream is closed before a new read stream opens the same name. The stored line remains available. A successful close is checked because buffered output can fail late.</p>",
+      "standard": "c17",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Read a fee through stdin and write a receipt through stdout",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The input value is 125. The prompt and receipt use stdout. The rejected-input branch uses stderr, which is a separate destination even when both appear in one terminal.</p>",
+      "standard": "c17",
+      "stdin": "examples/ex-2.in",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Read a named stream without changing its file",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The club file has two newline-terminated records. The loop reads until an operation reports no character, then distinguishes a read failure from normal completion.</p>",
+      "standard": "c17",
+      "workdirFiles": [
+        "examples/club.txt"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Total integer fees from a stream",
+      "difficulty": "easy",
+      "statementHtml": "<p>Read zero or more integers from stdin until end-of-file. Each fee is from 0 through 1000, and there are at most 20. Print Fees: followed by the total. For a malformed or out-of-range token print invalid instead of a total.</p>",
+      "hints": [
+        "Use an int for the conversion result.",
+        "Only add a value after one successful conversion."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Close a generated attendance journal",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n from 0 through 10. Write n lines containing present to journal.txt, close it, reopen it for reading, and count newline characters. Print Records: followed by the count. Invalid n prints invalid.</p>",
+      "hints": [
+        "The writing and reading streams are separate lifetimes.",
+        "Count only characters actually returned by fgetc."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Name the owner of each stream",
+      "difficulty": "medium",
+      "statementHtml": "<p>A helper receives FILE *in from its caller. It reads one line and returns. Should it close in? Explain how your answer changes when the helper itself opens a private file.</p>",
+      "hints": [
+        "Distinguish receiving access from acquiring ownership."
+      ],
+      "type": "written",
+      "answerHtml": "<p>A borrowed stream should normally remain open; the caller may need to read another line. State that rule in the helper contract. A helper that opens a private stream owns that resource and should close it on every path after a successful open. Passing a FILE pointer does not automatically transfer ownership.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Separate persistence from successful output",
+      "difficulty": "hard",
+      "statementHtml": "<p>A receipt appears on screen, but reopening fees.txt finds no new record. Explain why the visible receipt alone does not prove that the file update succeeded. Give three operations whose outcomes matter.</p>",
+      "hints": [
+        "A screen stream and a named file are not the same destination."
+      ],
+      "type": "written",
+      "answerHtml": "<p>The receipt may have been written only to stdout. The named file must be opened successfully, its write operation must report success, and fclose must also succeed after buffered output is delivered. Even these checks do not establish a crash-safe business transaction; the file format and storage guarantees need their own design.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which object does a FILE pointer let the program use?",
+      "options": [
+        "Every byte already loaded into the pointer",
+        "Only a terminal window",
+        "A directory name",
+        "A stream managed by the C I/O library"
+      ],
+      "answer": 3,
+      "explanation": "FILE describes library-managed stream state; its pointer is not the file contents."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can a saved club record remain after main returns?",
+      "options": [
+        "A FILE pointer is never destroyed",
+        "The terminal saves all variables",
+        "The external file can outlive the process",
+        "Every local array becomes permanent"
+      ],
+      "answer": 2,
+      "explanation": "A file is external storage. Local C object lifetimes and file persistence are different."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which standard stream normally carries an error diagnostic?",
+      "options": [
+        "The last opened stream always",
+        "stderr",
+        "stdin",
+        "A pointer named error only"
+      ],
+      "answer": 1,
+      "explanation": "stderr is the standard error stream; stdout remains available for ordinary results."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must be checked before using a newly returned fopen pointer?",
+      "options": [
+        "Whether it is NULL",
+        "Whether its address is even",
+        "Whether the file has an int extension",
+        "Whether printf has run first"
+      ],
+      "answer": 0,
+      "explanation": "NULL reports failure to create the stream, so dereferencing or passing it to ordinary stream operations is invalid."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A helper borrows stdout to print a table. Which ownership rule is most useful?",
+      "options": [
+        "Close stdout after every cell",
+        "Free stdout with free",
+        "Copy the FILE object by assignment",
+        "Leave closing to the owner of the stream"
+      ],
+      "answer": 3,
+      "explanation": "Borrowed access does not imply ownership. Closing shared output prevents later output."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does the character-reading example store fgetc in int?",
+      "options": [
+        "char is forbidden in file programs",
+        "EOF is always the character zero",
+        "It must represent character values and EOF",
+        "Every text file contains only integers"
+      ],
+      "answer": 2,
+      "explanation": "The return type can hold all unsigned-char values and the separate EOF result."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does assigning FILE *other = fees do?",
+      "options": [
+        "Guarantees two safe fclose calls",
+        "Creates another pointer to the same stream",
+        "Copies every record to another file",
+        "Opens an independent stream position"
+      ],
+      "answer": 1,
+      "explanation": "Both pointers refer to the same stream state; closing it twice is not valid."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which stored character is read after the temporary stream is rewound?",
+      "options": [
+        "X",
+        "Y",
+        "XY",
+        "EOF"
+      ],
+      "answer": 0,
+      "explanation": "rewind moves the stream back to its beginning, so the next character is X.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"XY\", f);\n    rewind(f);\n    printf(\"%c\\n\", fgetc(f));\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How do two aliases share the temporary stream position?",
+      "options": [
+        "AA",
+        "BB",
+        "BA",
+        "AB"
+      ],
+      "answer": 3,
+      "explanation": "alias and f name the same stream. The first read advances its position before the second read.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"AB\", f);\n    rewind(f);\n    FILE *alias = f;\n    int first = fgetc(alias);\n    int second = fgetc(f);\n    printf(\"%c%c\\n\", first, second);\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many successful character reads follow writing three letters?",
+      "options": [
+        "4",
+        "0",
+        "3",
+        "2"
+      ],
+      "answer": 2,
+      "explanation": "The three letters are read successfully; the later EOF result is not a fourth character.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"fee\", f);\n    rewind(f);\n    int n = 0;\n    while (fgetc(f) != EOF) {\n        n++;\n    }\n    printf(\"%d\\n\", n);\n    fclose(f);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A named file can preserve data beyond one execution.",
+      "bn": "নাম দেওয়া ফাইলে একবার প্রোগ্রাম চলার পরেও ডেটা রাখা যায়।"
+    },
+    {
+      "en": "A FILE pointer refers to library-managed stream state.",
+      "bn": "FILE পয়েন্টার লাইব্রেরির পরিচালিত স্ট্রিম ব্যবহার করতে দেয়।"
+    },
+    {
+      "en": "stdin, stdout and stderr have different usual roles.",
+      "bn": "stdin, stdout ও stderr-এর সাধারণ কাজ আলাদা।"
+    },
+    {
+      "en": "Check open, read or write, and close outcomes separately.",
+      "bn": "Open, read বা write এবং close-এর ফল আলাদা করে দেখো।"
+    },
+    {
+      "en": "Only close a stream when its ownership contract allows it.",
+      "bn": "স্ট্রিমের দায় তোমার হলে এবং চুক্তি মানলে সেটি close করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Distinguish a file name, a FILE object and a FILE pointer in the fee-saving example.",
+      "marks": 5,
+      "answerHtml": "<p>The name fees.txt selects an external file relative to the process working directory. A FILE object holds library stream state, including buffering and position information. The program receives a pointer to that object. Saving or copying the pointer does not copy the external bytes.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why checking fprintf alone is insufficient for a buffered record writer.",
+      "marks": 6,
+      "answerHtml": "<p>The write can succeed by placing characters in a memory buffer. A later delivery failure may appear during flushing or fclose. Check the write result and close result, preserve an error outcome, and do not announce successful persistence merely because a receipt was printed to stdout.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design a stream-owning helper and a stream-borrowing helper for a club report.",
+      "marks": 6,
+      "answerHtml": "<p>An owning helper opens a named file, checks the result, performs its task, then closes exactly once on all paths. A borrowing helper accepts a valid FILE pointer, reads or writes according to its contract, and leaves it open. Document whether its operations advance position and which failures its return value reports.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C input/output library reference",
+      "url": "https://en.cppreference.com/w/c/io"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
