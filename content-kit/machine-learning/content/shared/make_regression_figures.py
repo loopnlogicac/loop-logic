@@ -107,7 +107,9 @@ def main():
             ax.legend()
             ax.grid(alpha=0.2)
         ax.set_title(f"Picture {letter.upper()}: {key.replace('_', ' ')}")
-        fig.savefig(assets / f"picture-{letter}.svg", metadata={"Date": None})
+        svg = assets / f"picture-{letter}.svg"
+        fig.savefig(svg, metadata={"Date": None})
+        svg.write_text("\n".join(line.rstrip() for line in svg.read_text().splitlines()) + "\n")
         if args.preview_dir:
             fig.savefig(args.preview_dir / f"picture-{letter}.png", dpi=100)
         plt.close(fig)
