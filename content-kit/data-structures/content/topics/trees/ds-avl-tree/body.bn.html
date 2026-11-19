@@ -1,0 +1,102 @@
+<h2 id="introduction">সাজানো ট্রিকে চেইন হতে দিও না</h2>
+<p class="lead">সাধারণ BST-তে বাড়তে থাকা roll number insert করলে প্রতিটি নতুন সংখ্যা ডান শাখা বাড়ায়। Search ধীরে ধীরে linked list হাঁটার মতো হয়। <dfn>AVL ট্রি</dfn> BST-র ক্রম রেখেই insertion path-এর কাছে height-এর বড় পার্থক্য ঠিক করে।</p>
+<p>এক পাশে ভারী হয়ে যাওয়া তাক ভাবো। সব জিনিস আবার সাজানোর বদলে কয়েকটা ভর দেওয়া link সরাও। AVL ট্রিতে এই স্থানীয় বদল rotation। এতে root আর depth বদলায়, কিন্তু বাম থেকে ডান key-র ক্রম থাকে।</p>
+<p>এই পাঠে rebalancing-সহ insertion বানাবে। ভিত্তি হলো <a href="topic:ds-binary-search-tree">BST insertion</a> আর <a href="topic:ds-bst-deletion">deletion</a> পাঠের owner-link ধারণা। AVL deletion-এর বাড়তি rebalancing rule এই insertion পাঠের বাইরে। সাধারণ BST deletion অপরিবর্তিত চালিয়ে AVL balance থাকবে ভাববে না।</p>
+<p>এখানকার cache নোড গুনে height মাপে: ফাঁকা subtree-তে শূন্য, leaf-এ এক। আগের edge-height মাপ থেকে আলাদা। দুই child-এ একই নিয়ম মানলে প্রতিটি nonempty subtree height-এ এক যোগ করায় balance-এর পার্থক্য বদলায় না।</p>
+
+<h2 id="syntax">Height cache করো আর balance ঠিক করো</h2>
+<pre><code class="language-c">int left_height = height(root-&gt;left);
+int right_height = height(root-&gt;right);
+root-&gt;height = 1 + (left_height &gt; right_height ? left_height : right_height);
+int balance = left_height - right_height;</code></pre>
+<p><dfn>Balance factor</dfn> হলো left height থেকে right height বিয়োগ। প্রতিটি নোডে -1, শূন্য আর 1 চলবে। ধনাত্মক মানে বাম দিক লম্বা। Node record-এ key আর দুই child pointer-এর সঙ্গে cached height field যোগ হয়।</p>
+<p>Cached height দিয়ে দুই child field দেখে O(1)-এ update করা যায়। প্রতিবার subtree-র height শুরু থেকে গুনলে অনেক record বারবার দেখতে হতো। তাই সঠিক cache অ্যালগরিদমের অংশ, শুধু সাজসজ্জার optimization নয়। বদলানো প্রতিটি subtree-কে parent-কে updated height জানাতে হবে।</p>
+<pre><code class="language-text">insert(root, key):
+    perform distinct-key BST insertion
+    update root.height after its child returns
+    balance = height(left) - height(right)
+    if left-heavy: straighten LR if needed, then rotate right
+    if right-heavy: straighten RL if needed, then rotate left
+    return the repaired local root</code></pre>
+
+<h2 id="how-it-works">চার case, rotation-এর দুই দিক</h2>
+<p>Leaf বানানোর পরে insertion path ধরে ওপরে ফেরো। Balance 2 হলে নোড left-heavy, -2 হলে right-heavy হতে পারে। Insert করা key-র দিকে পরের বাঁক বলে পথ সোজা নাকি বাঁকা। এভাবেই LL, RR, LR আর RL হয়।</p>
+<table class="ref"><caption>প্রথম unbalanced ancestor-এ মেরামত</caption><thead><tr><th scope="col">Case</th><th scope="col">পথ</th><th scope="col">মেরামত</th></tr></thead><tbody><tr><td>LL</td><td>বামে, তারপর বামে</td><td>Root ডানে rotate</td></tr><tr><td>RR</td><td>ডানে, তারপর ডানে</td><td>Root বামে rotate</td></tr><tr><td>LR</td><td>বামে, তারপর ডানে</td><td>Left child বামে, তারপর root ডানে rotate</td></tr><tr><td>RL</td><td>ডানে, তারপর বামে</td><td>Right child ডানে, তারপর root বামে rotate</td></tr></tbody></table>
+<h3>LL-এর জন্য right rotation</h3>
+<pre class="diagram">আগে:               y=30          পরে:          x=20
+                   /    \                       /    \
+                x=20     C                     A     y=30
+                /  \                                /  \
+               A    B                               B    C
+Pointer বদল: middle=x.right; y.left=middle; x.right=y
+y-এর আগের owner-কে x ফেরাও।</pre>
+<p>Link বদলানোর আগে x আর তার right subtree B রাখো। আগে B-কে y.left-এ নাও, তারপর y-কে x.right করো। A-এর সব key x-এর নিচে, B-এরগুলো x আর y-র মাঝে, C-এরগুলো y-এর ওপরে থাকে। Interval-এর এই যুক্তিতে inorder অপরিবর্তিত প্রমাণ হয়।</p>
+<p>Link বদলানোর পরে x-এর আগে y update করো। y এখন নিচে, x-এর নতুন height y-এর নতুন height-এর ওপর নির্ভর করে। উল্টো update করলে ছবি ঠিক দেখালেও পুরোনো height রয়ে যেতে পারে। x ফেরাও, কারণ সেটাই স্থানীয় subtree-র নতুন root।</p>
+<h3>RR-এর জন্য left rotation</h3>
+<pre class="diagram">আগে:          x=10               পরে:            y=20
+              /    \                            /    \
+             A     y=20                       x=10    C
+                   /  \                      /  \
+                  B    C                     A    B
+Pointer বদল: middle=y.left; x.right=middle; y.left=x
+y ফেরাও, তারপর তার incoming owner link আবার জুড়ো।</pre>
+<p>Left rotation উল্টো দিকের একই কাজ। Right child ওপরে ওঠে, পুরোনো root বামে নামে। মাঝের subtree B পুরোনো root-এর right link-এ যায়। এখানেও আগে পুরোনো, তারপর নতুন root update করো।</p>
+<h3>বাঁকা পথের জন্য double rotation</h3>
+<pre class="diagram">LR আগে:   30.left=10; 10.right=20
+প্রথম:    rotate_left(10) -&gt; 30.left=20; 20.left=10
+দ্বিতীয়: rotate_right(30)
+LR পরে:   root=20; 20.left=10; 20.right=30
+RL আগে:   10.right=30; 30.left=20
+প্রথম:    rotate_right(30) -&gt; 10.right=20; 20.right=30
+দ্বিতীয়: rotate_left(10)
+RL পরে:   root=20; 20.left=10; 20.right=30</pre>
+<p>LR-এ শুধু right rotation দিলে ভেতরের শাখা অতিরিক্ত লম্বা থাকে। আগে left child বামে rotate করে বাঁকটাকে সোজা LL বানাও, তারপর আসল root ডানে rotate করো। RL একই জোড়া উল্টো দিকে করে।</p>
+<p>তিন key-র উদাহরণে সরে যাওয়া middle subtree সব ফাঁকা। বড় ট্রিতে সেগুলোতে অনেক নোড থাকতে পারে। Rotation function-এর মতো ঠিকভাবে রেখে আবার জুড়ো। Pointer-এর নিচে যত record-ই থাকুক, rotation নির্দিষ্ট অল্প কয়েকটি pointer সরায়।</p>
+<div data-lab="avl-insert"></div>
+<p>Lab প্রথম উদাহরণের একই insert, update, rotate_left আর rotate_right logic ব্যবহার করে। বদলানো প্রতিটি child link আর নতুন root আলাদা animate করে। Parent-এ আবার জোড়ার আগে সাময়িক আলাদা local subtree খেয়াল করো। Rotation আর owner-link মেরামত দুটো মিলেই কাজ সম্পূর্ণ।</p>
+<p>শুধু বাড়তে থাকা input দেখে বিচার না করে চার case-এর preset চালাও। বাড়তে থাকা key RR পরীক্ষা করে, সব LR বা RL ভুল ধরে না। Duplicate preset দেখায় সমান key record যোগ করে না। Empty preset দেখায় height শূন্যে allocated root লাগে না।</p>
+
+<h2 id="examples">গঠন আর cached height একসঙ্গে দেখো</h2>
+<p>প্রথম উদাহরণ insertion sequence নিয়ে প্রতিটি key-র পরে root প্রিন্ট করে। শেষে সাজানো inorder key, node height আর balance-cache check দেয়। চতুর্থটি তিন key-র চার case-ই চালায়; আলাদা মেরামতে একই ফল তুলনা করো।</p>
+
+<h3>LL, RR, LR আর RL মেরামত করে insert করো</h3>
+<p>20 insert-এর পরে left subtree ডানে হেলে। 10-এ left rotation, তারপর 30-এ right rotation করলে 20 root হয়।</p>
+<div data-example="ex-1"></div>
+
+<h3>বাড়তে থাকা key-ও balanced থাকে</h3>
+<p>বারবার right-heavy পথে left rotation হয়। এখানে height নোড গুনে, তাই ফাঁকা ট্রির height শূন্য।</p>
+<div data-example="ex-2"></div>
+
+<h3>Duplicate insert-এ height বদলায় না</h3>
+<p>Set-এর নিয়মে সমান key বাদ যায়। আবার 10 আর 20 দিলে নোড allocate বা balance factor বদল হয় না।</p>
+<div data-example="ex-3"></div>
+
+<h3>তিন key-র চার গঠন পরীক্ষা করো</h3>
+<p>Rotation sequence আলাদা হলেও চার insertion order-এই শেষে root 20 আর node height দুই হয়।</p>
+<div data-example="ex-4"></div>
+
+<h2 id="variations">Height কেন logarithmic</h2>
+<p>Node height h-এর AVL ট্রিতে সবচেয়ে কম নোডের সংখ্যা N(h) ধরি। কম নোডে h পেতে এক child-এর height h-1। অন্যটি সর্বোচ্চ এক level ছোট হতে পারে, অর্থাৎ h-2। Root ধরলে N(h)=1+N(h-1)+N(h-2)।</p>
+<p>শুরুর মান N(0)=0 আর N(1)=1। পরেরগুলো 2, 4, 7, 12 আর 20। Fibonacci-এর মতো এই বৃদ্ধি h-এর হিসাবে exponential। সম্পর্কটা উল্টে পড়লে রাখা নোডের সংখ্যার হিসাবে h logarithmic।</p>
+<p>নিশ্চয়তাটা কাজে লাগাতে logarithm-এর সঠিক constant লাগে না। পথে O(log n) নোড, তাই search আর insert O(log n) সময়। Recursive insertion-এ O(log n) সক্রিয় call। ট্রি নিজে O(n) record নেয়, প্রতিটিতে বাড়তি একটি height field।</p>
+<p>Call stack খুলতে থাকলে এক insertion-এ বেশ কয়েক ancestor লম্বা মনে হতে পারে। সবচেয়ে নিচের unbalanced ancestor rebalanced করলে সেই subtree-র আগের height ফেরে। তাই এক AVL insertion-এ সর্বোচ্চ এক জায়গায় rebalance লাগে, এক বা দুই rotation দিয়ে। ওপরের ancestor-রা তবুও returned child pointer আর updated cache পায়।</p>
+<p>আলাদা flag দিয়ে থামার বদলে কোড ফেরার সময় প্রতিটি ancestor-এ imbalance দেখে। এতে recursive গঠন সহজ বোঝা যায়। পথ logarithmic বলে সময়ও logarithmic থাকে। এক rotation-এর স্থানীয় সময় O(1), বাড়তি pointer storage-ও O(1)।</p>
+<p>Insertion-এ বারবার শুরু থেকে recursive height গোনার সঙ্গে তুলনা করো। শেষ ট্রি balanced হলেও পুনরাবৃত্ত scan অনেক বাড়তি কাজ করতে পারে। Cached child height প্রতিটি ancestor update constant time করে। নিশ্চয়তাটি ধরে নেয় প্রতিটি কাজের পরে cache সঠিক।</p>
+
+<h2 id="edge-cases">Duplicate, allocation আর ownership</h2>
+<p>ফাঁকা ট্রিতে insert করলে height একের leaf হয়। একই key আবার দিলে count না বাড়িয়ে আগের record ফেরে। Linked AVL storage-এ নির্দিষ্ট full সীমা নেই। Allocation ব্যর্থ হলে ok flag অসম্পূর্ণ কাজের rebalance আটকায়, caller রাখা ট্রি destroy করে।</p>
+<p>ব্যর্থ allocation ঘটে ফাঁকা child link-এ। সেখানে NULL ফেরালে ভরা subtree প্রতিস্থাপিত হয় না। আগের ancestor record-এ পৌঁছানো যায়, তাই cleanup সেগুলো ছাড়তে পারে। উদাহরণে failure-কে ব্যর্থ run ধরা হয়, নতুন key insert হয়েছে বলা হয় না।</p>
+<p>Rotation record allocate বা free করে না। Double rotation হলেও সফল distinct insertion শুধু এক leaf allocate করে। শেষে postorder cleanup প্রতিটি record একবার free করে। নোডের রাখা pointer একই record-এর address থাকে, যদিও parent আর depth বদলাতে পারে।</p>
+<p>শুধু balance দিয়ে BST-র নিয়ম প্রমাণ হয় না। ভুল ট্রির height সমান অথচ key ভুল জায়গায় থাকতে পারে। দুটো দেখো: inorder distinct input set-এর সঙ্গে মেলে কি না, প্রতিটি নোডের height আর balance সঠিক কি না। valid routine cache আর balance দেখে; insertion-এর তুলনার নিয়ম ক্রম রাখে।</p>
+
+<h2 id="common-mistakes">Middle subtree হারিও না</h2>
+<h3>খুব আগে পুরোনো root-কে child-এর নিচে জোড়া</h3><p>Right rotation-এ x.right রেখে দেওয়ার আগে overwrite করলে middle subtree হারাতে পারে। আগে middle রাখো। ছবির তিন named subtree বলে কোন assignment-এ কোন pointer বাঁচাতে হবে।</p>
+<h3>শুধু root-এর তুলনায় rotation বাছা</h3><p>Left-heavy থেকে LL আর LR আলাদা হয় না। Left child-এর তুলনায় insertion কোন দিকে গেছে দেখো। বাঁকা পথে শেষ root rotation-এর আগে child rotation লাগে।</p>
+<h3>Parent-এ পুরোনো local root রেখে দেওয়া</h3><p>Rotation-এর return value নতুন subtree root চেনায়। Parent-এর child field বা caller-এর root variable-এ বসাও। স্থানীয় link ঠিক হলেও owner পুরোনো root রাখলে মেরামত অসম্পূর্ণ।</p>
+<h3>শূন্য আর এক height-এর leaf cache মেশানো</h3><p>C helper NULL-কে শূন্য আর leaf-কে এক ধরে। নতুন record সেইমতো initialize করো। আলাদা নিয়মের height বিয়োগে অদরকারি rotation শুরু হতে পারে।</p>
+
+<h2 id="version-notes">C17 height field</h2>
+<div class="callout version"><p>AVL implementation-এ C17 struct, pointer আর সাধারণ integer arithmetic আছে। সীমিত input-এ height ছোট। Compiler নিজে height cache রাখে না; প্রতিটি update আর returned-root assignment তোমার অ্যালগরিদমের অংশ।</p></div>
+
+<h2 id="summary">স্থানীয় link পুরো পথের সীমা দেয়</h2>
+<p>AVL insertion সাধারণ key তুলনার সঙ্গে cached height আর চার মেরামত case যোগ করে। Rotation ক্রম রেখে লম্বা চেইন ঠেকায়। পরের <a href="topic:ds-heap">বাইনারি হিপ</a> complete গঠন আর আলাদা ordering rule দিয়ে সর্বোচ্চ বা সর্বনিম্ন key সহজে সরায়।</p>

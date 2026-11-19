@@ -1,0 +1,83 @@
+<h2 id="introduction">পরের সর্বোচ্চ মান সামনে রাখো</h2>
+<p class="lead">প্রতিযোগিতার আয়োজক বারবার বাকি থাকা সর্বোচ্চ score-কে পুরস্কার দেন। নতুন score এলেই সব সাজালে কাজ নষ্ট হয়। <dfn>বাইনারি হিপ</dfn> নির্দিষ্ট জায়গায় সর্বোচ্চ বা সর্বনিম্ন key রেখে দক্ষ insertion আর removal দেয়। শুধু প্রতিটি parent-কে তার child-এর সঙ্গে ক্রমে রাখবে।</p>
+<p>Max heap-এ সবচেয়ে বড় key root-এ। Min heap সব তুলনা উল্টে সবচেয়ে ছোটটি রাখে। দুটোতেই complete binary গঠন লাগে, তাই array-তে ফাঁক ছাড়া সক্রিয় নোড রাখা যায়। এই পাঠে max heap বানাবে; duplicate score আলাদা entry হিসেবে থাকবে।</p>
+<p><a href="topic:ds-priority-queue">Priority queue</a> হলো interface; heap তার একটি implementation। BST-র মতো বামের সব key ছোট, heap-এ এমন নিয়ম নেই। তাই যেকোনো key খুঁজতে এক root comparison দেখে বাম বা ডান বেছো না।</p>
+
+<h2 id="syntax">Array heap-এর দুই নিয়ম</h2>
+<p>প্রথম নিয়ম গঠন: সক্রিয় অবস্থান শূন্য থেকে n-1 index নেয়। দ্বিতীয়টি max ordering: প্রতিটি parent key তার প্রত্যেক child key-র সমান বা বড়। শূন্য-ভিত্তিক index-এ ধনাত্মক i-এর parent(i)=(i-1)/2। Left আর right child অবস্থান 2*i+1 আর 2*i+2।</p>
+<pre class="diagram">Insert-এর আগে: array=[10,7,8], n=3
+           [10]
+          /    \
+        [7]    [8]
+12 যোগ: array=[10,7,8,12], পরের complete অবস্থান 3
+Sift up: [10,12,8,7] -&gt; [12,10,8,7]
+Insert-এর পরে:
+           [12]
+          /    \
+        [10]   [8]
+        /
+      [7]</pre>
+<pre><code class="language-text">sift_up(heap, i): compare with parent and swap while larger
+sift_down(heap, n, i): choose larger child and swap while needed
+build_heap(heap, n): sift_down indices n/2-1 through 0
+insert: append at n, sift_up, then increase active size
+remove_max: save root, move last key to root, shrink, sift_down</code></pre>
+<p>C-র insertion প্রথমে heap[n]-এ key রাখে, সেই index দিয়ে sift_up ডাকে, তারপর n বাড়ায়। Sift-up-এর শুধু index আর ancestor লাগে, নতুন count লাগে না। Lab-এর array reducer append-এর সময়ই সক্রিয় length বাড়ায়। দুইটিতে একই তুলনা আর swap হয়।</p>
+
+<h2 id="how-it-works">শুধু নষ্ট হওয়া পথ মেরামত করো</h2>
+<p>Append complete গঠন রাখে, তবে নতুন leaf আর parent-এর ক্রম ভাঙতে পারে। Key তুলনা করো। Parent সমান বা বড় হলে থামো; না হলে swap করে parent index-এ চালাও।</p>
+<p>শুধু ওপরের পথ ভুল হতে পারে। আগের child subtree-গুলো insertion-এর আগে heap ছিল। বড় key ওপরে উঠলেও সেই child root-গুলোর বড় থাকে। তাই sift-up-এ সর্বোচ্চ tree height, অর্থাৎ O(log n) তুলনা আর O(1) কাজের storage লাগে।</p>
+<p>Maximum সরাতে আগে heap[0] রাখো। শেষ active key root-এ এনে n কমাও। Complete গঠন থাকে, কিন্তু বদলি key দুই child-এর যেকোনোটির ছোট হতে পারে। থাকা child তুলনা করে বড়টি বেছে নাও।</p>
+<pre class="diagram">সরানোর আগে: array=[12,10,8,7], n=4
+12 রাখো; শেষ 7 root-এ নাও; ছোট করো
+মাঝের অবস্থা: array=[7,10,8], n=3
+10 বেছে root আর index 1 swap করো
+সরানোর পরে: array=[10,7,8], removed=12</pre>
+<p>বাছা child বর্তমান key-র বড় হলেই swap। Parent বড় child-এরও সমান বা বড় হলে অন্যটিরও বড়, তাই থামো। Child key সমান হলে কোড বামটি নেয়। এই tie rule-এ lab আর C উদাহরণের array layout মেলে।</p>
+<p>Sift-down এক নিচের পথ ধরে O(log n) সময়, বাড়তি O(1) জায়গা নেয়। n ধনাত্মক দেখে peek O(1)-এ root পড়ে। Heap-এ sibling subtree-র মধ্যে ক্রম নেই, তাই root ছাড়া যেকোনো key খুঁজতে O(n) দেখা লাগতে পারে।</p>
+<p>যেকোনো array থেকে heap বানাতে শেষ internal index n/2-1 থেকে শুরু করো। সেটিকে sift-down করে উল্টো দিকে আগের index-গুলো ধরো। Parent-এর কাজের সময় প্রতিটি child subtree আগেই heap। Leaf-এর child নেই, তাই ভাঙার তুলনাও নেই, কাজও লাগে না।</p>
+<table class="ref"><caption>[1,2,3,4,5,6,7] নিচ থেকে তৈরি</caption><thead><tr><th scope="col">Index</th><th scope="col">Sift-down-এর পরে array</th></tr></thead><tbody><tr><td>2</td><td>1,2,7,4,5,6,3</td></tr><tr><td>1</td><td>1,5,7,4,2,6,3</td></tr><tr><td>0</td><td>7,5,6,4,2,1,3</td></tr></tbody></table>
+<div data-lab="heap-operations"></div>
+<p>Lab আগে input heap বানায়, তারপর key insert করে, চাইলে maximum সরায়। প্রথম উদাহরণ একই values, key আর remove-max flag পড়ে। Array অবস্থান আর tree level একসঙ্গে দেখো: একই গঠন বোঝায়। ভেতরের swap child link না সরিয়ে স্থির অবস্থানের key বদলায়।</p>
+
+<h2 id="examples">একবার বানিয়ে এক পথ বদলাও</h2>
+<p>Build উদাহরণ বৈধ heap array প্রিন্ট করে; সেটি পুরো descending হতে হবে না। Extraction উদাহরণ বারবার maximum সরিয়ে descending মান প্রিন্ট করে। ফল আলাদা: সব বাকি key পুরো না সাজিয়েই heap পরের extreme query দেয়।</p>
+
+<h3>তৈরি করো, insert করো, maximum সরাও</h3>
+<p>নিচ থেকে তৈরি করলে max heap হয়। 12 insert করলে root-এ ওঠে; সরালে বদলি key-র পথ মেরামত হয়।</p>
+<div data-example="ex-1"></div>
+
+<h3>বড় থেকে ছোট মান বের করো</h3>
+<p>প্রতি extraction বাকি সবচেয়ে বড় key সরায়। ভেতরের heap array সাজানো না হলেও এই output সাজানো।</p>
+<div data-example="ex-2"></div>
+
+<h3>একই জায়গায় heap বানাও</h3>
+<p>Leaf আগেই heap-এর নিয়ম মানে। Internal index উল্টো দিকে ধরলে parent-এর আগে প্রতিটি child subtree heap হয়।</p>
+<div data-example="ex-3"></div>
+
+<h3>ছোটটিকে আগে দিতে min heap</h3>
+<p>Build, sift-up আর sift-down সবখানে তুলনা উল্টো। -3 insert করলে সেটি minimum; সরালে আগের ছয় মান বৈধ min heap-এ থাকে।</p>
+<div data-example="ex-4"></div>
+
+<h2 id="variations">Linear build আর উল্টো তুলনা</h2>
+<p>n নোডের সঙ্গে log n height গুণ করে bottom-up construction-কে O(n log n) বলতে ইচ্ছা হতে পারে। এটি ওপরের সীমা, কিন্তু কাজের আসল ভাগ ধরে না। প্রায় অর্ধেক নোড leaf, এক level-ও সরে না। প্রায় এক চতুর্থাংশ শুধু এক level সরতে পারে।</p>
+<p>Height বাড়লে ওই height-এ নোডের সংখ্যা geometric হারে কমে। মোট নিচে নামা n গুণ 1/4+2/8+3/16 ও পরের পদগুলোর মধ্যে সীমিত। ধারাটির যোগফল constant। Leaf আর তুলনার খরচ ধরেও construction O(n)।</p>
+<p>Repeated insertion আলাদা build পদ্ধতি। পরে ঢোকা leaf অনেক level উঠতে পারে বলে worst-case সময় O(n log n)। মান ধীরে আসা stream-এ এটি কাজে লাগে। পুরো প্রাথমিক array আগে থেকেই থাকলে bottom-up ভালো।</p>
+<p>Min heap-এর sift-down-এ ছোট child নাও, আর key parent-এর ছোট হলে ওপরে swap করো। গঠন আর index সূত্র একই। Root তখন delete-max নয়, delete-min দেয়। শুধু এক routine-এর তুলনা উল্টে বাকিগুলো max রেখো না।</p>
+<p>Priority queue সমান priority ভাঙতে arrival sequence যোগ করতে পারে। এই integer heap FIFO tie-র নিশ্চয়তা দেয় না। সমান মান বৈধ entry, কিন্তু আলাদা identity নেই। সমান priority-তে স্থির service order লাগলে compound comparator নাও।</p>
+
+<h2 id="edge-cases">ফাঁকা, এক entry আর ভরা storage</h2>
+<p>ফাঁকা heap-এ দেখার বা সরানোর root নেই। এক entry সরালে key রেখে n শূন্য হয়, নিচে আর তুলনা হয় না। Fixed capacity-তে n capacity-র সমান হলে heap[n] লেখার আগেই full জানাতে হবে। সীমা storage-এর, abstract priority rule-এর নয়।</p>
+<p>উদাহরণে ষোলো ঘর রাখা, প্রথমে সর্বোচ্চ বারো key পড়া আর সর্বোচ্চ এক key append হয়। তাই insertion-এর capacity নিশ্চিত। শূন্য দৈর্ঘ্যের input-ও নতুন এক key নেয়। সঙ্গে সঙ্গে সরালে active array ফাঁকা।</p>
+<p>C-তে শেষ inactive ঘরে পুরোনো মান থাকতে পারে। শুধু n-এর নিচের index heap-এর অংশ। Lab দেখানো slot সরিয়ে দেয়, ফলে active মান C-র prefix-এর সঙ্গে মেলে। Spare cell-এর মান দিয়ে ফাঁকা কি না বোঝানো হয় না।</p>
+
+<h2 id="common-mistakes">গঠন আর ক্রম দুটোই রাখো</h2>
+<h3>BST-র deletion পথ নেওয়া</h3><p>Heap root-এ inorder successor বসিয়ে যেকোনো জায়গায় গর্ত রাখা চলে না। শেষ active মান সরিয়ে শেষে size কমাও। তাতে complete-tree indexing বৈধ থাকে।</p>
+<h3>সবসময় left child-এর সঙ্গে swap</h3><p>Right child বড় হতে পারে। ছোট child-এর সঙ্গে swap করলে নতুন parent সঙ্গে সঙ্গে sibling-এর ছোট থেকে যেতে পারে। বর্তমান key দেখার আগে থাকা child-গুলোর বড়টি নাও।</p>
+<h3>Unsigned index-এ উল্টো build loop</h3><p>Unsigned index শূন্য পেরিয়ে wrap করতে পারে। উদাহরণে i ধনাত্মক থাকা পর্যন্ত কমিয়ে i-1 repair করে। এতে negative active index না বানিয়েই n শূন্য বা এক সামলায়।</p>
+
+<h2 id="version-notes">C17 array-র সীমা</h2>
+<div class="callout version"><p>Heap routine-এ portable C17 integer index আছে। ছোট নির্দিষ্ট সীমায় child arithmetic নিরাপদ। অনেক বড় heap-এ n-এর সঙ্গে তুলনার আগেই 2*i+1 যেন index type overflow না করে নিশ্চিত করো।</p></div>
+
+<h2 id="summary">Extreme key-র জন্য আংশিক ক্রমই যথেষ্ট</h2>
+<p>Complete গঠন heap-কে array-তে গুছিয়ে রাখে, parent বড় থাকার নিয়ম maximum-কে root-এ রাখে। Sift এক পথ মেরামত করে; bottom-up build level জুড়ে কাজ ভাগ করে। পরের <a href="topic:ds-expression-tree">expression tree</a> child দিয়ে evaluation-এর নির্ভরতা দেখায়।</p>

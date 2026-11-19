@@ -1,0 +1,93 @@
+<h2 id="introduction">অনেক শব্দের শুরুর অংশ একবার রাখো</h2>
+<p class="lead">কোর্স খোঁজার ছোট box-এ ca লিখলে car, cart আর cat আসতে পারে। শব্দগুলোর প্রথম দুই অক্ষর একই। <dfn>Trie</dfn> বা prefix tree সেই শুরুর অংশ একবার রেখে পরের অক্ষর আলাদা হলেই শাখা বানায়।</p>
+<p>Trie পুরো শব্দ তুলনা করে বাম বা ডান বাছে না। প্রতিটি edge-এ একটা character এগোয়। Root থেকে পথ একটা prefix বানান করে। Terminal flag বলে বর্তমান নোডে রাখা কোনো শব্দ শেষ হয়েছে কি না।</p>
+<p>পথ আর শব্দ আলাদা। cart রাখলে c, ca আর car-এর পথ তৈরি হয়, কিন্তু ছোট string-গুলো শব্দ হিসেবে রাখা হয় না-ও হতে পারে। প্রতিটি চাওয়া শেষ আলাদা mark করতে হবে। Terminal node-এও বড় শব্দের child থাকতে পারে।</p>
+<p>তুমি lowercase শব্দের dictionary বানাবে, exact word খুঁজবে, prefix মেলা শব্দ গুনবে আর autocomplete ফল দেবে। C উদাহরণে a থেকে z, শব্দের দৈর্ঘ্য এক থেকে ছয়। Lab car, cat আর do দিয়ে শুরু, তারপর a থেকে z দিয়ে ছোট এক শব্দ যোগ করতে দেয়।</p>
+
+<h2 id="syntax">প্রতি অক্ষরে এক child slot</h2>
+<pre><code class="language-c">typedef struct Trie {
+    struct Trie *child[26];
+    int terminal;
+    int count;
+} Trie;</code></pre>
+<p>প্রতি lowercase অক্ষরের slot: a-তে শূন্য, b-তে এক, z-তে পঁচিশ। শব্দ যাচাইয়ের পরে word[i]-'a' দিয়ে slot বের করো। NULL child মানে দরকারি character path নেই। নতুন নোডে সব slot NULL, terminal আর count শূন্য থাকে।</p>
+<p>উদাহরণে malloc করে C initializer <code>(Trie){0}</code> দিয়ে নোড initialize করে। তাতে pointer member সঠিক null pointer মান পায়, flag আর counter শূন্য হয়। শূন্যে ভরা allocation byte সবসময় null pointer বোঝায় ধরে নেওয়ার চেয়ে এটি portable।</p>
+<pre class="diagram">car রাখার আগে:
+root --c--&gt; c --a--&gt; a --t--&gt; t*
+car রাখার পরে:
+root --c--&gt; c --a--&gt; a --t--&gt; t*
+                           \
+                            r*
+* মানে terminal, আলাদা child node নয়।
+cart যোগের আগে: r*-এর t child নেই
+cart যোগের পরে: r* --t--&gt; t*; car এখনও রাখা শব্দ</pre>
+<p>Count রাখে ওই নোড পর্যন্ত পথ দিয়ে শুরু হওয়া distinct শব্দের সংখ্যা। Root-এর পথ ফাঁকা, তাই তার count পুরো dictionary-র size। Terminal node নিজের শব্দকে count-এ ধরে; নিচের terminal-গুলো বড় শব্দ যোগ করে।</p>
+
+<h2 id="how-it-works">Insert, search আর prefix count</h2>
+<p>Insertion আগে দেখে পুরো শব্দ আগেই terminal node-এ শেষ হয় কি না। হলে count না বদলে success। Dictionary set-এর নিয়ম মানে, তাই পুনরাবৃত্ত input একাধিক copy বানায় না। নতুন ছোট শব্দ আগের nonterminal পথে শেষ হলে endpoint mark করতে হয়।</p>
+<p>cur root-এ রেখে পথে যাওয়া নোড মনে রাখো। প্রতিটি অক্ষরে child থাকলে ধরো, না থাকলে zero-initialized নোড allocate করে ওই slot-এ জুড়ো। বাছা child-এ cur সরিয়ে পরের অক্ষর ধরো।</p>
+<p>শেষ অক্ষরের পরে cur.terminal এক করো। Root আর রাখা পথের প্রতিটি নোডের count একবার বাড়াও। ছয় অক্ষরের সঙ্গে root ধরে সাত নোড লাগে বলে path array-তে সাত entry। পুরো শব্দ তৈরি হলেই update হয়।</p>
+<p>পরের অক্ষর allocate করতে ব্যর্থ হলে প্রোগ্রাম failure জানিয়ে পুরো dictionary destroy করে। আগে বানানো path node জোড়া আছে বলে cleanup-এ পৌঁছানো যায়। Counter তখনও শূন্য হতে পারে, কিন্তু failure-এর পরে সফল query বলা হয় না। Reusable library চাইলে নোড rollback করতে পারে বা recoverable failure-এর নিয়ম বলতে পারে।</p>
+<table class="ref"><caption>Distinct শব্দ car, cart, cat আর dog</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Exact word?</th><th scope="col">Count</th></tr></thead><tbody><tr><td>Root-এর ফাঁকা পথ</td><td>না</td><td>4</td></tr><tr><td>ca</td><td>না</td><td>3</td></tr><tr><td>car</td><td>হ্যাঁ</td><td>2</td></tr><tr><td>cart</td><td>হ্যাঁ</td><td>1</td></tr><tr><td>do</td><td>না</td><td>1</td></tr></tbody></table>
+<p>Exact search allocation ছাড়া শব্দের character ধরে চলে। দরকারি child না থাকলেই absent ফেরায়। শেষ নোড থাকলে terminal flag দেখে। Nonterminal-এ পৌঁছানো শুধু প্রমাণ করে query রাখা কোনো শব্দের prefix।</p>
+<p>Prefix count একই পথে গিয়ে নোডের count ফেরায়, terminal true হওয়া লাগে না। Prefix না থাকলে শূন্য। car, cart আর cat থাকলে ca নিজে শব্দ না হলেও count তিন।</p>
+<div data-lab="trie-insert"></div>
+<p>Lab fixed dictionary-র shared path ব্যবহার করে প্রতিটি না থাকা অক্ষরের allocation highlight করে। নোডের তারকা terminal বোঝায়। ca যোগ করলে নোড না বানিয়েই endpoint mark হতে পারে। do আগেই আছে বলে আবার যোগে নোড বা distinct count বদলায় না।</p>
+<p>Lab-এ ফাঁকা input মানে insertion বাদ, তিন শব্দের dictionary অপরিবর্তিত; empty string রাখা নয়। প্রথম উদাহরণ একই optional word line নিয়ে সব শব্দ আর distinct count প্রিন্ট করে। অন্যগুলো count-এর পরে এক থেকে ছয় অক্ষরের token পড়ে।</p>
+
+<h2 id="examples">সম্পূর্ণ শব্দ আর shared path আলাদা করো</h2>
+<p>Exact-search প্রোগ্রাম word status আর prefix count দুটো দেখিয়ে পার্থক্য বোঝায়। Autocomplete prefix নিয়ে মেলা শব্দ বর্ণানুক্রমে দেয়। একই dictionary word একবার আসে। চতুর্থ উদাহরণ allocated কিন্তু ফাঁকা dictionary root দেখায়।</p>
+
+<h3>ছোট dictionary-তে নিজের শব্দ ঢোকাও</h3>
+<p>c আর a নোড আগে আছে। cab ঢোকালে শুধু b তৈরি, endpoint mark আর distinct word count চার হয়।</p>
+<div data-example="ex-1"></div>
+
+<h3>Exact আর prefix search আলাদা</h3>
+<p>ca-র পথ আছে, terminal নয়। তিনটি distinct রাখা শব্দ ওই prefix মেলায়।</p>
+<div data-example="ex-2"></div>
+
+<h3>বর্ণানুক্রমে autocomplete</h3>
+<p>Child a থেকে z ক্রমে visit হয়। Duplicate car একবার রাখা, তাই ফল car, cart আর cat।</p>
+<div data-example="ex-3"></div>
+
+<h3>ফাঁকা dictionary-তে completion নেই</h3>
+<p>শব্দ না থাকলেও root allocated। তার terminal flag আর prefix count দুটোই শূন্য।</p>
+<div data-example="ex-4"></div>
+
+<h2 id="variations">Autocomplete আর longest stored prefix</h2>
+<p>Autocomplete আগে prefix ধরে তার নোডে যায়। পথ না থাকলে ফল ফাঁকা। না হলে character buffer বাড়িয়ে recursively descendant দেখো। Terminal true হলেই বর্তমান buffer প্রিন্ট করো।</p>
+<p>Lexicographic order পেতে শূন্য থেকে পঁচিশ child index visit করো। Child-এর আগে terminal prefix প্রিন্ট করো, তাই cart-এর আগে car আসে; শব্দটি নিজের extension-এর আগে। পুরো r শাখার পরে cat visit করো।</p>
+<pre class="diagram">ca autocomplete-এর আগে: buffer="ca", cur=node a
+r ধরো: terminal -&gt; car দাও
+r.t ধরো: terminal -&gt; cart দাও
+a-তে ফিরে t ধরো: terminal -&gt; cat দাও
+পরে: matches=[car,cart,cat]; কোনো child link বদলায়নি
+Cleanup-এর আগে: root সব child subtree-র মালিক
+পরে: প্রতিটি child subtree, তারপর root ছাড়া হয়েছে</pre>
+<p>Recursive call-গুলো একই buffer ব্যবহার করে। প্রতিটি extension পরের character overwrite করে; terminal visit প্রিন্টের আগে শেষে zero byte লেখে। শব্দ সর্বোচ্চ ছয় অক্ষর, তাই terminator-সহ সাত byte লাগে। বড় dictionary-তে অনুমোদিত সর্বোচ্চ word length থেকে buffer-এর সীমা বের করো।</p>
+<p>Longest-stored-prefix উল্টো সমস্যা। পুরো query ধরে চলতে সর্বশেষ terminal position মনে রাখো। ca আর car রাখা থাকলে query carton-এর শেষ stored prefix car। তার পরে পথ চললেও নতুন terminal না আসা পর্যন্ত উত্তর বদলায় না।</p>
+<p>Prefix count আর autocomplete সম্পর্কিত হলেও খরচ আলাদা। Cached count prefix-এর পথ শেষেই উত্তর দেয়। Completion দেখাতে সত্যিই সংশ্লিষ্ট নোডে যেতে আর output লিখতে হয়। প্রায় পুরো dictionary মেলা prefix-এ তাই autocomplete দীর্ঘ হতে পারে।</p>
+<p>Query বা ঢোকানো শব্দের দৈর্ঘ্য L, allocated trie node P ধরি। Exact search আর prefix lookup O(L)। নির্দিষ্ট alphabet-এ path-count update-সহ নতুন insertion O(L)। সর্বোচ্চ L নতুন নোড আর O(L) temporary path storage লাগতে পারে।</p>
+<p>কম child থাকলেও প্রতিটি নোডে ছাব্বিশ child pointer রাখা। মোট storage O(26P), নির্দিষ্ট alphabet-এ O(P), তবে constant বড়। Autocomplete প্রতি visited node-এ ছাব্বিশ slot দেখে আর প্রতিটি result character লেখে। V visited node আর R output character-এ সময় O(26V+R)।</p>
+<p>Autocomplete recursion-এর সর্বোচ্চ depth বাকি word length। Cleanup প্রতিটি নোডের ছাব্বিশ slot দেখে O(26P) সময় আর O(Lmax) call depth নেয়। অনেক শব্দ prefix ভাগ করলেও আলাদা parent একই node ভাগ করে না। প্রতিটি allocated record-এর তাই ঠিক একজন owner, একবার free করা যায়।</p>
+
+<p>Longest-stored-prefix lookup-ও সর্বোচ্চ L character link ধরে। Current pointer আর শেষ terminal position দিয়ে O(L) সময়, query-র বাইরে O(1) কাজের storage লাগে। Sibling branch ঘোরে না, শব্দও বদলায় না।</p>
+
+<h2 id="edge-cases">Alphabet, ফাঁকা input আর capacity</h2>
+<p>Dictionary প্রোগ্রাম শূন্য থেকে আট n, তারপর n lowercase word নেয়। শূন্য শব্দে live nonterminal root-এর count শূন্য। সব nonempty word-এর exact search ব্যর্থ, enumeration শুধু নিজের label প্রিন্ট করে। Destroy তবুও root record ছাড়ে।</p>
+<p>সাধারণ routine uppercase, punctuation আর ছয়ের বেশি অক্ষর বাদ দেয়। Index করার আগে যাচাই negative বা অতিরিক্ত child index ঠেকায়। আসল Bangla autocomplete-এ Unicode-aware tokenization আর আলাদা child mapping দরকার। UTF-8 byte থেকে English a বিয়োগ করে index হয় না।</p>
+<p>Linked trie-তে নির্দিষ্ট full অবস্থা নেই; allocation failure বাড়া থামায়। উদাহরণের input সীমা মোট নোড, buffer আর trace বেঁধে দেয়। আটটি ছয়-অক্ষরের শব্দে root-সহ সর্বোচ্চ ঊনপঞ্চাশ record; shared prefix সাধারণত কমায়।</p>
+<p>Repeated word নতুন node বা count বাড়ায় না। আগের nonterminal prefix-এর সমান নতুন word নোড না বাড়িয়ে terminal আর সব prefix count বদলায়। আগের word-এর extension পুরোনো terminal রাখে। তিন case আলাদা পরীক্ষা করো।</p>
+<p>এই topic-এ word deletion দরকার নেই। ভবিষ্যৎ routine terminal মুছে count কমাবে, শুধু অব্যবহৃত nonterminal node prune করবে। অন্য শব্দের দরকারি shared prefix সরানো যাবে না। Terminal শূন্য হলেও count ধনাত্মক নোড কাজে লাগে।</p>
+
+<h2 id="common-mistakes">পৌঁছানো গেলেই নোডটা শব্দ নয়</h2>
+<h3>সব existing prefix-কে exact match ধরা</h3><p>cart রাখলে ca পথ তৈরি হয়, ca শব্দ নয়। সব query character শেষেই terminal দেখো। Prefix query ইচ্ছা করেই ভিন্ন endpoint শর্ত মানে।</p>
+<h3>Duplicate আবার গোনা</h3><p>অন্ধভাবে path count বাড়ালে distinct dictionary frequency dictionary হয়ে যায়। আগে terminal দেখো। Frequency চাইলে counter-এর নাম আর ব্যাখ্যা বদলাও, দুই অর্থ মেশাবে না।</p>
+<h3>Child array-র বাইরে লেখা</h3><p>a থেকে z-এর বাইরের character থেকে a বিয়োগে নিরাপদ slot মেলে না। find বা insert-এর আগে পুরো input যাচাই করো। Routine ওই alphabet contract ধরে, নীরবে conversion করে না।</p>
+<h3>এক শব্দ সরাতে shared prefix free করা</h3><p>ca নোড car, cart আর cat-কে দিতে পারে। তার lifetime trie structure-এর, এক displayed result-এর নয়। Query শেষেই cleanup পুরো গঠন ছাড়ে।</p>
+
+<h2 id="version-notes">C17 initialization আর text</h2>
+<div class="callout version"><p>Trie-তে C17 pointer আর স্পষ্ট lowercase validation আছে। উদাহরণ toolchain-এর পাশাপাশি English letter encoding ধরে। C digit code পাশাপাশি রাখার নিশ্চয়তা দেয়, সব execution character set-এ letter-এর জন্য দেয় না; অন্য encoding-এ lookup mapping লাগবে।</p></div>
+
+<h2 id="summary">Character search-এর পথ বেছে নেয়</h2>
+<p>Trie prefix ভাগ করে, terminal flag পুরো শব্দ চেনায়, cached count সব completion না দেখেই উত্তর দেয়। একই link রেখে বর্ণানুক্রমে traversal suggestion বানায়। পরে <a href="topic:ds-hashing-intro">hashing</a> হিসাব করা অবস্থান দিয়ে dictionary lookup সাজানোর আরেক উপায় দেবে।</p>
