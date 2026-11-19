@@ -21,6 +21,7 @@ import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
 import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
 import { ClassService } from '../app/classes.ts';
+import { QuestionBankService } from '../app/question-bank.ts';
 import { OrderService } from '../app/orders.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
 import { SearchService } from '../app/search.ts';
@@ -85,6 +86,7 @@ const server = createApp({
   tutorials,
   admin,
   classes,
+  questionBank: new QuestionBankService(store, tutorials),
   orders,
   runner,
   search,

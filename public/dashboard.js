@@ -3,6 +3,7 @@ import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSigned
 
 const T = {
   en: {
+    customQuiz: 'Custom quiz',
     tagline: 'Learn with purpose', foot: 'Loop & Logic · answers come only from reviewed notes and approved websites',
     hello: 'Your learning', helloSub: 'Pick up where you left off. Everything here comes from what you did on Loop & Logic.',
     welcome: 'Welcome to Loop & Logic', welcomeSub: 'Start with a five-minute lesson. Select any line you don’t understand — you’ll get a short answer with its source.',
@@ -17,6 +18,7 @@ const T = {
     receipts: 'Evidence receipts', shown: 'Shown alone', notYet: 'Not yet shown', withHelp: 'With help', noReceipts: 'Finish a sealed check to get your first receipt.',
   },
   bn: {
+    customQuiz: 'নিজের তৈরি কুইজ',
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
     hello: 'তোমার শেখা', helloSub: 'যেখানে থেমেছিলে সেখান থেকে শুরু করো। এখানের সবকিছু লুপ অ্যান্ড লজিকে তোমার কাজ থেকে।',
     welcome: 'লুপ অ্যান্ড লজিকে স্বাগতম', welcomeSub: 'পাঁচ মিনিটের একটা পাঠ দিয়ে শুরু করো। যে লাইন বোঝোনি তা সিলেক্ট করো — উৎসসহ ছোট উত্তর পাবে।',
@@ -164,7 +166,7 @@ function classesBox() {
       e.preventDefault(); joinBtn.disabled = true;
       try { const r = await api('POST', '/api/classes/join', { code: input.value }); toast(`${r.status === 'pending' ? L.waiting : L.joined}: ${r.name}`); fill(); } catch (err) { toast(err.message); } finally { joinBtn.disabled = false; }
     };
-    const kind = { read: L.read, quiz: L.quiz, lab: L.lab };
+    const kind = { read: L.read, quiz: L.quiz, lab: L.lab, custom_quiz: T[getLang()].customQuiz };
     box.replaceChildren(el('h2', { id: 'mc-h', text: L.h }),
       ...classes.map((c) => el('div', { class: 'mc-class' },
         el('div', { class: 'mc-head' }, el('strong', { text: c.name }), el('span', { class: 'muted small', text: `${L.by}: ${c.instructor}` })),
@@ -175,7 +177,7 @@ function classesBox() {
           return el('details', { open: done < a.items.length || null },
             el('summary', {}, el('span', { text: a.title }), el('span', { class: `tag ${done === a.items.length ? 'live' : ''}`, text: `${num(done)}/${num(a.items.length)} · ${a.due ? `${L.due} ${new Date(a.due).toLocaleDateString(getLang() === 'bn' ? 'bn-BD' : 'en-GB')}` : L.noDue}` })),
             el('ul', {}, ...a.items.map((i) => el('li', {}, el('span', { class: i.done ? 'ok' : 'todo', text: i.done ? '✓' : '○' }), ' ', `${kind[i.kind]}: `,
-              el('a', { href: `/learn.html?track=${encodeURIComponent(i.track)}&topic=${encodeURIComponent(i.topic)}${i.lab ? `#lab-${i.lab}` : ''}`, text: i.title })))));
+              el('a', { href: i.kind === 'custom_quiz' ? `/custom-quiz.html?id=${encodeURIComponent(i.quizId)}` : `/learn.html?track=${encodeURIComponent(i.track)}&topic=${encodeURIComponent(i.topic)}${i.lab ? `#lab-${i.lab}` : ''}`, text: i.title })))));
         })) : el('p', { class: 'muted small', text: L.none })) : null,
         el('button', { type: 'button', class: 'linkish small', text: L.leave, onclick: async () => { if (!confirm(`${L.leave}: ${c.name}?`)) return; await api('POST', `/api/classes/${c.id}/leave`); toast(L.left); fill(); } }))),
       el('details', { class: 'mc-joinbox', open: !classes.length || null }, el('summary', { text: L.join }), el('p', { class: 'muted small', text: L.note }), form));

@@ -11,6 +11,7 @@ import { AppError } from './service.ts';
 import { csv } from './csv.ts';
 import type { DocRow, ReadingEventRow, Store } from '../store/store.ts';
 import type { TutorialService } from './tutorials.ts';
+import { QuestionBankService } from './question-bank.ts';
 import { getCourse } from '../content/courses.ts';
 import { getVideo } from '../content/videos.ts';
 import { courseVideoOrder } from './watch.ts';
@@ -135,13 +136,15 @@ export class ClassService {
     const title = str(body.title, 140);
     if (!title) throw bad('Give the assignment a title.');
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 30).map((it: Json) => ({
-      kind: ['read', 'quiz', 'lab'].includes(it?.kind) ? it.kind : 'read', track: str(it?.track, 60) || c.data.track, topic: str(it?.topic, 80), lab: str(it?.lab, 80) || null,
+      kind: ['read', 'quiz', 'lab', 'custom_quiz'].includes(it?.kind) ? it.kind : 'read', track: str(it?.track, 60) || c.data.track, topic: str(it?.topic, 80), lab: str(it?.lab, 80) || null, questionIds: it?.questionIds,
     })).filter((it: Json) => it.topic && (it.kind !== 'lab' || it.lab));
     if (!items.length) throw bad('Add at least one topic, quiz or lab.');
     const due = str(body.due, 40);
     if (due && !Number.isFinite(Date.parse(due))) throw bad('Choose a valid due date.');
-    const data = { classId, title, items, due: due ? new Date(Date.parse(due)).toISOString() : null, marks: Math.max(0, Math.min(1000, Number(body.marks) || 0)), passMark: Math.max(0, Math.min(100, Number(body.passMark ?? 60))), hintsOnly: body.hintsOnly !== false, createdAt: this.iso(), by: staff.email };
     const aid = id ?? randomUUID();
+    const prepared = [];
+    for (const item of items) prepared.push(item.kind === 'custom_quiz' ? await new QuestionBankService(this.store, this.tutorials).prepare(staff, classId, aid, item) : { kind: item.kind, track: item.track, topic: item.topic, lab: item.lab });
+    const data = { classId, title, items: prepared, due: due ? new Date(Date.parse(due)).toISOString() : null, marks: Math.max(0, Math.min(1000, Number(body.marks) || 0)), passMark: Math.max(0, Math.min(100, Number(body.passMark ?? 60))), hintsOnly: body.hintsOnly !== false, createdAt: this.iso(), by: staff.email };
     await this.put('assignment', aid, data);
     await this.audit(staff.email, id ? 'assignment.update' : 'assignment.create', aid, { classId, title });
     return { id: aid, ...data };
@@ -180,21 +183,22 @@ export class ClassService {
   }
   /** Per-student facts for one tutorial track. */
   private studentFacts(events: ReadingEventRow[], track: string | null) {
-    const seen = new Set<string>(), labs = new Set<string>(), quizzes = new Map<string, { score: number; total: number; at: string }>();
+    const seen = new Set<string>(), labs = new Set<string>(), quizzes = new Map<string, { score: number; total: number; at: string }>(), customQuizzes = new Map<string, { score: number; total: number; at: string }>();
     let last = '';
     for (const e of events) {
       if (e.at > last) last = e.at;
       const t = this.topicOf(e);
       if (!t || (track && t.track !== track)) continue;
       if (e.type === 'view') seen.add(t.topic);
-      if (e.type === 'quiz') { seen.add(t.topic); quizzes.set(t.topic, { score: Number(e.payload.score) || 0, total: Number(e.payload.total) || 0, at: e.at }); }
+      if (e.type === 'quiz') { seen.add(t.topic); (e.payload.customQuiz ? customQuizzes : quizzes).set(e.payload.customQuiz ? String(e.payload.customQuiz) : t.topic, { score: Number(e.payload.score) || 0, total: Number(e.payload.total) || 0, at: e.at }); }
       if (e.type === 'lab_check' && e.payload.lab) labs.add(`${t.topic}/${e.payload.lab}`);
     }
-    const qs = [...quizzes.values()].filter((q) => q.total);
-    return { seen, labs, quizzes, quizAvg: qs.length ? qs.reduce((n, q) => n + q.score / q.total, 0) / qs.length : null, last: last || null };
+    const qs = [...quizzes.values(), ...customQuizzes.values()].filter((q) => q.total);
+    return { seen, labs, quizzes, customQuizzes, quizAvg: qs.length ? qs.reduce((n, q) => n + q.score / q.total, 0) / qs.length : null, last: last || null };
   }
   private itemDone(item: Json, f: ReturnType<ClassService['studentFacts']>, passMark: number) {
     if (item.kind === 'read') return f.seen.has(item.topic);
+    if (item.kind === 'custom_quiz') { const q = f.customQuizzes.get(item.quizId); return Boolean(q && q.total && 100 * q.score / q.total >= passMark); }
     if (item.kind === 'quiz') { const q = f.quizzes.get(item.topic); return Boolean(q && q.total && (100 * q.score) / q.total >= passMark); }
     return f.labs.has(`${item.topic}/${item.lab}`);
   }
@@ -234,6 +238,7 @@ export class ClassService {
         const done = a.data.items.filter((it: Json) => this.itemDone(it, f, a.data.passMark)).length;
         const quizTopics = [...new Set(a.data.items.filter((it: Json) => it.kind === 'quiz').map((it: Json) => it.topic as string))];
         const scores = quizTopics.map((topic) => f.quizzes.get(topic)).filter((q) => q && q.total > 0);
+        scores.push(...a.data.items.filter((it: Json) => it.kind === 'custom_quiz').map((it: Json) => f.customQuizzes.get(it.quizId)).filter((q: any) => q && q.total > 0));
         const quizPercent = scores.length ? Math.round(scores.reduce((n, q) => n + q!.score / q!.total, 0) / scores.length * 100) : null;
         return { id: a.id, done, of: a.data.items.length, quizPercent };
       });
@@ -261,7 +266,7 @@ export class ClassService {
     const qStats = new Map<string, { wrong: number; n: number; who: Set<string>; topic: string; qid: string }>();
     for (const e of events) {
       const t = this.topicOf(e);
-      if (e.type !== 'quiz' || !t || (cls.track && t.track !== cls.track)) continue;
+      if (e.type !== 'quiz' || e.payload.customQuiz || !t || (cls.track && t.track !== cls.track)) continue;
       const s = topicScores.get(t.topic) ?? { sum: 0, n: 0, who: new Set() };
       if (Number(e.payload.total)) { s.sum += Number(e.payload.score) / Number(e.payload.total); s.n++; s.who.add(e.learnerId); }
       topicScores.set(t.topic, s);
