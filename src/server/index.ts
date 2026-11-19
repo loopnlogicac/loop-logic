@@ -36,9 +36,10 @@ const env = process.env;
 const serverKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
 const store: Store = env.SUPABASE_URL && serverKey ? new SupabaseStore(env.SUPABASE_URL, serverKey) : new MemoryStore();
 // Sign-in: with SUPABASE_URL and SUPABASE_ANON_KEY (the public "publishable" key) sign-in is optional
-// (hybrid); AUTH_MODE=supabase makes it required; AUTH_MODE=anonymous turns it off.
+// (hybrid, also when AUTH_MODE is the old default "anonymous"); AUTH_MODE=supabase makes it required;
+// AUTH_MODE=off turns sign-in off.
 const publicKey = env.SUPABASE_ANON_KEY || env.SUPABASE_PUBLISHABLE_KEY;
-const auth = !env.SUPABASE_URL || !publicKey || env.AUTH_MODE === 'anonymous' ? anonymousAuth()
+const auth = !env.SUPABASE_URL || !publicKey || env.AUTH_MODE === 'off' ? anonymousAuth()
   : env.AUTH_MODE === 'supabase' ? supabaseAuth(env.SUPABASE_URL, publicKey) : hybridAuth(env.SUPABASE_URL, publicKey);
 const gateway = gatewayFromEnv(env, store);
 const live = new LiveSearch({ apiKey: env.TAVILY_API_KEY || null, store });
