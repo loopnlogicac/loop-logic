@@ -9,6 +9,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
 import type { ReadingService } from '../reading/service.ts';
+import type { NoteService } from '../app/notes.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
 import type { WatchService } from '../app/watch.ts';
@@ -46,6 +47,7 @@ export interface AppDeps {
   learner: LearnerService;
   labs: LabService;
   watch: WatchService;
+  notes?: NoteService;
   extras: VideoExtrasService;
   tutorials: TutorialService;
   mastery?: MasteryService;
@@ -142,7 +144,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
     return d.admin;
   };
+  const notesFor = (ctx: Ctx) => {
+    if (!ctx.signedIn && d.auth.mode !== 'supabase') throw new AppError('unauthenticated', 401, lang(ctx.query.get('lang')) === 'bn' ? 'সেভ করতে সাইন ইন করো।' : 'Sign in to save.');
+    if (!d.notes) throw new AppError('unavailable', 503, 'Saved items are unavailable.');
+    return d.notes;
+  };
   return [
+    route('GET', '/api/my-notes', (ctx) => notesFor(ctx).list(ctx.learnerId, lang(ctx.query.get('lang'))), 'learner'),
+    route('GET', '/api/my-notes/:key', (ctx) => notesFor(ctx).get(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
+    route('PUT', '/api/my-notes/:key', (ctx) => notesFor(ctx).put(ctx.learnerId, ctx.params.key!, ctx.body ?? {}, lang(ctx.query.get('lang'))), 'learner'),
+    route('DELETE', '/api/my-notes/:key', (ctx) => notesFor(ctx).delete(ctx.learnerId, ctx.params.key!, lang(ctx.query.get('lang'))), 'learner'),
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
       authMode: d.auth.mode,

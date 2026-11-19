@@ -1,0 +1,62 @@
+<h2 id="introduction">One space for one alternative at a time</h2>
+<p class="lead">A form may record either an item count or a money amount. If each form needs only one alternative at a time, storing both values independently wastes the intended model. A <dfn>union</dfn> gives several named members overlapping storage. The record can use the space for one meaningful alternative, then replace it with another.</p>
+<p>Think of a reusable notice board. You can display a count notice or an amount notice in the same place. Putting up the amount does not preserve an independent count behind it. A union's members share their storage rather than occupying distinct member regions like a structure's fields.</p>
+<p>This arrangement needs a way to remember which interpretation is meaningful. A <dfn>tagged union</dfn> pairs a union with a separate field identifying the stored alternative. A small enum can name the alternatives; here ITEM_COUNT and ITEM_AMOUNT are named integer choices. The next lesson teaches enums more fully.</p>
+<p>The tag is your program's promise, not a hidden feature of union. C does not automatically update it or reject a wrong-member read. Keep tag updates and member assignments together. A tagged design turns shared storage into a readable value model rather than a guessing game about bytes.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>A union definition resembles a structure definition, using union instead of struct. union Value names a type with count and amount alternatives. Dot access works with a union object, and arrow works through a union pointer. The syntax alone does not say whether the chosen member matches the value last stored.</p>
+<p>A designated initializer makes the starting alternative clear. Later, assigning value.amount replaces the previously meaningful count representation. Print count before that replacement if you need its old value. Reading amount afterward uses the newly stored double rather than converting an old count automatically.</p><pre><code class="language-c">union Value { int count; double amount; };
+
+union Value value = {.count = 12};
+value.amount = 25.5;
+</code></pre><table class="ref"><thead><tr><th scope="col">Property</th><th scope="col">struct</th><th scope="col">union</th></tr></thead><tbody><tr><td>Member storage</td><td>Distinct member regions</td><td>Overlapping member regions</td></tr><tr><td>Meaningful independent values</td><td>Can keep all fields</td><td>Use the intended stored alternative</td></tr><tr><td>Size</td><td>May include member and trailing padding</td><td>Enough for every member, with possible padding</td></tr><tr><td>Selection syntax</td><td>Dot or arrow</td><td>Dot or arrow</td></tr></tbody></table>
+
+<h2 id="how-it-works">Follow the tag before reading the payload</h2>
+<p>The first example initializes count to twelve and prints it while that member is meaningful. Assigning amount then stores a double in the same union. The program prints amount with a floating format and never reads count afterward. There is no portable promise that the old integer value remains there.</p>
+<p>A union is large enough to hold each of its members and suitably aligned for them. Its size can exceed the largest member's size because layout may need padding. The second example prints two guaranteed comparisons rather than assuming exact sizes. Both comparisons are true on every conforming implementation supporting these ordinary types.</p>
+<p>The tagged Item structure stores kind separately from value. Its two members do not overlap with each other as structure members, while value's count and amount alternatives do overlap. The switch first reads kind, then selects the matching union member. The count item prints three and the amount item prints forty-two point five.</p><pre class="diagram">Item structure
+[kind: ITEM_COUNT] [union storage: count 3]
+
+Item structure after choosing amount
+[kind: ITEM_AMOUNT] [same union region: amount 42.5]
+
+count and amount overlap; kind is a separate field</pre><p>A union read of a different member is not an ordinary numeric conversion. C describes a reinterpretation of the stored representation, which can produce a trap representation or an implementation-dependent value. It is not a portable way to turn an integer into a double. Use a cast for numeric conversion and a matching union member for tagged values.</p>
+<p>Some specialized low-level code uses representation rules deliberately, including narrow common-initial-sequence guarantees for structure members in a union. Those cases need precise standard reasoning and are outside this beginner-facing tagged design. The safe everyday rule here is to read the member identified by the maintained tag.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The union programs show replacement, storage guarantees, and a tagged array of alternatives. Trace the member that was most recently assigned before each print. In the tagged example, read the separate enum field first. The branch should lead to exactly the payload member initialized for that item.</p>
+
+<h3>Replace one union alternative with another</h3>
+<p>The program never asks two members to remain independent. It first stores and reads count, then stores and reads amount. The two lines are Count: 12 and Amount: 25.5. The floating format matches the double member. Trying to print count again after the amount assignment would leave the straightforward tagged-value model used here.</p>
+<div data-example="ex-1"></div>
+
+<h3>Check portable union size guarantees</h3>
+<p>The program avoids hard-coded byte counts. sizeof(union Value) must be at least sizeof(int) and at least sizeof(double). Extra padding is possible, so equality with the largest member is not assumed. The output Fits int: 1 Fits double: 1 expresses guaranteed relationships instead of a machine-specific layout claim.</p>
+<div data-example="ex-2"></div>
+
+<h3>Read a payload using its explicit tag</h3>
+<p>Each initializer sets a kind and the corresponding union member together. The switch inspects the kind before accessing the payload. Separate structure fields keep the tag outside the overlapping region. This pattern supports a list with different kinds of values while preserving a clear rule for every read. There is no attempt to infer the kind from the payload bytes.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">The tag and payload must agree</h2>
+<p>A mismatched tag can make otherwise ordinary code read the wrong member. If kind says ITEM_COUNT after storing amount, the display helper will interpret the union as an integer. Make functions set both fields as one logical operation. For values crossing an input boundary, validate the tag before selecting a branch.</p>
+<p>Copying a tagged Item copies its tag and union value as part of the structure. If an alternative contains a pointer, copying still copies that address rather than duplicating its target. The tag can help decide which cleanup action applies, but only an explicit ownership contract says whether that pointer should be freed.</p>
+<p>A union can contain members larger than the examples' scalar values, including arrays and structures. Its size guarantee remains enough storage for each alternative, not the sum of them. Exact byte counts depend on member types, alignment rules, and the implementation. Avoid writing a file format by dumping the union's raw bytes.</p>
+<p>An invalid tag deserves an explicit error result in a public interface. The worked array creates only the two valid enum alternatives, so its switch needs no unknown-input recovery. The input practices accept only zero or one before constructing an Item. This validation is separate from the union's storage behavior.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Expecting independent old member values</h3>
+<p>After assigning amount, do not expect count to retain its earlier twelve. The alternatives overlap. If the application needs both a count and an amount simultaneously, a structure with separate fields models that requirement. Choose a union only when the data is intentionally alternative.</p>
+<h3>Using a union as a numeric cast</h3>
+<p>Storing an int and reading the double member does not calculate the corresponding floating value. It interprets a different representation and can be unsafe. Use an ordinary cast such as (double)count when conversion is the goal. Then store that converted value in the amount member if needed.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Keep the tag and payload together in an outer structure. Name tag values after meaningful alternatives rather than unexplained numbers. Centralize creation and display helpers when the number of alternatives grows. Every reader and cleanup function should branch on the same tag definitions.</p>
+<p>State what each alternative owns. A count payload needs no extra cleanup, while an owned text pointer might. Prefer a structure when both facts must coexist. A union can save storage, but its strongest value is an accurate model of one choice from several alternatives.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Unions are available in C89 and later. Designated initializers used here require C99, and all complete programs target C17. These examples read only the intended stored alternative and avoid representation punning. C17 gives no universal exact union byte size or raw binary file layout for these member types.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>A union overlaps member storage, so its alternatives are not independent values. Pair it with a tag, keep that tag consistent with assignments, and read the matching payload. Use ordinary conversions for numeric changes. Next, give named choices their own vocabulary in <a href="topic:c-enums">Enumerations</a>.</p>

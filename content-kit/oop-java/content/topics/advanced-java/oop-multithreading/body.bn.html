@@ -1,0 +1,69 @@
+<h2 id="introduction">কাজ আর কখন চলবে সেই সিদ্ধান্ত আলাদা করো</h2>
+<p class="lead">একটি কাজ রিপোর্ট হিসাব করছে, আরেকটি অনুরোধ সামলাতে পারে। <dfn>থ্রেড</dfn> একই process-এর আলাদা execution path। থ্রেডগুলো অবজেক্ট শেয়ার করতে পারে। যোগাযোগ সহজ হয়, শেয়ার করা স্টেটে ভুলের সুযোগও আসে।</p>
+<p><dfn>Concurrency</dfn>-তে একই সময়সীমার মধ্যে কয়েকটি কাজ এগোয়। Parallelism-এ আলাদা processing resource-এ সত্যিই একই সঙ্গে চলে। দুই থ্রেড বানালেই parallel বা দ্রুত হবে না। scheduler ঠিক করে কখন কে processor পাবে।</p>
+<p>সঠিক প্রোগ্রাম ভাগ্যক্রমে পাওয়া একটি schedule-এর ওপর নির্ভর করে না। কাজের কোড আর সমন্বয় আলাদা করো। কলার কখন অপেক্ষা করবে, কী ডেটা শেয়ার হবে, আপডেট কোন নিয়মে রক্ষা হবে ঠিক করো। থ্রেডের সংখ্যার চেয়ে এগুলো জরুরি।</p>
+<div class="callout note"><p class="callout-title">C জানা থাকলে</p><p>Java মেমরি সামলালেও শেয়ার করা আপডেট নিজে থেকে নিরাপদ হয় না। দুই থ্রেডে কপি হওয়া রেফারেন্স একই mutable অবজেক্ট দেখাতে পারে। garbage collection আর synchronization আলাদা সমস্যা মেটায়।</p></div>
+<h2 id="syntax">কাজ লেখো, থ্রেড চালু করো</h2>
+<pre><code class="language-java">Runnable task = () -&gt; calculate();
+Thread worker = new Thread(task);
+worker.start();
+worker.join();</code></pre>
+<p>Runnable-এর run কোনো আর্গুমেন্ট নেয় না, ফল void। এটি কাজের বর্ণনা। Thread তৈরি করলেই কাজ শুরু হয় না। start নতুন থ্রেডে execution schedule করে। সরাসরি run ডাকলে বর্তমান থ্রেডেই সাধারণ মেথড কল হয়।</p>
+<p>এক Thread একবারই start হয়। আবার চালাতে নতুন Thread বা worker সামলানো executor নাও। join-এর পরে একই অবজেক্টে start দিয়ে আবার চালানো যায় না।</p>
+<p>join নির্দিষ্ট থ্রেড শেষ হওয়া পর্যন্ত কলারকে আটকে রাখে, যদি অপেক্ষা interrupted না হয়। অ্যাপের সব থ্রেডের জন্য অপেক্ষা করে না। start-এর পরে join দাও। worker-এর দরকারি lock ধরে অপেক্ষা কোরো না।</p>
+<h2 id="how-it-works">শেষ হওয়া, দেখা যাওয়া আর atomic কাজ আলাদা করো</h2>
+<p>Completion মানে কাজ শেষ কি না। Visibility মানে এক থ্রেড অন্যটির লেখা দেখতে পায় কি না। Atomicity মানে কাজের মাঝখানে অন্য কাজ ঢুকতে পারে কি না। ডিজাইনে প্রাসঙ্গিক প্রতিটি নিশ্চয়তা লাগবে।</p>
+<p>সফল join-এর পরে অপেক্ষাকারী কলার joined থ্রেডের কাজের ফল দেখতে পায়। একই monitor ছাড়া আর পরে নেওয়ার মধ্যেও visibility-এর সম্পর্ক আছে। সময় আন্দাজ করার বদলে এসব নিয়ম মানো।</p>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">Worker A</th><th scope="col">Worker B</th><th scope="col">রাখা count</th></tr></thead><tbody>
+<tr><td>1</td><td>5 পড়ে</td><td></td><td>5</td></tr>
+<tr><td>2</td><td></td><td>5 পড়ে</td><td>5</td></tr>
+<tr><td>3</td><td>6 লেখে</td><td></td><td>6</td></tr>
+<tr><td>4</td><td></td><td>6 লেখে</td><td>6</td></tr>
+</tbody></table>
+<p>এটি <dfn>lost update</dfn>: দুজনই count++ করলেও count একবার বাড়ে। int পড়া বা লেখা atomic হলেও পুরো পড়া-যোগ-লেখা একসঙ্গে atomic নয়। volatile visibility বাড়ায়, এই একাধিক ধাপের কাজ ঠিক করে না।</p>
+<p>synchronized ইনস্ট্যান্স মেথড receiver-এর monitor নেয়। এক সময়ে একজনই তা ধরে। প্রতি worker-এ একই monitor দিয়ে পুরো increment রক্ষা করো। আলাদা দুটি Counter-এর lock একটি shared মান সমন্বয় করবে না।</p>
+<h2 id="examples">সময় বদলালেও রিপোর্টের ফল একই রাখো</h2>
+<h3>নির্দিষ্ট worker-এর জন্য অপেক্ষা</h3>
+<p>Runnable, Worker finished লেখে। Main সেই থ্রেড join করে তারপর নিজের পরের মেসেজ দেয়। scheduler দেরি করালেও দুই লাইনের ক্রম নির্দিষ্ট। কারণ কাজ শেষের সম্পর্ক, বেছে নেওয়া delay নয়।</p>
+<div data-example="ex-1"></div>
+<h3>এক শেয়ার করা monitor-এ increment</h3>
+<p>দুই worker একই Counter-এ এক হাজারবার করে increment করে। আপডেট আর রিড synchronized। Main দুটিকে join করে পড়ে। মাঝের ক্রম যেমনই হোক ফল 2000।</p>
+<div data-example="ex-2"></div>
+<h3>managed task-এর ফল চাও</h3>
+<p>single-thread executor একটি Callable চালিয়ে 30 ফেরায়। submit তার Future দেয়। get অপেক্ষা করে ফল আনে। finally-তে executor shutdown হয়, তাই worker অনন্ত সময় কাজের জন্য খোলা থাকে না।</p>
+<div data-example="ex-3"></div>
+<h3>বিরতিতে interruption দেখো</h3>
+<p>শেষ উদাহরণে ঘুমন্ত worker-কে অপেক্ষা ছাড়তে বলা হয়। সাধারণত Rest cancelled আসে, তবে schedule-এ আগে Rest completed-ও হতে পারে। কোড কম্পাইল হয়, এক নির্দিষ্ট আউটপুট ধরা হয় না। sleep দিয়ে অন্য কাজ কোন ধাপে পৌঁছেছে প্রমাণ হয় না।</p>
+<div data-example="ex-4"></div>
+<h2 id="sleep-and-interruption">বন্ধ করার অনুরোধে সহযোগিতা করো</h2>
+<p>Thread.sleep বর্তমান থ্রেডকে আনুমানিক সময় থামায়; scheduling আর interruption-এ প্রভাব পড়ে। আগে নেওয়া monitor ছাড়ে না। synchronized কোডে sleep করলে অন্য worker আটকে থাকতে পারে।</p>
+<p>interrupt সহযোগিতার অনুরোধ। sleep বা join-এ InterruptedException আসতে পারে, সেই delivery-তে interrupt status পরিষ্কার হয়। মেথড checked exception বাইরে পাঠাতে না পারলে Thread.currentThread().interrupt() দিয়ে flag ফেরাও, যাতে বাইরের কোড বুঝতে পারে।</p>
+<p>flag ফেরানো মানে স্বাভাবিক কাজ অনন্ত চালানো নয়। উপযুক্ত return বা থামার পথ নাও। CPU-bound task সুবিধাজনক ধাপে cancellation দেখুক। blocking I/O-র নিজস্ব নিয়ম থাকতে পারে; সব মেথড sleep-এর মতো নয়।</p>
+<p>deprecated Thread.stop দিয়ে জোর করে থামিয়ো না। অর্ধেক আপডেটের অবজেক্ট দেখা যেতে পারে। নিরাপদ cancellation point-এ পৌঁছে থামবে, shared স্টেট বৈধ রাখবে এমন কাজ লেখো।</p>
+<p>দরকারি lock ধরে শেষ হওয়ার অপেক্ষায় deadlock হয়। Main Counter monitor ধরে worker join করছে, worker পরের কাজে ওই monitor চাইছে। দুজনই অন্যজনের অপেক্ষায়। lock আর অপেক্ষা ছোট আর বুঝে রাখো।</p>
+<h2 id="executors">task পাঠানো আর worker সামলানো আলাদা করো</h2>
+<p>ExecutorService task নেয়, চালানো সামলায়। ফল ছাড়া কাজে Runnable। Callable&lt;T&gt; থেকে T আসে, checked exception-ও দিতে পারে। submit দুটোকেই Future-এ মোড়ায়; শেষ হয়েছে কি না দেখা বা অপেক্ষা করা যায়।</p>
+<p>task ব্যর্থ হলে Future.get, ExecutionException দিতে পারে; তার cause-এ আসল ব্যর্থতা থাকে। অপেক্ষায় interrupt-ও হতে পারে। ব্যর্থ task নিজে থেকে ব্যবহারকারীর ভালো মেসেজ দেয় না। পাঠানো স্তরকে জানানো বা বাইরে পাঠানোর নীতি নিতে হয়।</p>
+<p>shutdown নতুন task নেওয়া বন্ধ করে, আগেরগুলো শেষ হতে দেয়। নিজে termination পর্যন্ত অপেক্ষা করে না। সব শেষ জানা লাগলে timeout-সহ awaitTermination নাও। shutdownNow interruption চায় আর শুরু না হওয়া queued কাজ ফেরায়। সহযোগিতা না করা task সঙ্গে সঙ্গে থামবে এমন নয়।</p>
+<p>কনসোলে task-এর সীমা আর cleanup জরুরি। executor-এর সাধারণ worker process বাঁচিয়ে রাখতে পারে। shutdown বাদ পড়লে সঠিক উত্তর ছাপিয়েও প্রোগ্রাম বন্ধ না হতে পারে।</p>
+<p>Java 17-এ ExecutorService, AutoCloseable নয়। নতুন Java-র try-with-resources উদাহরণ কপি না করে finally নাও। যে release-এ কম্পাইল করছ তার API মেলাও।</p>
+<h2 id="locking-design">আলাদা লাইনের বদলে নিয়ম রক্ষা করো</h2>
+<p>ব্যাংক transfer-এ শুধু getter-setter আলাদাভাবে synchronized হলেই হয় না। balance দেখা আর টাকা কাটা এক protected অপারেশন হতে হবে, নইলে মাঝখানে অন্য থ্রেড বদলাবে। পুরো নিয়মের আপডেট atomic করো।</p>
+<p>static synchronized ক্লাসের Class অবজেক্ট lock করে। ইনস্ট্যান্স synchronized receiver lock করে। monitor আলাদা। দুই মেথডেই synchronized আছে বলে একে অন্যকে রক্ষা করে না।</p>
+<p>সম্ভব হলে shared mutable স্টেট কমাও। worker নিজের লোকাল ফল হিসাব করে Future-এ ফেরাক। সবাই মিলে বড় রিপোর্ট বদলানোর চেয়ে ভাবা সহজ। ইচ্ছাকৃত sharing-এ synchronization লাগে; sharing কমলে সম্ভাব্য মিশ্র ক্রমও কমে।</p>
+<h2 id="zero-work">খালি কাজেও সমন্বয় রাখো</h2>
+<p>n শূন্য হলে দুই worker চালু হয়ে increment ছাড়াই শেষ হয়। Main তবু join করে পড়ে। বড় ইনপুটের একই নিয়মে ফল শূন্য। খালি কাজের জন্য timing shortcut না রেখে একই completion rule রাখো।</p>
+<p>executor-এর square-sum অনুশীলনে কোনো পদ না থাকলে task-local accumulator শূন্য দেয়। শুধু শেষ ফল Future পেরোয় বলে shared counter লাগে না।</p>
+<h2 id="common-mistakes">schedule আন্দাজের বদলে নির্দিষ্ট সমন্বয় নাও</h2>
+<h3>shared ফল ছাপার আগে sleep</h3>
+<p>ল্যাপটপে লম্বা delay কাজ করলেও ব্যস্ত মেশিনে ব্যর্থ হতে পারে। join, Future বা নথিবদ্ধ completion ব্যবস্থা নাও। সময় গেলেই কাজ শেষ বা লেখা দৃশ্যমান হয় না।</p>
+<h3>প্রতি কলে নতুন lock</h3>
+<p>নতুন lock আলাদা; worker-রা একে অন্যকে আটকায় না। shared স্টেটের সঙ্গে একটি স্থির lock রাখো। কোন ফিল্ড রক্ষা করে বলো।</p>
+<h3>interruption বাদ দেওয়া</h3>
+<p>খালি catch-এ cancellation অকার্যকর হয়। সুযোগ থাকলে বাইরে পাঠাও, নইলে status ফিরিয়ে নিরাপদ পথে বের হও। বন্ধ করার অনুরোধকে অকারণ সফলতা বানিয়ো না।</p>
+<h2 id="best-practices">সমন্বয় ছোট রাখো</h2>
+<ul><li>প্রতি task-এ সীমিত দায়িত্ব আর স্পষ্ট ফল দাও।</li><li>পরের কাজ যার শেষের ওপর নির্ভর করে তাকে join করো।</li><li>এক নিয়মিত locking policy দিয়ে পুরো শর্ত রক্ষা করো।</li><li>monitor ধরে ধীর কাজ এড়াও।</li><li>executor shutdown করো, cancellation-এর নিয়ম বোঝাও।</li></ul>
+<h2 id="version-notes">Java 17-এর concurrency</h2>
+<div class="callout version"><p>Thread, Runnable, synchronized আর ExecutorService Java 17-এ আছে। virtual thread পরের release-এর, এখানে নেই। Java 17-এ পরের AutoCloseable executor চুক্তি নেই বলে স্পষ্ট shutdown আছে।</p></div>
+<h2 id="summary">schedule বদলালেও কাজ সঠিক থাকবে</h2>
+<p>task কাজ বলে, join আর Future শেষ হওয়া সমন্বয় করে, shared monitor একাধিক ধাপের আপডেট রক্ষা করে। interruption আর cleanup-ও চুক্তির অংশ। এবার <a href="topic:oop-swing-basics">Swing-এর বেসিকসে</a> একটি event thread-এ সেই নিয়ম লাগাও।</p>

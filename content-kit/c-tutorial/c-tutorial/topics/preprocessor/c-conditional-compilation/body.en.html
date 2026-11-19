@@ -1,0 +1,67 @@
+<h2 id="introduction">Build only the source variant you need</h2>
+<p class="lead">During development, a program may print extra trace messages. A release build may omit them. You could delete and restore those lines by hand, but that makes mistakes likely. <dfn>Conditional compilation</dfn> keeps the alternatives in the source and lets preprocessing select which tokens reach the C compiler.</p>
+<p>Think of preparing two versions of a lab sheet from one master copy. One version includes hints, and the other leaves them out. The decision happens before printing. Similarly, a debug macro can include trace code before the executable exists. Runtime student input cannot change which branch was compiled.</p>
+<p>The #if family tests preprocessing conditions. #ifdef checks whether a macro exists, while #if can test its numeric value. That distinction is essential for a configuration such as DEBUG defined as zero. The name exists, but its numeric feature flag is disabled.</p>
+<p>Conditional source can also isolate platform-specific declarations or choose a supported implementation. Keep such branches small and document their assumptions. A build that compiles on one platform does not prove every excluded alternative is valid. Each maintained variant needs its own compilation and meaningful execution.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>An #if group ends with #endif. Optional #elif branches test further conditions in order, and an optional #else handles the remaining case. Only the first selected branch contributes C tokens. Nested groups are possible, but every opening directive must have a matching end.</p>
+<p>Use #ifndef NAME to provide a default only when the build did not already define NAME. A command-line definition such as gcc -DDEBUG=1 can then override that default. Keep the source default and the build setting consistent across files that share interfaces or structure definitions.</p><pre><code class="language-c">#ifndef DEBUG
+#define DEBUG 0
+#endif
+#if DEBUG
+#define LABEL &quot;debug&quot;
+#else
+#define LABEL &quot;release&quot;
+#endif
+</code></pre><table class="ref"><thead><tr><th scope="col">Directive</th><th scope="col">Question</th></tr></thead><tbody><tr><td>#ifdef DEBUG</td><td>Does the macro name exist?</td></tr><tr><td>#ifndef DEBUG</td><td>Is the macro name absent?</td></tr><tr><td>#if DEBUG</td><td>Is the expanded integer expression nonzero?</td></tr><tr><td>#elif condition</td><td>Does this later condition match?</td></tr><tr><td>#else</td><td>Was no earlier branch selected?</td></tr><tr><td>#endif</td><td>Where does this source choice finish?</td></tr></tbody></table>
+
+<h2 id="how-it-works">Definition and truth are different tests</h2>
+<p>The first example defines DEBUG as zero. #ifdef DEBUG is true because the macro exists, so its message is included. The later #if DEBUG expands to #if 0 and selects the disabled message. The output therefore contains both DEBUG is defined and debug disabled. These statements describe different properties without contradiction.</p>
+<p>For a numeric feature flag, prefer #if DEBUG when the project convention says zero means off. For an existence-only marker, use #ifdef. Do not mix those conventions silently across files. A flag that one file treats as disabled and another treats as present can enable incompatible pieces of code.</p>
+<p>The room-size example tests conditions in order. Thirty does not meet the first threshold of fifty but meets the second threshold of twenty. The preprocessor keeps the medium-room call and removes the other calls. The result cannot change because a runtime variable later happens to be thirty or fifty.</p>
+<p>Preprocessing integer expressions have their own limits. They cannot use sizeof, cast values with ordinary type names, or inspect enum constants as C declarations. After macro expansion, remaining identifiers become zero. Use defined(NAME) to test macro presence explicitly within a larger condition, such as defined(FEATURE) &amp;&amp; FEATURE.</p>
+<p>The platform example checks implementation-supplied macro conventions, including __linux__ and _WIN32. These names are not universal C17 requirements. Their spelling and meaning come from supported toolchains. The fallback branch keeps an ordinary message for other targets, rather than pretending every non-Linux system is Windows.</p>
+<p>The debug example supplies DEBUG=0 only if no definition exists. Its registered build passes -DDEBUG=1, so the trace line is included. Compiling the same source without that flag omits the trace. Compare actual builds to inspect the two variants; a runtime condition cannot bring excluded tokens back.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The conditional programs test macro presence, numeric thresholds, platform conventions, and command-line configuration. The platform message records the current target rather than a universal output. The debug program's build flag is part of the example's configuration, so reproduce that flag when compiling it manually.</p>
+
+<h3>A defined flag can still be disabled</h3>
+<p>The #ifdef branch tests macro existence and survives. The separate #if branch tests the expanded value zero and selects its else. The two printed lines are DEBUG is defined and debug disabled. This is a useful check when a release configuration supplies zero instead of removing the macro entirely.</p>
+<div data-example="ex-1"></div>
+
+<h3>Select one capacity category</h3>
+<p>The first condition requires at least fifty and fails. The next requires at least twenty and succeeds, so only medium room is compiled. The final else is excluded. The ordered conditions matter: placing the broad twenty threshold first would consume values that should have selected the larger category.</p>
+<div data-example="ex-2"></div>
+
+<h3>Identify a documented platform convention</h3>
+<p>The Linux and Windows checks use implementation conventions rather than standard C names. Other targets take the fallback. The recorded run prints Platform: Linux on this environment. The program demonstrates guarded source selection, not a portable operating-system detection API. Every target still compiles only a small ordinary string-printing branch.</p>
+<div data-example="ex-3"></div>
+
+<h3>Enable traces with a build flag</h3>
+<p>The #ifndef default leaves the command-line value intact. This example is compiled with -DDEBUG=1 and prints trace: entering main, then Result: 12. Without the definition, the source default zero omits the trace but keeps Result: 12. The observation does not perform any essential calculation, so disabling it does not alter the intended result.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Excluded code still has source-level obligations</h2>
+<p>An excluded branch is not compiled as ordinary C, so it can contain declarations unavailable on the current platform. However, the file must still have valid preprocessing token structure and balanced conditional directives. An unterminated comment or malformed token can affect translation before branch exclusion helps. Do not use #if 0 as a general repair for broken source spelling.</p>
+<p>A debug-only expression must not perform work required for correctness. If an increment or resource release appears only under DEBUG, disabling traces changes program behavior. Keep diagnostic observation separate from essential state changes. A release variant should compute the same intended result after removing extra messages.</p>
+<p>A missing macro in #if silently behaves like zero after the required preprocessing steps. A typo such as DEUBG can therefore select the wrong branch without a basic syntax error. GCC's -Wundef can warn about unrecognized identifiers in conditions. A shared configuration header can also centralize expected flag definitions.</p>
+<p>For unsupported configurations, #error can stop translation with a clear message. For example, a source file can reject an invalid numeric feature level rather than silently choosing an arbitrary fallback. That is a build-time error policy. It does not replace runtime validation for user input.</p>
+<p>Keep declarations compatible when separate files communicate. If a macro changes a record layout in one file but not another, compilation may succeed locally while linked code disagrees about the object. Pass consistent flags to every related translation unit. The later multi-file lesson develops that boundary in more detail.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Using #ifdef for a zero-valued enable flag</h3>
+<p>If the project defines DEBUG=0 for release, #ifdef DEBUG still includes its branch. Use #if DEBUG for that convention. Reserve presence checks for macros whose existence itself is the intended signal. Read the flag contract before replacing one conditional form with another.</p>
+<h3>Assuming a platform macro is standard C</h3>
+<p>__linux__ and _WIN32 are toolchain conventions, not guaranteed macros on all C17 systems. Use documented checks for the supported platforms and provide a fallback or clear error for others. Do not infer hardware byte order or type widths solely from a broad operating-system label.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Choose a consistent flag style and write defaults near their use or in a shared configuration header. Keep condition groups short enough that the matching #endif is easy to find. Name configuration levels and accepted values clearly. Avoid a maze of nested platform branches when a small wrapper function can isolate the difference.</p>
+<p>Compile and run each supported variant. Check debug and release outputs for the same essential result, then compare only the intentional traces. Record the exact flags used for a platform-sensitive failure. Excluded source is still maintained source, so it needs periodic real builds instead of permanent assumptions.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>#if, #ifdef, #ifndef, #elif, #else, and #endif are available in C89 and later. All runnable examples use C17. Command-line -D syntax belongs to the compiler driver. Platform macros vary by implementation. C23's newer conditional directives are unnecessary here; the existing family expresses every source choice in these programs.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>Conditional compilation selects source before execution. Distinguish a defined macro from a nonzero flag, keep platform conventions explicit, and test every supported variant. Defaults guarded by #ifndef allow intentional build overrides. Next, apply macro presence checks to repeated header inclusion in <a href="topic:c-header-files-guards">Header Files and Include Guards</a>.</p>

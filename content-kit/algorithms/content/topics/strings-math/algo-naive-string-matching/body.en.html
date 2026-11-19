@@ -1,0 +1,66 @@
+<h2 id="introduction">Slide a word across a sentence</h2>
+<p class="lead">Imagine looking for a short course code inside a notice. Place the code under the first possible text position and compare letters. If it fails, move it one position right and try again. Naive string matching applies this direct idea to every legal start.</p>
+<p>Let n be the text length and m the pattern length. A complete pattern fits at starts zero through n-m when m&lt;=n. Each alignment compares text[start+j] with pattern[j], beginning at j=0.</p>
+<p>Our examples use nonempty lowercase Latin tokens and count overlapping occurrences. In ababa, the pattern aba appears at starts zero and two. The second occurrence shares the final a of the first. Whether overlaps count is part of the problem statement, not an implementation detail.</p>
+
+<h2 id="syntax">Keep the end of the window inside the text</h2>
+<p>Use the condition start+m&lt;=n. The right boundary n is excluded, so a window ending exactly there is valid. Inside the window, j&lt;m protects the pattern and text accesses.</p>
+<p>The inner loop stops at its first mismatch or after m successful comparisons. Only j==m means a full occurrence. Matching a prefix of the pattern does not count.</p>
+<p>The main program records character comparisons, including the mismatch that ends an alignment. This definition lets you compare the trace table with an actual operation count. It is different from counting successful comparisons only.</p>
+<pre><code class="language-text">count = 0
+for start = 0 while start + m &lt;= n:
+    j = 0
+    while j &lt; m:
+        compare text[start + j] with pattern[j]
+        if different: break
+        j++
+    if j == m: report start; count++</code></pre>
+
+<h2 id="how-it-works">Restart the pattern at each alignment</h2>
+<p>For ababa against aba, start zero succeeds after three comparisons. At start one, b differs from a immediately. Start two succeeds after three more comparisons. The total is two occurrences and seven character comparisons.</p>
+<p>After a match, moving one position preserves overlaps. Moving m positions instead creates a nonoverlapping policy. Both may be useful, but they answer different questions. The third example makes that alternative explicit.</p>
+<p>A first-occurrence search may stop after its first match. Counting all occurrences must continue through the final legal alignment. Starting the next comparison from a remembered partial prefix would be a different algorithm and needs a reason for that reuse.</p>
+<p>The lab displays the text, a separator and the pattern in one array. For an empty pattern, it explicitly matches all n+1 boundaries; the C token examples require nonempty patterns. An empty text with a nonempty pattern has no matches.</p>
+<div data-lab="naive-matching"></div>
+
+<h2 id="examples">Read the complete C programs</h2>
+<h3>Count every overlapping occurrence</h3>
+<p>Input ababa aba reports starts zero and two, count two, comparisons seven. Try aaaaa aaa to see three overlapping matches. Every legal start is tested even after success.</p>
+<div data-example="ex-1"></div>
+<h3>Stop at the first occurrence</h3>
+<p>The strncmp-based program returns the first matching position or minus one. It still tests complete pattern-sized windows, so the library comparison never reads beyond the validated string window.</p>
+<div data-example="ex-2"></div>
+<h3>Choose a nonoverlapping policy</h3>
+<p>For aaaaa with pattern aa, the third program counts two nonoverlapping matches. After success it advances by two, while a mismatch advances by one. The ordinary overlapping count would be four.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="trace">Include the mismatch comparison</h2>
+<p>The same text position can be compared at several alignments. That repeated work is the main inefficiency of naive matching. Later algorithms will use information from previous comparisons to avoid some repetitions.</p>
+<table class="ref"><caption>ababa searched for aba</caption><thead><tr><th scope="col">Start</th><th scope="col">Compared pairs</th><th scope="col">Result</th><th scope="col">Comparisons</th></tr></thead><tbody><tr><td>0</td><td>a=a, b=b, a=a</td><td>Match</td><td>3</td></tr><tr><td>1</td><td>b differs from a</td><td>Mismatch</td><td>1</td></tr><tr><td>2</td><td>a=a, b=b, a=a</td><td>Match</td><td>3</td></tr></tbody></table>
+
+<h2 id="correctness">No legal start is skipped</h2>
+<p>Before each outer iteration, every earlier start has been classified. The inner loop maintains that the first j pattern bytes equal the aligned text bytes. A mismatch proves this alignment cannot match; reaching j==m proves every pattern byte agrees.</p>
+<p>The outer loop visits every fitting start exactly once. It therefore reports every occurrence and no invalid one. Overlaps need no special exception because starts advance by one regardless of the previous result.</p>
+
+<h2 id="complexity">Repeated prefixes create the worst case</h2>
+<p>For 1&lt;=m&lt;=n, there are n-m+1 starts, each requiring at most m comparisons. The worst-case time is O((n-m+1)*m), commonly written O(nm). A text of many a letters and a pattern of many a letters ending in b forces long failures repeatedly.</p>
+<p>If every first comparison fails, the scan uses one comparison per start. Input reading still costs O(n+m). Searching needs O(1) extra working space beyond the strings and any retained list of matches.</p>
+<p>When m&gt;n, there are no search alignments. We use signed lengths in the bounded demonstrations, avoiding unsigned subtraction n-m that could wrap to a huge value.</p>
+
+<h2 id="edge-cases">Decide what an empty pattern means</h2>
+<p>The token interface does not accept an empty pattern. Some mathematical conventions match it at every boundary, giving n+1 starts; some applications reject it. Choose a policy before extending the program.</p>
+<p>A one-byte pattern can occur at every text position. A pattern equal to the whole text has exactly one legal alignment. A longer pattern has none. These boundaries are useful checks for the outer-loop condition.</p>
+
+<h2 id="common-mistakes">A partial match is not an occurrence</h2>
+<p>Counting whenever the first character matches overcounts longer patterns. Require all m comparisons to succeed. Another off-by-one error uses start+m&lt;n and misses the window ending at the final byte.</p>
+<p>Do not treat the zero terminator as another text character. strlen excludes it, and the search bounds should do the same. Byte positions here do not represent Bangla grapheme positions; multibyte text needs a specified encoding and index policy.</p>
+
+<h2 id="best-practices">Keep a direct reference implementation</h2>
+<p>Naive matching is easy to inspect and useful for short strings or as a reference for a faster search. Test repeated letters, a missing first letter, an exact whole-text match and a pattern longer than the text.</p>
+<p>Measure comparisons under a clear definition. A faster elapsed run on one short sample does not change the worst-case bound, and library optimisations can obscure small timing differences.</p>
+
+<h2 id="version-notes">Bounded strings in C17</h2>
+<p>The input buffers hold twenty-four letters plus a terminator. Field widths and lowercase checks enforce the intended token domain. C17 string functions operate on bytes ending at a zero byte; they do not understand user-perceived Unicode characters.</p>
+
+<h2 id="summary">Every fitting start gets a test</h2>
+<p>Naive matching classifies every legal alignment independently. Its simple invariant makes a useful baseline, while repeated prefixes reveal its O(nm) weakness. KMP improves that repeated work by remembering pattern borders.</p>

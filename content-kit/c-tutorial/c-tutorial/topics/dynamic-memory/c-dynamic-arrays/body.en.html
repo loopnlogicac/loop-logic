@@ -1,0 +1,72 @@
+<h2 id="introduction">Choose the shape before the pointer type</h2>
+<p class="lead">A lab timetable has rows and columns, but a computer still stores bytes at addresses. You choose how the row idea maps onto those bytes. A <dfn>dynamic array</dfn> gets its storage during execution. A dynamic matrix can use one continuous block or several separately allocated rows. Those layouts need different pointer types and different cleanup.</p>
+<p>For one dimension, an int pointer and a count describe the collection. You allocate count integers, initialize them, and use indices below count. A maximum-mark search then works like a fixed-array search. The storage source changes, but the algorithm's valid index range does not.</p>
+<p>For two dimensions, a flat block is a natural choice when every row has the same width. A table of row pointers is useful when rows need different lengths or separate growth. The double subscript grid[r][c] is convenient, but its appearance does not tell you which allocations exist underneath.</p>
+<p>Decide the ownership picture before writing loops. A flat matrix has one owned allocation. A separate-row matrix owns an outer pointer table plus each completed row. Failure partway through construction must release only the objects that actually exist. A drawing is often the quickest way to check that responsibility.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>A flat matrix maps row r and column c to offset r*cols+c. This is row-major order: every element of row zero comes before row one. Keep cols available wherever you calculate an offset. A flat int * does not accept two subscripts by itself because its first subscript produces an int, not another pointer.</p>
+<p>A separate-row matrix uses int **. The outer allocation stores int * objects. Each row allocation stores ints. Write sizeof *grid for one outer entry and sizeof *grid[r] for one row element. These expressions describe different types even when their byte sizes happen to match on a machine.</p><pre><code class="language-c">int *flat = malloc(rows * cols * sizeof *flat);
+/* flat[r * cols + c] selects one integer. */
+int **grid = malloc(rows * sizeof *grid);
+/* grid[r] must receive its own successful row allocation. */
+</code></pre><table class="ref"><thead><tr><th scope="col">Layout</th><th scope="col">Cell access</th><th scope="col">Release</th></tr></thead><tbody><tr><td>One flat block</td><td>flat[r*cols+c]</td><td>free(flat) once</td></tr><tr><td>Separate rows</td><td>grid[r][c]</td><td>Free each row, then grid</td></tr><tr><td>Fixed-width local matrix</td><td>matrix[r][c]</td><td>No free of automatic storage</td></tr></tbody></table>
+
+<h2 id="how-it-works">Translate a cell into an owned object</h2>
+<p>For two rows and three columns, a flat block contains six integers. Row one starts after three integers, so cell (1,2) has offset five. Multiplying an element offset by sizeof(int) gives its byte offset when explaining addresses. In the actual expression, C pointer arithmetic scales by the element type automatically.</p>
+<p>The flat example stores r*10+c in each cell. Row zero holds 0, 1, and 2. Row one holds 10, 11, and 12. The total is 36 and cell (1,2) is 12. A single free releases the full rectangle because no row was allocated independently.</p>
+<p>The row-table example first allocates two pointer entries. Only after a row request succeeds is that row entry usable. At row r, the earlier rows zero through r-1 already exist. If the current request fails, release exactly those earlier rows and then release the table. No cleanup loop reads the unfinished entry.</p><pre class="diagram">flat ----&gt; [0][1][2][10][11][12]
+            row 0     row 1
+
+grid ----&gt; [row pointer 0][row pointer 1]
+                 |               |
+                 v               v
+              [0][1][2]       [10][11][12]
+
+flat: one allocation; grid: three allocations here</pre><p>The separate rows are not guaranteed adjacent. Never use grid[0][cols] to reach the next row; it is outside row zero. Use grid[1][0], which first loads row one's pointer from the table. Similarly, casting the flat block to int ** cannot create row pointer objects where only integers exist.</p>
+<p>A pointer-to-array offers another rectangular layout, written int (*matrix)[COLS] for a fixed column count. It selects whole rows in one allocation and permits matrix[r][c]. With run-time column types, support involves variable-length-array features, which some C17 implementations may omit. The flat representation avoids that requirement while keeping a single allocation.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>Compare identical cell values under the two matrix layouts. The values agree because the filling rule agrees; the allocation and release steps differ. The one-dimensional search program adds a different lesson: choose the first actual element as the maximum seed so an all-negative list works correctly.</p>
+
+<h3>A rectangular matrix in one block</h3>
+<p>The flat program calculates every offset using the column count. The two-by-three shape makes the stride visible: the second row begins at index three. All six cells are written before they are read into total. The printed cell value is 12 and the total is 36. free(grid) releases all rows because they are parts of one allocation.</p>
+<div data-example="ex-1"></div>
+
+<h3>The same rectangle with separate rows</h3>
+<p>The outer allocation contains row pointers rather than marks. Each successful inner allocation adds one owned row. If an inner request fails, cleanup walks only the rows already constructed. The successful path prints Cell: 12, releases each row, and finally releases the table. Similar indexing does not mean the rows share one block.</p>
+<div data-example="ex-2"></div>
+
+<h3>Find a maximum in a dynamic vector</h3>
+<p>The vector program reads a positive count and then exactly that many bounded integers. It seeds largest with values[0] after every input value is known. This handles one element and lists containing only negative numbers. Compare that logic with an incorrect initial maximum of zero. Input failure after allocation also releases the block before returning.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Dimensions, products, and partial rows</h2>
+<p>Check both dimensions before constructing a matrix. A negative signed dimension must be rejected before conversion to size_t. For unrestricted dimensions, verify rows*cols before multiplying: if rows is nonzero, require cols no greater than SIZE_MAX/rows. Then require the element count no greater than SIZE_MAX/sizeof *flat. These two guards protect the full byte product.</p>
+<p>For row tables, check the outer rows*sizeof *grid product and each row's cols*sizeof *grid[r] product separately. The fixed dimensions in the examples and the limits up to five in the exercises keep all products small. That is a stated domain restriction, not a replacement for guards in a general library.</p>
+<p>A zero-row or zero-column collection needs an API policy. One reasonable design uses a NULL data pointer and records its dimensions without allocating any cells. These matrix exercises require positive dimensions, which gives every matrix at least one cell. The earlier empty-vector exercise shows the alternative empty collection pattern.</p>
+<p>A jagged matrix has varying row lengths. Keep a length for each row if later operations will revisit them. A total computed while filling can finish without retaining those lengths, as in the practice problem. A reusable table should store lengths so search, printing, and bounds checks know each row's valid extent.</p>
+<p>Construction and cleanup need not use the same representation for their counters. The completed-row count is enough to release rows after failure. Initializing an outer table with calloc is not a portable substitute for explicitly establishing NULL pointer values. Instead, use a completed count, or assign each pointer entry NULL before relying on that empty state.</p>
+
+<h3>Pass the representation honestly</h3>
+<p>A helper for a flat matrix can accept an int pointer plus row and column counts. A helper for separate rows instead accepts a row-pointer table and the required row lengths. These interfaces should not share a misleading int double-pointer signature merely because both algorithms describe a grid. Let the parameter types reflect the actual stored objects.</p>
+<p>When a matrix is read mostly by rows, adjacent storage can improve cache use. Separately allocated rows introduce another pointer load and may be spread across memory. That tradeoff is a reason to measure, not a guarantee that every flat-matrix operation wins. Independent row replacement and genuinely different row lengths can make the pointer table the simpler model.</p>
+<p>For a constructor that returns a complete matrix owner, keep dimensions and the data pointer together. Do not expose a partially initialized grid as a successful result. Finish all required rows first, then transfer ownership. Failure cleanup stays inside construction, where the completed-row count is already known.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Freeing the outer table first</h3>
+<p>After free(grid), reading grid[r] to find row addresses is invalid. You may also lose the only usable addresses of all rows. Release the row allocations while the table is still live. Only then release the outer pointer array. The order follows the ownership arrows in reverse.</p>
+<h3>Treating a rectangle as int **</h3>
+<p>A flat array contains integer objects, not stored row pointers. An int ** access expects to load a pointer before reaching a cell. A cast changes the expression's type but does not manufacture the missing pointer entries. Pick the right layout and indexing expression instead of forcing incompatible representations together.</p>
+<h3>Using the wrong stride</h3>
+<p>For a rectangular flat array, the row stride is cols. Using rows in r*rows+c accidentally works for some square matrices, then fails for rectangles. Test at least one non-square case, such as two by three. Check the last cell offset against rows*cols-1.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Choose a flat matrix when rows share one width and are usually processed together. It requires fewer allocations and gives adjacent cells useful locality. Choose row pointers when rows differ in length or need independent lifetimes. More flexible ownership costs extra bookkeeping and more failure paths.</p>
+<p>Write row and column bounds beside helper parameters. Save dimensions in the same owner object when a matrix must travel between functions. During cleanup, rely on the completed-row count rather than assumptions about uninitialized entries. When performance matters, measure the real access pattern instead of assuming all double-subscript code has the same layout.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>The flat and row-pointer examples target C17 using C99 loop declarations. They do not require variable-length arrays. C11 and C17 allow implementations without VLA support, so run-time pointer-to-array examples need a support check. The basic pointer-table and malloc interfaces remain widely available. C does not promise that independently allocated rows are contiguous.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>A dynamic vector needs a pointer and length. A flat matrix adds a column stride, while a row table adds owned row allocations and lengths. Validate dimensions before products, initialize cells, and release rows before their table. Continue to <a href="topic:c-structures">Structures</a> to group related values into records.</p>

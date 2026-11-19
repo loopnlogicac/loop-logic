@@ -1,0 +1,57 @@
+<h2 id="introduction">Keep one student record together</h2>
+<p class="lead">A student's roll, name, and mark belong together. Three unrelated variables can hold them, but the relationship lives only in your memory. A <dfn>structure</dfn> groups named members into one record. Unlike an array, those members can have different types. You can then describe one student with one variable.</p>
+<p>Think of a structure as a form with labeled boxes. The labels are member names such as roll and mark. The structure definition describes the form's layout. A structure variable is one filled or partially filled form. Defining the form alone does not create a student object.</p>
+<p>You already know arrays collect many values of one element type. A structure solves a different problem: combining unlike facts about one thing. Later, an array of structures will combine many student records. First learn how to initialize one record, select its members, and copy it without losing the relationship between its fields.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>The keyword struct begins a structure definition. Student is its tag. Each member declaration ends with a semicolon, and the full definition ends with another semicolon after the closing brace. To create an object, write struct Student followed by the variable name. The tag alone is not a type alias in C.</p>
+<p>Use the dot operator to select a member of an actual structure object. student.mark is an int expression. student.name is a character array member with its own capacity. Each selected member follows the rules of its declared type, including string termination and numeric bounds.</p><pre><code class="language-c">struct Student {
+    int roll;
+    char name[20];
+    int mark;
+};
+
+struct Student student = {.roll = 17, .name = &quot;Learner&quot;, .mark = 82};
+</code></pre><table class="ref"><thead><tr><th scope="col">Notation</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>struct Student</td><td>The record type</td></tr><tr><td>student</td><td>One object of that type</td></tr><tr><td>student.roll</td><td>The integer roll member</td></tr><tr><td>student.name</td><td>The embedded character array</td></tr></tbody></table>
+
+<h2 id="how-it-works">Initialize members and then read them</h2>
+<p>A positional initializer follows declaration order. In {11, "Alpha", 65}, the values initialize roll, name, and mark respectively. A designated initializer names its destinations, as in .mark=82. That form makes the relationship visible even if you list members in a different order.</p>
+<p>An omitted member in an aggregate initializer receives the appropriate zero initialization. For {.roll=23}, mark becomes zero and every character of name becomes a null character. This is different from declaring an automatic struct variable with no initializer. Uninitialized automatic members do not become safe values because they share a structure.</p>
+<p>A whole-structure assignment copies member values. The embedded name array is copied as part of that assignment, even though you cannot assign one standalone array to another. After second=first, changing second.name[0] does not change first.name[0]. The objects have separate embedded arrays.</p>
+<p>Whole-structure copying is not a general deep-copy operation. If a different structure contains a pointer, assignment copies the pointer value rather than its target. That distinction becomes important in <a href="topic:c-structures-and-pointers">Structures and Pointers</a>. For now, the student record owns its name characters directly inside the record.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>Read each printed line as a view of named fields. The first program fills every field. The second copies a complete student and then changes only the copy. The third deliberately omits members from an initializer so you can observe their defined initial values before updating the mark.</p>
+
+<h3>Initialize one student record</h3>
+<p>Each initializer names the member it fills. The embedded name has room for the text and its terminating null character. printf receives three selected member values with matching formats. The record definition creates the type, while the declaration inside main creates the actual student. The output line keeps all three facts about that one student together.</p>
+<div data-example="ex-1"></div>
+
+<h3>Copy a record with an embedded name</h3>
+<p>second=first copies all member values, including the name's character array. The later assignments affect only second. Changing its first character produces Olpha, while first still contains Alpha. The two mark fields also remain independent. A whole-structure assignment is valid here even though a standalone name-array assignment would not be.</p>
+<div data-example="ex-2"></div>
+
+<h3>Omit fields in a designated initializer</h3>
+<p>Only roll is specified in the initializer. C initializes the remaining members, so the first line prints 23 0 1. The final one confirms that name[0] equals the null character. The later mark assignment prints Updated: 75. Do not generalize this behavior to a local structure declaration with no initializer at all.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="comparison">A structure and an array answer different questions</h2>
+<p>Use an array when an index naturally selects one of many similar items. Use a structure when a name naturally identifies one part of a record. marks[2] selects the third mark; student.mark selects the mark belonging to that student. Combining these representations later avoids parallel arrays drifting out of step.</p>
+<p>You cannot compare two complete structures with == in C17. Compare the meaningful members instead. For embedded names, use strcmp after ensuring termination. Comparing every byte with memcmp is unreliable as a value-equality test because padding bytes may differ. The compiler may insert padding between members or at the end of a record.</p>
+<p>A structure's sizeof may therefore exceed the sum of its member sizes. Do not calculate member addresses by adding guessed byte counts. Dot selection uses the implementation's actual layout. The <a href="topic:c-structure-padding">padding lesson</a> explains layout and alignment after you have used records in programs.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Forgetting the final semicolon</h3>
+<p>The brace closes the member list, but the definition still needs its terminating semicolon. Without it, a compiler may report a confusing error at the next declaration. Check the definition line before changing the later variable declaration.</p>
+<h3>Assigning a string to an array member</h3>
+<p>A string literal can initialize name when the structure is created. A later assignment student.name="Alpha" is invalid because an array is not assignable. Use a bounded character copy with enough space for the terminator, or copy another complete structure with the intended embedded name.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Choose member names that explain the record rather than its current use. Keep mark as an integer when only whole-number marks are accepted. Validate new values before storing them if the structure must always represent a valid student. A structure type groups fields but does not enforce your university's grading policy.</p>
+<p>Prefer designated initialization when a record has several numeric members. A named field reduces the chance of placing a mark in a roll slot. Use an explicit comparison rule when selecting between students, including how ties are resolved. Clear field meaning matters more than minimizing the number of declarations.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>Structures and structure assignment are long-standing C features. Designated initializers were added in C99, so the examples select C17 and use at least C99 syntax. C17 requires struct Student unless you create a typedef alias. The examples do not assume an int width or an exact structure byte layout.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>A structure groups differently typed members into one record. Use designated initialization to label values and dot selection to access fields. Whole-record assignment copies embedded members, while equality still needs a field-based rule. Next, place one record inside another in <a href="topic:c-nested-structures">Nested Structures</a>.</p>

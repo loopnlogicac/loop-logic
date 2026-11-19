@@ -10,6 +10,7 @@ import { LearnerService } from '../app/learner.ts';
 import { WatchService } from '../app/watch.ts';
 import { VideoExtrasService } from '../app/video-extras.ts';
 import { LabService } from '../app/labs.ts';
+import { NoteService } from '../app/notes.ts';
 import { TutorialService } from '../app/tutorials.ts';
 import { ReadingService } from '../reading/service.ts';
 import { MasteryService } from '../app/mastery.ts';
@@ -80,6 +81,7 @@ const server = createApp({
   reading,
   instructor,
   learner,
+  notes: new NoteService(store, tutorials),
   labs,
   watch,
   extras,
