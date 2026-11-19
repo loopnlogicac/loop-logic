@@ -1,0 +1,53 @@
+<h2 id="introduction">A marble on Mina's cardboard valley</h2>
+<div class="callout story"><p>Mina bends cardboard into a valley and places a marble high on one side. The marble rolls towards the bottom. Tuktuk tries to imitate it with a pencil mark, but takes such a large jump that the next mark lands even higher on the opposite side. Nana asks Tuktuk to look at the nearby slope before choosing another step.</p></div>
+<p>Training a model often means adjusting numbers to reduce an error measure. A local slope can suggest which direction lowers that measure. The size of the adjustment matters as much as its direction.</p>
+<p>You will estimate a curve's slope, take downhill steps and see a learning rate that diverges. Then you will extend the idea from one adjustable number to two. The bowl is a controlled mathematical example, so its behaviour can be derived exactly.</p>
+
+<h2 id="intuition">Read the hill before taking a step</h2>
+<p>A <dfn>derivative</dfn> is a curve's local rate of change at a point. A <dfn>learning rate</dfn> scales a proposed parameter change. A <dfn>gradient</dfn> collects local slopes for several adjustable inputs.</p>
+<table class="ref"><caption>Five heights on a bowl whose lowest location is one</caption><thead><tr><th scope="col">Position x</th><th scope="col">-1</th><th scope="col">0</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th></tr></thead><tbody><tr><th scope="row">Cost</th><td>4</td><td>1</td><td>0</td><td>1</td><td>4</td></tr></tbody></table>
+<p>On the left side, moving right lowers the height. On the right side, moving left lowers it. At the bottom, a small movement either way raises the height. Imagine placing a short ruler against the curve at each location. Its tilt changes even though one long chord might miss that local change.</p>
+<div data-lab="roll-to-the-bottom"></div>
+<p>The moving dot shows position and cost together: its horizontal coordinate is the parameter and its vertical coordinate is the cost. Each movement updates the horizontal position and its vertical cost in the same step. The variables show the iteration, position and cost, so you can compare new heights without mixing two horizontal scales.</p>
+
+<h2 id="how-it-works">Subtract the slope times the step size</h2>
+<p>The bowl is f(x)=(x-1)². The cost f is the height, and x is the adjustable number. Its local slope is f′(x)=2(x-1). To move downhill, update x to x-η f′(x), where η, pronounced eta, is the learning rate. A positive slope leads to a leftward step; a negative slope leads right.</p>
+<p>Start at x=4 with η=0.25. The slope is six, so subtract 1.5 to reach 2.5. New cost is 1.5²=2.25, down from nine. Continue with the new slope at every location rather than reusing six.</p>
+<table class="ref"><caption>The first five updates from four at learning rate one quarter</caption><thead><tr><th scope="col">Step</th><th scope="col">New x</th><th scope="col">New cost</th></tr></thead><tbody><tr><td>1</td><td>2.5</td><td>2.25</td></tr><tr><td>2</td><td>1.75</td><td>0.5625</td></tr><tr><td>3</td><td>1.375</td><td>0.140625</td></tr><tr><td>4</td><td>1.1875</td><td>0.03515625</td></tr><tr><td>5</td><td>1.09375</td><td>0.0087890625</td></tr></tbody></table>
+<pre class="diagram">cost(x) = (x - 1)^2; slope(x) = 2*(x - 1)
+record the initial position and cost
+repeat for the chosen number of steps:
+    x = x - lr * slope(x)
+    plot new position and cost at the same step</pre>
+<p>With a very small rate, each step improves slowly. With rate 0.75, the position overshoots the bottom but gets closer after each crossing. Overshoot alone does not prove divergence. At rate 1.25, the first update reaches -3.5 and raises cost to 20.25. Later jumps become larger.</p>
+<p>Estimate the local slope without memorising a derivative rule. Compare f(4+h) with f(4) and divide the height difference by h. For h=1 the ratio is seven; for h=0.1 it is 6.1. As the nearby gap shrinks, this approaches six. A derivative formalises that limiting ratio.</p>
+<p>For two knobs, use a partial slope for each: vary that input while holding the other fixed. On F(x,y)=(x-1)²+2(y+2)², the partial slopes are 2(x-1) and 4(y+2). At (4,2) they are six and sixteen. A rate of 0.1 moves both simultaneously to (3.4,0.4), lowering cost from 41 to 17.28.</p>
+
+<h2 id="try-it-yourself">Choose a step before seeing its height</h2>
+<p>Use the default lab start and predict its first location. Change only the learning rate to 0.75 and watch crossings. Then try one and 1.25. Compare equal-height oscillation with growing-height divergence.</p>
+<div class="callout unplugged"><p>Draw the bowl on squared paper and place a counter on one side. Estimate the local ruler tilt and choose a short horizontal move against it. Mark the resulting height. Let a classmate deliberately choose an excessive move, then explain why the correct direction did not save that step.</p></div>
+<p>Start exactly at the bottom. The slope is zero, so every permitted rate leaves the point there in this noiseless example. Distinguish this special start from a method that can recover after a bad step elsewhere.</p>
+
+<h2 id="examples">Keep internal values more precise than the display</h2>
+<p>The first program takes twelve updates using scalar arithmetic. Its cost prints as zero to three decimals, although the parameter remains a little above one.</p>
+<div data-example="ex-1"></div>
+<p>The NumPy version keeps the same recurrence and first-preset result. This array form prepares you to update several parameters without changing the principle.</p>
+<div data-example="ex-2"></div>
+<p>The two-knob program computes both partial slopes at the original point before moving either coordinate. This is one simultaneous gradient step. Updating one coordinate and then recomputing another gradient would describe a different procedure for a coupled objective.</p>
+<div data-example="ex-3"></div>
+<p>The final program compares forward and central differences. It uses a quadratic where the symmetric estimate happens to match the exact derivative. For a general curve, finite-difference estimates have approximation and floating-point errors.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="common-mistakes">Small slope is not a universal certificate</h2>
+<ul><li><strong>Adding the gradient:</strong> positive rate times gradient points uphill. Subtract it for descent.</li><li><strong>Keeping the initial slope forever:</strong> recalculate at the current location because the curve's tilt changes.</li><li><strong>Calling every crossing failure:</strong> a step may cross the minimum yet reduce cost. Check the new height.</li><li><strong>Using displayed rounded values for updates:</strong> retain internal precision or the walk can stop artificially.</li><li><strong>Calling any zero slope a global minimum:</strong> inspect the objective. Maxima and stationary inflections can also have zero derivative.</li></ul>
+
+<h2 id="going-deeper">Optional: prove the stable range on this bowl</h2>
+<div class="callout math"><p>Let e=x-1 be the signed distance from the minimum. The update gives e<sub>new</sub>=(1-2η)e<sub>old</sub>. Error magnitude shrinks when |1-2η|&lt;1, equivalent to 0&lt;η&lt;1. This derivation applies to this particular curvature.</p>
+<p>At η=0.5 the point reaches one in a single exact step. At η=1 the error changes sign without shrinking. Above one, a nonzero error grows. A different curvature changes those bounds; do not reuse this numerical limit as a universal training rule.</p>
+<p>For F(x,y), the gradient is a two-entry vector. A gradient step subtracts η times that vector from the parameter vector. Computing d available partial derivatives and applying the update needs O(d) work, in addition to the cost of evaluating those derivatives.</p>
+<p>Zero derivative is only a stationarity statement. The function -x² has a maximum at zero; x³ has a stationary inflection there. Convex bowls provide stronger guarantees than arbitrary neural-network objectives. Stopping criteria should combine gradient size, cost change and iteration limits.</p><p>The slope formula can be derived without a memorised power rule. Expand the nearby height difference: f(x+h)-f(x)=2h(x-1)+h². Divide by the nonzero input change h to get 2(x-1)+h. As h approaches zero, the remaining local rate is 2(x-1). This also explains why the forward-difference program gives six plus h at x=4. Making h extremely tiny is not always helpful on a computer: subtracting nearly equal floating-point heights can lose significant digits. Compare several sensible scales rather than treating the smallest possible h as automatically best.</p>
+</div>
+
+<h2 id="summary">Follow both direction and height</h2>
+<ul><li>A derivative describes a local change ratio.</li><li>Subtract the gradient to propose a downhill move.</li><li>Learning rate controls the step size.</li><li>Some overshooting paths still converge.</li><li>Excessive steps can increase cost and diverge.</li><li>Partial slopes vary one knob at a time.</li><li>Rounded zero and exact convergence are different claims.</li></ul>
+<p>Next, organise many row calculations in <a href="topic:ml-matrices">Matrices Without Fear</a>.</p>

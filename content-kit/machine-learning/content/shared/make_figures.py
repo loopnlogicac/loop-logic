@@ -39,7 +39,7 @@ def build():
     fruit_panels = {"plot": plot, **table("cards", ["Card", "Size", "Sweetness", "Label"], cards)}
     figures = {"fruits": figure(
         "Ten fruit cards and their exact two-feature positions.",
-        "দশ ফলের কার্ড আর দুই feature-এর ঠিক অবস্থান।", fruit_panels,
+        "দশ ফলের কার্ড আর দুই ফিচারের ঠিক অবস্থান।", fruit_panels,
     )}
     for threshold in [3, 4, 5]:
         fenced = copy.deepcopy(plot)
@@ -90,7 +90,7 @@ def build():
     )
     toys = [(1, 2), (2, 2), (2, 3), (7, 7), (8, 7), (8, 8)]
     figures["groups"] = figure(
-        "Six toy measurements without supplied class labels.", "দলের label ছাড়া ছয় খেলনার মাপ।",
+        "Six toy measurements without supplied class labels.", "দলের লেবেল ছাড়া ছয় খেলনার মাপ।",
         {"plot": {"xRange": [0, 10], "yRange": [0, 10], "xLabel": "Toy size",
                   "yLabel": "Colour score", "points": [
                       {"id": f"t{i + 1}", "x": x, "y": y} for i, (x, y) in enumerate(toys)
@@ -107,11 +107,11 @@ def build():
     _, counts = reference["score"](reference["POINTS"], 4)
     figures["exam"] = figure(
         "Six training and four hidden cards: counts from three fitted size-only rules.",
-        "ছয় training, চার test কার্ডে তিন আকারভিত্তিক নিয়মের ভুল।",
+        "ছয় ট্রেনিং, চার টেস্ট কার্ডে তিন আকারভিত্তিক নিয়মের ভুল।",
         {"chart": {"xLabel": "Rule", "yLabel": "Mistakes (train 6, test 4)", "series": [
-            {"id": "train", "label": "Training / শেখা", "type": "bar",
+            {"id": "train", "label": "ট্রেনিং / শেখা", "type": "bar",
              "points": [[name, pair[0]] for name, pair in counts.items()]},
-            {"id": "test", "label": "Hidden test / পরীক্ষা", "type": "bar",
+            {"id": "test", "label": "লুকানো টেস্ট / পরীক্ষা", "type": "bar",
              "points": [[name, pair[1]] for name, pair in counts.items()]},
         ]}},
     )

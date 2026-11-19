@@ -35,10 +35,10 @@ function trace(input) {
       bn: `প্রথম ${trainSize}টি দিয়ে শিখি, শেষ ${test.length}টির নাম ঢাকি। এটি কাগজের ক্রমভিত্তিক খেলা।` } });
   for (const p of train) steps.push({ op: 'point-mark', targets: [p.id], tone: 'current', line: 2,
     note: { en: `${p.id} is available for fitting; its known label can influence all three training-only rules.`,
-      bn: `${p.id}-এর জানা নাম শুধু training-এর নিয়ম বানাতে ব্যবহার করা যায়।` } });
+      bn: `${p.id}-এর জানা নাম শুধু ট্রেনিংয়ের নিয়ম বানাতে ব্যবহার করা যায়।` } });
   steps.push({ op: 'note', line: 2, vars: { threshold: shownThreshold },
     note: { en: `Simple threshold ${shownThreshold} minimises training mistakes; ties use the larger fence. Nearest-size ties use earlier cards.`,
-      bn: 'কম training ভুলের এক রেখা বাছি। সমান ভুলে বড় ভাগ, সমান নিকটতায় আগের কার্ড।' } });
+      bn: 'কম ট্রেনিং ভুলের এক রেখা বাছি। সমান ভুলে বড় ভাগ, সমান নিকটতায় আগের কার্ড।' } });
   // Run the fitted prediction rule at every cell centre, independently of test labels.
   const cells = [];
   for (let row = 0; row < 20; row++) {
@@ -48,7 +48,7 @@ function trace(input) {
   }
   steps.push({ op: 'regions', rows: 20, cols: 20, mode: 'class', cells, line: 3,
     note: { en: 'Each shaded cell is a prediction from training alone; all three rules ignore sweetness.',
-      bn: 'প্রতিটি ঘরের রং শুধু training থেকে অনুমান। তিন নিয়মই মিষ্টতা বাদ দেয়।' } });
+      bn: 'প্রতিটি ঘরের রং শুধু ট্রেনিং থেকে অনুমান। তিন নিয়মই মিষ্টতা বাদ দেয়।' } });
   if (input.model === 'simple') {
     steps.push({ op: 'shape', id: 'fence', type: 'line', w: [1, 0], b: -threshold,
       label: 'Simple ' + shownThreshold, tone: 'found', line: 3,
@@ -81,14 +81,14 @@ function trace(input) {
   for (const model of ['flat', 'simple', 'flexible']) {
     steps.push({ op: 'series-add', id: 'train', x: model, y: errors(model, train), line: 5,
       note: { en: `${model} makes ${errors(model, train)} mistakes on ${train.length} training cards.`,
-        bn: `${model}: ${train.length}টি training কার্ডে ${errors(model, train)}টি ভুল।` } });
+        bn: `${model}: ${train.length}টি ট্রেনিং কার্ডে ${errors(model, train)}টি ভুল।` } });
     steps.push({ op: 'series-add', id: 'test', x: model, y: errors(model, test), line: 5,
       note: { en: `${model} makes ${errors(model, test)} mistakes on ${test.length} hidden cards; the pile sizes differ.`,
-        bn: `${model}: ${test.length}টি test কার্ডে ${errors(model, test)}টি ভুল। স্তূপের আকার খেয়াল করো।` } });
+        bn: `${model}: ${test.length}টি টেস্ট কার্ডে ${errors(model, test)}টি ভুল। ডেটাসেটের আকার খেয়াল করো।` } });
   }
   steps.push({ op: 'done', line: 6,
     vars: { trainMistakes: errors(input.model, train), testMistakes: errors(input.model, test) },
     note: { en: 'Test answers only judged the fixed models. If you change a rule after this, bring fresh hidden cards for its final check.',
-      bn: 'Test দিয়ে স্থির নিয়ম বিচার হলো। এবার নিয়ম বদলালে শেষ যাচাইয়ে নতুন কার্ড লাগবে।' } });
+      bn: 'টেস্ট দিয়ে স্থির নিয়ম বিচার হলো। এবার নিয়ম বদলালে শেষ যাচাইয়ে নতুন কার্ড লাগবে।' } });
   return { init, steps };
 }
