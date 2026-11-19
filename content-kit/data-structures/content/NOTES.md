@@ -1,3 +1,13 @@
+# Data Structures — Bangla edition, part 1 (R5-G)
+
+Added full `body.bn.html` lessons for all **14 topics** in `foundations`, `arrays` and `linked-lists`, following `BANGLA_STYLE.md`. The Bangla bodies retain the English section IDs, paragraph coverage, topic links, example/lab placements and code blocks. Diagram narration and the complexity table caption are also translated.
+
+All **seven labs** now have Bangla summaries and narration for every emitted step, including boundary and failure paths. Existing bilingual topic fields were already filled; inherited recursion spellings are aligned to রিকার্শন. There are no figure captions in these topics' JSON that need translation. The package remains `bn-partial` because later modules still lack full Bangla bodies.
+
+English text, example/practice code, quiz code, lab behavior and `.out` files are unchanged. Additional before/after trace comparisons cover **231 preset/check/generated inputs and 3,587 narrated steps** across the seven labs; every non-Bangla trace field is identical and each step has Bangla narration. The required full-package sanitizer check reports **0 errors and 0 warnings**. The earlier Batch 4 notes below describe that delivery before this translation pass.
+
+---
+
 # Data Structures — Batch 4 (final)
 
 Package **0.4.0**, schema **1.1**, completes **47/47 topics and 24/24 labs**. This delivery adds the **12 topics** in `hashing`, `graphs` and `practice-exam`, with their **five curriculum labs**. All topics retain draft editorial status.
