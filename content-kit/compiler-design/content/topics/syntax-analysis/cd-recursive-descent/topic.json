@@ -1,0 +1,427 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-recursive-descent",
+  "module": "syntax-analysis",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Recursive Descent Parsing",
+    "bn": "রিকার্সিভ ডিসেন্ট পার্সিং"
+  },
+  "summary": {
+    "en": "Use one Python function per grammar level to parse arithmetic, preserve associativity, and recover at statement boundaries.",
+    "bn": "গ্রামারের প্রতিটি স্তরের জন্য Python ফাংশন লিখে এক্সপ্রেশন পার্স করি এবং ভুলের পরের স্টেটমেন্টে এগোই।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-ll1-parsing"
+  ],
+  "related": [
+    "cd-shift-reduce"
+  ],
+  "keywords": [
+    "Recursive Descent Parsing",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14; no third-party packages are needed."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Grammar and representation"
+    },
+    {
+      "id": "how-it-works",
+      "title": "How the parser works"
+    },
+    {
+      "id": "examples",
+      "title": "Examples"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Python version notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Multiply before adding",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>term consumes 3*4 before expression adds it to 2, giving 14.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Group and subtract from left to right",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Parentheses produce 20. Repeated subtraction uses a loop and produces 6.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Recover after a malformed statement",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Recovery discards the damaged statement through its semicolon, then keeps the later values.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "Reject unknown source characters",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-4.py",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The scanner reports @ before grammar functions run. No statement recovery is attempted here.</p>\n"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Evaluate exactly one arithmetic expression",
+      "statementHtml": "<p>Read one line containing unsigned decimal integers, +, -, *, parentheses, and spaces. Do not include a semicolon. Print its integer value, or <code>error</code> for invalid syntax. Unary minus and division are outside this grammar. Keep nesting below 100 parentheses.</p>\n",
+      "difficulty": "easy",
+      "hints": [
+        "After expression returns, require EOF so trailing tokens cannot be ignored."
+      ],
+      "id": "p-1",
+      "solution": "practice/p-1.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        },
+        {
+          "stdin": "practice/p-1.t6.in",
+          "output": "practice/p-1.t6.out"
+        }
+      ]
+    },
+    {
+      "title": "Recover a sequence of score calculations",
+      "statementHtml": "<p>Read one line of arithmetic statements, each ending in a semicolon. Print successful values on one line, or <code>none</code> if none succeed. Then print <code>errors N</code>. A lexical error prints only <code>lexical error</code>. Use the same operators as the parser; keep nesting below 100.</p>\n",
+      "difficulty": "hard",
+      "hints": [
+        "Append a result only after its semicolon is successfully consumed."
+      ],
+      "id": "p-2",
+      "solution": "practice/p-2.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        },
+        {
+          "stdin": "practice/p-2.t5.in",
+          "output": "practice/p-2.t5.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Explain the precedence calls",
+      "statementHtml": "<p>Trace the function calls and returned values for 2+3*4;.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Calls while reading 2 + 3 * 4 ;</caption><thead><tr><th scope=\"col\">Active function</th><th scope=\"col\">Input action</th><th scope=\"col\">Returned value</th></tr></thead><tbody><tr><td>factor inside first term</td><td>Read NUM 2</td><td>2</td></tr><tr><td>term inside expression</td><td>Next token + ends term</td><td>2</td></tr><tr><td>expression</td><td>Consume +, call term</td><td>Waiting for right value</td></tr><tr><td>factor inside second term</td><td>Read NUM 3</td><td>3</td></tr><tr><td>second term</td><td>Consume *, call factor</td><td>Waiting for 4</td></tr><tr><td>factor inside second term</td><td>Read NUM 4</td><td>4</td></tr><tr><td>second term</td><td>Compute 3 * 4</td><td>12</td></tr><tr><td>expression</td><td>Compute 2 + 12</td><td>14</td></tr><tr><td>program</td><td>Require ; before saving value</td><td>Save 14</td></tr></tbody></table>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace recovery across statements",
+      "statementHtml": "<p>For 8+; 6*7; (2+3; 5;, state the saved values and recovery points.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Statement-level recovery for 8+; 6*7; (2+3; 5;</caption><thead><tr><th scope=\"col\">Statement</th><th scope=\"col\">Problem</th><th scope=\"col\">Recovery</th><th scope=\"col\">Saved value</th></tr></thead><tbody><tr><td>8+;</td><td>Operand expected at ;</td><td>Consume the synchronising ;</td><td>None</td></tr><tr><td>6*7;</td><td>No error</td><td>Consume ; normally</td><td>42</td></tr><tr><td>(2+3;</td><td>Closing ) expected at ;</td><td>Discard to and consume ;</td><td>None</td></tr><tr><td>5;</td><td>No error</td><td>Consume ; normally</td><td>5</td></tr></tbody></table>\n<p>The saved values are 42 and 5. Two syntax errors are recorded.</p>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Find the association bug",
+      "statementHtml": "<p>A parser uses left = term(); if minus follows, returns left - expression(). Why does 9-2-1 become wrong?</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>The right expression consumes 2-1 and returns 1, so the result is 8. A loop with term operands instead updates 9 to 7 to 6.</p>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which function gives multiplication higher precedence than addition?",
+      "options": [
+        "program",
+        "tokenize",
+        "term",
+        "take"
+      ],
+      "answer": 2,
+      "explanation": "term completes all multiplication before expression combines additive terms."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does factor do after consuming an opening parenthesis?",
+      "options": [
+        "Read only one digit",
+        "Call program",
+        "Return immediately",
+        "Call expression and then require )"
+      ],
+      "answer": 3,
+      "explanation": "A parenthesised expression may contain several operators."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "When should a successful statement value enter the results list?",
+      "options": [
+        "After its semicolon matches",
+        "After its first number",
+        "Before parsing its last factor",
+        "At the first operator"
+      ],
+      "answer": 0,
+      "explanation": "The semicolon proves that the complete statement was recognised."
+    },
+    {
+      "id": "q-4",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What does a left fold print for 9-2-1?",
+      "options": [
+        "8",
+        "6",
+        "7",
+        "10"
+      ],
+      "answer": 1,
+      "explanation": "Each subtraction updates the accumulated left value.",
+      "code": "if __name__ == \"__main__\":\n    value = 9\n    for right in (2, 1):\n        value -= right\n    print(value)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-5",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Where does this recovery scan stop in the token list?",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "answer": 2,
+      "explanation": "It skips the damaged tokens but leaves the semicolon for the recovery caller.",
+      "code": "if __name__ == \"__main__\":\n    tokens = [\"NUM\", \"+\", \"*\", \";\", \"EOF\"]\n    position = 1\n    while tokens[position] not in (\";\", \"EOF\"):\n        position += 1\n    print(position)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-6",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many statement results survive when only completed entries are appended?",
+      "options": [
+        "[14, 8]",
+        "[]",
+        "[8]",
+        "[14]"
+      ],
+      "answer": 3,
+      "explanation": "The incomplete second statement contributes no stored result.",
+      "code": "if __name__ == \"__main__\":\n    results = []\n    for value, complete in ((14, True), (8, False)):\n        if complete:\n            results.append(value)\n    print(results)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does a single-expression recogniser require EOF after expression()?",
+      "options": [
+        "To reject trailing tokens",
+        "To create an extra operand",
+        "To remove parentheses",
+        "To permit unary minus"
+      ],
+      "answer": 0,
+      "explanation": "Returning a value does not prove that all input was consumed."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which input lies outside the arithmetic language taught here?",
+      "options": [
+        "0;",
+        "-2;",
+        "2-3;",
+        "(2+3)*4;"
+      ],
+      "answer": 1,
+      "explanation": "Unary minus is not a factor production."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the recovery boundary set in program()?",
+      "options": [
+        "{+, -}",
+        "{NUM}",
+        "{;, EOF}",
+        "{(, *}"
+      ],
+      "answer": 2,
+      "explanation": "A semicolon ends the damaged statement; EOF ends the program."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can a deeply nested valid expression fail in this Python parser?",
+      "options": [
+        "Python integers cannot hold zero",
+        "The lexer rejects all parentheses",
+        "Subtraction must be positive",
+        "The interpreter limits call-stack depth"
+      ],
+      "answer": 3,
+      "explanation": "Parenthesis nesting creates recursive expression calls."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How does an unknown @ differ from a missing operand?",
+      "options": [
+        "@ fails during tokenisation",
+        "Both are always repaired automatically",
+        "@ is a valid terminal",
+        "A missing operand prevents tokenisation"
+      ],
+      "answer": 0,
+      "explanation": "The scanner rejects unsupported characters before syntax recovery begins."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Each grammar level has a matching parser function.",
+      "bn": "গ্রামারের প্রতিটি স্তরের জন্য আলাদা parser ফাংশন থাকে।"
+    },
+    {
+      "en": "A loop preserves left-associative subtraction.",
+      "bn": "লুপে আগের ফল আপডেট করলে বিয়োগ বাম দিক থেকে হয়।"
+    },
+    {
+      "en": "Parentheses trigger a nested expression call.",
+      "bn": "বন্ধনী পেলে ভেতরের এক্সপ্রেশনের জন্য নতুন কল হয়।"
+    },
+    {
+      "en": "A failed statement contributes no saved value.",
+      "bn": "ভুল স্টেটমেন্টের আংশিক ফল জমা রাখা হয় না।"
+    },
+    {
+      "en": "Recovery must consume tokens or stop at EOF.",
+      "bn": "ভুলের পর এগোতে টোকেন বাদ দিতে হয়, নইলে শেষ হলে থামতে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Trace the function calls and returned values for 2+3*4;.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>Calls while reading 2 + 3 * 4 ;</caption><thead><tr><th scope=\"col\">Active function</th><th scope=\"col\">Input action</th><th scope=\"col\">Returned value</th></tr></thead><tbody><tr><td>factor inside first term</td><td>Read NUM 2</td><td>2</td></tr><tr><td>term inside expression</td><td>Next token + ends term</td><td>2</td></tr><tr><td>expression</td><td>Consume +, call term</td><td>Waiting for right value</td></tr><tr><td>factor inside second term</td><td>Read NUM 3</td><td>3</td></tr><tr><td>second term</td><td>Consume *, call factor</td><td>Waiting for 4</td></tr><tr><td>factor inside second term</td><td>Read NUM 4</td><td>4</td></tr><tr><td>second term</td><td>Compute 3 * 4</td><td>12</td></tr><tr><td>expression</td><td>Compute 2 + 12</td><td>14</td></tr><tr><td>program</td><td>Require ; before saving value</td><td>Save 14</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "For 8+; 6*7; (2+3; 5;, state the saved values and recovery points.\n",
+      "marks": 8,
+      "answerHtml": "<table class=\"ref\"><caption>Statement-level recovery for 8+; 6*7; (2+3; 5;</caption><thead><tr><th scope=\"col\">Statement</th><th scope=\"col\">Problem</th><th scope=\"col\">Recovery</th><th scope=\"col\">Saved value</th></tr></thead><tbody><tr><td>8+;</td><td>Operand expected at ;</td><td>Consume the synchronising ;</td><td>None</td></tr><tr><td>6*7;</td><td>No error</td><td>Consume ; normally</td><td>42</td></tr><tr><td>(2+3;</td><td>Closing ) expected at ;</td><td>Discard to and consume ;</td><td>None</td></tr><tr><td>5;</td><td>No error</td><td>Consume ; normally</td><td>5</td></tr></tbody></table>\n<p>The saved values are 42 and 5. Two syntax errors are recorded.</p>\n"
+    },
+    {
+      "type": "long",
+      "question": "A parser uses left = term(); if minus follows, returns left - expression(). Why does 9-2-1 become wrong?\n",
+      "marks": 5,
+      "answerHtml": "<p>The right expression consumes 2-1 and returns 1, so the result is 8. A loop with term operands instead updates 9 to 7 to 6.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

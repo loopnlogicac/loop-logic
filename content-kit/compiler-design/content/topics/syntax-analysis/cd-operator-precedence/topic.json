@@ -1,0 +1,335 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-operator-precedence",
+  "module": "syntax-analysis",
+  "order": 9,
+  "kind": "theory",
+  "title": {
+    "en": "Operator Precedence Parsing",
+    "bn": "অপারেটর প্রিসিডেন্স পার্সিং"
+  },
+  "summary": {
+    "en": "Derive FIRSTVT/LASTVT and a complete precedence-relation table, then locate handles using terminal boundaries.",
+    "bn": "FIRSTVT ও LASTVT থেকে precedence টেবিল বানাই এবং টার্মিনালের সম্পর্ক দেখে হ্যান্ডেল খুঁজি।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-clr-lalr"
+  ],
+  "related": [
+    "cd-bison"
+  ],
+  "keywords": [
+    "Operator Precedence Parsing",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14; no third-party packages are needed."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Reasoning and checks"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Derive relations and recognise an arithmetic phrase",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The relation + &lt; * shifts multiplication into the right operand before addition can reduce.</p>\n"
+    }
+  ],
+  "practice": [
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Construct the expression relations",
+      "statementHtml": "<p>For E → E + T | T, T → T * F | F, F → ( E ) | id, derive FIRSTVT/LASTVT and the full relation table.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>FIRSTVT and LASTVT for the arithmetic operator grammar</caption><thead><tr><th scope=\"col\">Nonterminal</th><th scope=\"col\">FIRSTVT</th><th scope=\"col\">LASTVT</th></tr></thead><tbody><tr><td>E</td><td>{(, *, +, id}</td><td>{), *, +, id}</td></tr><tr><td>T</td><td>{(, *, id}</td><td>{), *, id}</td></tr><tr><td>F</td><td>{(, id}</td><td>{), id}</td></tr></tbody></table>\n<table class=\"ref\"><caption>Every terminal precedence relation; blank relations are errors</caption><thead><tr><th scope=\"col\">Stack terminal / input terminal</th><th scope=\"col\">+</th><th scope=\"col\">*</th><th scope=\"col\">id</th><th scope=\"col\">(</th><th scope=\"col\">)</th><th scope=\"col\">$</th></tr></thead><tbody><tr><td>+</td><td>&gt;</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>&gt;</td><td>&gt;</td></tr><tr><td>*</td><td>&gt;</td><td>&gt;</td><td>&lt;</td><td>&lt;</td><td>&gt;</td><td>&gt;</td></tr><tr><td>id</td><td>&gt;</td><td>&gt;</td><td>error</td><td>error</td><td>&gt;</td><td>&gt;</td></tr><tr><td>(</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>=</td><td>error</td></tr><tr><td>)</td><td>&gt;</td><td>&gt;</td><td>error</td><td>error</td><td>&gt;</td><td>&gt;</td></tr><tr><td>$</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>error</td><td>accept test</td></tr></tbody></table>\n",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Locate the product handle",
+      "statementHtml": "<p>Using normalised N markers, parse id + id * id and show every shift and reduction.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Operator-precedence trace with normalised nonterminal N</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$</td><td>id + id * id $</td><td>$ &lt; id: shift</td></tr><tr><td>$ id</td><td>+ id * id $</td><td>id &gt; +: reduce id to N</td></tr><tr><td>$ N</td><td>+ id * id $</td><td>$ &lt; +: shift</td></tr><tr><td>$ N +</td><td>id * id $</td><td>+ &lt; id: shift</td></tr><tr><td>$ N + id</td><td>* id $</td><td>id &gt; *: reduce id to N</td></tr><tr><td>$ N + N</td><td>* id $</td><td>+ &lt; *: shift</td></tr><tr><td>$ N + N *</td><td>id $</td><td>* &lt; id: shift</td></tr><tr><td>$ N + N * id</td><td>$</td><td>id &gt; $: reduce id to N</td></tr><tr><td>$ N + N * N</td><td>$</td><td>* &gt; $: reduce N * N to N</td></tr><tr><td>$ N + N</td><td>$</td><td>+ &gt; $: reduce N + N to N</td></tr><tr><td>$ N</td><td>$</td><td>accept</td></tr></tbody></table>\n",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Override precedence with parentheses",
+      "statementHtml": "<p>Trace ( id + id ) * id and explain the ( = ) relation.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Parentheses force an earlier addition reduction</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$</td><td>( id + id ) * id $</td><td>$ &lt; (: shift</td></tr><tr><td>$ (</td><td>id + id ) * id $</td><td>( &lt; id: shift</td></tr><tr><td>$ ( id</td><td>+ id ) * id $</td><td>id &gt; +: reduce id to N</td></tr><tr><td>$ ( N</td><td>+ id ) * id $</td><td>( &lt; +: shift</td></tr><tr><td>$ ( N +</td><td>id ) * id $</td><td>+ &lt; id: shift</td></tr><tr><td>$ ( N + id</td><td>) * id $</td><td>id &gt; ): reduce id to N</td></tr><tr><td>$ ( N + N</td><td>) * id $</td><td>+ &gt; ): reduce N + N to N</td></tr><tr><td>$ ( N</td><td>) * id $</td><td>( = ): shift</td></tr><tr><td>$ ( N )</td><td>* id $</td><td>) &gt; *: reduce ( N ) to N</td></tr><tr><td>$ N</td><td>* id $</td><td>$ &lt; *: shift</td></tr><tr><td>$ N *</td><td>id $</td><td>* &lt; id: shift</td></tr><tr><td>$ N * id</td><td>$</td><td>id &gt; $: reduce id to N</td></tr><tr><td>$ N * N</td><td>$</td><td>* &gt; $: reduce N * N to N</td></tr><tr><td>$ N</td><td>$</td><td>accept</td></tr></tbody></table>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Reject a leading operator",
+      "statementHtml": "<p>Trace + id and explain why a non-error $/+ cell cannot make it a valid expression.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Leading-plus rejection</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$</td><td>+ id $</td><td>$ &lt; +: shift</td></tr><tr><td>$ +</td><td>id $</td><td>+ &lt; id: shift</td></tr><tr><td>$ + id</td><td>$</td><td>id &gt; $: reduce id to N</td></tr><tr><td>$ + N</td><td>$</td><td>error: invalid handle</td></tr></tbody></table>\n<p>FIRSTVT contains boundary operators. The final + N suffix is not a legal handle.</p>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Identify an operator-grammar violation",
+      "statementHtml": "<p>Which rules violate operator-grammar restrictions: S → A B, A → ε, B → id? Explain both violations.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>S → A B has adjacent nonterminals. A → ε has an empty right side. B → id is allowed. The boundary construction assumes both restrictions.</p>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which rule violates the adjacent-nonterminal restriction?",
+      "options": [
+        "E → E + T",
+        "F → ( E )",
+        "S → A B",
+        "T → id"
+      ],
+      "answer": 2,
+      "explanation": "Two neighbouring nonterminals have no separating terminal."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why does FIRSTVT(E) contain + for E → E + T?",
+      "options": [
+        "Every expression begins with +",
+        "+ is nullable",
+        "FOLLOW(E) contains ε",
+        "+ follows a leading nonterminal"
+      ],
+      "answer": 3,
+      "explanation": "FIRSTVT describes terminal boundary positions, not only initial sentence tokens."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which relation follows from F → ( E )?",
+      "options": [
+        "( = )",
+        "( > )",
+        ") < (",
+        "id = id"
+      ],
+      "answer": 0,
+      "explanation": "A terminal/nonterminal/terminal triple gives an equality boundary."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does + < * make the parser do on lookahead *?",
+      "options": [
+        "Reduce the addition immediately",
+        "Shift *",
+        "Accept",
+        "Delete +"
+      ],
+      "answer": 1,
+      "explanation": "The tighter multiplication must extend the right operand."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does * > + make the parser do?",
+      "options": [
+        "Shift + before reducing",
+        "Ignore the star",
+        "Reduce a completed product",
+        "Declare equal precedence"
+      ],
+      "answer": 2,
+      "explanation": "The product should finish before the addition begins."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which relation enforces left association for repeated +?",
+      "options": [
+        "+ < +",
+        "+ = +",
+        "$ = +",
+        "+ > +"
+      ],
+      "answer": 3,
+      "explanation": "The earlier sum reduces before another plus shifts."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is compared with lookahead when the stack ends in N?",
+      "options": [
+        "The nearest terminal below N",
+        "N itself",
+        "The start nonterminal",
+        "The last input character regardless of tokenisation"
+      ],
+      "answer": 0,
+      "explanation": "Precedence relations are terminal-to-terminal."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which normalised suffix is a legal handle here?",
+      "options": [
+        "N *",
+        "N * N",
+        "+ N",
+        "N N"
+      ],
+      "answer": 1,
+      "explanation": "Both operands and the operator are required."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is $/$ alone insufficient for acceptance?",
+      "options": [
+        "The marker must be shifted twice",
+        "An epsilon relation is missing",
+        "The stack must also contain a completed start expression",
+        "Every empty input is valid"
+      ],
+      "answer": 2,
+      "explanation": "Otherwise an empty or damaged stack could be accepted."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which table property is required by operator-precedence recognition?",
+      "options": [
+        "Every cell contains =",
+        "All terminals have numeric priorities",
+        "No right side contains a terminal",
+        "At most one relation per ordered terminal pair"
+      ],
+      "answer": 3,
+      "explanation": "Conflicting relations leave the action undecidable."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can the normalised N shortcut be applied to every operator grammar?",
+      "options": [
+        "No",
+        "Yes, it always preserves nonterminal categories",
+        "Only if all tokens are letters",
+        "Only if the grammar has ε"
+      ],
+      "answer": 0,
+      "explanation": "Collapsing distinct phrase categories can accept invalid combinations outside this special expression grammar."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Operator grammars forbid empty right sides and adjacent nonterminals.",
+      "bn": "অপারেটর গ্রামারে ডান পাশ খালি বা পাশাপাশি দুই nonterminal থাকে না।"
+    },
+    {
+      "en": "FIRSTVT describes terminals near a phrase’s left boundary.",
+      "bn": "FIRSTVT কোনো অংশের বাম সীমার কাছের টার্মিনালগুলো জানায়।"
+    },
+    {
+      "en": "Precedence relations compare terminals around a potential handle.",
+      "bn": "precedence সম্পর্ক সম্ভাব্য হ্যান্ডেলের আশপাশের টার্মিনাল তুলনা করে।"
+    },
+    {
+      "en": "A reduction must match a valid handle shape.",
+      "bn": "রিডিউস করার আগে হ্যান্ডেলের গঠন নিয়মের সঙ্গে মেলাতে হয়।"
+    },
+    {
+      "en": "Parenthesis equality marks a boundary relationship.",
+      "bn": "বন্ধনীর সমান সম্পর্কটি সীমা বোঝায়, সংখ্যার মান নয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "For E → E + T | T, T → T * F | F, F → ( E ) | id, derive FIRSTVT/LASTVT and the full relation table.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>FIRSTVT and LASTVT for the arithmetic operator grammar</caption><thead><tr><th scope=\"col\">Nonterminal</th><th scope=\"col\">FIRSTVT</th><th scope=\"col\">LASTVT</th></tr></thead><tbody><tr><td>E</td><td>{(, *, +, id}</td><td>{), *, +, id}</td></tr><tr><td>T</td><td>{(, *, id}</td><td>{), *, id}</td></tr><tr><td>F</td><td>{(, id}</td><td>{), id}</td></tr></tbody></table>\n<table class=\"ref\"><caption>Every terminal precedence relation; blank relations are errors</caption><thead><tr><th scope=\"col\">Stack terminal / input terminal</th><th scope=\"col\">+</th><th scope=\"col\">*</th><th scope=\"col\">id</th><th scope=\"col\">(</th><th scope=\"col\">)</th><th scope=\"col\">$</th></tr></thead><tbody><tr><td>+</td><td>&gt;</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>&gt;</td><td>&gt;</td></tr><tr><td>*</td><td>&gt;</td><td>&gt;</td><td>&lt;</td><td>&lt;</td><td>&gt;</td><td>&gt;</td></tr><tr><td>id</td><td>&gt;</td><td>&gt;</td><td>error</td><td>error</td><td>&gt;</td><td>&gt;</td></tr><tr><td>(</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>=</td><td>error</td></tr><tr><td>)</td><td>&gt;</td><td>&gt;</td><td>error</td><td>error</td><td>&gt;</td><td>&gt;</td></tr><tr><td>$</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>&lt;</td><td>error</td><td>accept test</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Using normalised N markers, parse id + id * id and show every shift and reduction.\n",
+      "marks": 8,
+      "answerHtml": "<table class=\"ref\"><caption>Operator-precedence trace with normalised nonterminal N</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$</td><td>id + id * id $</td><td>$ &lt; id: shift</td></tr><tr><td>$ id</td><td>+ id * id $</td><td>id &gt; +: reduce id to N</td></tr><tr><td>$ N</td><td>+ id * id $</td><td>$ &lt; +: shift</td></tr><tr><td>$ N +</td><td>id * id $</td><td>+ &lt; id: shift</td></tr><tr><td>$ N + id</td><td>* id $</td><td>id &gt; *: reduce id to N</td></tr><tr><td>$ N + N</td><td>* id $</td><td>+ &lt; *: shift</td></tr><tr><td>$ N + N *</td><td>id $</td><td>* &lt; id: shift</td></tr><tr><td>$ N + N * id</td><td>$</td><td>id &gt; $: reduce id to N</td></tr><tr><td>$ N + N * N</td><td>$</td><td>* &gt; $: reduce N * N to N</td></tr><tr><td>$ N + N</td><td>$</td><td>+ &gt; $: reduce N + N to N</td></tr><tr><td>$ N</td><td>$</td><td>accept</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "long",
+      "question": "Trace ( id + id ) * id and explain the ( = ) relation.\n",
+      "marks": 5,
+      "answerHtml": "<table class=\"ref\"><caption>Parentheses force an earlier addition reduction</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$</td><td>( id + id ) * id $</td><td>$ &lt; (: shift</td></tr><tr><td>$ (</td><td>id + id ) * id $</td><td>( &lt; id: shift</td></tr><tr><td>$ ( id</td><td>+ id ) * id $</td><td>id &gt; +: reduce id to N</td></tr><tr><td>$ ( N</td><td>+ id ) * id $</td><td>( &lt; +: shift</td></tr><tr><td>$ ( N +</td><td>id ) * id $</td><td>+ &lt; id: shift</td></tr><tr><td>$ ( N + id</td><td>) * id $</td><td>id &gt; ): reduce id to N</td></tr><tr><td>$ ( N + N</td><td>) * id $</td><td>+ &gt; ): reduce N + N to N</td></tr><tr><td>$ ( N</td><td>) * id $</td><td>( = ): shift</td></tr><tr><td>$ ( N )</td><td>* id $</td><td>) &gt; *: reduce ( N ) to N</td></tr><tr><td>$ N</td><td>* id $</td><td>$ &lt; *: shift</td></tr><tr><td>$ N *</td><td>id $</td><td>* &lt; id: shift</td></tr><tr><td>$ N * id</td><td>$</td><td>id &gt; $: reduce id to N</td></tr><tr><td>$ N * N</td><td>$</td><td>* &gt; $: reduce N * N to N</td></tr><tr><td>$ N</td><td>$</td><td>accept</td></tr></tbody></table>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

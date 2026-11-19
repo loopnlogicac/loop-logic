@@ -1,0 +1,349 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-clr-lalr",
+  "module": "syntax-analysis",
+  "order": 8,
+  "kind": "theory",
+  "title": {
+    "en": "CLR(1) and LALR(1) Parsing",
+    "bn": "সিএলআর ও এলএএলআর পার্সিং"
+  },
+  "summary": {
+    "en": "Carry lookaheads in LR(1) items, construct complete CLR tables, merge equal cores, and see how LALR merging can create conflicts.",
+    "bn": "LR আইটেমে lookahead রাখি, CLR টেবিল বানাই এবং একই core মেলালে LALR-এ কী বদলায় তা দেখি।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-lr0-slr"
+  ],
+  "related": [
+    "cd-operator-precedence"
+  ],
+  "keywords": [
+    "CLR(1) and LALR(1) Parsing",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14; no third-party packages are needed."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Reasoning and checks"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Construct CLR and merge equal cores",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>CLR keeps context-specific lookaheads in ten states. Merging equal cores gives seven LALR states.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Expose a conflict introduced by LALR merging",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The CLR grammar has no conflicts. Merging completed A and B cores creates two reduce/reduce cells.</p>\n"
+    }
+  ],
+  "practice": [
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Construct the full CLR parser",
+      "statementHtml": "<p>For S → C C, C → c C | d, build all CLR states and the complete ACTION/GOTO table.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>CLR(1) for S → C C; C → c C | d: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>S' -&gt; · S, $; S -&gt; · C C, $; C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I1</td><td>S -&gt; C · C, $; C -&gt; · c C, $; C -&gt; · d, $</td></tr><tr><td>I2</td><td>S' -&gt; S ·, $</td></tr><tr><td>I3</td><td>C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; c · C, c; C -&gt; c · C, d; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I4</td><td>C -&gt; d ·, c; C -&gt; d ·, d</td></tr><tr><td>I5</td><td>S -&gt; C C ·, $</td></tr><tr><td>I6</td><td>C -&gt; · c C, $; C -&gt; c · C, $; C -&gt; · d, $</td></tr><tr><td>I7</td><td>C -&gt; d ·, $</td></tr><tr><td>I8</td><td>C -&gt; c C ·, c; C -&gt; c C ·, d</td></tr><tr><td>I9</td><td>C -&gt; c C ·, $</td></tr></tbody></table>\n<table class=\"ref\"><caption>CLR(1) for S → C C; C → c C | d: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>C</td><td>1</td></tr><tr><td>0</td><td>S</td><td>2</td></tr><tr><td>0</td><td>c</td><td>3</td></tr><tr><td>0</td><td>d</td><td>4</td></tr><tr><td>1</td><td>C</td><td>5</td></tr><tr><td>1</td><td>c</td><td>6</td></tr><tr><td>1</td><td>d</td><td>7</td></tr><tr><td>3</td><td>C</td><td>8</td></tr><tr><td>3</td><td>c</td><td>3</td></tr><tr><td>3</td><td>d</td><td>4</td></tr><tr><td>6</td><td>C</td><td>9</td></tr><tr><td>6</td><td>c</td><td>6</td></tr><tr><td>6</td><td>d</td><td>7</td></tr></tbody></table>\n<table class=\"ref\"><caption>CLR(1) for S → C C; C → c C | d: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">c</th><th scope=\"col\">d</th><th scope=\"col\">$</th><th scope=\"col\">S</th><th scope=\"col\">C</th></tr></thead><tbody><tr><td>0</td><td>s3</td><td>s4</td><td>error</td><td>2</td><td>1</td></tr><tr><td>1</td><td>s6</td><td>s7</td><td>error</td><td>—</td><td>5</td></tr><tr><td>2</td><td>error</td><td>error</td><td>acc</td><td>—</td><td>—</td></tr><tr><td>3</td><td>s3</td><td>s4</td><td>error</td><td>—</td><td>8</td></tr><tr><td>4</td><td>r3</td><td>r3</td><td>error</td><td>—</td><td>—</td></tr><tr><td>5</td><td>error</td><td>error</td><td>r1</td><td>—</td><td>—</td></tr><tr><td>6</td><td>s6</td><td>s7</td><td>error</td><td>—</td><td>9</td></tr><tr><td>7</td><td>error</td><td>error</td><td>r3</td><td>—</td><td>—</td></tr><tr><td>8</td><td>r2</td><td>r2</td><td>error</td><td>—</td><td>—</td></tr><tr><td>9</td><td>error</td><td>error</td><td>r2</td><td>—</td><td>—</td></tr></tbody></table>\n",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Carry out equal-core merging",
+      "statementHtml": "<p>Merge the CLR states of the two-group grammar into LALR states and show the complete resulting table.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Exactly which CLR states are merged</caption><thead><tr><th scope=\"col\">LALR state</th><th scope=\"col\">Original CLR states</th></tr></thead><tbody><tr><td>0</td><td>I0</td></tr><tr><td>1</td><td>I1</td></tr><tr><td>2</td><td>I2</td></tr><tr><td>3</td><td>I3, I6</td></tr><tr><td>4</td><td>I4, I7</td></tr><tr><td>5</td><td>I5</td></tr><tr><td>6</td><td>I8, I9</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR(1) after equal-core merging: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>S' -&gt; · S, $; S -&gt; · C C, $; C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I1</td><td>S -&gt; C · C, $; C -&gt; · c C, $; C -&gt; · d, $</td></tr><tr><td>I2</td><td>S' -&gt; S ·, $</td></tr><tr><td>I3</td><td>C -&gt; · c C, $; C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; c · C, $; C -&gt; c · C, c; C -&gt; c · C, d; C -&gt; · d, $; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I4</td><td>C -&gt; d ·, $; C -&gt; d ·, c; C -&gt; d ·, d</td></tr><tr><td>I5</td><td>S -&gt; C C ·, $</td></tr><tr><td>I6</td><td>C -&gt; c C ·, $; C -&gt; c C ·, c; C -&gt; c C ·, d</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR(1) after equal-core merging: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>C</td><td>1</td></tr><tr><td>0</td><td>S</td><td>2</td></tr><tr><td>0</td><td>c</td><td>3</td></tr><tr><td>0</td><td>d</td><td>4</td></tr><tr><td>1</td><td>C</td><td>5</td></tr><tr><td>1</td><td>c</td><td>3</td></tr><tr><td>1</td><td>d</td><td>4</td></tr><tr><td>3</td><td>C</td><td>6</td></tr><tr><td>3</td><td>c</td><td>3</td></tr><tr><td>3</td><td>d</td><td>4</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR(1) after equal-core merging: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">c</th><th scope=\"col\">d</th><th scope=\"col\">$</th><th scope=\"col\">S</th><th scope=\"col\">C</th></tr></thead><tbody><tr><td>0</td><td>s3</td><td>s4</td><td>error</td><td>2</td><td>1</td></tr><tr><td>1</td><td>s3</td><td>s4</td><td>error</td><td>—</td><td>5</td></tr><tr><td>2</td><td>error</td><td>error</td><td>acc</td><td>—</td><td>—</td></tr><tr><td>3</td><td>s3</td><td>s4</td><td>error</td><td>—</td><td>6</td></tr><tr><td>4</td><td>r3</td><td>r3</td><td>r3</td><td>—</td><td>—</td></tr><tr><td>5</td><td>error</td><td>error</td><td>r1</td><td>—</td><td>—</td></tr><tr><td>6</td><td>r2</td><td>r2</td><td>r2</td><td>—</td><td>—</td></tr></tbody></table>\n",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace the same word in two methods",
+      "statementHtml": "<p>Parse c d d using CLR and LALR, comparing reductions rather than state numbers.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>CLR execution</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>c d d $</td><td>s3</td></tr><tr><td>0 3</td><td>d d $</td><td>s4</td></tr><tr><td>0 3 4</td><td>d $</td><td>r3</td></tr><tr><td>0 3 8</td><td>d $</td><td>r2</td></tr><tr><td>0 1</td><td>d $</td><td>s7</td></tr><tr><td>0 1 7</td><td>$</td><td>r3</td></tr><tr><td>0 1 5</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR execution</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>c d d $</td><td>s3</td></tr><tr><td>0 3</td><td>d d $</td><td>s4</td></tr><tr><td>0 3 4</td><td>d $</td><td>r3</td></tr><tr><td>0 3 6</td><td>d $</td><td>r2</td></tr><tr><td>0 1</td><td>d $</td><td>s4</td></tr><tr><td>0 1 4</td><td>$</td><td>r3</td></tr><tr><td>0 1 5</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Explain a merging-induced conflict",
+      "statementHtml": "<p>For S → a A d | b A e | a B e | b B d, A → c, B → c, show why CLR succeeds but LALR conflicts.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Completed CLR contexts in the LR(1)-but-not-LALR grammar</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Completed items</th></tr></thead><tbody><tr><td>6</td><td>A -&gt; c ·, d; B -&gt; c ·, e</td></tr><tr><td>9</td><td>A -&gt; c ·, e; B -&gt; c ·, d</td></tr></tbody></table>\n<table class=\"ref\"><caption>After merging, both reduction lookaheads overlap</caption><thead><tr><th scope=\"col\">LALR state</th><th scope=\"col\">Lookahead</th><th scope=\"col\">Actions</th></tr></thead><tbody><tr><td>6</td><td>d</td><td>r5 / r6</td></tr><tr><td>6</td><td>e</td><td>r5 / r6</td></tr></tbody></table>\n<p>The same completed core occurs with reversed d/e assignments. Their union gives both reductions in both columns.</p>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Propagate a nullable suffix lookahead",
+      "statementHtml": "<p>For [X → · A B, $] with B → b | ε and A → a, which A item lookaheads must closure add?</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>FIRST(B $) = {b,$}. Add [A → · a,b] and [A → · a,$]. The ε possibility in B passes the parent $ onward.</p>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does the lookahead in [A → α · β, a] describe?",
+      "options": [
+        "The first token of α",
+        "A token that may follow the completed A",
+        "A token already shifted",
+        "A nonterminal to expand"
+      ],
+      "answer": 1,
+      "explanation": "It carries the surrounding completion context."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which set supplies lookaheads when closure predicts B from [A → α · B β, a]?",
+      "options": [
+        "FOLLOW(B) unconditionally",
+        "FIRST(α)",
+        "FIRST(βa)",
+        "FIRST(B) only"
+      ],
+      "answer": 2,
+      "explanation": "The remaining suffix precedes the parent lookahead."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "When β is empty, what lookahead passes to predicted B items?",
+      "options": [
+        "ε",
+        "Every terminal",
+        "No lookahead",
+        "a"
+      ],
+      "answer": 3,
+      "explanation": "FIRST of the sequence containing only terminal a is {a}."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which states can LALR merge?",
+      "options": [
+        "States with identical LR(0) cores",
+        "States with equal numbers",
+        "States with one shared shift",
+        "Any two accepting states"
+      ],
+      "answer": 0,
+      "explanation": "Lookaheads may differ, but dotted-production sets must match."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens to lookaheads on matching items during merging?",
+      "options": [
+        "They are intersected",
+        "They are unioned",
+        "Only the first is kept",
+        "They are replaced by ε"
+      ],
+      "answer": 1,
+      "explanation": "Every source context must remain represented."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many states does the worked two-group grammar have in CLR and LALR?",
+      "options": [
+        "7 and 10",
+        "10 and 10",
+        "10 and 7",
+        "5 and 7"
+      ],
+      "answer": 2,
+      "explanation": "Three pairs of equal-core CLR states merge."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which conflict can equal-core merging newly introduce from conflict-free CLR states?",
+      "options": [
+        "Shift/shift",
+        "A new shift/reduce conflict",
+        "A lexical conflict",
+        "Reduce/reduce"
+      ],
+      "answer": 3,
+      "explanation": "Distinct reductions can acquire overlapping lookaheads from different source contexts."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which standard grammar-class containment is correct?",
+      "options": [
+        "SLR ⊆ LALR ⊆ CLR",
+        "CLR ⊆ SLR ⊆ LALR",
+        "LALR ⊆ LR(0)",
+        "All four classes are equal"
+      ],
+      "answer": 0,
+      "explanation": "More precise lookahead context recognises a broader grammar class."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "In the counterexample, which terminals conflict after merging A → c · and B → c ·?",
+      "options": [
+        "a and b",
+        "d and e",
+        "c only",
+        "$ only"
+      ],
+      "answer": 1,
+      "explanation": "Both completed productions acquire both d and e lookaheads."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why must merged edges be redirected?",
+      "options": [
+        "The terminal alphabet changes",
+        "Every shift becomes a reduction",
+        "Old state identities have become new merged identities",
+        "The end marker disappears"
+      ],
+      "answer": 2,
+      "explanation": "Both source and target references must use the merged numbering."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For FIRST(B $) with B → b | ε, which set is correct?",
+      "options": [
+        "{b,ε}",
+        "{$} only",
+        "{b} only",
+        "{b,$}"
+      ],
+      "answer": 3,
+      "explanation": "Nullable B lets the parent end marker contribute."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "LR(1) items carry context-specific following tokens.",
+      "bn": "LR(1) আইটেমে নির্দিষ্ট প্রসঙ্গে পরের টোকেনের তথ্য থাকে।"
+    },
+    {
+      "en": "Closure uses FIRST of the suffix followed by the parent lookahead.",
+      "bn": "closure নিতে বাকি অংশের পরে আগের lookahead বসিয়ে FIRST নিতে হয়।"
+    },
+    {
+      "en": "LALR merges only states with equal dotted-production cores.",
+      "bn": "ডটসহ নিয়মের core একই হলেই LALR স্টেট মেলানো যায়।"
+    },
+    {
+      "en": "Merging unions each matching item’s lookaheads.",
+      "bn": "একই আইটেমের সব lookahead মেলানোর সময় একসঙ্গে রাখতে হয়।"
+    },
+    {
+      "en": "Equal-core merging can introduce reduce/reduce conflicts.",
+      "bn": "একই core মেলালেও নতুন রিডিউস-রিডিউস দ্বন্দ্ব আসতে পারে।"
+    },
+    {
+      "en": "CLR may need more states to preserve separate contexts.",
+      "bn": "আলাদা প্রসঙ্গ ধরে রাখতে CLR-এর বেশি স্টেট লাগতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "For S → C C, C → c C | d, build all CLR states and the complete ACTION/GOTO table.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>CLR(1) for S → C C; C → c C | d: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>S' -&gt; · S, $; S -&gt; · C C, $; C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I1</td><td>S -&gt; C · C, $; C -&gt; · c C, $; C -&gt; · d, $</td></tr><tr><td>I2</td><td>S' -&gt; S ·, $</td></tr><tr><td>I3</td><td>C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; c · C, c; C -&gt; c · C, d; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I4</td><td>C -&gt; d ·, c; C -&gt; d ·, d</td></tr><tr><td>I5</td><td>S -&gt; C C ·, $</td></tr><tr><td>I6</td><td>C -&gt; · c C, $; C -&gt; c · C, $; C -&gt; · d, $</td></tr><tr><td>I7</td><td>C -&gt; d ·, $</td></tr><tr><td>I8</td><td>C -&gt; c C ·, c; C -&gt; c C ·, d</td></tr><tr><td>I9</td><td>C -&gt; c C ·, $</td></tr></tbody></table>\n<table class=\"ref\"><caption>CLR(1) for S → C C; C → c C | d: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>C</td><td>1</td></tr><tr><td>0</td><td>S</td><td>2</td></tr><tr><td>0</td><td>c</td><td>3</td></tr><tr><td>0</td><td>d</td><td>4</td></tr><tr><td>1</td><td>C</td><td>5</td></tr><tr><td>1</td><td>c</td><td>6</td></tr><tr><td>1</td><td>d</td><td>7</td></tr><tr><td>3</td><td>C</td><td>8</td></tr><tr><td>3</td><td>c</td><td>3</td></tr><tr><td>3</td><td>d</td><td>4</td></tr><tr><td>6</td><td>C</td><td>9</td></tr><tr><td>6</td><td>c</td><td>6</td></tr><tr><td>6</td><td>d</td><td>7</td></tr></tbody></table>\n<table class=\"ref\"><caption>CLR(1) for S → C C; C → c C | d: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">c</th><th scope=\"col\">d</th><th scope=\"col\">$</th><th scope=\"col\">S</th><th scope=\"col\">C</th></tr></thead><tbody><tr><td>0</td><td>s3</td><td>s4</td><td>error</td><td>2</td><td>1</td></tr><tr><td>1</td><td>s6</td><td>s7</td><td>error</td><td>—</td><td>5</td></tr><tr><td>2</td><td>error</td><td>error</td><td>acc</td><td>—</td><td>—</td></tr><tr><td>3</td><td>s3</td><td>s4</td><td>error</td><td>—</td><td>8</td></tr><tr><td>4</td><td>r3</td><td>r3</td><td>error</td><td>—</td><td>—</td></tr><tr><td>5</td><td>error</td><td>error</td><td>r1</td><td>—</td><td>—</td></tr><tr><td>6</td><td>s6</td><td>s7</td><td>error</td><td>—</td><td>9</td></tr><tr><td>7</td><td>error</td><td>error</td><td>r3</td><td>—</td><td>—</td></tr><tr><td>8</td><td>r2</td><td>r2</td><td>error</td><td>—</td><td>—</td></tr><tr><td>9</td><td>error</td><td>error</td><td>r2</td><td>—</td><td>—</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Merge the CLR states of the two-group grammar into LALR states and show the complete resulting table.\n",
+      "marks": 8,
+      "answerHtml": "<table class=\"ref\"><caption>Exactly which CLR states are merged</caption><thead><tr><th scope=\"col\">LALR state</th><th scope=\"col\">Original CLR states</th></tr></thead><tbody><tr><td>0</td><td>I0</td></tr><tr><td>1</td><td>I1</td></tr><tr><td>2</td><td>I2</td></tr><tr><td>3</td><td>I3, I6</td></tr><tr><td>4</td><td>I4, I7</td></tr><tr><td>5</td><td>I5</td></tr><tr><td>6</td><td>I8, I9</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR(1) after equal-core merging: complete item sets</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Items</th></tr></thead><tbody><tr><td>I0</td><td>S' -&gt; · S, $; S -&gt; · C C, $; C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I1</td><td>S -&gt; C · C, $; C -&gt; · c C, $; C -&gt; · d, $</td></tr><tr><td>I2</td><td>S' -&gt; S ·, $</td></tr><tr><td>I3</td><td>C -&gt; · c C, $; C -&gt; · c C, c; C -&gt; · c C, d; C -&gt; c · C, $; C -&gt; c · C, c; C -&gt; c · C, d; C -&gt; · d, $; C -&gt; · d, c; C -&gt; · d, d</td></tr><tr><td>I4</td><td>C -&gt; d ·, $; C -&gt; d ·, c; C -&gt; d ·, d</td></tr><tr><td>I5</td><td>S -&gt; C C ·, $</td></tr><tr><td>I6</td><td>C -&gt; c C ·, $; C -&gt; c C ·, c; C -&gt; c C ·, d</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR(1) after equal-core merging: nonempty transitions</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>0</td><td>C</td><td>1</td></tr><tr><td>0</td><td>S</td><td>2</td></tr><tr><td>0</td><td>c</td><td>3</td></tr><tr><td>0</td><td>d</td><td>4</td></tr><tr><td>1</td><td>C</td><td>5</td></tr><tr><td>1</td><td>c</td><td>3</td></tr><tr><td>1</td><td>d</td><td>4</td></tr><tr><td>3</td><td>C</td><td>6</td></tr><tr><td>3</td><td>c</td><td>3</td></tr><tr><td>3</td><td>d</td><td>4</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR(1) after equal-core merging: every ACTION and GOTO cell</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">c</th><th scope=\"col\">d</th><th scope=\"col\">$</th><th scope=\"col\">S</th><th scope=\"col\">C</th></tr></thead><tbody><tr><td>0</td><td>s3</td><td>s4</td><td>error</td><td>2</td><td>1</td></tr><tr><td>1</td><td>s3</td><td>s4</td><td>error</td><td>—</td><td>5</td></tr><tr><td>2</td><td>error</td><td>error</td><td>acc</td><td>—</td><td>—</td></tr><tr><td>3</td><td>s3</td><td>s4</td><td>error</td><td>—</td><td>6</td></tr><tr><td>4</td><td>r3</td><td>r3</td><td>r3</td><td>—</td><td>—</td></tr><tr><td>5</td><td>error</td><td>error</td><td>r1</td><td>—</td><td>—</td></tr><tr><td>6</td><td>r2</td><td>r2</td><td>r2</td><td>—</td><td>—</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "long",
+      "question": "Parse c d d using CLR and LALR, comparing reductions rather than state numbers.\n",
+      "marks": 5,
+      "answerHtml": "<table class=\"ref\"><caption>CLR execution</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>c d d $</td><td>s3</td></tr><tr><td>0 3</td><td>d d $</td><td>s4</td></tr><tr><td>0 3 4</td><td>d $</td><td>r3</td></tr><tr><td>0 3 8</td><td>d $</td><td>r2</td></tr><tr><td>0 1</td><td>d $</td><td>s7</td></tr><tr><td>0 1 7</td><td>$</td><td>r3</td></tr><tr><td>0 1 5</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n<table class=\"ref\"><caption>LALR execution</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>c d d $</td><td>s3</td></tr><tr><td>0 3</td><td>d d $</td><td>s4</td></tr><tr><td>0 3 4</td><td>d $</td><td>r3</td></tr><tr><td>0 3 6</td><td>d $</td><td>r2</td></tr><tr><td>0 1</td><td>d $</td><td>s4</td></tr><tr><td>0 1 4</td><td>$</td><td>r3</td></tr><tr><td>0 1 5</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

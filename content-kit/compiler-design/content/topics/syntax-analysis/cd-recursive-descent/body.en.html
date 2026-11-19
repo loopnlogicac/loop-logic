@@ -1,0 +1,60 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine a teacher handing a calculation to three assistants. One handles sums, one handles products, and one handles single numbers or brackets. Each assistant returns a completed value before the caller continues. Recursive descent organises parsing in this familiar way.</p>
+<p>A <dfn>recursive-descent parser</dfn> uses functions that follow grammar rules. A function consumes the tokens belonging to its phrase and returns to its caller. Recursion handles nested phrases such as parentheses. Loops handle repeated operators without creating unnecessary recursive calls.</p>
+<p>The parser here evaluates unsigned integer expressions using +, -, *, and parentheses. It also reads programs containing semicolon-terminated expressions. Unary signs, division, variables, and assignments are outside this language. Thus 9-2 is legal, while -2 is rejected because a factor cannot begin with minus.</p>
+<h2 id="syntax">Grammar and representation</h2>
+<pre><code class="language-text">program    → { expression ; } EOF
+expression → term { (+ | -) term }
+term       → factor { * factor }
+factor     → NUM | ( expression )</code></pre>
+<p>Braces in this displayed notation mean zero or more repetitions; they are not source characters. The functions expression, term, and factor each implement one nonterminal. program implements the outer statement sequence. After an expression, the caller decides which following token is required.</p>
+<table class="ref"><caption>Python parser responsibilities</caption><thead><tr><th scope="col">Function</th><th scope="col">Consumes</th><th scope="col">Why it stops</th></tr></thead><tbody><tr><td>tokenize</td><td>ASCII digit runs, punctuation, whitespace</td><td>End of source text.</td></tr><tr><td>factor</td><td>One NUM or a parenthesised expression</td><td>The factor has completed.</td></tr><tr><td>term</td><td>A factor and zero or more * factor pairs</td><td>The next token is not *.</td></tr><tr><td>expression</td><td>A term and zero or more + or - terms</td><td>The next token is neither + nor -.</td></tr><tr><td>program</td><td>Expressions each followed by ;</td><td>Lookahead becomes EOF.</td></tr></tbody></table>
+<p>Each token is a tuple containing its kind, value, and zero-based character position. NUM carries a Python integer; punctuation carries its own spelling. The scanner appends EOF once. Error messages add one to the character position so students see one-based columns. A tab counts as one character in this convention, not as a display-width tab stop.</p>
+<p>The expression parser operates on source characters through its scanner. This differs from the preceding LL(1) recogniser, which receives token kinds such as id. Both designs separate lexical recognition from grammar decisions, but the recursive parser also carries numeric values.</p>
+<h2 id="how-it-works">How the parser works</h2>
+<h3>Let function calls enforce precedence</h3>
+<table class="ref"><caption>Calls while reading 2 + 3 * 4 ;</caption><thead><tr><th scope="col">Active function</th><th scope="col">Input action</th><th scope="col">Returned value</th></tr></thead><tbody><tr><td>factor inside first term</td><td>Read NUM 2</td><td>2</td></tr><tr><td>term inside expression</td><td>Next token + ends term</td><td>2</td></tr><tr><td>expression</td><td>Consume +, call term</td><td>Waiting for right value</td></tr><tr><td>factor inside second term</td><td>Read NUM 3</td><td>3</td></tr><tr><td>second term</td><td>Consume *, call factor</td><td>Waiting for 4</td></tr><tr><td>factor inside second term</td><td>Read NUM 4</td><td>4</td></tr><tr><td>second term</td><td>Compute 3 * 4</td><td>12</td></tr><tr><td>expression</td><td>Compute 2 + 12</td><td>14</td></tr><tr><td>program</td><td>Require ; before saving value</td><td>Save 14</td></tr></tbody></table>
+<p>expression first calls term. term first calls factor. When term sees *, it consumes the operator and obtains another factor before returning. Therefore expression receives the complete value 12 for 3*4. It cannot add the 3 early because its right-hand term has not yet finished.</p>
+<p>A factor beginning with ( consumes that token, calls expression, and requires ). This recursive call starts a new expression level inside the parentheses. For (2+3)*4, the inner call returns 5 before the outer term multiplies by 4. The call stack remembers which closing parenthesis belongs to which opening one.</p>
+<h3>Keep subtraction left associative</h3>
+<table class="ref"><caption>Accumulator trace for 9-2-1</caption><thead><tr><th scope="col">Stage</th><th scope="col">Accumulator</th><th scope="col">Next action</th></tr></thead><tbody><tr><td>Read first term</td><td>9</td><td>See - and read 2.</td></tr><tr><td>First update</td><td>7</td><td>See - and read 1.</td></tr><tr><td>Second update</td><td>6</td><td>Return because the next token ends the expression.</td></tr></tbody></table>
+<p>The expression loop updates value after each operator. This is a left fold: the result of the previous operation becomes the next left operand. Replacing the loop with value - expression() would recurse through the entire remaining tail. That alternative computes 9-(2-1), giving 8 and changing the language’s association rule.</p>
+<h3>Signal a failed expectation precisely</h3>
+<p>take(kind) checks the current token before advancing. If the kind differs, it raises ParseError with the column, expected kind, and actual kind. A failed take does not consume a token. The caller can therefore decide how to recover without losing the location of the error.</p>
+<p>factor first accepts NUM. Otherwise it attempts the parenthesised branch and expects (. Consequently an operand error such as 8+; reports that ( was expected at the semicolon. That message names the remaining factor branch; a fuller diagnostic could say “expected a number or (”. The recogniser rejects the input correctly in either wording.</p>
+<p>Unknown source characters are lexical failures. tokenize raises ParseError before returning its token list. The examples catch that exception around parser construction. Statement-level recovery cannot run if tokenisation never completed. This deliberate separation keeps the small parser’s syntax recovery from guessing what an unknown character meant.</p>
+<h3>Recover at a statement boundary</h3>
+<table class="ref"><caption>Statement-level recovery for 8+; 6*7; (2+3; 5;</caption><thead><tr><th scope="col">Statement</th><th scope="col">Problem</th><th scope="col">Recovery</th><th scope="col">Saved value</th></tr></thead><tbody><tr><td>8+;</td><td>Operand expected at ;</td><td>Consume the synchronising ;</td><td>None</td></tr><tr><td>6*7;</td><td>No error</td><td>Consume ; normally</td><td>42</td></tr><tr><td>(2+3;</td><td>Closing ) expected at ;</td><td>Discard to and consume ;</td><td>None</td></tr><tr><td>5;</td><td>No error</td><td>Consume ; normally</td><td>5</td></tr></tbody></table>
+<p><dfn>Panic-mode recovery</dfn> discards tokens until reaching a chosen boundary. Here the synchronising set is {;, EOF}. After a syntax exception, program advances to one of those tokens. If it finds ;, it consumes it and tries the following statement. If it finds EOF, the outer loop ends.</p>
+<p>A statement value is saved only after its semicolon matches. Thus a partially computed 8+ result never enters the results list. A missing final semicolon also counts as an error even if expression returned a number. For input 7 without ;, the value 7 is discarded because the statement is incomplete.</p>
+<p>Recovery must make progress. The scanning loop moves the token position unless it already sees a boundary. A boundary semicolon is then consumed. At EOF, parsing stops. Without one of these changes, the parser could report the same error forever at the same token. One recovery episode records one syntax error, even if several damaged tokens are skipped.</p>
+<p>Semicolon recovery may discard more than the original mistake. For a missing ) inside a statement, everything through ; is abandoned. A production compiler can use context-specific synchronising sets or error productions to retain more structure. Recovery is a useful continuation strategy, not a proof that the skipped text has a unique correction.</p>
+<h3>Check complete consumption and resource limits</h3>
+<p>For the single-expression practice problem, call expression and then require EOF. Otherwise 2 3 might appear valid because the first call returns 2 and ignores the trailing number. For the program parser, require a semicolon after each expression and stop only at EOF. Empty programs are allowed; empty expressions are not.</p>
+<p>Each successful token is normally consumed once, so syntax work is linear in token count. Nested parentheses use O(d) call-stack depth for nesting depth d. The scanner stores O(n) tokens and the program stores successful values. Python integers have arbitrary precision, so arithmetic cost also grows with the size of intermediate values.</p>
+<p>Deeply nested source can exceed Python’s recursion limit. The practice tasks keep nesting below 100, which avoids this concern for ordinary classroom inputs. A parser for untrusted large documents should enforce a depth limit explicitly or use an iterative stack. Increasing the interpreter limit without controlling input depth is not a parsing strategy.</p>
+<h2 id="examples">Examples</h2>
+<h3>Multiply before adding</h3>
+<p>term consumes 3*4 before expression adds it to 2, giving 14.</p>
+<div data-example="ex-1"></div>
+<h3>Group and subtract from left to right</h3>
+<p>Parentheses produce 20. Repeated subtraction uses a loop and produces 6.</p>
+<div data-example="ex-2"></div>
+<h3>Recover after a malformed statement</h3>
+<p>Recovery discards the damaged statement through its semicolon, then keeps the later values.</p>
+<div data-example="ex-3"></div>
+<h3>Reject unknown source characters</h3>
+<p>The scanner reports @ before grammar functions run. No statement recovery is attempted here.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Calling expression for the right side of every operator</h3>
+<p>That choice changes subtraction into a right-associated operation. Use term for additive operands and update the accumulator inside a loop.</p>
+<h3>Recording values before the statement ends</h3>
+<p>A returned expression value is not a completed statement. Match ; first so a damaged suffix cannot leave a false successful result.</p>
+<h3>Recovering without moving the token position</h3>
+<p>Consume a synchronising semicolon or stop at EOF. Re-entering the same failed phrase without progress repeats the error indefinitely.</p>
+<h2 id="version-notes">Python version notes</h2>
+<div class="callout version"><p>The recursive parser uses standard Python 3.12 exceptions and integers. Python limits recursion depth, so very deeply nested expressions need an explicit stack.</p>
+</div>
+<h2 id="summary">Summary</h2>
+<p>Recursive descent mirrors grammar levels with functions. Loops preserve left association, calls handle nesting, and exceptions carry failures to recovery boundaries. Next, <a href="topic:cd-shift-reduce">shift-reduce parsing</a> builds phrases upward from recognised tokens.</p>

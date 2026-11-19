@@ -1,0 +1,409 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-shift-reduce",
+  "module": "syntax-analysis",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Bottom-Up Parsing: Shift-Reduce",
+    "bn": "বটম-আপ শিফট-রিডিউস পার্সিং"
+  },
+  "summary": {
+    "en": "Build phrases upward with shifts and reductions, locate handles, and distinguish shift/reduce from reduce/reduce conflicts.",
+    "bn": "টোকেন স্ট্যাকে তুলে ছোট অংশ থেকে বড় অংশ বানাই এবং shift/reduce ও reduce/reduce দ্বন্দ্ব আলাদা করি।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-recursive-descent"
+  ],
+  "related": [
+    "cd-lr0-slr"
+  ],
+  "keywords": [
+    "Bottom-Up Parsing: Shift-Reduce",
+    "parsing",
+    "grammar"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14; no third-party packages are needed."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Grammar and representation"
+    },
+    {
+      "id": "how-it-works",
+      "title": "How the parser works"
+    },
+    {
+      "id": "examples",
+      "title": "Examples"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Python version notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Shift and reduce two c-star-d groups",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The first d reduces to C, then c C reduces to C. A second group is still required.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Detect the plus-expression shift/reduce conflict",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>On + after E + E, the table offers both shifting and reducing.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Detect two reductions for one token",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Both A → id and B → id can reduce at the end marker, so the grammar has two trees.</p>\n"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Recognise two terminated groups",
+      "statementHtml": "<p>Read a line of space-separated c and d tokens. For S → C C, C → c C | d, print <code>accept</code> or <code>reject</code>. Reject input containing $.</p>\n",
+      "difficulty": "easy",
+      "hints": [
+        "Count a group as complete only after its d has been recognised."
+      ],
+      "id": "p-1",
+      "solution": "practice/p-1.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "title": "Count the reductions without counting acceptance",
+      "statementHtml": "<p>Read c and d tokens on one line using the two-group grammar. Print the number of reduction actions for an accepted word; otherwise print <code>reject</code>. The accept action is not a reduction.</p>\n",
+      "difficulty": "medium",
+      "hints": [
+        "Each c adds one C → c C reduction; there are also two C → d reductions and S → C C."
+      ],
+      "id": "p-2",
+      "solution": "practice/p-2.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Mark every handle",
+      "statementHtml": "<p>For S → C C, C → c C | d, trace c d d and identify each handle.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>Handle pruning for c d d; rightmost handle marked by brackets</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Decision</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>$</td><td>c d d $</td><td>shift c</td><td>No complete right side yet.</td></tr><tr><td>$ c</td><td>d d $</td><td>shift d</td><td>d completes the innermost C.</td></tr><tr><td>$ c [d]</td><td>d $</td><td>reduce C → d</td><td>The handle is this d.</td></tr><tr><td>$ [c C]</td><td>d $</td><td>reduce C → c C</td><td>The first group is complete.</td></tr><tr><td>$ C</td><td>d $</td><td>shift d</td><td>The second C is still missing.</td></tr><tr><td>$ C [d]</td><td>$</td><td>reduce C → d</td><td>Complete the second group.</td></tr><tr><td>$ [C C]</td><td>$</td><td>reduce S → C C</td><td>Build the start phrase.</td></tr><tr><td>$ S</td><td>$</td><td>accept</td><td>Whole input forms one S.</td></tr></tbody></table>\n<table class=\"ref\"><caption>The rightmost derivation is reconstructed backward</caption><thead><tr><th scope=\"col\">Forward derivation</th><th scope=\"col\">Reverse reduction</th></tr></thead><tbody><tr><td>S ⇒ C C</td><td>C C → S</td></tr><tr><td>C C ⇒ C d</td><td>C d → C C</td></tr><tr><td>C d ⇒ c C d</td><td>c C d → C d</td></tr><tr><td>c C d ⇒ c d d</td><td>c d d → c C d</td></tr></tbody></table>\n",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Explain two distinct conflicts",
+      "statementHtml": "<p>Show a shift/reduce conflict for E → E + E | id and a reduce/reduce conflict for S → A | B, A → id, B → id.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<p>After E+E with + ahead, shifting extends the right E and reducing completes the left sum. After id with $ ahead, either A→id or B→id can reduce. The first is shift/reduce; the second is reduce/reduce.</p>\n",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Reject an unfinished two-group word",
+      "statementHtml": "<p>For S → C C, C → c C | d, trace the input d until rejection and explain what is missing.</p>\n",
+      "hints": [
+        "Follow each replacement in order."
+      ],
+      "answerHtml": "<table class=\"ref\"><caption>A missing second group</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>d $</td><td>s4</td></tr><tr><td>0 4</td><td>$</td><td>r3</td></tr><tr><td>0 1</td><td>$</td><td>error</td></tr></tbody></table>\n<p>The first d reduces to C. The parser still needs another C, which must contain a final d. Lookahead $ supplies neither c nor d, so the current ACTION cell is empty.</p>\n",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which shift-reduce operation advances the input?",
+      "options": [
+        "Reduce",
+        "GOTO after reduction",
+        "Accept",
+        "Shift"
+      ],
+      "answer": 3,
+      "explanation": "A shift reads exactly the next terminal token."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the first handle in the c d d trace?",
+      "options": [
+        "The first d",
+        "The entire c d d",
+        "The last d",
+        "The token c alone"
+      ],
+      "answer": 0,
+      "explanation": "Reducing that d to C reverses the last rightmost-derivation step."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "A reduction reconstructs which derivation direction?",
+      "options": [
+        "A leftmost derivation forward",
+        "A rightmost derivation in reverse",
+        "Any random expansion order",
+        "Only terminal substitutions"
+      ],
+      "answer": 1,
+      "explanation": "Handle pruning reverses rightmost expansions."
+    },
+    {
+      "id": "q-4",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which states remain after reducing a right side of length two?",
+      "options": [
+        "[0, 1, 2]",
+        "[2, 3]",
+        "[0, 1]",
+        "[]"
+      ],
+      "answer": 2,
+      "explanation": "One state per recognised right-side symbol is removed.",
+      "code": "if __name__ == \"__main__\":\n    stack = [0, 1, 2, 3]\n    del stack[-2:]\n    print(stack)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-5",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What position is printed after a reduction that reads no token?",
+      "options": [
+        "3",
+        "1",
+        "0",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "Reduction changes the stack but not the input cursor.",
+      "code": "if __name__ == \"__main__\":\n    position = 2\n    stack = [0, 3, 4]\n    stack.pop()\n    stack.append(6)\n    print(position)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-6",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many genuine reductions occur in this action sequence?",
+      "options": [
+        "4",
+        "3",
+        "5",
+        "8"
+      ],
+      "answer": 0,
+      "explanation": "r3, r2, r3, and r1 reduce; accept has its own role.",
+      "code": "if __name__ == \"__main__\":\n    actions = [\"s3\", \"s4\", \"r3\", \"r2\", \"s4\", \"r3\", \"r1\", \"accept\"]\n    print(sum(action.startswith(\"r\") for action in actions))\n",
+      "language": "python"
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which pair defines a reduce/reduce conflict?",
+      "options": [
+        "A terminal and EOF",
+        "Two completed productions in one ACTION cell",
+        "An empty and filled cell",
+        "One shift and one reduction"
+      ],
+      "answer": 1,
+      "explanation": "The parser has two candidate phrase replacements."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does greedy reduction mishandle E + E before *?",
+      "options": [
+        "It always creates a lexical error",
+        "It consumes the star twice",
+        "It may complete addition before the higher-precedence product",
+        "E is a terminal"
+      ],
+      "answer": 2,
+      "explanation": "The right operand may need to grow before addition reduces."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does any LR table conflict prove grammar ambiguity?",
+      "options": [
+        "Yes, for every method",
+        "Yes, if FOLLOW is finite",
+        "Only if there are no ε rules",
+        "No"
+      ],
+      "answer": 3,
+      "explanation": "A weaker method may lose contextual distinctions."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must an epsilon reduction pop from the state stack?",
+      "options": [
+        "Zero states",
+        "One state",
+        "The entire stack",
+        "Two states"
+      ],
+      "answer": 0,
+      "explanation": "An empty right side recognises no symbols."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is a single d rejected by S → C C?",
+      "options": [
+        "d cannot form C",
+        "One required C is still missing",
+        "The start symbol is nullable",
+        "There must be a c"
+      ],
+      "answer": 1,
+      "explanation": "Each C requires its own final d."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A shift consumes one input token.",
+      "bn": "শিফট করলে ইনপুটের একটি টোকেন পড়া হয়।"
+    },
+    {
+      "en": "A reduction replaces a handle without consuming input.",
+      "bn": "রিডিউসে ইনপুট না পড়ে হ্যান্ডেলের জায়গায় বাম পাশ বসে।"
+    },
+    {
+      "en": "Handles reverse a rightmost derivation.",
+      "bn": "হ্যান্ডেল ধরে ছোট করলে rightmost derivation উল্টো পথে পাওয়া যায়।"
+    },
+    {
+      "en": "Parser states provide the context for safe reductions.",
+      "bn": "কখন রিডিউস করা ঠিক, parser স্টেট সেই প্রসঙ্গ ধরে রাখে।"
+    },
+    {
+      "en": "Shift/reduce and reduce/reduce conflicts need different explanations.",
+      "bn": "শিফট-রিডিউস আর রিডিউস-রিডিউস দ্বন্দ্বের কারণ আলাদা করে বুঝতে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "For S → C C, C → c C | d, trace c d d and identify each handle.\n",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>Handle pruning for c d d; rightmost handle marked by brackets</caption><thead><tr><th scope=\"col\">Stack (top at right)</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Decision</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>$</td><td>c d d $</td><td>shift c</td><td>No complete right side yet.</td></tr><tr><td>$ c</td><td>d d $</td><td>shift d</td><td>d completes the innermost C.</td></tr><tr><td>$ c [d]</td><td>d $</td><td>reduce C → d</td><td>The handle is this d.</td></tr><tr><td>$ [c C]</td><td>d $</td><td>reduce C → c C</td><td>The first group is complete.</td></tr><tr><td>$ C</td><td>d $</td><td>shift d</td><td>The second C is still missing.</td></tr><tr><td>$ C [d]</td><td>$</td><td>reduce C → d</td><td>Complete the second group.</td></tr><tr><td>$ [C C]</td><td>$</td><td>reduce S → C C</td><td>Build the start phrase.</td></tr><tr><td>$ S</td><td>$</td><td>accept</td><td>Whole input forms one S.</td></tr></tbody></table>\n<table class=\"ref\"><caption>The rightmost derivation is reconstructed backward</caption><thead><tr><th scope=\"col\">Forward derivation</th><th scope=\"col\">Reverse reduction</th></tr></thead><tbody><tr><td>S ⇒ C C</td><td>C C → S</td></tr><tr><td>C C ⇒ C d</td><td>C d → C C</td></tr><tr><td>C d ⇒ c C d</td><td>c C d → C d</td></tr><tr><td>c C d ⇒ c d d</td><td>c d d → c C d</td></tr></tbody></table>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Show a shift/reduce conflict for E → E + E | id and a reduce/reduce conflict for S → A | B, A → id, B → id.\n",
+      "marks": 8,
+      "answerHtml": "<p>After E+E with + ahead, shifting extends the right E and reducing completes the left sum. After id with $ ahead, either A→id or B→id can reduce. The first is shift/reduce; the second is reduce/reduce.</p>\n"
+    },
+    {
+      "type": "long",
+      "question": "For S → C C, C → c C | d, trace the input d until rejection and explain what is missing.\n",
+      "marks": 5,
+      "answerHtml": "<table class=\"ref\"><caption>A missing second group</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>d $</td><td>s4</td></tr><tr><td>0 4</td><td>$</td><td>r3</td></tr><tr><td>0 1</td><td>$</td><td>error</td></tr></tbody></table>\n<p>The first d reduces to C. The parser still needs another C, which must contain a final d. Lookahead $ supplies neither c nor d, so the current ACTION cell is empty.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "GNU Bison manual: parsing algorithms",
+      "url": "https://www.gnu.org/software/bison/manual/bison.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
