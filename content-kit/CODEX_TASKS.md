@@ -166,3 +166,5 @@ Round 4 is merged: Data Structures, Python, DBMS, OOP (Java) and Compiler Design
 | R5-F | Python | Bangla edition, part 1 | basics, control-flow, data-structures |
 | R5-G | Data Structures | Bangla edition, part 1 | foundations, arrays, linked-lists |
 | R5-H | DBMS | Bangla edition, part 1 | foundations, er-modelling, relational-model |
+
+Every lab's English `title` must be a short, descriptive phrase (for example "Shortest paths with Dijkstra"), never the lab id in title case ("Dijkstra", "Graph Bfs"). Round 4 left 13 such titles; they were fixed by hand.
