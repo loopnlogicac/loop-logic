@@ -1,0 +1,59 @@
+<h2 id="introduction">Connect every room with less cable</h2>
+<p class="lead">Suppose six campus rooms need one connected cable network. You care about the sum of installed cable lengths, rather than travel distance from a particular room. A minimum spanning tree, or MST, connects every vertex with the smallest possible total edge weight.</p>
+<p>A spanning tree uses every vertex, remains connected, and has no cycle. For V vertices, it contains V-1 edges. Adding a cycle wastes an edge for connectivity because one cycle edge can be removed while keeping the same vertices connected. With nonnegative installation costs, the tree picture directly matches the cable problem.</p>
+<p>Prim&#x27;s algorithm grows one connected tree from a selected start. At every step, it chooses the lightest edge that joins the current tree to a vertex outside it. The start changes the growth sequence, but any completed MST has the same minimum total weight. Different MST edge sets can still tie.</p>
+<h2 id="syntax">A key is one connection edge</h2>
+<p>Prim keeps used[v] to mark vertices already in the tree. For a vertex outside the tree, key[v] is the lightest edge found from the tree to v. It is not the length of a route from start. The source has key zero and no parent edge so that it can seed the tree.</p>
+<p>A binary min-heap stores candidate triples of value, vertex and parent. The smallest key is removed first, with vertex index breaking equal-key ties. Whenever a lighter connection to v is found, push a new entry. Older entries remain until popped, when a used test or mismatched key identifies them as stale.</p>
+<p>The C heap has space for 32 entries, enough for these fixed graphs. A general lazy heap needs storage that grows with successful key improvements. Unlike an indexed heap, it does not keep exactly one current record per vertex. The animation displays a sorted queue panel with the same minimum and tie behaviour.</p>
+<pre><code class="language-text">key[*] = INF; used[*] = false; key[start] = 0; push (0,start)
+while priority queue is nonempty: pop minimum (value,u,parent)
+    if used[u] or value != key[u]: discard stale entry
+    add u and its parent edge to the tree; total += value
+    for each neighbour v outside the tree with weight w
+        if w &lt; key[v]: key[v] = w; push (w,v,u)
+report total and vertex count; fewer than V means disconnected</code></pre>
+<h2 id="how-it-works">Grow across the current boundary</h2>
+<p>The shared Prim input has undirected edges AB=4, AC=2, BC=1, BD=5, CE=8, DE=2, DF=6 and EF=3. From A, the boundary offers B at 4 and C at 2. Accept C, then replace B&#x27;s key with 1 through C. This demonstrates why a key is an edge weight.</p>
+<p>After B joins, D receives key 5. D then offers E at 2 and F at 6. E&#x27;s old key 8 is replaced by 2. Accept E and improve F to 3 through E. The final selected edges are AC, CB, BD, DE and EF.</p>
+<p>Every accepted edge has one endpoint already inside and one outside. Therefore it adds exactly one new vertex and cannot close a cycle. The growing object remains connected throughout. When all six vertices have joined, five accepted parent edges form a spanning tree.</p>
+<h2 id="examples">Compare starts and disconnected inputs</h2>
+<h3>The shared graph</h3><p>The accepted parent edges have weights 2,1,5,2,3, totalling 13.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>All five chain edges are required, so their total is five.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>The five reached vertices form a minimum tree of weight ten; F remains outside.</p><div data-example="ex-3"></div>
+<p>Example 1 accepts graph and start indices and prints accepted edges followed by total weight and reached-node count. Scenario 1 is a unit-weight chain, so every edge is forced. Scenario 2 isolates F and leaves a five-node connected region. Scenario 3 contains six isolated vertices.</p>
+<p>This implementation runs only from the chosen start component. If fewer than six vertices join, it prints a disconnected message. It does not claim that its partial result spans the whole graph. To produce a minimum spanning forest, restart from every still-unused vertex and add each component&#x27;s independently grown tree.</p>
+<p>Try starting from F in scenario 2. The selected component consists only of F, so its weight is zero and reached count is one. Starting from A in that scenario reaches five vertices with total weight 10. Both outputs correctly describe their start components, but neither is a six-vertex spanning tree.</p>
+<h2 id="trace">Keys can fall below earlier accepted weights</h2>
+<p>The trace lists the chosen vertex, its accepted parent edge, the tree total and the remaining best boundary keys. Key values do not form a nondecreasing sequence: accepting D with key 5 can reveal E with key 2. That does not violate Prim&#x27;s rule because the cut has changed.</p>
+<table class="ref"><thead><tr><th scope="col">Accept vertex</th><th scope="col">Parent edge</th><th scope="col">Total</th><th scope="col">Finite boundary keys afterward</th></tr></thead><tbody><tr><td>A</td><td>none</td><td>0</td><td>B:4,C:2</td></tr><tr><td>C</td><td>A-C:2</td><td>2</td><td>B:1,E:8</td></tr><tr><td>B</td><td>C-B:1</td><td>3</td><td>D:5,E:8</td></tr><tr><td>D</td><td>B-D:5</td><td>8</td><td>E:2,F:6</td></tr><tr><td>E</td><td>D-E:2</td><td>10</td><td>F:3</td></tr><tr><td>F</td><td>E-F:3</td><td>13</td><td>none</td></tr></tbody></table>
+<p>The five cable lengths sum to 2+1+5+2+3=13. The tree path from A to D costs 2+1+5=8. Prim minimises the total network weight 13, not the individual source distances. Any agreement with a shortest-path tree on this particular graph is incidental.</p>
+<div data-lab="prim"></div>
+<h2 id="correctness">Exchange a heavier crossing edge</h2>
+<p>A cut divides vertices into those already in Prim&#x27;s tree and those outside. Assume some MST contains every edge accepted so far. Let e be the lightest edge crossing this cut. If that MST already contains e, the assumption remains true after accepting it.</p>
+<p>Otherwise, add e to the MST. A tree plus one edge creates exactly one cycle. That cycle must cross the cut again, so it contains another crossing edge f. Earlier accepted edges lie entirely inside the current tree, so f is not one of those protected edges.</p>
+<p>Because e is lightest across the cut, weight(e) is no greater than weight(f). Remove f from the cycle. The result is still a spanning tree, contains all earlier accepted edges and e, and costs no more than the original MST. It is therefore also minimum. This exchange proves the next greedy choice safe.</p>
+<p>Initially any MST contains the empty selected edge set. Repeating the safe-choice argument until V-1 edges have been accepted gives a complete MST. The proof requires an undirected connected graph for one spanning tree; disconnected inputs need a forest or a clear failure report.</p>
+<h2 id="complexity">Heap entries follow key improvements</h2>
+<p>With adjacency lists, each accepted vertex scans its neighbours once. Across the graph, that is O(E) arc inspections. Each strict key improvement pushes one candidate, so at most O(E+1) lazy heap entries are created. Push and pop cost O(log(E+1)), giving O(V+E log(E+1)) time including initialisation.</p>
+<p>A common simple-graph expression is O((V+E) log V). The lazy implementation may hold O(E) entries, while an indexed decrease-key heap can keep O(V). Key and used arrays require O(V) space. Include graph input storage separately when comparing implementations.</p>
+<p>A dense implementation can scan all unused vertices to find the minimum key at each step. That version takes O(V²) time and avoids a heap. For a nearly complete graph, its simpler access pattern can be useful. A list-and-heap algorithm is not automatically faster merely because its heap operations are logarithmic.</p>
+<h2 id="comparison">Prim and Dijkstra store different meanings</h2>
+<p>Dijkstra&#x27;s relaxation tests dist[u]+w against dist[v]. Prim compares w alone against key[v]. Dijkstra builds minimum source-route costs under nonnegative weights. Prim builds a minimum total-weight connecting tree in an undirected graph. Replacing one formula with the other changes the problem being solved.</p>
+<p>Prim&#x27;s cut proof also permits negative edge weights. The selected tree remains finite because it contains only V-1 edges and cannot repeat a cycle. This differs from shortest-walk problems, where repeating a negative cycle destroys a finite minimum. The provided Prim examples use positive weights for easier arithmetic.</p>
+<h2 id="edge-cases">Equal weights and missing connections</h2>
+<p>If two boundary edges have equal weight, either can be safe. The code keeps the earlier parent on an equal key and compares heap entries by vertex index. These choices make the demonstration reproducible; they do not prove that the MST is unique.</p>
+<p>A vertex with key INF has no known edge from the current component. Such a key is never pushed. When the heap empties while unused vertices remain, there is no crossing edge to them. That is the precise reason the program reports disconnected input.</p>
+<h2 id="common-mistakes">Keep route costs out of the key</h2>
+<h3>Adding the parent&#x27;s key</h3>
+<p>Prim&#x27;s next connection costs only the candidate edge weight. Adding a source-prefix cost turns the key into something different and breaks the cut-choice implementation.</p>
+<h3>Accepting an old heap record</h3>
+<p>A previously improved key can leave a larger stale record in the heap. Reject entries for used vertices or values different from the current key before adding any weight.</p>
+<h3>Calling a partial tree spanning</h3>
+<p>A tree with fewer than V reached vertices does not span the input. Report the reached component or restart to build a forest.</p>
+<h2 id="best-practices">Check tree shape and total separately</h2>
+<p>After tracing Prim, count V-1 accepted edges for a connected graph. Check that every vertex is reached and that no accepted edge closes a cycle. Add the weights independently; a correct sum alone does not establish a valid spanning tree.</p>
+<h2 id="version-notes">Heap triples in C17</h2>
+<p>The Prim implementation uses C17 structure values for heap entries and bounded integer weights. Its maximum total magnitude is far below int limits. Larger applications need capacity checks and a total type wide enough for the sum of V-1 edge weights.</p>
+<h2 id="summary">One safe boundary edge at a time</h2>
+<p>Prim grows a connected tree using the lightest edge across its current cut. Key values describe individual joining edges, and the exchange argument proves the total is minimum. Next, <a href="topic:algo-kruskal">Kruskal's Algorithm</a> grows several components at once by sorting all edges.</p>

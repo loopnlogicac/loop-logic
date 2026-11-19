@@ -1,0 +1,56 @@
+<h2 id="introduction">Put prerequisites before their tasks</h2>
+<p class="lead">You cannot sit an advanced lab before completing its required introduction. A set of such prerequisites forms a directed graph. An edge u to v means u must come before v. A topological sort lists all tasks while respecting every directed edge.</p>
+<p>The graph must be acyclic: it must contain no directed cycle. If A requires B and B requires A, neither can be first. A directed acyclic graph is often called a DAG. Topological ordering is useful for course plans, build dependencies and calculations where earlier results feed later ones.</p>
+<p>A valid order need not be unique. Two unrelated tasks may appear in either order. The goal is to satisfy dependencies, not to sort names or weights. Both Kahn&#x27;s queue method and reverse DFS finish order can produce a valid answer, sometimes with different tie choices.</p>
+<h2 id="syntax">Count what still enters each vertex</h2>
+<p>The indegree of a vertex is its number of incoming arcs. Kahn&#x27;s algorithm places all zero-indegree vertices in a queue. They have no unmet prerequisites. Removing one from the graph conceptually satisfies each outgoing dependency and reduces its neighbours&#x27; indegrees.</p>
+<p>The C graph keeps outgoing adjacency lists and a separate edge list. One scan of the edge list counts the initial indegrees. The queue begins with zero-indegree vertices in ascending letter order. Newly ready vertices join at the back, so this implementation gives FIFO tie handling rather than a globally smallest-letter order.</p>
+<p>Topological scenario 0 orients the shared eight edges as AB, AC, BC, BD, CE, DE, DF and EF, with each pair read left to right. Scenario 1 is the directed cycle A to B to C to D to E to F to A. Scenario 2 isolates F, and scenario 3 has six independent vertices. Edge weights have no role in dependency ordering.</p>
+<pre><code class="language-text">count incoming arcs into indegree[*]
+enqueue all zero-indegree vertices in ascending order
+while queue is nonempty: u = dequeue; append u to order
+    for each outgoing arc u -&gt; v
+        decrement indegree[v]; enqueue v when it becomes zero
+if order has fewer than V vertices: report cycle
+otherwise report order</code></pre>
+<h2 id="how-it-works">Remove a ready task, then its outgoing obligations</h2>
+<p>Kahn&#x27;s algorithm appends the dequeued u to order. For every outgoing u to v, it decrements indegree[v] once. If the value becomes zero, v has become ready and is enqueued. Do not enqueue it while its indegree is still positive; that would place it before an unmet prerequisite.</p>
+<p>An actual edge is not deleted from the stored graph. The indegree array represents how many incoming edges remain after conceptual removals. This avoids changing adjacency lists during traversal. The order array records what was removed, and count records how many vertices the algorithm successfully placed.</p>
+<p>When the queue empties, compare count with V. If they are equal, the order includes every task. If fewer were removed, the remaining graph contains a directed cycle. A partial prefix can still be valid, but it is not a topological order of the complete cyclic graph.</p>
+<h2 id="examples">Queue order and reverse finish order</h2>
+<h3>The shared graph</h3><p>Kahn removes A,B,C,D,E,F while every prerequisite has already been removed.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>The directed ring has no zero-indegree vertex and therefore produces a cycle result.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>F has no prerequisites and joins the initial queue alongside A.</p><div data-example="ex-3"></div>
+<h3>A second representation</h3><p>Reverse DFS finish order gives 0,2,1,3 on this diamond DAG.</p><div data-example="ex-4"></div>
+<p>The fourth example implements DFS-based sorting on four tasks. White vertices are unvisited, grey vertices are active, and black vertices have finished. An edge to a grey vertex proves a directed cycle. A vertex is appended only when its recursive call finishes, and the collected finish order is then reversed.</p>
+<p>For an acyclic edge u to v, either DFS enters v from u and finishes v first, or v has already finished. A grey v would create a cycle and is rejected. Thus finish[u] exceeds finish[v] for every DAG edge. Reversing finish order places u before v, proving the DFS method correct.</p>
+<p>Never print reverse finish order as a valid result after detecting a back edge. The dependency contract has failed. A program can report the existence of a cycle, or extend the DFS to recover one, but no ordering can satisfy all cycle edges simultaneously.</p>
+<h2 id="trace">Track indegrees on the directed example</h2>
+<p>The initial indegrees of A through F are 0,1,2,1,2,2. Only A is initially ready. Processing A makes B ready but leaves C with one predecessor. Processing B then makes both C and D ready, in ascending neighbour order.</p>
+<table class="ref"><thead><tr><th scope="col">Remove</th><th scope="col">Indegrees A,B,C,D,E,F afterward</th><th scope="col">Queue</th></tr></thead><tbody><tr><td>A</td><td>0,0,1,1,2,2</td><td>B</td></tr><tr><td>B</td><td>0,0,0,0,2,2</td><td>C,D</td></tr><tr><td>C</td><td>0,0,0,0,1,2</td><td>D</td></tr><tr><td>D</td><td>0,0,0,0,0,1</td><td>E</td></tr><tr><td>E</td><td>0,0,0,0,0,0</td><td>F</td></tr><tr><td>F</td><td>0,0,0,0,0,0</td><td>empty</td></tr></tbody></table>
+<p>After removing C, E still waits for D. After removing D, E is ready while F still waits for E. The final order A, B, C, D, E, F respects all eight arcs. The table should show the queue as well as indegrees, because a ready vertex can wait behind another ready vertex.</p>
+<div data-lab="topological-sort"></div>
+<h2 id="correctness">Ready means safe to place next</h2>
+<p>Kahn&#x27;s invariant says indegree[v] equals the number of incoming arcs from vertices not yet removed. Initially the count comes directly from the edge list. Removing u subtracts exactly its outgoing arcs, so the invariant stays true. Each vertex is enqueued when this remaining count first reaches zero.</p>
+<p>When u is appended, it has no incoming edge from a remaining vertex. Therefore every predecessor is already earlier in order. Induction over removals proves that the produced prefix respects every dependency whose destination has been placed. If all vertices are placed, the whole sequence is a valid topological order.</p>
+<p>Why does failure imply a cycle? If a nonempty remaining directed graph has no zero-indegree vertex, every remaining vertex has a remaining predecessor. Follow predecessor choices backward. Because the graph is finite, some vertex repeats, yielding a directed cycle. Conversely, vertices on a directed cycle can never lose their final incoming cycle edge through this removal rule.</p>
+<h2 id="complexity">Account for arcs once</h2>
+<p>Kahn&#x27;s indegree construction scans E arcs. Each vertex enters and leaves the queue once, and each outgoing arc is processed when its source leaves. Total time is O(V+E), with O(V) auxiliary space for indegree, queue and order. Adjacency-list graph storage is O(V+E) separately.</p>
+<p>DFS-based sorting also costs O(V+E) with lists. Its colour array, finish list and recursive stack together need O(V) additional space. The small DFS example scans a four-by-four matrix, so that particular representation generalises to O(V²) time. The graph algorithm&#x27;s list bound does not automatically apply to a matrix implementation.</p>
+<p>If you need the smallest available task at every step, replace Kahn&#x27;s FIFO queue with a min-priority queue. Queue operations then add O(V log V) work. Sorting the final output alphabetically would be wrong because that can destroy dependencies that were already respected.</p>
+<h2 id="edge-cases">Disconnected tasks and blocked tails</h2>
+<p>An isolated vertex has indegree zero and belongs in the initial queue. Scenario 2 therefore starts with A and F ready. F can appear before later tasks reached from A, despite its letter being last. Topological sorting must include vertices that no dependency mentions.</p>
+<p>A cycle can also block vertices downstream from it. Those blocked vertices need not lie on the cycle themselves. Count less than V identifies that some cycle exists; it does not identify every remaining vertex as a cycle member. Recover a cycle with DFS or find strongly connected components when that distinction matters.</p>
+<h2 id="common-mistakes">Do not change the meaning of indegree</h2>
+<h3>Counting outgoing instead of incoming arcs</h3>
+<p>Outgoing degree counts dependants, not unmet prerequisites. Increment the destination for each u to v arc when building indegree.</p>
+<h3>Reducing an indegree twice</h3>
+<p>Process each outgoing arc exactly once when its source is removed. Decrementing during enqueue and again during dequeue can release tasks too early.</p>
+<h3>Assuming weights decide prerequisites</h3>
+<p>A low-weight edge still enforces its direction. Topological sorting is about ordering constraints, so weights do not choose the next vertex.</p>
+<h2 id="best-practices">Check an order by positions</h2>
+<p>Build rank[v] from the proposed order. For every directed edge u to v, verify rank[u] is less than rank[v]. Also verify that every vertex occurs exactly once. This provides a direct way to review a hand-written answer even when your tie order differs.</p>
+<h2 id="version-notes">Bounded queues in C17</h2>
+<p>The C17 implementation reserves one queue slot per vertex. Each indegree reaches zero at most once, so no vertex needs a second slot. The start argument is accepted for consistency with nearby graph examples but does not affect Kahn&#x27;s all-vertex ordering.</p>
+<h2 id="summary">Dependencies choose what is ready</h2>
+<p>A topological order exists exactly when the directed graph is acyclic. Kahn exposes readiness through indegrees; DFS exposes it through finishing times. Continue with <a href="topic:algo-strongly-connected">Strongly Connected Components</a> to group tasks that can reach one another even when cycles exist.</p>

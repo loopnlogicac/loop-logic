@@ -1,0 +1,59 @@
+<h2 id="introduction">Cheapest travel needs weights</h2>
+<p class="lead">A route with fewer roads is not always quicker. Two short roads may beat one long road. Dijkstra&#x27;s algorithm finds minimum total weight from one source when every edge weight is nonnegative. Weights may represent minutes, metres or another cost that adds along a route.</p>
+<p>A tentative distance is the cheapest route found so far. It is an upper bound on the true shortest distance, because it describes a real route. Initially only the source has a known route, of cost zero. Every other vertex begins at INF, a marker for no known route.</p>
+<p>Dijkstra repeatedly chooses the unsettled vertex with the smallest tentative distance. Nonnegative weights make that chosen distance final. A priority queue makes the choice efficient when the graph is sparse. Compare with BFS: FIFO layers are enough for equal-cost edges, while varying costs require ordering by total route cost.</p>
+<h2 id="syntax">Relax a route and save its predecessor</h2>
+<p>Relaxing u to v asks whether dist[u]+w is smaller than dist[v]. If it is, save the smaller value and parent[v]=u. A predecessor array allows you to recover an actual shortest path after the distances are known. Strict improvement avoids changing parents for equal-cost routes.</p>
+<p>The C implementation uses a binary min-heap of Entry values. Each entry contains value, vertex and parent fields. Dijkstra uses the first two to select and validate a queued distance; the parent array is updated at relaxation. Entries compare by value, then vertex index, so ties have a fixed order.</p>
+<p>Rather than decreasing an existing heap entry, the program pushes a new entry after every improvement. Old entries stay in the heap. On removal, an entry whose value differs from dist[u] is stale and is ignored. This lazy approach avoids maintaining a heap-position array for every vertex.</p>
+<pre><code class="language-text">dist[*] = INF; parent[*] = -1; dist[start] = 0; push (0,start)
+while priority queue is not empty: pop minimum (value,u)
+    if value != dist[u]: discard stale entry
+    for each neighbour v of u with weight w
+        if dist[u] + w &lt; dist[v]: update dist[v] and parent[v]
+            push (dist[v],v)
+report distances; follow parents backward to recover paths</code></pre>
+<h2 id="how-it-works">Settle one minimum, then inspect its roads</h2>
+<p>Dijkstra&#x27;s shared undirected graph has weights AB=4, AC=2, BC=1, BD=5, CE=8, DE=2, DF=6 and EF=3. Start at A. Its first relaxations propose B at 4 and C at 2. Removing C next improves B to 3 and proposes E at 10.</p>
+<p>Removing B at 3 proposes D at 8. The older B entry with value 4 will later be skipped. D does not improve E, because 8+2 equals 10. It proposes F at 14. E then improves F to 13. The old F entry at 14 is another stale entry.</p>
+<p>The visual priority panel lists entries in removal order. For readability, the small animation keeps that list sorted; the C program implements actual heap operations. Both choose the same minimum and use the same tie rule. You should read the panel as queue contents, not as the physical array layout of a heap.</p>
+<h2 id="examples">Run a heap search and inspect the path</h2>
+<h3>The shared graph</h3><p>The lazy binary heap finds distances 0,3,2,8,10,13 and recovers A,C,E,F.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>Unit chain distances increase by one at each edge.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>The isolated F has no source route, so the program prints -1 for its distance.</p><div data-example="ex-3"></div>
+<p>Example 1 prints each vertex letter followed by its distance, using -1 for unreachable vertices. Its final line is a shortest path to F, or a message that no such path exists. This output marker is unambiguous here because all valid costs are nonnegative.</p>
+<p>Scenario 1 replaces the shared graph with a six-vertex unit-weight chain. Scenario 2 keeps the original weights while removing F&#x27;s incident edges. Scenario 3 has six isolated vertices. Try a different start in the first example to observe how an undirected route reverses while its total weight stays the same.</p>
+<h2 id="trace">Routes from A on the shared drawing</h2>
+<p>Distances are listed in vertex order A through F. A dash in the trace means INF. Each row follows one valid minimum removal and its outgoing relaxations. Stale removals do not change distances and are recorded separately in the animation.</p>
+<table class="ref"><thead><tr><th scope="col">Valid removal</th><th scope="col">Distances A,B,C,D,E,F after relaxation</th><th scope="col">New or changed parents</th></tr></thead><tbody><tr><td>A:0</td><td>0,4,2,-,-,-</td><td>B&lt;-A,C&lt;-A</td></tr><tr><td>C:2</td><td>0,3,2,-,10,-</td><td>B&lt;-C,E&lt;-C</td></tr><tr><td>B:3</td><td>0,3,2,8,10,-</td><td>D&lt;-B</td></tr><tr><td>D:8</td><td>0,3,2,8,10,14</td><td>F&lt;-D</td></tr><tr><td>E:10</td><td>0,3,2,8,10,13</td><td>F&lt;-E</td></tr><tr><td>F:13</td><td>0,3,2,8,10,13</td><td>none</td></tr></tbody></table>
+<p>F has two equal shortest routes of cost 13: A,C,E,F and A,C,B,D,E,F. Because E first receives parent C at distance 10, the strict-comparison implementation retains A,C,E,F. Recover F,E,C,A through parent links, then reverse it for forward display.</p>
+<div data-lab="dijkstra"></div>
+<p>The obsolete B:4 entry is removed after B:3 and before D:8; the obsolete F:14 entry is removed after F:13. Both fail the saved-distance comparison. Their removal changes no distance or parent.</p>
+<h2 id="correctness">Why the smallest unsettled value is final</h2>
+<p>Assume every previously settled vertex already has its true shortest distance. Let u have the smallest tentative distance among unsettled vertices. Consider a shortest route from the source to u. If the route crosses from the settled set into an unsettled vertex x, the crossing edge has already been relaxed.</p>
+<p>The tentative distance of x is therefore no greater than the cost of that route&#x27;s prefix to x. Since all remaining edges are nonnegative, that prefix costs no more than the entire route to u. The minimum-choice rule gives dist[u] no greater than dist[x], so dist[u] cannot exceed the true shortest cost to u.</p>
+<p>Every finite tentative distance also comes from a real route, so it cannot be below the true minimum. The two inequalities make dist[u] exact. The source establishes the induction base with distance zero. Stale entries do not settle vertices again because they no longer equal the best saved distance.</p>
+<h2 id="comparison">A negative edge breaks finalisation</h2>
+<p>Consider directed edges A to B of cost 2, A to C of cost 5, and C to B of cost -4. A finalising Dijkstra version settles B at 2 before C at 5. But A,C,B costs 1. The proof fails because extending the prefix to C can reduce rather than increase its cost.</p>
+<p>The lazy implementation without a settled flag may revisit a vertex after an improvement. This does not restore Dijkstra&#x27;s nonnegative-weight correctness and complexity contract. Some negative-edge graphs happen to work, while a reachable negative cycle can keep generating improvements. Use Bellman-Ford for negative weights rather than relying on such accidental success.</p>
+<p>A zero-weight edge is allowed. Nonnegative means zero or positive. Multiple equally good routes may exist, and a path through a zero-weight cycle need not be unique. The strict improvement rule avoids replacing parents merely because an equal route was rediscovered.</p>
+<h2 id="complexity">Charge heap work to successful relaxations</h2>
+<p>Once a vertex has a valid minimum removal, its adjacency list is scanned. Under nonnegative weights it cannot later receive a strict improvement. Across all valid removals, there are O(E) arc examinations. Each successful relaxation pushes one heap entry, and the source contributes one initial entry.</p>
+<p>The lazy heap may contain O(E+1) entries over the run, including stale ones. Each push or pop costs O(log(E+1)), giving O(V+E log(E+1)) time including array initialisation. O((V+E) log(V+E)) is a convenient bound covering isolated vertices as well. For simple connected graphs, it is often written O((V+E) log V).</p>
+<p>Distance and parent arrays take O(V) auxiliary space. Lazy heap entries can take O(E), whereas an indexed decrease-key heap keeps O(V) entries. The C demonstration reserves 32 heap slots; its eight undirected edges permit at most sixteen successful arc relaxations plus the initial source insertion, which fits safely.</p>
+<h2 id="edge-cases">Do not invent a path through INF</h2>
+<p>If the source is isolated, its distance is zero and every other distance remains INF. Do not follow a missing parent chain for an unreachable target. If source equals target F, the recovered path contains only F and has cost zero.</p>
+<p>The sentinel INF is one million in these programs. A finite simple route has at most five edges with weight at most eight, so finite answers are at most forty. Integer sums stay far from overflow. Larger weight ranges need a derived bound, wider integers and guarded arithmetic; a sentinel is not mathematical infinity.</p>
+<h2 id="common-mistakes">Distinguish costs from keys and layers</h2>
+<h3>Using an ordinary queue for weighted roads</h3>
+<p>FIFO order can settle an expensive route before a cheap one arrives. Order tentative total costs with a priority queue.</p>
+<h3>Adding weights to an unreachable marker</h3>
+<p>Do not relax from a vertex without a finite route. Heap entries here are inserted only for reachable vertices, so the loop never pops INF.</p>
+<h3>Treating a predecessor as the final target</h3>
+<p>Parent links point backward. Collect them from the target, stop at -1, and reverse the collected vertices before printing.</p>
+<h2 id="best-practices">Show stale entries honestly</h2>
+<p>When tracing the lazy heap, retain outdated entries until removal and explain why they are ignored. State your tie rule before comparing two route outputs. To verify a recovered path, add its edge weights and compare the sum with the reported distance.</p>
+<h2 id="version-notes">Heap storage in C17</h2>
+<p>Dijkstra&#x27;s C17 heap uses structure values and bounded arrays, without external libraries. The capacity proof applies to the six-node demonstrations. A general implementation must grow the heap or check capacity before inserting more entries.</p>
+<h2 id="summary">Minimum tentative cost drives the search</h2>
+<p>Dijkstra combines relaxation, minimum selection and a nonnegative-weight proof to find shortest routes efficiently. Parent links recover one optimal route. Continue with <a href="topic:algo-bellman-ford">Bellman-Ford Algorithm</a> when routes may contain negative edges.</p>

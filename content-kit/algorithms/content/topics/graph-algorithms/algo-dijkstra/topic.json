@@ -1,0 +1,419 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-dijkstra",
+  "module": "graph-algorithms",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Dijkstra's Algorithm",
+    "bn": "Dijkstra অ্যালগরিদম"
+  },
+  "summary": {
+    "en": "ওজন শূন্য বা ধনাত্মক হলে Dijkstra-এর minimum নেওয়ার যুক্তি কাজ করে।",
+    "bn": "ওজন শূন্য বা ধনাত্মক হলে প্রায়োরিটি কিউ দিয়ে গ্রাফের শর্টেস্ট পাথ বের করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "algo-strongly-connected"
+  ],
+  "related": [
+    "algo-bellman-ford"
+  ],
+  "keywords": [
+    "Dijkstra's Algorithm",
+    "C17",
+    "graph",
+    "correctness",
+    "trace"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Dijkstra's Algorithm programs use C17 with fixed six-vertex scenarios; integer limits and representation costs are explained in the lesson."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Cheapest travel needs weights"
+    },
+    {
+      "id": "syntax",
+      "title": "Relax a route and save its predecessor"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Settle one minimum, then inspect its roads"
+    },
+    {
+      "id": "examples",
+      "title": "Run a heap search and inspect the path"
+    },
+    {
+      "id": "trace",
+      "title": "Routes from A on the shared drawing"
+    },
+    {
+      "id": "correctness",
+      "title": "Why the smallest unsettled value is final"
+    },
+    {
+      "id": "comparison",
+      "title": "A negative edge breaks finalisation"
+    },
+    {
+      "id": "complexity",
+      "title": "Charge heap work to successful relaxations"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Do not invent a path through INF"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Distinguish costs from keys and layers"
+    },
+    {
+      "id": "best-practices",
+      "title": "Show stale entries honestly"
+    },
+    {
+      "id": "version-notes",
+      "title": "Heap storage in C17"
+    },
+    {
+      "id": "summary",
+      "title": "Minimum tentative cost drives the search"
+    }
+  ],
+  "labs": [
+    "dijkstra"
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Shared input from A",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The lazy binary heap finds distances 0,3,2,8,10,13 and recovers A,C,E,F.</p>",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "A chain or cycle variant",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Unit chain distances increase by one at each edge.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "F has no connection",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The isolated F has no source route, so the program prints -1 for its distance.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "medium",
+      "title": "Implement Dijkstra's Algorithm",
+      "statementHtml": "<p>Dijkstra accepts two whitespace-separated indices: graph from 0 to 3 and start from 0 to 5. Work with the undirected nonnegative-weight roads specified for that scenario. Print each letter followed by its shortest distance, or -1 if unreachable. Then print a space-separated shortest route to F, or no path to F. Keep the earlier parent for tied routes. For this Dijkstra's Algorithm solution, the first output line is <code>Enter graph (0-3) and start (0-5):</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "dist[u]-এর সঙ্গে এজের ওজন যোগ করে নতুন পথের খরচ দেখো।"
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "hard",
+      "title": "Weighted return routes from F",
+      "statementHtml": "<p>The return-route exercise reads one nonnegative graph selector, 0–3, and fixes the source at F. Use F as the source of Dijkstra on the selected undirected graph. Print each letter and distance in A-to-F order, using -1 for unreachable vertices. Then print the recovered route to target F. That final route has one vertex because source equals target; other distances can still be nonzero. Begin the Weighted return routes from F output with <code>Enter graph (0-3); start is F:</code>. Vertex indices are A=0 through F=5.</p>",
+      "hints": [
+        "পপ করা মান dist[u]-এর সঙ্গে না মিললে এন্ট্রিটা পুরোনো।"
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Routes from A on the shared drawing by hand",
+      "statementHtml": "<p>Trace lazy-heap Dijkstra from A on graph 0. Show tentative distances after each valid removal, identify stale entries, and recover a route to F with its weight.</p>",
+      "hints": [
+        "দূরত্ব কমলে নতুন হিপ এন্ট্রি যায়; পুরোনোটা পরে বাদ পড়ে।"
+      ],
+      "answerHtml": "<p>Distances are listed in vertex order A through F. A dash in the trace means INF. Each row follows one valid minimum removal and its outgoing relaxations. Stale removals do not change distances and are recorded separately in the animation.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Valid removal</th><th scope=\"col\">Distances A,B,C,D,E,F after relaxation</th><th scope=\"col\">New or changed parents</th></tr></thead><tbody><tr><td>A:0</td><td>0,4,2,-,-,-</td><td>B&lt;-A,C&lt;-A</td></tr><tr><td>C:2</td><td>0,3,2,-,10,-</td><td>B&lt;-C,E&lt;-C</td></tr><tr><td>B:3</td><td>0,3,2,8,10,-</td><td>D&lt;-B</td></tr><tr><td>D:8</td><td>0,3,2,8,10,14</td><td>F&lt;-D</td></tr><tr><td>E:10</td><td>0,3,2,8,10,13</td><td>F&lt;-E</td></tr><tr><td>F:13</td><td>0,3,2,8,10,13</td><td>none</td></tr></tbody></table>\n<p>F has two equal shortest routes of cost 13: A,C,E,F and A,C,B,D,E,F. Because E first receives parent C at distance 10, the strict-comparison implementation retains A,C,E,F. Recover F,E,C,A through parent links, then reverse it for forward display.</p>\n<p>The obsolete B:4 entry is removed after B:3 and before D:8; the obsolete F:14 entry is removed after F:13. Both fail the saved-distance comparison. Their removal changes no distance or parent.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Why the smallest unsettled value is final by hand",
+      "statementHtml": "<p>Prove Dijkstra&#x27;s minimum-removal invariant for nonnegative weights. Identify the proof step a negative edge breaks and explain why stale heap entries are ignored.</p>",
+      "hints": [
+        "দূরত্ব কমলে নতুন হিপ এন্ট্রি যায়; পুরোনোটা পরে বাদ পড়ে।"
+      ],
+      "answerHtml": "<p>Assume every previously settled vertex already has its true shortest distance. Let u have the smallest tentative distance among unsettled vertices. Consider a shortest route from the source to u. If the route crosses from the settled set into an unsettled vertex x, the crossing edge has already been relaxed.</p>\n<p>The tentative distance of x is therefore no greater than the cost of that route&#x27;s prefix to x. Since all remaining edges are nonnegative, that prefix costs no more than the entire route to u. The minimum-choice rule gives dist[u] no greater than dist[x], so dist[u] cannot exceed the true shortest cost to u.</p>\n<p>Every finite tentative distance also comes from a real route, so it cannot be below the true minimum. The two inequalities make dist[u] exact. The source establishes the induction base with distance zero. Stale entries do not settle vertices again because they no longer equal the best saved distance.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which edge-weight condition supports Dijkstra's finalisation proof?",
+      "options": [
+        "Every edge weight is nonnegative",
+        "Every graph is a tree",
+        "Every edge has the same positive weight",
+        "Every edge is negative"
+      ],
+      "answer": 0,
+      "explanation": "A suffix cannot lower a prefix cost when weights are nonnegative."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does relaxation compare for an edge u -> v of weight w?",
+      "options": [
+        "w against parent[v]",
+        "dist[u] + w against dist[v]",
+        "dist[v] against zero only",
+        "The number of graph components"
+      ],
+      "answer": 1,
+      "explanation": "A reachable route through u gives a candidate upper bound for v."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can a lazy heap contain two entries for the same vertex?",
+      "options": [
+        "The vertex has two source ids",
+        "Every edge is processed infinitely",
+        "An improvement pushes a new entry without removing the old one",
+        "The graph must contain a negative cycle"
+      ],
+      "answer": 2,
+      "explanation": "Stale entries are expected and are checked when popped."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What makes a popped entry stale in this implementation?",
+      "options": [
+        "Its vertex is alphabetically later",
+        "Its weight is zero",
+        "It has a parent",
+        "Its stored value differs from the current dist[u]"
+      ],
+      "answer": 3,
+      "explanation": "Only the current best value may trigger neighbour scanning."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which structure recovers one chosen shortest route?",
+      "options": [
+        "Predecessor links updated on strict improvements",
+        "The list of all popped weights alone",
+        "Indegrees",
+        "A union-find representative array"
+      ],
+      "answer": 0,
+      "explanation": "Follow predecessors backward from the target and reverse the result."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "May a zero-weight edge be used by Dijkstra?",
+      "options": [
+        "No, only strictly positive weights work",
+        "Yes",
+        "Only if it is a self-loop",
+        "Only in an undirected graph"
+      ],
+      "answer": 1,
+      "explanation": "Zero still satisfies the required nonnegative suffix argument."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens to the old F:14 entry after F improves to 13?",
+      "options": [
+        "It restores distance 14",
+        "It overwrites the predecessor",
+        "It is later popped and skipped",
+        "It causes a second source"
+      ],
+      "answer": 2,
+      "explanation": "Its stored value no longer equals dist[F]."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What minimum distance reaches 1 after the detour through 2?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int a[3][3]={{-1,4,2},{4,-1,1},{2,1,-1}},d[3]={0,999,999};\n    int used[3]={0},p[3]={-1,-1,-1};\n    for(int step=0;step<3;step++) {\n        int u=-1;\n        for(int v=0;v<3;v++) { if(!used[v] && (u==-1 || d[v]<d[u])) { u=v; } }\n        used[u]=1;\n        for(int v=0;v<3;v++) {\n            if(a[u][v]>=0 && d[u]+a[u][v]<d[v]) { d[v]=d[u]+a[u][v];p[v]=u; }\n        }\n    }\n    (void)p;\n    printf(\"%d\\n\",d[1]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "4",
+        "2",
+        "5"
+      ],
+      "answer": 0,
+      "explanation": "The route 0,2,1 costs 2+1=3, beating the direct edge of four."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What distance reaches 1 when the final detour edge has zero weight?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int a[3][3]={{-1,4,2},{4,-1,0},{2,0,-1}},d[3]={0,999,999};\n    int used[3]={0},p[3]={-1,-1,-1};\n    for(int step=0;step<3;step++) {\n        int u=-1;\n        for(int v=0;v<3;v++) { if(!used[v] && (u==-1 || d[v]<d[u])) { u=v; } }\n        used[u]=1;\n        for(int v=0;v<3;v++) {\n            if(a[u][v]>=0 && d[u]+a[u][v]<d[v]) { d[v]=d[u]+a[u][v];p[v]=u; }\n        }\n    }\n    (void)p;\n    printf(\"%d\\n\",d[1]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "2",
+        "1",
+        "4"
+      ],
+      "answer": 1,
+      "explanation": "Zero is permitted, so the detour costs two."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which parent is kept when the detour would cost five?",
+      "code": "#include <stdio.h>\nint main(void)\n{\n    int a[3][3]={{-1,4,2},{4,-1,3},{2,3,-1}},d[3]={0,999,999};\n    int used[3]={0},p[3]={-1,-1,-1};\n    for(int step=0;step<3;step++) {\n        int u=-1;\n        for(int v=0;v<3;v++) { if(!used[v] && (u==-1 || d[v]<d[u])) { u=v; } }\n        used[u]=1;\n        for(int v=0;v<3;v++) {\n            if(a[u][v]>=0 && d[u]+a[u][v]<d[v]) { d[v]=d[u]+a[u][v];p[v]=u; }\n        }\n    }\n    (void)p;\n    printf(\"%d\\n\",p[1]);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "-1",
+        "0",
+        "2"
+      ],
+      "answer": 2,
+      "explanation": "The direct route costs four and remains better than the five-cost detour."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A suffix cannot lower a prefix cost when weights are nonnegative.",
+      "bn": "ওজন শূন্য বা ধনাত্মক হলে Dijkstra-এর minimum নেওয়ার যুক্তি কাজ করে।"
+    },
+    {
+      "en": "A reachable route through u gives a candidate upper bound for v.",
+      "bn": "dist[u]-এর সঙ্গে এজের ওজন যোগ করে নতুন পথের খরচ দেখো।"
+    },
+    {
+      "en": "Stale entries are expected and are checked when popped.",
+      "bn": "দূরত্ব কমলে নতুন হিপ এন্ট্রি যায়; পুরোনোটা পরে বাদ পড়ে।"
+    },
+    {
+      "en": "Only the current best value may trigger neighbour scanning.",
+      "bn": "পপ করা মান dist[u]-এর সঙ্গে না মিললে এন্ট্রিটা পুরোনো।"
+    },
+    {
+      "en": "Follow predecessors backward from the target and reverse the result.",
+      "bn": "parent ধরে টার্গেট থেকে পেছনে গিয়ে পথটা উল্টে দাও।"
+    },
+    {
+      "en": "Zero still satisfies the required nonnegative suffix argument.",
+      "bn": "শূন্য ওজনের এজ থাকলেও Dijkstra চলে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 8,
+      "question": "Show every step of Dijkstra's Algorithm for the lesson's graph 0 from A. Include the table and final result.",
+      "answerHtml": "<p>Distances are listed in vertex order A through F. A dash in the trace means INF. Each row follows one valid minimum removal and its outgoing relaxations. Stale removals do not change distances and are recorded separately in the animation.</p>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Valid removal</th><th scope=\"col\">Distances A,B,C,D,E,F after relaxation</th><th scope=\"col\">New or changed parents</th></tr></thead><tbody><tr><td>A:0</td><td>0,4,2,-,-,-</td><td>B&lt;-A,C&lt;-A</td></tr><tr><td>C:2</td><td>0,3,2,-,10,-</td><td>B&lt;-C,E&lt;-C</td></tr><tr><td>B:3</td><td>0,3,2,8,10,-</td><td>D&lt;-B</td></tr><tr><td>D:8</td><td>0,3,2,8,10,14</td><td>F&lt;-D</td></tr><tr><td>E:10</td><td>0,3,2,8,10,13</td><td>F&lt;-E</td></tr><tr><td>F:13</td><td>0,3,2,8,10,13</td><td>none</td></tr></tbody></table>\n<p>F has two equal shortest routes of cost 13: A,C,E,F and A,C,B,D,E,F. Because E first receives parent C at distance 10, the strict-comparison implementation retains A,C,E,F. Recover F,E,C,A through parent links, then reverse it for forward display.</p>\n<p>The obsolete B:4 entry is removed after B:3 and before D:8; the obsolete F:14 entry is removed after F:13. Both fail the saved-distance comparison. Their removal changes no distance or parent.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Give a correctness proof for Dijkstra's Algorithm. Explain the assumptions and termination.",
+      "answerHtml": "<p>Assume every previously settled vertex already has its true shortest distance. Let u have the smallest tentative distance among unsettled vertices. Consider a shortest route from the source to u. If the route crosses from the settled set into an unsettled vertex x, the crossing edge has already been relaxed.</p>\n<p>The tentative distance of x is therefore no greater than the cost of that route&#x27;s prefix to x. Since all remaining edges are nonnegative, that prefix costs no more than the entire route to u. The minimum-choice rule gives dist[u] no greater than dist[x], so dist[u] cannot exceed the true shortest cost to u.</p>\n<p>Every finite tentative distance also comes from a real route, so it cannot be below the true minimum. The two inequalities make dist[u] exact. The source establishes the induction base with distance zero. Stale entries do not settle vertices again because they no longer equal the best saved distance.</p>"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and auxiliary-space bounds of Dijkstra's Algorithm, distinguishing representation and working storage.",
+      "answerHtml": "<p>Once a vertex has a valid minimum removal, its adjacency list is scanned. Under nonnegative weights it cannot later receive a strict improvement. Across all valid removals, there are O(E) arc examinations. Each successful relaxation pushes one heap entry, and the source contributes one initial entry.</p>\n<p>The lazy heap may contain O(E+1) entries over the run, including stale ones. Each push or pop costs O(log(E+1)), giving O(V+E log(E+1)) time including array initialisation. O((V+E) log(V+E)) is a convenient bound covering isolated vertices as well. For simple connected graphs, it is often written O((V+E) log V).</p>\n<p>Distance and parent arrays take O(V) auxiliary space. Lazy heap entries can take O(E), whereas an indexed decrease-key heap keeps O(V) entries. The C demonstration reserves 32 heap slots; its eight undirected edges permit at most sixteen successful arc relaxations plus the initial source insertion, which fits safely.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms: graph algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

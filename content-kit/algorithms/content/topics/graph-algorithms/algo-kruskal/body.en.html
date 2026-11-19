@@ -1,0 +1,61 @@
+<h2 id="introduction">Buy the cheapest safe connections first</h2>
+<p class="lead">Imagine a cable contractor offers every possible connection with a fixed price. You sort those offers from cheapest to most expensive. Take an offer only when it joins two currently separate groups. Kruskal&#x27;s algorithm follows this rule to build a minimum spanning tree.</p>
+<p>Unlike Prim, Kruskal does not grow only from one starting room. It begins with every vertex in its own component and gradually joins components. The selected edges form a forest at every stage. On a connected graph, the forest eventually becomes one tree spanning all vertices.</p>
+<p>The hard part is checking whether an offered edge would create a cycle. Repeatedly searching the selected forest would waste work. A disjoint-set structure, also called union-find, tracks which vertices are already connected. It answers connectivity questions without storing the actual graph paths.</p>
+<h2 id="syntax">Sort edges and maintain representatives</h2>
+<p>Kruskal first sorts edges by nondecreasing weight. The C implementation uses stable merge sort, keeping original edge-list order for equal weights. Stability is a tie convention here, not a requirement for MST correctness. Any deterministic order among equal-weight edges can produce a minimum result.</p>
+<p>Each disjoint set has a representative root. find(u) follows parent links to that root. Path compression changes links along the search path to point directly toward the root. Union by size attaches the smaller root below the larger one. Together these rules make a sequence of set operations very fast.</p>
+<p>Do not confuse disjoint-set parent links with selected graph edges. A representative can change during union, and compression can connect two indices that have no direct graph edge. The selected tree is recorded by accepted edge ids, while the disjoint-set structure records only component membership.</p>
+<pre><code class="language-text">sort edges by weight, preserving original edge order for ties
+make one disjoint set per vertex; total = 0
+for each edge (u,v,w) in sorted order
+    a = find(u); b = find(v), using path compression
+    if a == b: reject the edge because it closes a cycle
+    otherwise union by size; accept edge; total += w
+report total and V minus accepted edges as the component count</code></pre>
+<h2 id="how-it-works">An edge is safe when its endpoints are separate</h2>
+<p>For each sorted edge u,v,w, compute a=find(u) and b=find(v). If a equals b, the selected forest already contains a path from u to v. Adding the edge would close a cycle, so reject it. Otherwise accept it, unite the sets and add w to the running total.</p>
+<p>The common Kruskal graph uses AB=4, AC=2, BC=1, BD=5, CE=8, DE=2, DF=6 and EF=3. The sorted order is BC, AC, DE, EF, AB, BD, DF, CE. Equal-weight AC precedes DE because its original edge id comes earlier.</p>
+<p>Initially the six components are A, B, C, D, E and F. BC merges B with C. AC joins A to that group. DE joins D with E, and EF adds F. AB is rejected because A and B already share a component. BD then joins the two remaining groups.</p>
+<h2 id="examples">Sort, reject and inspect a forest</h2>
+<h3>The shared graph</h3><p>Stable edge sorting and union-find accept weights 1,2,2,3,5, totalling 13.</p><div data-example="ex-1"></div>
+<h3>A chain or cycle variant</h3><p>Every chain edge joins different components, leaving one component.</p><div data-example="ex-2"></div>
+<h3>An isolated destination</h3><p>The forest has weight ten and two components because F is isolated.</p><div data-example="ex-3"></div>
+<p>The first example accepts a graph index and a start index. Kruskal ignores start because it processes the whole edge list. Scenario 1 is a chain with all five edges required. Scenario 2 isolates F while leaving the other five vertices connected; its minimum spanning forest has two components. Scenario 3 has no edges and therefore six singleton trees.</p>
+<p>The code continues scanning after one component remains so the trace can demonstrate later rejections. Stopping after V-1 accepted edges is safe for a known connected input. On disconnected input, that count is never reached, so all edges must be considered before reporting the forest.</p>
+<p>Each accepted edge reduces the component count by exactly one. Thus final components equals V minus accepted edges. This is true even when the graph is disconnected. It provides a compact check on both the selected edge count and the union operations.</p>
+<h2 id="trace">A forest becomes one spanning tree</h2>
+<p>The trace records every offered edge, including the rejected ones. Rejecting a light edge is not a mistake when its endpoints already have a selected path. The cycle rule preserves the forest shape while the sorted order controls total cost.</p>
+<table class="ref"><thead><tr><th scope="col">Offered edge</th><th scope="col">Decision</th><th scope="col">Component groups afterward</th><th scope="col">Total</th></tr></thead><tbody><tr><td>BC:1</td><td>accept</td><td>A / BC / D / E / F</td><td>1</td></tr><tr><td>AC:2</td><td>accept</td><td>ABC / D / E / F</td><td>3</td></tr><tr><td>DE:2</td><td>accept</td><td>ABC / DE / F</td><td>5</td></tr><tr><td>EF:3</td><td>accept</td><td>ABC / DEF</td><td>8</td></tr><tr><td>AB:4</td><td>reject: already joined</td><td>ABC / DEF</td><td>8</td></tr><tr><td>BD:5</td><td>accept</td><td>ABCDEF</td><td>13</td></tr><tr><td>DF:6</td><td>reject: already joined</td><td>ABCDEF</td><td>13</td></tr><tr><td>CE:8</td><td>reject: already joined</td><td>ABCDEF</td><td>13</td></tr></tbody></table>
+<p>The accepted edges BC, AC, DE, EF and BD have total 1+2+2+3+5=13. This matches Prim&#x27;s minimum total on the same undirected graph. Their selection orders differ because Prim follows one growing cut while Kruskal follows a global weight order.</p>
+<div data-lab="kruskal"></div>
+<h2 id="correctness">Exchange across one forest component</h2>
+<p>Assume an MST contains every edge accepted so far. Consider the next edge e that joins two different forest components. Choose the cut consisting of one endpoint&#x27;s current component and all other vertices. No previously accepted edge crosses that cut because each forest component already contains all of its selected internal connections.</p>
+<p>Edge e is a lightest edge crossing this cut. If a lighter crossing edge had appeared earlier, its endpoints would then have belonged to different components and it would have been accepted. Components only merge; an earlier accepted crossing connection would mean the two current sides were already joined, which contradicts the chosen current cut.</p>
+<p>If the preserving MST lacks e, add e and inspect the resulting cycle. Another edge f on that cycle crosses the cut. Since e is no heavier than f, replacing f with e keeps the tree connected and cannot increase its cost. The removed edge was not previously protected, so the new MST still contains every accepted edge.</p>
+<p>This exchange maintains the invariant after each acceptance. Rejected edges need no exchange because they are not added. When the graph is connected, V-1 acceptances connect all V vertices, and the preserved MST is exactly the selected tree. For disconnected input, the same argument applies independently inside each original component.</p>
+<h2 id="complexity">Sorting dominates connectivity work</h2>
+<p>Merge sort handles E edges in O(E log E) time using O(E) temporary storage and O(log E) recursive depth. The C demonstration reserves a twelve-edge temporary array at each active merge call. It fits the fixed input; a scalable version can share one E-entry buffer across calls.</p>
+<p>With path compression and union by size, a sequence of E find/union operations takes O((V+E) alpha(V)) amortised time including initial set creation. Alpha is the inverse Ackermann function, which grows extraordinarily slowly. This is an amortised sequence bound, not a claim that every individual find takes one machine instruction.</p>
+<p>Combining sorting and set operations gives O(E log E+(V+E) alpha(V)) time. For a connected graph, the familiar summary is O(E log E). Parent and size arrays need O(V) space; edge storage and sorting workspace add O(E). Input and auxiliary memory should be separated when comparing with Prim.</p>
+<p>The tiny implementation uses fixed capacities and a bounded recursion depth. If the temporary merge array were changed to an E-entry local array in every active call, peak storage could grow beyond one shared buffer. Keep the stated allocation strategy consistent with the memory bound you claim.</p>
+<h2 id="comparison">Choose union-find for connectivity, not paths</h2>
+<p>Union-find can tell you that A and F are connected after BD is accepted. It cannot directly print the cable route between them. To recover a route, keep the accepted graph edges and traverse that resulting tree. The disjoint-set parent forest is an implementation detail of connectivity maintenance.</p>
+<p>Kruskal naturally produces a minimum spanning forest for disconnected graphs. Prim can do the same if restarted from every unused vertex. On a dense graph, a matrix-based Prim implementation may be convenient. When edges already arrive as a list, Kruskal&#x27;s sorting and set operations often fit the representation well.</p>
+<h2 id="edge-cases">Equal weights do not imply one tree</h2>
+<p>Several equal-weight crossing choices can produce different MST edge sets with the same total. A stable edge order selects one reproducible result. To prove uniqueness, you need stronger information; matching one deterministic output is not enough.</p>
+<p>Self-loops are rejected because both endpoints have the same representative. Parallel edges are allowed by Kruskal: the lighter useful one may be accepted, and later redundant ones are rejected. The fixed examples use simple graphs, but the union-find cycle test still works with these extensions.</p>
+<p>Negative edge weights are also allowed for the spanning-tree objective. A tree cannot repeatedly traverse a negative cycle because it has no cycle at all. This differs from unrestricted shortest-walk problems. Keep the optimisation objective clear before applying a restriction borrowed from Dijkstra.</p>
+<h2 id="common-mistakes">Keep roots and weights straight</h2>
+<h3>Joining endpoint indices directly</h3>
+<p>After earlier unions, an endpoint may not be a representative. Find both roots first, then attach one root to the other.</p>
+<h3>Rejecting every repeated endpoint</h3>
+<p>A vertex may appear in many accepted edges without a cycle. Reject only when the two endpoints already belong to the same component.</p>
+<h3>Sorting weights without their endpoints</h3>
+<p>Moving only weight values disconnects costs from their actual edges. Sort complete Edge records so from, to and weight stay together.</p>
+<h2 id="best-practices">Trace component membership</h2>
+<p>Beside each considered edge, record the two representatives before the decision. After an acceptance, update the component groups and total. At the end, check that accepted edges are acyclic and connect every original component internally.</p>
+<h2 id="version-notes">Structure sorting in C17</h2>
+<p>Kruskal&#x27;s C17 merge sort copies complete structures and compares weights without subtraction. The fixed totals fit in int. General code should use a wider total when many edge weights may accumulate, and should allocate sorting storage once when graph sizes grow.</p>
+<h2 id="summary">Sorted offers plus cycle checks</h2>
+<p>Kruskal combines global edge ordering with union-find to grow a cheapest spanning forest. The cut exchange explains why each safe acceptance preserves optimality. Continue with <a href="topic:algo-cycle-bipartite">Cycle Detection and Bipartite Check</a> for cycle tests and a different use of BFS colouring.</p>
