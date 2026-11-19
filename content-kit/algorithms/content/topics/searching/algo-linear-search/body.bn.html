@@ -1,0 +1,54 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">অসাজানো roll number থেকে একটি student খুঁজবে। সঠিক position-এ লাফ দেওয়ার নিশ্চয়তা নেই। বাম থেকে একে একে roll দেখে match পেলেই থামো। এটি <dfn>linear search</dfn>।</p>
+<p>দ্রুত মনে হওয়া পদ্ধতি শেখার পরেও এটি লাগে। Unsorted input নেয়, preparation নেই, প্রথম match-এ থামে। ছোট attendance list-এ আগে sort লাগা ভালো asymptotic bound-এর চেয়ে এগুলো বেশি কাজে লাগতে পারে।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">for i = 0 to n - 1
+    if a[i] == target: return i
+return -1</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>Match-এর অর্থ আগে বলো</h3>
+<p>এখানে target-এর প্রথম zero-based position ফেরাবে, না থাকলে -1। শুধু yes/no-এর চেয়ে position কাজে লাগে; caller record পড়তে বা বদলাতে পারে। Zero বৈধ success, failure-ও হতে পারে না।</p>
+<p>a=[7,3,5,3,1],target=5-এ 7,3,5 দেখে 2 ফেরে; শেষ দুইটি পড়ে না। Target 3-এ প্রথম index 1, পরে 3 থাকলেও। Target 9-এ পাঁচ comparison ব্যর্থ, -1।</p>
+<p>Input array বদলায় না। Equality ব্যর্থ হলে index এক বাড়ে। এগোনোর আগে test করো, নইলে প্রথম মান বাদ যাবে। i&lt;n প্রতিটি read রক্ষা করে। Empty-তে a[0] না পড়েই -1।</p>
+<h3>নিজের storage থাকলেই sentinel</h3>
+<p><dfn>Sentinel</dfn> এমন extra stopping value যেখানে scan পৌঁছাবেই। এখানে caller n data value-এর বাইরে একটি writable cell রাখে। a[n]=target বসিয়ে equality পর্যন্ত scan। Inner loop-এ প্রতিবার length check লাগে না।</p>
+<p>এখন target পাওয়া নিশ্চিত, data-র ভেতরে পাওয়া নয়। শেষে i&lt;n হলেই i ফেরাও। i=n হলে শুধু sentinel, আসল target absent। Empty-তেও a[0] reserved writable cell চাই। Storage-হীন pointer এই variant-এ চলে না।</p>
+<p>আরেক বইয়ের version শেষ real element বদলায়। পুরোনো মান save-restore করে genuine last match ও temporary sentinel আলাদা করতে হয়। Extra-slot version-এ সেই restore লাগে না। দুটোতেই cell লেখার অধিকার চাই; normal n-element array-এর বাইরে লেখার ছাড় নয়।</p>
+<h3>প্রথম, শেষ ও সব match</h3>
+<p>Result contract বদলালে stopping rule বদলায়। First-match প্রথম equality-তে ফেরে। Last-match প্রতিটি index মনে রেখে শেষ পর্যন্ত যায়। Counting-এ প্রতিটি equality-তে counter, পুরো scan। All occurrence চাইলে early return নয়।</p>
+<p>Record search-এ চাওয়া field তুলনা করো। Roll search roll, marks search mark দেখে। সমান mark ভিন্ন student-এর হতে পারে, unique record চেনে না। সব matching student চাইলে সব position ফেরাও বা print করো।</p>
+<p>একটি করে input এলেও linear search চলে; পরের value-তে random access লাগে না। Linked structure-এ next node একই scan। Advance storage অনুযায়ী বদলায়, rejected prefix-এর invariant থাকে।</p>
+<h3>কখন scan-ই ভালো পছন্দ</h3>
+<p>Unsorted list-এ একটি query-তে সর্বোচ্চ n comparison। আগে sorting সাধারণত এক scan-এর চেয়ে বেশি। একই collection-এ অনেক query হলে ordered preparation কাজে লাগতে পারে। তুলনায় preparation-ও ধরো, শুধু পরের search নয়।</p>
+<p>ঘন ঘন চাওয়া item সামনে রাখলে practical expected কাজ কমতে পারে। ওই usage pattern-এ লাভ, worst case নয়। Absent target এখনও সব candidate বাদ দিতে বাধ্য করে।</p>
+<p>Animation-এ absent ও singleton নাও। Equality ব্যর্থ হওয়ার পরই position বাদ যায় দেখো। Rejected color ওই target-এর evidence, value-এর স্থায়ী পরিচয় নয়। Target বদলালে যুক্তি নতুন করে শুরু।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>পাঁচ মানে mark খোঁজো</h3>
+<p>Scan 7,3 পেরিয়ে position 2-এ 5 পায়।</p>
+<div data-example="ex-1"></div>
+<h3>Reserved sentinel cell নাও</h3>
+<p>Extra 8 index 5-এ থামায়। এটি পাঁচ data value-এর বাইরে, তাই -1।</p>
+<div data-example="ex-2"></div>
+<h3>সব সমান mark গোনো</h3>
+<p>সব match চাই বলে প্রথম 3-এর পরেও scan। Index 1,3 মিলে count দুই।</p>
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>i = 0</td><td>7 != 5</td><td>Position 0 উত্তর নয়।</td></tr><tr><td>i = 1</td><td>3 != 5</td><td>এখন rejected prefix-এর length দুই।</td></tr><tr><td>i = 2</td><td>5 == 5</td><td>Suffix না দেখেই 2 ফেরাও।</td></tr></tbody></table>
+<div data-lab="linear-search"></div>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>i দেখার আগে নিচের কোনো position-এ target নেই। শুরুতে rejected prefix খালি, সত্য। a[i] ভিন্ন হলে i বাড়িয়ে prefix বাড়ে। সমান হলে আগের সবাই ব্যর্থ, তাই প্রথম match। i=n হলে সবাই ব্যর্থ, -1 ঠিক।</p>
+<p>প্রতি unsuccessful iteration i বাড়ায়, n fixed; সর্বোচ্চ n data comparison। Sentinel-এ reserved cell target বলে n-এর মধ্যে equality হবেই। শেষে index test real data ও extra stopping cell আলাদা করে।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Nonempty first match-এ best Θ(1); absent বা last match-এ worst Θ(n)। Successful position uniform হলে expected (n+1)/2, এটিও Θ(n); probability assumption বলতেই হবে। দুই scan-এর working variable Θ(1); sentinel-এ বাড়তি এক writable cell চাই।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>Missing result-এ zero নেওয়া</h3>
+<p>Zero বৈধ match। Missing marker -1 রাখো, returned index স্পষ্ট তুলনা করো।</p>
+<h3>সব match গোনার আগে return</h3>
+<p>Count-এ পরের equal value-ও লাগে। Early return সরিয়ে scan শেষ করো।</p>
+<h3>Reserved নয় এমন sentinel লেখা</h3>
+<p>n-element array-তে a[n] data cell নেই। n+1 reserve করো বা সাধারণ bounds-checked scan নাও।</p>
+<h2 id="version-notes">C17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>সাধারণ C17 search input বদলায় না বলে const pointer। Sentinel writable storage নেয়, স্পষ্টভাবে extra cell চায়।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>প্রথম match-এর scan বোঝো, failed search বিশ্লেষণ করো, বৈধ writable storage থাকলেই sentinel নাও।</p>
+<p>Ordered input-এ অন্য পথ দেখতে <a href="topic:algo-binary-search">binary search</a> পড়ো।</p>
