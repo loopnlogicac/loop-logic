@@ -1,0 +1,115 @@
+<h2 id="introduction">Use two coordinates for a table</h2>
+
+<p class="lead">A class result sheet has rows for students and columns for assessments. One position needs both a row number and a column number. A <dfn>two-dimensional array</dfn> stores this rectangular arrangement as an array whose elements are themselves row arrays.</p>
+
+<p>In <code>int matrix[2][3]</code>, there are two rows and three columns. The expression matrix[1][2] selects the second row and third column. Both coordinates start at zero. Neither coordinate is a count of all earlier entries by itself.</p>
+
+<p>Matrices are useful for images, grids, attendance tables and mathematical calculations. Their shape determines which operations make sense. Addition needs equal shapes; multiplication has a different compatibility rule. Writing the dimensions before the loops helps prevent confusing these operations.</p>
+
+<h2 id="syntax">Declare rows outside, columns inside</h2>
+
+<pre><code class="language-c">int matrix[2][3] = {
+    {1, 2, 3},
+    {4, 5, 6}
+};
+int value = matrix[1][2];</code></pre>
+
+<p>The first bound counts rows and the second counts entries per row. The nested braces show that structure. The selected value above is six. An omitted element in an aggregate initializer becomes zero, following the same rule as a one-dimensional array.</p>
+
+<p>A row loop normally surrounds a column loop. For each row, the column counter starts again at zero. This structure also makes printing easy: print entries inside the inner loop and one newline after that loop finishes.</p>
+
+<h2 id="how-it-works">Read the row-major layout</h2>
+
+<p><dfn>Row-major order</dfn> means that one complete row precedes the next complete row in memory. For a two-by-three matrix, the conceptual element sequence is 1, 2, 3, 4, 5, 6. Advancing one column moves one int; advancing one row moves three ints.</p>
+
+<pre class="diagram">coordinates: [0][0] [0][1] [0][2] | [1][0] [1][1] [1][2]
+values:         1      2      3  |    4      5      6
+element offset = row * column_count + column</pre>
+
+<p>The offset formula counts elements, not bytes. Multiply by sizeof the element type only when calculating a byte offset. It also explains why helpers need a physical row width when accepting a two-dimensional array.</p>
+
+<p>Each subscript must respect its own row or column bound. Writing matrix[0][3] is outside row zero, even if another row follows in storage. Use matrix[1][0] for the first element of the next row. Contiguous layout does not legalize an out-of-range row subscript.</p>
+
+<h2 id="examples">Read, transform and combine matrices</h2>
+
+<h3>Read and print a rectangular matrix</h3>
+
+<p>The input fills row zero before row one. The output prints two rows of three entries.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Add two matrices element by element</h3>
+
+<p>Matching coordinates give rows 6 8 and 10 12. Addition never mixes a row with a different column.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Multiply a 2 by 3 matrix by a 3 by 2 matrix</h3>
+
+<p>The first result is 1*7 + 2*9 + 3*11 = 58. Each output cell starts at zero before adding three products.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Transpose a rectangle into a new shape</h3>
+
+<p>The first row 1 2 3 becomes the first column. A rectangular transpose needs storage with reversed dimensions.</p>
+
+<div data-example="ex-4"></div>
+
+<h3>Sum two diagonals separately</h3>
+
+<p>Each diagonal totals 15. Their union totals 25 because the central 5 must be counted once.</p>
+
+<div data-example="ex-5"></div>
+
+<p>The rectangular transpose creates a three-by-two destination. A two-by-three source cannot hold its transpose under the same declared shape. The square case can use pair swaps, but copying to a separate array is easier to read when first learning the coordinate exchange.</p>
+
+<p>The diagonal example reports separate sums and their union. Each separate diagonal includes the center. If the requested total means entries belonging to either diagonal, subtract the center once for an odd-sized square.</p>
+
+<h2 id="comparison">Addition and multiplication use different rules</h2>
+
+<p>Addition pairs corresponding coordinates. For every row r and column c, the result is a[r][c] plus b[r][c]. Both input matrices must have exactly the same dimensions. The work is O(rows times columns).</p>
+
+<p>For multiplication, suppose A has r rows and k columns. B must have k rows, and it may have c columns. The product then has r rows and c columns. Each output entry combines one row of A with one column of B.</p>
+
+<p>For the first product cell in the example, the calculation is 1 times 7 plus 2 times 9 plus 3 times 11. That gives 58. The inner k loop advances across the left row and down the right column. Reset the output accumulator before starting a different cell.</p>
+
+<p>The multiplication work is O(r*k*c). Multiplying the corresponding coordinates is an elementwise operation, not matrix multiplication. A square example can hide this shape difference, so first trace the rectangular example where the inner dimension is three and the output width is two.</p>
+
+<h2 id="edge-cases">Transpose and diagonals have their own bounds</h2>
+
+<p>Transposition exchanges row and column coordinates. Its output shape is columns by rows. A loop that prints the transpose therefore has the original column count as its outer bound. Reusing the original row bound can omit entries or read invalid positions.</p>
+
+<p>A primary diagonal uses [i][i]. A secondary diagonal in an n-by-n square uses [i][n-1-i]. The secondary column decreases while the row increases. For n equal to one, both diagonals select the same single entry.</p>
+
+<p>The practice matrices limit dimensions to four and values to minus ten through ten. A product cell then adds at most four products with magnitudes at most one hundred. These bounds keep int arithmetic safe. Larger dimensions and values need a separate range analysis.</p>
+
+<p>An identity matrix has ones on its primary diagonal and zeros elsewhere. Multiplying a matrix by a compatible identity should preserve its entries. This gives a useful independent check for the multiplication task, alongside one-cell and all-zero inputs.</p>
+
+<h2 id="common-mistakes">Name every loop coordinate</h2>
+
+<h3>Swapping row and column input limits</h3>
+
+<p>A two-by-three array needs row less than two and column less than three. Square matrices can conceal a swapped bound. Include a rectangular input when checking a traversal.</p>
+
+<h3>Leaving a product accumulator uninitialized</h3>
+
+<p>Adding products to an indeterminate local produces an invalid result. Initialize each output cell to zero, or declare a fresh zero sum inside the column loop. Do not carry the preceding cell's total into the next one.</p>
+
+<h3>Counting the shared center twice</h3>
+
+<p>Two diagonal sums are individually correct even when they share a center. The error occurs only when their sum is treated as a union total. Read whether the problem wants two sums or one set of diagonal entries.</p>
+
+<h2 id="best-practices">Write shapes beside an operation</h2>
+
+<p>Before matrix multiplication, write A as r by k, B as k by c, and the result as r by c. Each loop then has a natural bound. For transposition, explicitly reverse the destination dimensions.</p>
+
+<p>Use row and column names rather than unrelated counters while learning. Keep a clear newline boundary in matrix output. Validate input shape before using it as a logical range within fixed-capacity storage.</p>
+
+<h2 id="version-notes">Nested arrays have a stable layout</h2>
+
+<div class="callout version"><p>Fixed rectangular arrays and row-major nested-array layout are longstanding C features. These examples use C17 and C99 loop declarations. Runtime-dependent row widths involve VLA-related rules, covered separately in the final arrays lesson.</p></div>
+
+<h2 id="summary">Let the shape guide the loops</h2>
+
+<p>Two-dimensional arrays group complete rows in memory. Addition, multiplication, transposition and diagonal totals each follow a different coordinate rule. Continue with <a href="topic:c-multidimensional-arrays">Multidimensional Arrays</a> when data needs another coordinate such as day or layer.</p>

@@ -1,0 +1,128 @@
+<h2 id="introduction">Give a helper both storage and a range</h2>
+
+<p class="lead">An array of marks can be summed, filtered or modified by several helpers. Copying the whole array for every call would be unnecessary for many tasks. C normally gives a helper access to the caller's array elements through a pointer.</p>
+
+<p>This behavior has a useful consequence and an important limit. A helper can change the original elements when its parameter permits writing. It does not automatically know how many elements exist. The caller must supply the intended length and any required capacity information.</p>
+
+<p>Think of handing someone the first shelf number in a row of shelves. That identifies where the data begins, but not how far they may go. A safe interface describes both the starting storage and the valid range.</p>
+
+<h2 id="syntax">Array notation in a parameter is adjusted</h2>
+
+<pre><code class="language-c">int array_sum(const int values[], int count);
+int array_sum(const int *values, int count);
+void double_values(int values[], int count);</code></pre>
+
+<p>The first two declarations describe compatible parameter types. In a parameter declaration, an array form is adjusted to a pointer form. The const qualification applies to the int elements reached through the pointer. It prevents array_sum from writing those elements through values.</p>
+
+<p><dfn>Array-to-pointer conversion</dfn>, often called decay, usually converts an array expression to a pointer to its first element. It happens when the caller passes the array to these helpers. Important exceptions include sizeof applied to an actual array and the address operator applied to the array itself.</p>
+
+<p>C still passes the resulting pointer value by value. The pointer identifies shared element storage; it is not a copy of every element. Review <a href="topic:c-call-by-value-reference">Call by Value</a> if this distinction is unclear.</p>
+
+<h2 id="how-it-works">Keep length calculations in the caller</h2>
+
+<p>In main, sizeof values describes the complete actual array. Inside array_sum, values is a pointer parameter, so sizeof values describes that pointer. Dividing it by sizeof values[0] does not recover the caller's array length.</p>
+
+<p>Calculate an element count before the call while the array object is visible, or track a separately maintained logical length. Then pass that count explicitly. The helper's loop can visit indices from zero through count minus one under that agreement.</p>
+
+<pre class="diagram">main:  values = [12][15][18], count = 3
+                      ^
+helper parameter -----+      copied pointer value
+helper count = 3             copied integer value
+
+helper reads the original elements; it does not discover their capacity</pre>
+
+<p>The modifying helper doubles the same caller elements. The const sum helper only reads them. The interface's element qualification tells readers which behavior to expect. An ordinary mutable array can be passed to the read-only int-pointer interface.</p>
+
+<p>For these int-count examples, the caller guarantees a nonnegative count that fits int. A general library commonly uses size_t for lengths. Whichever type is chosen, the helper still needs a truthful range within live storage.</p>
+
+<h2 id="examples">Read, update and fill caller results</h2>
+
+<h3>Sum through a read-only parameter</h3>
+
+<p>The caller calculates three elements before the call. The helper uses the supplied length and returns 45.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Modify elements through an array parameter</h3>
+
+<p>The values become 4, 8 and 12 in the original array. The helper received a copied pointer to those elements.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Keep the column count in a matrix parameter</h3>
+
+<p>The row type contains three ints. Advancing a row therefore skips three elements and the result is 21.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Write several results into caller storage</h3>
+
+<p>The output array contains 3, 8, 10 and 14. Its lifetime belongs to main, so the values remain valid after return.</p>
+
+<div data-example="ex-4"></div>
+
+<h3>A static result survives but is reused</h3>
+
+<p>The first line is 4 5. The next call overwrites the same static array, so first now also observes 9.</p>
+
+<div data-example="ex-5"></div>
+
+<p>The prefix-sum helper writes into storage allocated by main. It does not return an array type. The destination remains alive after the helper returns because its lifetime belongs to main's block. Its capacity must be at least the requested count.</p>
+
+<p>The static-pair example demonstrates a different result-storage choice. The returned pointer remains valid after return, but successive calls reuse the same two elements. Saving the pointer does not save an independent copy of the values.</p>
+
+<h2 id="edge-cases">Two-dimensional arrays need a row type</h2>
+
+<p>For a matrix declared int matrix[2][3], the first element is a row array of three ints. Conversion therefore gives a pointer to a three-int row, not an int pointer to an arbitrary flat list. A parameter written int matrix[][3] retains that row width.</p>
+
+<p>The equivalent pointer declaration is <code>int (*matrix)[3]</code>. The parentheses make matrix a pointer to an array. A declaration such as int **matrix describes a pointer to a pointer, a different type and layout. Do not cast a rectangular matrix to int double pointer.</p>
+
+<p>The first row count can be passed separately because pointer arithmetic already knows one row's width. Every later bound is part of the nested element type. For three dimensions, a parameter similarly needs the extents of the inner row and column arrays.</p>
+
+<p>A runtime-width interface can use a preceding column parameter and VLA-related syntax. It needs compiler support for that form. The fixed-three-column helper avoids that dependency. See <a href="topic:c-variable-length-arrays">Variable-Length Arrays</a> for a bounded runtime-width example and fallback.</p>
+
+<p>Before C23, adding const through nested array-pointer conversions has subtleties beyond the simple one-dimensional case. The fixed-width matrix example uses a mutable matrix parameter and does not write it. Its body is read-only by design without depending on a questionable pre-C23 qualification conversion.</p>
+
+<h2 id="comparison">Choose where returned data will live</h2>
+
+<p>A C function cannot have an array return type directly. Returning a pointer is possible, but that pointer needs valid backing storage. Returning the address of an ordinary local array leaves the caller with expired storage and cannot safely provide a result.</p>
+
+<p>Caller-owned output arrays make the storage owner clear. Pass the destination, its capacity and the input length where needed. The prefix-sum and filter tasks follow this design. The filter returns a scalar used length because not every input value survives.</p>
+
+<p>Static result arrays last for the program but are shared across calls. This can be unsuitable when two results must exist independently or concurrent calls are possible. Copy the result before another call if its contract allows reuse but you need to preserve values.</p>
+
+<p>Allocated result storage can outlive the helper too. That design must say who releases the allocation and how failure is reported. It is developed later in <a href="topic:c-dynamic-arrays">Dynamic Arrays</a>. A structure containing a fixed array can also be returned by value, after structures have been introduced.</p>
+
+<h2 id="common-mistakes">Do not make a length promise that the type cannot enforce</h2>
+
+<h3>Writing a bound in a parameter and assuming it is checked</h3>
+
+<p>A parameter written values[20] still becomes a pointer parameter. It does not automatically copy twenty elements or verify that the caller owns twenty. Supply and respect a length contract explicitly.</p>
+
+<h3>Ignoring output capacity</h3>
+
+<p>A helper that writes count results needs at least count destination slots. Passing a smaller output array is unsafe even if the input length is valid. For filtering, a destination as large as the input always has enough room.</p>
+
+<h3>Returning an automatic array address</h3>
+
+<p>The return value may still look like an address, but its former local object has ended. Storage duration is the problem. Move storage into the caller rather than relying on what happened during a small run.</p>
+
+<h3>Using the wrong physical column width</h3>
+
+<p>A three-column helper cannot accept a four-column rectangular object merely because only three columns are logically used. Row stepping depends on the physical array type. Match that width or choose a different interface.</p>
+
+<h2 id="best-practices">Make input and output roles explicit</h2>
+
+<p>Use const for one-dimensional input-only element access. Give output parameters names such as destination or prefix. Return a length or success flag when the caller needs to know how much output became valid.</p>
+
+<p>Document whether input and output ranges may overlap. The prefix operation happens to support the same starting array when implemented with a running sum, but other transformations may overwrite unread input. The practice tasks use separate arrays so ownership and capacity remain visible.</p>
+
+<p>Include empty-range cases for helpers that promise to accept them. A sum can return zero without reading the first element. A minimum helper needs a different rule because an empty set has no minimum value under the usual integer ordering.</p>
+
+<h2 id="version-notes">Parameter adjustment remains part of C</h2>
+
+<div class="callout version"><p>C17 adjusts array parameters to pointer types. C99 adds variable-length array parameter forms and minimum-size annotations using static inside brackets. Such annotations state a caller obligation; they are not automatic runtime bounds checks.</p></div>
+
+<h2 id="summary">Pass enough information to use the elements safely</h2>
+
+<p>Array helpers receive access to storage, while explicit lengths describe valid ranges. Matrix row widths and result lifetimes need their own clear rules. Next, <a href="topic:c-linear-binary-search">Linear and Binary Search</a> uses read-only array interfaces to locate values.</p>

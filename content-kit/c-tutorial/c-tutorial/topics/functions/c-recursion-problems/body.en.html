@@ -1,0 +1,126 @@
+<h2 id="introduction">Choose a reduction that matches the problem</h2>
+
+<p class="lead">A recursive solution begins by deciding what a smaller problem means. For digits, remove the last digit. For a text range, remove both endpoints after handling them. For a sorted search interval, discard the half that cannot contain the key.</p>
+
+<p>These reductions are different, but each needs a stopping condition and preserved information. Do not memorize a recursive call without understanding which part of the original task remains. A short equation or range diagram often reveals the correct arguments.</p>
+
+<p>Some examples here preview arrays and strings because the problems naturally use them. An array stores indexed elements, starting at zero. A C string is a character array ending with a zero character. Later lessons in <a href="topic:c-arrays-intro">Arrays</a> and <a href="topic:c-strings-intro">Strings</a> develop these details.</p>
+
+<h2 id="syntax">Write the mathematical reduction first</h2>
+
+<pre><code class="language-text">power(b, 0) = 1
+power(b, e) = b * power(b, e - 1), e &gt; 0
+
+digit_sum(n) = n, n &lt; 10
+digit_sum(n) = n % 10 + digit_sum(n / 10), n &gt;= 10
+
+gcd(a, 0) = a
+gcd(a, b) = gcd(b, a % b), b &gt; 0</code></pre>
+
+<p>The power helper reduces the exponent rather than the base. The digit helper reduces the number of decimal digits. Euclid's GCD helper replaces a pair with another pair whose second value is smaller. Each equation points to its own base case.</p>
+
+<p>The classroom power task defines every zero-exponent answer as one, including zero to the zero power. State that convention because different mathematical contexts treat that expression differently. The numeric bounds also keep all products representable.</p>
+
+<h2 id="how-it-works">Trace digit sum and Euclid GCD</h2>
+
+<p>For digit_sum(5072), the last digit is 2 and the remaining prefix is 507. The chain adds 2, 7, 0 and finally 5. The result is 14. Zero inside the number contributes nothing, but it still occupies a digit position during the reduction.</p>
+
+<table class="ref"><caption>Euclid reduction for 84 and 30</caption><thead><tr><th scope="col">a</th><th scope="col">b</th><th scope="col">Next pair</th></tr></thead><tbody><tr><td>84</td><td>30</td><td>30, 24</td></tr><tr><td>30</td><td>24</td><td>24, 6</td></tr><tr><td>24</td><td>6</td><td>6, 0</td></tr><tr><td>6</td><td>0</td><td>Return 6</td></tr></tbody></table>
+
+<p>A common divisor of a and b also divides a modulo b. Replacing the pair therefore preserves the greatest common divisor. The remainder is smaller than a positive divisor, so the second argument eventually becomes zero. This gives both a correctness reason and a termination reason.</p>
+
+<p>The digit recursion takes O(d) time and depth for d digits. The simple power helper takes O(e) time and depth for exponent e. Euclid's reduction takes O(log min(a,b)) remainder steps for positive inputs, with zero cases handled before division.</p>
+
+<h2 id="examples">Different shapes of recursive work</h2>
+
+<h3>Integer powers with a zero exponent</h3>
+
+<p>The results are 81 and 1. The exponent decreases to zero, whose empty product is defined as one here.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Peel digits and reduce a GCD pair</h3>
+
+<p>The digit sum is 14. GCD reduces (84,30) to (30,24), (24,6) and (6,0), giving 6.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Reverse a small writable string</h3>
+
+<p>text is a writable character array with a trailing zero character. Swapping pairs preserves that terminator and prints akahD.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Move three disks between pegs</h3>
+
+<p>Seven moves obey the smaller-on-larger rule. The second recursive call uses the spare peg as its new source.</p>
+
+<div data-example="ex-4"></div>
+
+<h3>Search a sorted array recursively</h3>
+
+<p>The found index is 3 and the missing result is -1. Each call excludes the midpoint that was already checked.</p>
+
+<div data-example="ex-5"></div>
+
+<h3>Build a triangle while calls return</h3>
+
+<p>The first visible row has one star because triangle handles smaller rows before printing the current row.</p>
+
+<div data-example="ex-6"></div>
+
+<p>The reversal helper uses a writable array, not a pointer to a string literal. The indices begin at zero and length minus one. It swaps those endpoint characters, then moves left inward and right inward. When the indices meet or cross, there is nothing left to exchange.</p>
+
+<p>The pattern helper uses two recursive layers. triangle handles rows; stars handles one row's repeated character. Printing the shorter triangle before the current row gives increasing lengths. Reversing those two actions would print decreasing lengths instead.</p>
+
+<h2 id="real-world-use">Understand the Tower of Hanoi plan</h2>
+
+<p>Hanoi has three pegs and n disks of different sizes. Move one disk at a time, and never place a larger disk on a smaller one. To move n disks from source to target, first move n minus one disks to spare. Then move the largest disk to target, and finally move the smaller group from spare to target.</p>
+
+<p>The peg roles change between recursive calls. The first smaller move uses the old target as spare. The second smaller move begins at the old spare and uses the old source as spare. Copying the same three peg arguments into both calls would describe the wrong moves.</p>
+
+<p>For three disks, the move count is seven. The recurrence is T(n) = 2T(n minus one) + 1 with T(0) = 0. It gives 2^n minus one moves. The running time is exponential because the output itself contains exponentially many move lines.</p>
+
+<p>The maximum active call depth is O(n), even though the move count is much larger. A completed first branch returns before the second branch begins. Restricting the practice task to five disks keeps both the trace and the output manageable.</p>
+
+<h2 id="edge-cases">Binary search must shrink past its midpoint</h2>
+
+<p>The recursive search example uses an inclusive interval from left through right. An interval with left greater than right is empty and returns minus one. Otherwise calculate the middle index as left plus half the difference, avoiding the potentially overflowing left-plus-right formula.</p>
+
+<p>If the middle value is too large, search left through middle minus one. If too small, search middle plus one through right. The already-tested midpoint is excluded. Reusing middle as an unchanged endpoint can leave a one-element interval that recurses forever.</p>
+
+<p>The input must be sorted under the same comparison used by the search. An unsorted array can send the search away from a key that is actually present. The iterative search lesson later compares this requirement with linear search.</p>
+
+<p>A string of length zero or one needs no reversal swap. The practice reads a nonempty ASCII word with a width-limited %s conversion. Its character array has one extra element for the terminating zero. Byte-by-byte reversal is not a correct method for general UTF-8 Bangla text.</p>
+
+<h2 id="common-mistakes">Preserve the problem's meaning in every call</h2>
+
+<h3>Applying remainder before checking zero</h3>
+
+<p>Euclid's base case must be checked before a modulo b. Remainder with a zero divisor is undefined. The zero second argument means the answer is already the first argument.</p>
+
+<h3>Multiplying outside the promised numeric domain</h3>
+
+<p>Recursion does not provide unlimited integer precision. A power result can overflow long long. Follow the stated base and exponent bounds instead of assuming a smaller exponent always means a safe product.</p>
+
+<h3>Reversing the terminator into the word</h3>
+
+<p>The final character position is length minus one. Position length holds the terminating zero and must stay at the end. Moving it to the front would make printing stop immediately.</p>
+
+<h3>Underestimating recursive output</h3>
+
+<p>Hanoi cannot become fast merely by shortening its function body. Every legal plan still needs exponentially many moves. Pattern output also costs time for each printed character, even when recursion organizes the rows neatly.</p>
+
+<h2 id="best-practices">Name the decreasing measure</h2>
+
+<p>Before coding, write whether digits, exponent, disk count or interval length decreases. Then check the smallest input and the first recursive input. These two cases often expose an incorrect boundary before a long trace does.</p>
+
+<p>Use separate names for a problem's roles: source, spare and target; left and right; base and exponent. The names help you verify argument permutations. Compare small results with an independent calculation, such as a loop power or a known GCD.</p>
+
+<h2 id="version-notes">Keep recursive storage bounded</h2>
+
+<div class="callout version"><p>These recursive reductions require no feature beyond C17. The unsigned helpers accept nonnegative inputs and guard their base cases before subtraction or remainder. Available call storage remains an implementation limit, regardless of whether the mathematical recurrence terminates.</p></div>
+
+<h2 id="summary">One stopping rule for each reduction</h2>
+
+<p>Recursive arithmetic peels off digits or factors; reversal narrows a range; Hanoi rearranges peg roles; search discards an impossible half. Explain why each new call is smaller. Next, <a href="topic:c-variadic-functions">Variadic Functions</a> introduces calls whose number of arguments can vary.</p>

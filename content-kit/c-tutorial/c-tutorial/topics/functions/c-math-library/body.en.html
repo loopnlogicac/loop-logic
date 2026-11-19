@@ -1,0 +1,95 @@
+<h2 id="introduction">Use a library for familiar mathematics</h2>
+
+<p class="lead">A calculator has separate keys for a square root, a power and a sine. C provides similar operations through functions declared in <code>math.h</code>. You can use these functions for geometry, measurements, rounding and scientific calculations.</p>
+
+<p>The header describes how to call each function. It does not turn every mathematical input into a meaningful real answer. A square root of a negative real number needs a different number system. A useful program checks that an input belongs to the function's intended domain.</p>
+
+<p><dfn>Domain</dfn> means the set of allowed inputs for an operation. Floating-point calculations also have limited precision. A displayed decimal answer is a rounded representation, so numerical reasoning matters alongside correct function names.</p>
+
+<h2 id="syntax">Include the declarations and link the implementation</h2>
+
+<pre><code class="language-bash">gcc -std=c17 -Wall -Wextra -Wpedantic -Werror main.c -o main -lm</code></pre>
+
+<p>Include <code>#include &lt;math.h&gt;</code> in a source file that calls these functions. On this GCC/Linux toolchain, place <code>-lm</code> after the source or object files when linking. The option requests the mathematical library.</p>
+
+<p>A missing header and a missing library are different problems. Without the declaration, the compiler may reject the call. Without the implementation at link time, the linker may report an undefined reference. Optimization can hide some missing-library mistakes for constant expressions, so use the explicit link option consistently.</p>
+
+<table class="ref"><caption>Frequently used double functions</caption><thead><tr><th scope="col">Function</th><th scope="col">Meaning</th><th scope="col">Example</th></tr></thead><tbody><tr><td>sqrt(x)</td><td>Nonnegative square root</td><td>sqrt(81.0) gives 9</td></tr><tr><td>pow(x,y)</td><td>x raised to y</td><td>pow(3.0,4.0) gives 81</td></tr><tr><td>fabs(x)</td><td>Floating magnitude</td><td>fabs(-2.5) gives 2.5</td></tr><tr><td>ceil(x)</td><td>Round upward</td><td>ceil(-2.5) gives -2</td></tr><tr><td>floor(x)</td><td>Round downward</td><td>floor(-2.5) gives -3</td></tr><tr><td>round(x)</td><td>Nearest integer, halfway away from zero</td><td>round(-2.5) gives -3</td></tr><tr><td>sin(x), cos(x)</td><td>Trigonometric values in radians</td><td>sin(0.0) gives 0</td></tr></tbody></table>
+
+<h2 id="how-it-works">Separate the function result from its display</h2>
+
+<p>sqrt, pow and the other table entries normally operate on double and return double. The rounding functions return integer-valued floating results, not an int type. Printing floor(2.8) with %.1f is therefore appropriate; printing it with %d is not.</p>
+
+<p>Use fabs for double magnitudes. abs, declared in stdlib.h, accepts int instead. Passing a fractional reading to abs would first require an integer conversion and lose information. Function names and parameter types tell you which operation preserves the intended value.</p>
+
+<p>The rounding example is deliberately negative. Upward means toward positive infinity, so ceil(-2.5) gives -2. Downward means toward negative infinity, so floor gives -3. Truncation toward zero would instead give -2; it is a different rounding rule.</p>
+
+<h2 id="examples">Inspect roots, rounding and angles</h2>
+
+<h3>Roots, powers and magnitude</h3>
+
+<p>sqrt gives 9, pow gives 81 and fabs gives 2.5. The result formats retain one digit after the decimal point.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Rounding negative numbers</h3>
+
+<p>ceil moves toward positive infinity to -2. floor moves to -3. round sends the halfway value away from zero, also to -3.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Convert degrees to radians</h3>
+
+<p>The sine is displayed as 0.500000. acos computes a usable pi value without depending on the nonstandard M_PI name.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Compare a computed root with a tolerance</h3>
+
+<p>A small rounding error is allowed in the squared result. Exact equality is unnecessary for this numerical check.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The trigonometry example converts degrees to radians using degrees times pi divided by 180. It computes pi with acos(-1.0). A right angle is pi divided by two radians, rather than ninety radians. Passing degrees directly gives a valid but unintended angle.</p>
+
+<p>The tolerance example squares an approximate square root. The mathematical result is two, but the stored floating value may differ slightly. fabs measures the magnitude of that difference without caring which side of two it lands on.</p>
+
+<h2 id="edge-cases">Check domain, range and precision</h2>
+
+<p>sqrt expects a nonnegative input for a real result. pow with a negative base and a noninteger exponent can have a domain error. Zero raised to a negative exponent also needs attention. Large powers can exceed the representable floating range even when their input domain is otherwise acceptable.</p>
+
+<p>The practice programs use isfinite to reject infinities and NaN values before calculating. NaN means not a number. Comparisons involving NaN do not behave like an ordinary ordered reading. For broader applications, the library also provides error-reporting mechanisms described by math_errhandling.</p>
+
+<p>Floating-point values approximate many decimal fractions. Avoid assuming that a printed 0.50 means the stored value is exactly one half in every calculation. The chosen decimal places control the display, while the underlying representation controls subsequent arithmetic.</p>
+
+<p>A tolerance should fit the problem's scale. An absolute tolerance of 1e-12 works for the small identity checks here. Comparing large measurements may need a relative tolerance based on their magnitudes. Monetary calculations often need an integer minor-unit design instead of unrestricted floating rounding.</p>
+
+<p>pow is a floating operation, even when the mathematical result is an integer. For exact bounded integer powers, a checked integer loop or recursive helper can be a better choice. Do not convert an out-of-range double to int and expect a safe exact answer.</p>
+
+<h2 id="common-mistakes">Watch units and return types</h2>
+
+<h3>Using degrees as radians</h3>
+
+<p>The sine of thirty degrees is about one half. The sine of thirty radians is a different value. Convert units at the input boundary and give the converted variable a name such as radians.</p>
+
+<h3>Assuming M_PI is portable C17</h3>
+
+<p>Some implementations provide M_PI as an extension. Standard C17 does not require that macro. Use a clearly stated constant or calculate a suitable pi with acos(-1.0).</p>
+
+<h3>Using equality for every numerical check</h3>
+
+<p>Exact equality can reject a useful computed result after rounding. Choose a tolerance from the task's accuracy requirement. Conversely, do not add a large tolerance that hides a real algorithmic error.</p>
+
+<h2 id="best-practices">Check the smallest meaningful numeric case</h2>
+
+<p>Try a zero distance, a perfect square and a non-square. For rounding, include positive and negative halfway values. For angles, begin with zero and a familiar angle before trying an arbitrary reading.</p>
+
+<p>Keep units in names and explanations. A distance formula requires matching coordinate units. Restrict inputs enough to avoid overflow in intermediate squares; use hypot for larger-scale work when its range behavior is useful.</p>
+
+<h2 id="version-notes">Choose an explicit numerical baseline</h2>
+
+<div class="callout version"><p>sqrt, pow, fabs, ceil, floor, sin and cos are longstanding C library functions. round and isfinite were added in C99. These programs use C17 with -lm on GCC/Linux; other toolchains may link the mathematical functions without that option.</p></div>
+
+<h2 id="summary">Use the right function with the right domain</h2>
+
+<p>math.h provides numerical tools, while your program supplies valid inputs, matching units and a sensible accuracy rule. Read both the mathematical domain and the C return type. Next, <a href="topic:c-arrays-intro">Introduction to Arrays</a> groups related values into indexed storage.</p>

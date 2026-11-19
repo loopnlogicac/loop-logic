@@ -1,0 +1,111 @@
+<h2 id="introduction">Storage class is more than a location label</h2>
+
+<p class="lead">A lab may keep a daily visitor sheet and a permanent total. Both records can sit inside the same room, yet their persistence differs. C storage-class specifiers help describe comparable choices for variables and names. They do not merely choose a physical place in memory.</p>
+
+<p>The four traditional specifiers in this lesson are <code>auto</code>, <code>register</code>, <code>static</code> and <code>extern</code>. Their effects depend on where the declaration appears. In particular, static inside a function changes duration, while static at file scope also changes linkage.</p>
+
+<p>Review <a href="topic:c-scope-lifetime">Scope and Lifetime</a> if visibility and existence still seem interchangeable. Here a third idea matters: <dfn>linkage</dfn> tells whether different declarations can identify the same object or function. External linkage can connect declarations across translation units.</p>
+
+<h2 id="syntax">Compare declarations by context</h2>
+
+<pre><code class="language-c">auto int subtotal = 0;
+register int index = 0;
+static int visits;
+extern int lab_capacity;</code></pre>
+
+<p>The first two lines belong inside a function or another block. auto explicitly names the usual automatic storage class of a block variable. It is normally omitted. register suggests frequent access, but a compiler may ignore that hint when choosing machine instructions.</p>
+
+<p>A block-scope static object lasts for the entire program. Its name still belongs to the block. An extern declaration can refer to an object defined elsewhere. Without an initializer, it does not by itself supply the object's storage.</p>
+
+<table class="ref"><caption>Traditional C17 declarations</caption><thead><tr><th scope="col">Declaration context</th><th scope="col">Scope</th><th scope="col">Duration</th><th scope="col">Linkage</th></tr></thead><tbody><tr><td>Block auto int x</td><td>Block</td><td>Automatic</td><td>None</td></tr><tr><td>Block register int x</td><td>Block</td><td>Automatic</td><td>None</td></tr><tr><td>Block static int x</td><td>Block</td><td>Static</td><td>None</td></tr><tr><td>File static int x</td><td>File</td><td>Static</td><td>Internal</td></tr><tr><td>File int x = 1</td><td>File</td><td>Static</td><td>External</td></tr><tr><td>extern int x</td><td>Declaration site</td><td>Refers to static-duration object</td><td>Usually external; prior linkage can matter</td></tr></tbody></table>
+
+<h2 id="how-it-works">A static initializer is not a repeated reset</h2>
+
+<p>Consider a helper containing <code>static int visits;</code> followed by an increment. Before normal execution begins, visits is initialized to zero. The first call increases it to one. Returning hides the local name from callers, but the object continues to exist.</p>
+
+<p>The second call reaches the same object, whose value is already one. Its declaration does not reset it. The next increment produces two. An ordinary <code>int visits = 0;</code> would instead create and initialize a new automatic object for each call.</p>
+
+<p>Static-duration objects without explicit initializers receive zero initialization. For arithmetic objects this gives zero; pointer objects receive null pointers. Ordinary automatic objects without initializers do not receive the same useful guarantee. Initialize a subtotal before reading it.</p>
+
+<p>A static local initializer must be a permitted constant expression in C. It cannot call a function to initialize itself on first entry as some other languages allow. If a value depends on runtime input, arrange an explicit assignment and define when that assignment should occur.</p>
+
+<h2 id="examples">Observe persistence and linkage separately</h2>
+
+<h3>Spell out auto and register</h3>
+
+<p>The sum is 10. register changes neither the loop arithmetic nor the promised storage location.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>A local static counts calls</h3>
+
+<p>The zero-initialized static visits object is shared across these calls, giving 1 and then 2.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Internal linkage for a private total</h3>
+
+<p>Both the helper and total are private names within this translation unit. The two amounts still accumulate into one object.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>extern refers to a later definition</h3>
+
+<p>The declaration reserves no second object. The definition below main provides the storage initialized to 60.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The private-total example uses static on both an object and a function at file scope. Other translation units cannot link to those names as external interfaces. The helper can still read and change the total normally inside this source file.</p>
+
+<p>The extern example places its definition later in the same file so you can run the idea in one program. Across files, the same relationship applies: a compatible declaration identifies an object whose one definition provides storage. The source-file boundary adds a separate compilation and linking step.</p>
+
+<h2 id="edge-cases">Use extern across source files</h2>
+
+<p>Suppose a small program has two source files and one header. A header named capacity.h contains <code>extern int lab_capacity;</code>. One file, capacity.c, includes that header and defines <code>int lab_capacity = 60;</code>. A second file includes the header and prints the value from main.</p>
+
+<p>Compile and link both sources together with <code>gcc -std=c17 main.c capacity.c -o capacity</code>. The declaration gives main the type information. The definition in capacity.c provides the object. Linking only main.c leaves the external reference without its definition.</p>
+
+<p>The following are the exact declarations needed in those two places. The runnable extern example above puts their relationship in a single translation unit. The multi-file form changes where the definition is compiled, not whether two separate capacity objects should exist.</p>
+
+<pre><code class="language-c">extern int lab_capacity;
+int lab_capacity = 60;</code></pre>
+
+<p>Do not put the initialized definition in a header included by several source files. Each inclusion would define another externally linked object. A header should share the extern declaration; one implementation file should own the definition.</p>
+
+<p>In C17, register also imposes a language restriction. You cannot apply the address operator to an object declared register. This remains true even if the compiler stores it in ordinary memory. Avoid register for objects whose addresses you need to pass to another helper.</p>
+
+<p>File-scope objects already have static storage duration without the word static. Adding static there mainly changes their linkage to internal. Saying that static always means a global variable is therefore misleading: a static local has block scope, and a non-static global already persists.</p>
+
+<h2 id="common-mistakes">Separate declaration from definition</h2>
+
+<h3>Assuming extern always creates a new object</h3>
+
+<p>An ordinary <code>extern int rate;</code> declares a reference to an existing definition. Adding an initializer makes an object declaration a definition, including when extern is written. Keep the single storage-owning definition easy to locate.</p>
+
+<h3>Using a static local as a fresh subtotal</h3>
+
+<p>A static subtotal accumulates across calls unless explicitly reset. That can silently combine unrelated calculations. Use an automatic subtotal when each request should start from zero.</p>
+
+<h3>Promising speed with register</h3>
+
+<p>Modern compilers choose register allocation from the whole function. The keyword does not guarantee faster code or a hardware register. Clear algorithms and measured performance matter more than this hint.</p>
+
+<h3>Giving a private object an external declaration elsewhere</h3>
+
+<p>A file-scope static object is not an external object available to another source file. Expose an intentional helper interface if another module needs controlled access. Do not try to connect incompatible linkage expectations by matching spellings alone.</p>
+
+<h2 id="best-practices">Keep persistent state deliberate</h2>
+
+<p>Prefer automatic variables for temporary calculation. Use file-scope static for implementation state that belongs privately to one source file. Avoid exposing writable global state unless there is a clear reason and an ownership rule.</p>
+
+<p>For a static counter, decide its starting value, increment moment and reset behavior. Also consider repeated use in one program. An interface that remembers calls can be harder to test or reuse than a function whose result depends only on its arguments.</p>
+
+<p>When reviewing an extern declaration, find the matching definition and compare types. Include the same header in its implementation file. This lets the compiler catch a mismatch before a separately compiled caller relies on it.</p>
+
+<h2 id="version-notes">Traditional rules and newer additions</h2>
+
+<div class="callout version"><p>auto, register, static and extern are traditional C keywords. C11 also adds thread storage duration through _Thread_local. C23 extends auto to support type inference in certain declarations; these examples deliberately use the explicit C17 spelling auto int.</p></div>
+
+<h2 id="summary">Describe duration and linkage precisely</h2>
+
+<p>Storage classes affect different properties in different contexts. Local static preserves a value; file static limits linkage; extern connects a declaration to a definition. Next, <a href="topic:c-recursion">Recursion</a> uses separate automatic call state to solve smaller versions of a problem.</p>

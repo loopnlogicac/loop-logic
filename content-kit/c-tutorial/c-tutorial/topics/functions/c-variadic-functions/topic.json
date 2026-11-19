@@ -1,0 +1,442 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-variadic-functions",
+  "module": "functions",
+  "order": 9,
+  "kind": "lesson",
+  "title": {
+    "en": "Variadic Functions",
+    "bn": "ভ্যারিয়াডিক ফাংশন"
+  },
+  "summary": {
+    "en": "Read a variable argument list with a clear type and count contract.",
+    "bn": "কতটি মান আর কোন টাইপের মান আসবে, সেই নিয়ম মেনে ভ্যারিয়াডিক ফাংশন লেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 65,
+  "prerequisites": [
+    "c-function-parameters-return",
+    "c-call-by-value-reference"
+  ],
+  "related": [
+    "c-math-library"
+  ],
+  "keywords": [
+    "variadic functions",
+    "C programming",
+    "functions"
+  ],
+  "standards": {
+    "minimum": "c99",
+    "notes": [
+      "stdarg.h is standard since C89; va_copy arrived in C99, and C23 relaxed va_start syntax."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A flexible call needs a strict agreement"
+    },
+    {
+      "id": "syntax",
+      "title": "Start, retrieve and finish a list"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace a counted integer call"
+    },
+    {
+      "id": "examples",
+      "title": "Counts, promoted values and independent traversals"
+    },
+    {
+      "id": "comparison",
+      "title": "Retrieve the promoted type"
+    },
+    {
+      "id": "real-world-use",
+      "title": "How printf decides what to read"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Copy a traversal before reusing it"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "An ellipsis does not validate its contents"
+    },
+    {
+      "id": "best-practices",
+      "title": "Prefer a small, documented type agreement"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 and C23 differ at va_start"
+    },
+    {
+      "id": "summary",
+      "title": "Flexible arguments require exact types"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Sum a counted list of integers",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The count controls three int reads for 25. A zero count reads nothing and gives the additive identity.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Read promoted floating arguments",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The float first is promoted to double. Every unnamed value therefore matches va_arg(arguments, double).</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Copy a list before a second traversal",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Two independent traversals compute sum 9 and product 24. Each copied or started list is ended separately.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "A tiny typed printing interface",
+      "level": "intermediate",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The i, d and i tags select int, double and int. Unlike printf, this interface recognizes only those two tags.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "difficulty": "easy",
+      "title": "Sum exactly three supplied marks",
+      "statementHtml": "<p>Read three integers from 0 to 100. Pass them to a variadic helper with count 3. Print Marks to add: before input, then their total.</p>",
+      "hints": [
+        "The count is a fixed agreement between caller and helper."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "difficulty": "easy",
+      "title": "Average two decimal readings",
+      "statementHtml": "<p>Read two doubles from -100 to 100. Call average_values with count 2 and the two readings. Print Decimal pair: before input, then the average with two decimals.</p>",
+      "hints": [
+        "An int literal in this call would have the wrong unnamed type."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "difficulty": "medium",
+      "title": "Maximum of a fixed four-argument call",
+      "statementHtml": "<p>Read four ints from -100 to 100. Call a variadic maximum helper with count 4. Print Four values: before input, then the greatest value. The helper requires a positive count.</p>",
+      "hints": [
+        "Initialize the maximum from the first argument so negatives work."
+      ],
+      "solution": "practice/p-3.c",
+      "tests": [
+        {
+          "stdin": "practice/p-3.t1.in",
+          "output": "practice/p-3.t1.out"
+        },
+        {
+          "stdin": "practice/p-3.t2.in",
+          "output": "practice/p-3.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-4",
+      "difficulty": "hard",
+      "title": "Two independent argument traversals",
+      "statementHtml": "<p>Read three ints from 0 to 10. Use va_copy to compute their sum and product independently. Print Three factors: then sum and product separated by a space.</p>",
+      "hints": [
+        "Do not assign one va_list to another with equals."
+      ],
+      "solution": "practice/p-4.c",
+      "tests": [
+        {
+          "stdin": "practice/p-4.t1.in",
+          "output": "practice/p-4.t1.out"
+        },
+        {
+          "stdin": "practice/p-4.t2.in",
+          "output": "practice/p-4.t2.out"
+        }
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which header provides va_list and va_arg?",
+      "options": [
+        "stdarg.h",
+        "stdlib.h",
+        "string.h",
+        "stdint.h"
+      ],
+      "answer": 0,
+      "explanation": "The standard variable-argument traversal interface is declared in stdarg.h."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What tells sum_ints how many unnamed int values to retrieve?",
+      "options": [
+        "A hidden array length stored by C",
+        "Its named count argument",
+        "The size of va_list",
+        "The return type"
+      ],
+      "answer": 1,
+      "explanation": "The caller and helper agree that count matches the following integer arguments."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "hard",
+      "prompt": "A counted sum reads three int values. Which total does the list traversal produce?",
+      "options": [
+        "3",
+        "13",
+        "11",
+        "472"
+      ],
+      "answer": 1,
+      "explanation": "The count is not added; the three retrieved integers total thirteen.",
+      "code": "#include <stdio.h>\n#include <stdarg.h>\n\nint sum_ints(int count, ...)\n{\n    va_list arguments;\n    va_start(arguments, count);\n    int total = 0;\n    for (int i = 0; i < count; i++) {\n        total += va_arg(arguments, int);\n    }\n    va_end(arguments);\n    return total;\n}\n\nint main(void)\n{\n    printf(\"%d\\n\", sum_ints(3, 4, 7, 2));\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What type should retrieve an unnamed float argument after promotion?",
+      "options": [
+        "float",
+        "int",
+        "double",
+        "long double automatically"
+      ],
+      "answer": 2,
+      "explanation": "Default argument promotions convert float to double in an unnamed argument position."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does passing the int literal 4 to an unnamed position automatically make it double?",
+      "options": [
+        "Yes, if va_arg requests double",
+        "Yes, in every variadic function",
+        "Only after va_end",
+        "No"
+      ],
+      "answer": 3,
+      "explanation": "The ellipsis supplies no double parameter type to request that conversion. Pass 4.0 for a double agreement."
+    },
+    {
+      "id": "q-6",
+      "type": "output",
+      "difficulty": "easy",
+      "prompt": "A zero count performs no va_arg retrieval. Which result is printed?",
+      "options": [
+        "1",
+        "-1",
+        "0",
+        "Undefined"
+      ],
+      "answer": 2,
+      "explanation": "The total starts at zero and the empty loop leaves it unchanged.",
+      "code": "#include <stdio.h>\n#include <stdarg.h>\n\nint sum_ints(int count, ...)\n{\n    va_list arguments;\n    va_start(arguments, count);\n    int total = 0;\n    for (int i = 0; i < count; i++) {\n        total += va_arg(arguments, int);\n    }\n    va_end(arguments);\n    return total;\n}\n\nint main(void)\n{\n    printf(\"%d\\n\", sum_ints(0));\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "How should an independent copy of a va_list be created?",
+      "options": [
+        "va_copy",
+        "Ordinary assignment on every implementation",
+        "memcpy without further rules",
+        "Subtracting its first pointer"
+      ],
+      "answer": 0,
+      "explanation": "va_list representation varies, so the dedicated macro provides the portable copy operation."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must match every va_start or va_copy?",
+      "options": [
+        "An extra return type",
+        "A va_end on that list",
+        "A second count argument",
+        "A malloc call"
+      ],
+      "answer": 1,
+      "explanation": "Each initialized or copied traversal needs its own cleanup before leaving the function."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "A float becomes double in the variadic average. Which decimal average appears?",
+      "options": [
+        "1.50",
+        "4.00",
+        "2.50",
+        "2.00"
+      ],
+      "answer": 3,
+      "explanation": "Both unnamed values are retrieved as double and their sum is divided by two.",
+      "code": "#include <stdio.h>\n#include <stdarg.h>\n\ndouble average_values(int count, ...)\n{\n    if (count <= 0) {\n        return 0.0;\n    }\n    va_list arguments;\n    va_start(arguments, count);\n    double total = 0.0;\n    for (int i = 0; i < count; i++) {\n        total += va_arg(arguments, double);\n    }\n    va_end(arguments);\n    return total / count;\n}\n\nint main(void)\n{\n    float a = 1.5f;\n    printf(\"%.2f\\n\", average_values(2, a, 2.5));\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What happens if a helper retrieves more arguments than the caller passed?",
+      "options": [
+        "It reliably reads zeros",
+        "It receives EOF",
+        "Undefined behavior",
+        "It discovers an automatic sentinel"
+      ],
+      "answer": 2,
+      "explanation": "C supplies no portable end-of-arguments test for a broken count contract."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a printf conversion describe conceptually?",
+      "options": [
+        "Only how many bytes to skip in the source file",
+        "A conversion of any passed type into any requested type",
+        "An allocation size for all caller variables",
+        "Which argument type to retrieve and how to display it"
+      ],
+      "answer": 3,
+      "explanation": "A mismatched conversion can request the wrong argument type rather than perform a safe numeric conversion."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which interface is usually safer for a runtime collection already stored in an array?",
+      "options": [
+        "A typed array pointer and length",
+        "An invented va_list memory layout",
+        "An ellipsis with a guessed count",
+        "A list without any type agreement"
+      ],
+      "answer": 0,
+      "explanation": "The array interface preserves an ordinary element type and an explicit valid range."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An ellipsis permits extra arguments after named parameters.",
+      "bn": "নামযুক্ত প্যারামিটারের পরে তিনটি ডট বাড়তি আর্গুমেন্ট নিতে দেয়।"
+    },
+    {
+      "en": "va_start initializes a traversal of unnamed arguments.",
+      "bn": "va_start নামহীন আর্গুমেন্ট পড়া শুরু করে।"
+    },
+    {
+      "en": "va_arg retrieves the next argument using its promoted type.",
+      "bn": "va_arg প্রমোশনের পরের টাইপ দিয়ে পরের আর্গুমেন্ট পড়ে।"
+    },
+    {
+      "en": "Each va_start or va_copy requires a matching va_end.",
+      "bn": "প্রতিটি va_start বা va_copy-এর জন্য va_end লাগে।"
+    },
+    {
+      "en": "An int count does not prove that enough arguments were passed.",
+      "bn": "count থাকলেই যথেষ্ট আর্গুমেন্ট দেওয়া হয়েছে, এমন নিশ্চয়তা নেই।"
+    },
+    {
+      "en": "Float arguments become double in the unnamed argument list.",
+      "bn": "নামহীন আর্গুমেন্টে float মান double-এ রূপান্তরিত হয়।"
+    },
+    {
+      "en": "A format string tells printf how to interpret its arguments.",
+      "bn": "ফরম্যাট স্ট্রিং printf-কে আর্গুমেন্টের টাইপ বুঝতে সাহায্য করে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Explain the type and count obligations of a variadic integer sum and a variadic double average.",
+      "marks": 4,
+      "answerHtml": "<p>The integer sum must receive exactly the promised count of retrievable int arguments. The average retrieves double: float promotes to double, but an int literal does not automatically become double through an ellipsis. Excess retrieval or incompatible types cause undefined behavior. Every started or copied list needs va_end.</p>"
+    },
+    {
+      "type": "output",
+      "question": "A counted sum reads three int values. Which total does the list traversal produce?\n\n#include <stdio.h>\n#include <stdarg.h>\n\nint sum_ints(int count, ...)\n{\n    va_list arguments;\n    va_start(arguments, count);\n    int total = 0;\n    for (int i = 0; i < count; i++) {\n        total += va_arg(arguments, int);\n    }\n    va_end(arguments);\n    return total;\n}\n\nint main(void)\n{\n    printf(\"%d\\n\", sum_ints(3, 4, 7, 2));\n    return 0;\n}\n",
+      "marks": 3,
+      "answerHtml": "<pre><code class=\"language-c\">#include &lt;stdio.h&gt;\n#include &lt;stdarg.h&gt;\n\nint sum_ints(int count, ...)\n{\n    va_list arguments;\n    va_start(arguments, count);\n    int total = 0;\n    for (int i = 0; i &lt; count; i++) {\n        total += va_arg(arguments, int);\n    }\n    va_end(arguments);\n    return total;\n}\n\nint main(void)\n{\n    printf(&quot;%d\\n&quot;, sum_ints(3, 4, 7, 2));\n    return 0;\n}\n</code></pre><pre class=\"output\">13</pre><p>The count is not added; the three retrieved integers total thirteen.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Read three ints from 0 to 10. Use va_copy to compute their sum and product independently. Print Three factors: then sum and product separated by a space.",
+      "marks": 7,
+      "answerHtml": "<pre><code class=\"language-c\">#include &lt;stdio.h&gt;\n#include &lt;stdarg.h&gt;\n\nvoid show_twice(int count, ...)\n{\n    va_list first, second;\n    va_start(first, count);\n    va_copy(second, first);\n    int sum = 0;\n    int product = 1;\n    for (int i = 0; i &lt; count; i++) {\n        sum += va_arg(first, int);\n        product *= va_arg(second, int);\n    }\n    va_end(second);\n    va_end(first);\n    printf(&quot;%d %d\\n&quot;, sum, product);\n}\n\nint main(void)\n{\n    int a, b, c;\n    puts(&quot;Three factors:&quot;);\n    if (scanf(&quot;%d%d%d&quot;, &amp;a, &amp;b, &amp;c) != 3 || a &lt; 0 || a &gt; 10 ||\n        b &lt; 0 || b &gt; 10 || c &lt; 0 || c &gt; 10) {\n        return 1;\n    }\n    show_twice(3, a, b, c);\n    return 0;\n}\n</code></pre><p>Do not assign one va_list to another with equals.</p><p>For input <code>0 3 4</code>, the program prints:</p><pre class=\"output\">Three factors:\n7 0\n</pre>"
+    },
+    {
+      "type": "short",
+      "question": "Which interface is usually safer for a runtime collection already stored in an array? Choose and justify: A typed array pointer and length; An invented va_list memory layout; An ellipsis with a guessed count; A list without any type agreement.",
+      "marks": 3,
+      "answerHtml": "<p>A typed array pointer and length. The array interface preserves an ordinary element type and an explicit valid range.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c/variadic.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

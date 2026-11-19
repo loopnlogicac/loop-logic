@@ -1,0 +1,123 @@
+<h2 id="introduction">An array has storage and a used portion</h2>
+
+<p class="lead">A classroom mark list may reserve space for sixty students while containing only forty marks today. The reserved space is the <dfn>capacity</dfn>. The number currently used is the <dfn>logical length</dfn>. Many array operations change the length without changing the capacity.</p>
+
+<p>A traversal reads each used element for a total, average or comparison. Insertion and deletion additionally move values to preserve their order. The direction of movement matters because a write can overwrite a value that another step still needs.</p>
+
+<p>You already know how to select one array element. This lesson combines that access with accumulators, comparisons and shifts. Before each operation, decide whether an empty range is meaningful and whether enough storage exists for the result.</p>
+
+<h2 id="syntax">Use one loop for one traversal</h2>
+
+<pre><code class="language-c">int sum = 0;
+for (int i = 0; i &lt; n; i++) {
+    sum += values[i];
+}
+double average = (double)sum / n;</code></pre>
+
+<p>The sum starts at zero because zero is the additive identity. The average expression requires n greater than zero. Casting sum before division preserves a fractional result. Casting an already-truncated integer quotient would not repair it.</p>
+
+<p>For a nonempty range, initialize minimum and maximum from values[0]. Then compare the remaining elements. Starting maximum at zero fails for an all-negative list. Starting minimum at zero fails for an all-positive list unless zero actually occurs.</p>
+
+<h2 id="how-it-works">Shift in the direction that preserves unread values</h2>
+
+<p>To insert at position p, first check that n is less than capacity and p lies from zero through n. Move elements from the old last element backward toward p. Each old element goes one slot to its right. Then store the new value at p and increase n.</p>
+
+<pre class="diagram">Insert 30 at position 2, capacity 6
+before: [10][20][40][50][  ][  ]   n=4
+shift:  [10][20][40][50][50][  ]
+shift:  [10][20][40][40][50][  ]
+store:  [10][20][30][40][50][  ]   n=5</pre>
+
+<p>If shifting started at p and moved forward, copying 40 onto 50 would destroy the old 50 before it could move. The backward loop avoids that data loss. The unused destination at index n is valid only because spare capacity was checked first.</p>
+
+<p>Deletion uses the opposite direction. Replace the deleted slot with its successor, then keep moving left through the suffix. Decrease n after the shift. A leftover value outside the new logical range need not be erased for an ordinary int list.</p>
+
+<h2 id="examples">Combine statistics with controlled movement</h2>
+
+<h3>Read marks and calculate statistics</h3>
+
+<p>Four marks total 290, averaging 72.50. Starting min and max from the first mark avoids a misleading zero minimum.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Reverse in place</h3>
+
+<p>Two swaps reverse five elements. The central 5 stays in place and no second array is needed.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Insert into spare capacity</h3>
+
+<p>The rightward shifts start at the unused slot, preserving 40 and 50. Inserting 30 increases the logical length to five.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Delete an indexed element</h3>
+
+<p>The 30 and 40 move left. A duplicate 40 remains outside the logical range, so the print loop ignores it.</p>
+
+<div data-example="ex-4"></div>
+
+<h3>Count a bounded frequency domain</h3>
+
+<p>Zero appears twice, two appears three times and four appears once. Every value fits the table indices 0 through 4.</p>
+
+<div data-example="ex-5"></div>
+
+<h3>Find the second distinct largest</h3>
+
+<p>The repeated maximum 9 does not become its own runner-up. The helper returns 7 and a success flag.</p>
+
+<div data-example="ex-6"></div>
+
+<p>The frequency example has a domain from zero to four. A five-element counter array therefore has a valid position for each possible input value. With arbitrary negative values or huge integers, this direct indexing would be unsafe and wasteful.</p>
+
+<p>The second-largest helper returns a success flag separately from its output. A one-element list and an all-equal list have no second distinct value. The helper does not invent a numeric sentinel that might also be legitimate input.</p>
+
+<h2 id="edge-cases">Define what second largest means</h2>
+
+<p>For the values 9, 9, 7 and 4, the second distinct largest value is 7. If duplicates occupied separate ranking positions, a different task might answer 9. Read the wording before choosing an algorithm. Here equal maxima are deliberately excluded.</p>
+
+<p>Maintain the largest seen value, a candidate second value and a flag saying whether that candidate exists. A new largest moves the previous largest into second place. A smaller distinct value can improve second place. The flag prevents reading an uninitialized candidate.</p>
+
+<p>Reversal uses two indices that move inward. Swap the endpoints, then move left forward and right backward. Stop when left meets or passes right. An odd-length list leaves its central element untouched. An empty range performs no swaps when the signed right index starts at minus one.</p>
+
+<p>Inserting into an empty range is valid at position zero if capacity exists. Inserting at position n appends a value and requires no element shifts. Deleting from an empty range is invalid, while deleting the only element leaves a zero logical length.</p>
+
+<p>The statistics example restricts marks to zero through one hundred and length to twenty. Its int sum therefore remains small. General integer arrays may need a wider accumulator or checked addition. Choosing a wide type does not remove every possible overflow risk.</p>
+
+<h2 id="comparison">Count the work of each operation</h2>
+
+<p>A total, minimum, maximum or reversal visits at most a constant number of times per element. Each takes O(n) time. Reversal needs O(1) extra working storage because one temporary holds a swapped value.</p>
+
+<p>Insertion and deletion can shift almost n elements near the front, so their worst-case time is O(n). Appending into spare capacity can take O(1) time. A direct frequency table takes O(n+k) time to count and report k possible values, with O(k) counter storage.</p>
+
+<p>The second-distinct-largest scan takes O(n) time and constant extra storage. Sorting first would also reveal the answer, but sorting does more work than this single requested statistic needs. Choose an operation that matches the actual question.</p>
+
+<h2 id="common-mistakes">Check the used range before reading</h2>
+
+<h3>Dividing an empty total by zero</h3>
+
+<p>Zero is a valid sum for an empty range, but its average is not defined by this task. Require at least one element before calculating an average, or report an explicit empty result.</p>
+
+<h3>Using the wrong shift endpoint</h3>
+
+<p>Insertion writes the new last slot at old index n. Deletion reads only through old index n minus one. Trace the first and final copy to check that neither loop steps outside the available storage.</p>
+
+<h3>Counting frequency without validating values</h3>
+
+<p>A value used as a counter index must fit the counter array. Reject out-of-domain input before incrementing. The frequency table's length depends on the value domain, not just the number of input items.</p>
+
+<h2 id="best-practices">Separate movement from reporting</h2>
+
+<p>Finish an operation before printing its final list. Mixing prints with shifts can show temporary duplicate values that are not the intended result. Keep n updated exactly once after successful insertion or deletion.</p>
+
+<p>Try a front position, an end position and a one-element list. Include all-equal and all-negative data for the runner-up task. These cases check the meaning of the operation more directly than another long random list.</p>
+
+<h2 id="version-notes">No automatic array growth</h2>
+
+<div class="callout version"><p>The fixed-capacity algorithms here work in C17 without variable-length arrays. C arrays do not grow when an insertion needs another slot. Dynamic resizing requires a separate allocation strategy, introduced in later memory-management lessons.</p></div>
+
+<h2 id="summary">Preserve both values and length</h2>
+
+<p>Array operations combine bounded traversal with clear rules for empty input, shifting and duplicates. Track capacity separately from the logical length. Next, <a href="topic:c-2d-arrays">Two-Dimensional Arrays</a> extends indexed storage to rows and columns.</p>

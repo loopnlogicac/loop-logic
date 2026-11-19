@@ -1,0 +1,105 @@
+<h2 id="introduction">Tell C the interface before using it</h2>
+
+<p class="lead">A <dfn>declaration</dfn> tells the compiler that a name exists and describes its type. For a function, a prototype states the result type and the types of its parameters. Think of a service counter with a notice saying what information to bring and what result you receive.</p>
+
+<p>A <dfn>definition</dfn> also gives the function body. The prototype for triple promises an int result from one int input. The definition explains how to calculate that result. A semicolon ends the prototype; braces enclose the definition.</p>
+
+<p>This separation lets you read main before reading every helper's implementation. main can show the overall plan near the top of a file. The compiler still needs the interface before each call, so it can check how that helper is used.</p>
+
+<h2 id="syntax">Prototype and definition side by side</h2>
+
+<pre><code class="language-c">int triple(int value);
+
+int triple(int value)
+{
+    return value * 3;
+}</code></pre>
+
+<p>Both lines describe the same function type. The prototype has no body and does not run any calculation. The definition contains an actual return expression. Do not put a semicolon between the definition's closing parenthesis and its opening brace.</p>
+
+<p>Parameter names may be omitted from a prototype. <code>int larger(int, int);</code> still states two int inputs. Names become necessary in a definition when the body refers to those parameters. The names in a prototype need not match the definition's names; the types and order must agree.</p>
+
+<p>A prototype can appear more than once if every declaration is compatible. A normal externally linked function should have one definition in the program. Repeating its full body in several source files causes multiple-definition problems during linking.</p>
+
+<h2 id="how-it-works">Compile a call using its declared type</h2>
+
+<p>When the compiler sees triple(9), the visible prototype says one int argument is expected. It checks the number of arguments and converts compatible argument values to parameter types. It also knows that the call expression produces an int.</p>
+
+<p>The compiler does not infer the intended interface from a later function body. Put a matching declaration earlier, or move the whole definition before the call. These are two valid ways to make a declaration visible. Even a definition is also a declaration.</p>
+
+<table class="ref"><caption>What each stage needs</caption><thead><tr><th scope="col">Stage</th><th scope="col">Needed information</th></tr></thead><tbody><tr><td>Compile a call</td><td>A visible declaration describing the function type</td></tr><tr><td>Compile the helper</td><td>A compatible definition and a valid body</td></tr><tr><td>Link the program</td><td>The definition of each called external function</td></tr></tbody></table>
+
+<p>A missing body may therefore be a linker error even when the call compiles. A mismatched declaration can fail earlier, during compilation. Read which stage reports the problem before changing the code.</p>
+
+<h2 id="examples">Place helpers below their callers</h2>
+
+<h3>Prototype above main, definition below</h3>
+
+<p>The prototype lets main call triple before its body appears. The definition agrees on one int parameter and an int result.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Parameter names may differ</h3>
+
+<p>The declaration omits names. The definition adds left and right, while the types and parameter order remain unchanged.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>A no-argument prototype</h3>
+
+<p>void inside the parentheses tells C17 that the caller supplies no arguments. The return type void separately says there is no result value.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Mutually visible helper declarations</h3>
+
+<p>Both signatures are visible before main. total can call fee even though fee is defined last.</p>
+
+<div data-example="ex-4"></div>
+
+<p>In the fee example, total is defined before fee. Its call to fee remains valid because fee's prototype was already visible. You can rearrange helper bodies without changing their interfaces, provided the necessary declarations stay ahead of calls.</p>
+
+<p>The show_unit example has two separate uses of void. Its return type means no result is supplied. Its parameter list means no arguments are accepted. Keep those questions separate when reading unfamiliar declarations.</p>
+
+<h2 id="edge-cases">Share declarations through a header</h2>
+
+<p>A <dfn>header</dfn> is a file included where declarations are needed. The C preprocessor reads its contents into each including source file. Your own header uses quotes, such as <code>#include "fees.h"</code>. Standard library headers normally use angle brackets.</p>
+
+<p>A small fees.h can contain <code>int fee(int hours);</code>. Both the caller source and the fee implementation should include it. This gives the compiler a chance to compare the implementation with the same declaration the callers see. It reduces accidental disagreement between separately maintained files.</p>
+
+<pre><code class="language-c">#ifndef FEES_H
+#define FEES_H
+int fee(int hours);
+#endif</code></pre>
+
+<p>The guard prevents repeated processing of that header in one translation unit. A translation unit is one source file after its included text has been processed. These preprocessor lines are explained further in <a href="topic:c-header-files-guards">Header Files</a>. A header normally shares declarations, while one source file supplies the function definition.</p>
+
+<p>Including a header is not the same as linking an implementation. A declaration tells C how to call a helper; the linker still needs its compiled body. For standard library functions, the implementation comes from the toolchain's libraries.</p>
+
+<h2 id="common-mistakes">Do not guess a function type</h2>
+
+<h3>Calling without any earlier declaration</h3>
+
+<p>Old C allowed implicit function declarations in some situations. Modern C does not. In C99 and later, declare a function before using it. A compiler diagnostic about an implicit declaration is a reason to add the correct interface, not to suppress the warning.</p>
+
+<h3>Confusing empty parentheses with void</h3>
+
+<p>In C17, <code>int f();</code> does not provide parameter-type information. Write <code>int f(void);</code> to explicitly declare no parameters. This also helps the compiler diagnose accidental extra arguments.</p>
+
+<h3>Changing only one declaration</h3>
+
+<p>Changing fee to return double requires updating its declaration and definition consistently. A caller compiled with an incompatible interface cannot safely rely on the function result. Put shared declarations in one header to reduce this risk.</p>
+
+<h2 id="best-practices">Read signatures before bodies</h2>
+
+<p>For each prototype, say the result type and each input type aloud. Then compare those with the definition. Look especially for missing pointer stars, switched parameter order and inconsistent return types. These errors are easier to find at the signature than inside a long calculation.</p>
+
+<p>Keep public interfaces small. A prototype should reveal the information a caller needs without exposing unrelated implementation details. Descriptive parameter names help readers even though they are optional in a declaration.</p>
+
+<h2 id="version-notes">A changing empty parameter list</h2>
+
+<div class="callout version"><p>C99 removed implicit function declarations and implicit int. C17 still distinguishes f() from f(void) in declarations. C23 changes an empty parameter list to mean no parameters; explicit void remains clear in code shared with older standards.</p></div>
+
+<h2 id="summary">One interface, one implementation</h2>
+
+<p>A prototype lets C check a call; a definition supplies the work. Keep them compatible and use headers when several source files need the same interface. Continue with <a href="topic:c-function-parameters-return">Parameters and Return Values</a> to design the information that crosses that boundary.</p>

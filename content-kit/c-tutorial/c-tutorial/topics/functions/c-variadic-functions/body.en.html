@@ -1,0 +1,135 @@
+<h2 id="introduction">A flexible call needs a strict agreement</h2>
+
+<p class="lead">You have used printf with one value, several values and sometimes no converted values. Its parameter list cannot name a separate variable for every possible call. A <dfn>variadic function</dfn> accepts a variable number of arguments after its named parameters.</p>
+
+<p>Flexibility removes information that ordinary prototypes provide. The function must learn the number and types of unnamed arguments through an agreement with its caller. A count can describe how many int values follow. A format string can describe both order and type.</p>
+
+<p>Think of sealed envelopes accompanied by a packing list. The helper opens each envelope using the type written on that list. C does not attach a runtime type label to every variadic argument. A wrong packing list can therefore make the program read arguments incorrectly, causing undefined behavior.</p>
+
+<p>Use an ordinary array interface when it describes your data more safely. Variadic helpers are useful for understanding formatted library calls and specialized interfaces. They are not a shortcut for accepting arbitrary unknown values.</p>
+
+<h2 id="syntax">Start, retrieve and finish a list</h2>
+
+<pre><code class="language-c">int sum_ints(int count, ...)
+{
+    va_list arguments;
+    va_start(arguments, count);
+    int total = 0;
+    for (int i = 0; i &lt; count; i++) {
+        total += va_arg(arguments, int);
+    }
+    va_end(arguments);
+    return total;
+}</code></pre>
+
+<p>Include <code>stdarg.h</code> to obtain va_list and the argument-list macros. In C17, the ellipsis follows at least one named parameter. Here count is the last named parameter and tells the helper how many int arguments to retrieve.</p>
+
+<p><code>va_list</code> is an implementation-defined type for traversing unnamed arguments. Treat it as a special library-managed object, not as an ordinary int pointer. Its representation may contain more than one field or use an array type.</p>
+
+<p><code>va_start</code> prepares the traversal. <code>va_arg</code> retrieves the next argument using the specified type and advances the traversal. <code>va_end</code> finishes its use. Pair every successful start with an end in the same function before leaving that path.</p>
+
+<h2 id="how-it-works">Trace a counted integer call</h2>
+
+<p>In sum_ints(3, 12, 8, 5), count receives three normally. The ellipsis covers the three following values. The first va_arg reads 12, the second reads 8, and the third reads 5. The total progresses through 12, 20 and 25.</p>
+
+<table class="ref"><caption>Traversal follows the caller's agreement</caption><thead><tr><th scope="col">Loop index</th><th scope="col">Requested type</th><th scope="col">Retrieved value</th><th scope="col">Total</th></tr></thead><tbody><tr><td>0</td><td>int</td><td>12</td><td>12</td></tr><tr><td>1</td><td>int</td><td>8</td><td>20</td></tr><tr><td>2</td><td>int</td><td>5</td><td>25</td></tr></tbody></table>
+
+<p>The count does not prove that three arguments actually exist. Calling sum_ints(3, 12, 8) breaks the agreement. The third retrieval has no corresponding argument and the behavior is undefined. There is no portable has_next operation that can repair an incorrect count.</p>
+
+<p>Calling sum_ints(0) is valid for this helper because its loop reads nothing. A negative count would also skip this particular loop, but it lies outside the intended nonnegative count contract. A different helper, such as maximum, may require at least one value.</p>
+
+<p>The caller must also respect arithmetic bounds. A valid count and correct types do not prevent the int total from overflowing. The examples use small integers, and the practice problems state bounds that keep both sums and products representable.</p>
+
+<h2 id="examples">Counts, promoted values and independent traversals</h2>
+
+<h3>Sum a counted list of integers</h3>
+
+<p>The count controls three int reads for 25. A zero count reads nothing and gives the additive identity.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Read promoted floating arguments</h3>
+
+<p>The float first is promoted to double. Every unnamed value therefore matches va_arg(arguments, double).</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Copy a list before a second traversal</h3>
+
+<p>Two independent traversals compute sum 9 and product 24. Each copied or started list is ended separately.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>A tiny typed printing interface</h3>
+
+<p>The i, d and i tags select int, double and int. Unlike printf, this interface recognizes only those two tags.</p>
+
+<div data-example="ex-4"></div>
+
+<p>The typed printing helper is a deliberately small analogue of a formatting interface. Its type string uses i for int and d for double. The helper follows those tags in order. It does not implement field widths, escaping, strings or the full printf conversion language.</p>
+
+<p>The maximum practice has a stronger count requirement than sum. It retrieves the first value before entering its remaining loop. A count of zero would therefore violate its interface. Always read a variadic function's specific contract rather than assuming every counted list accepts an empty list.</p>
+
+<h2 id="comparison">Retrieve the promoted type</h2>
+
+<p><dfn>Default argument promotions</dfn> apply to unnamed arguments. A float becomes double. Small integer types, including char and short, undergo integer promotion, usually to int. If int cannot represent every value of a small unsigned type, that type promotes to unsigned int instead.</p>
+
+<p>The average helper retrieves double, even when the caller writes a float variable. Retrieving float with va_arg would use the wrong type. Conversely, passing the int literal 4 does not automatically turn it into double because the helper wants a floating reading.</p>
+
+<p>Use 4.0, or an explicit conversion to double, when the agreement requires double. The ellipsis provides no fixed parameter type to trigger that conversion for an int. A normal declared double parameter behaves differently because its prototype describes the conversion destination.</p>
+
+<table class="ref"><caption>Common unnamed arguments</caption><thead><tr><th scope="col">Caller expression</th><th scope="col">Passed type</th><th scope="col">Typical retrieval</th></tr></thead><tbody><tr><td>7</td><td>int</td><td>va_arg(list, int)</td></tr><tr><td>2.5f</td><td>double after promotion</td><td>va_arg(list, double)</td></tr><tr><td>2.5</td><td>double</td><td>va_arg(list, double)</td></tr><tr><td>A plain char holding a small positive value</td><td>int on this host</td><td>va_arg(list, int)</td></tr><tr><td>A pointer to int</td><td>Pointer to int</td><td>va_arg(list, int *)</td></tr></tbody></table>
+
+<p>Pointer arguments also need matching types. Do not assume an integer zero in an unnamed position supplies the exact pointer type a helper retrieves. When a pointer sentinel is required, pass a null pointer explicitly converted to the agreed pointer type.</p>
+
+<h2 id="real-world-use">How printf decides what to read</h2>
+
+<p>Conceptually, printf walks through its format string. Ordinary characters are printed directly. A conversion such as %d tells it to obtain an int; %f tells it to obtain a double. The conversion also describes how to format that retrieved value.</p>
+
+<p>A format conversion and its corresponding argument must agree. Printing an int with %f is not a numeric conversion request; it tells printf to retrieve the wrong argument type. That mismatch can cause undefined behavior. Convert the value first, then use the matching conversion.</p>
+
+<p>Compilers often recognize printf-like calls and diagnose literal format mismatches. This is valuable assistance, but it is not a general runtime type system for your own ellipsis interface. A format constructed during execution can also hide mistakes from a compile-time format check.</p>
+
+<p>scanf is variadic too, but its conversion rules concern destination pointers. For example, %f expects float pointer and %lf expects double pointer there. Do not transfer printf's floating conversion rules to scanf without considering what each function receives.</p>
+
+<h2 id="edge-cases">Copy a traversal before reusing it</h2>
+
+<p>Reading a va_list advances its state. A second loop over the same already-consumed state does not automatically restart at the beginning. To perform two independent traversals, use va_copy before consuming the original list. End the copied list as well as the original.</p>
+
+<p>The show_twice helper starts first, copies it into second, and computes a sum and product. Each va_arg advances only its own list. Ordinary assignment between va_list objects is not a portable replacement for va_copy because their representation varies.</p>
+
+<p>Passing a va_list to another function has additional ownership rules. A called function that consumes the list can affect the caller's usable traversal state. Standard vprintf-family functions are designed around a va_list interface. When you need to retain an independent traversal, make and manage a separate copy.</p>
+
+<p>Do not return a va_list that depends on arguments of a function call that has ended. Its traversal is tied to the active variadic call and its argument storage. Keep initialization, copying, consumption and cleanup within a clearly defined lifetime.</p>
+
+<h2 id="common-mistakes">An ellipsis does not validate its contents</h2>
+
+<h3>Using a count larger than the argument list</h3>
+
+<p>The helper cannot infer where the list really ends. A sentinel convention also requires the caller to provide the correct sentinel type. Prefer an array plus length for runtime-sized input collected in a loop.</p>
+
+<h3>Requesting a convenient type instead of the passed type</h3>
+
+<p>va_arg performs retrieval, not arbitrary numeric conversion. Retrieve the promoted type that was passed, then convert that retrieved value if the calculation needs another type.</p>
+
+<h3>Returning before va_end</h3>
+
+<p>An early return after va_start still needs cleanup. Structure the helper so every started list reaches its matching end. The average helper handles its empty-count decision before starting a list.</p>
+
+<h3>Assuming a list can be indexed backward</h3>
+
+<p>The macros provide forward traversal. They do not expose a portable array of all arguments or support decrementing a cursor. Store retrieved values in an ordinary array if later random access is required.</p>
+
+<h2 id="best-practices">Prefer a small, documented type agreement</h2>
+
+<p>Write down the meaning of every named parameter and the exact sequence of unnamed types. Check that every call obeys the count and promotion rules. Keep a variadic interface narrow enough that readers can verify it without guessing.</p>
+
+<p>If values originate in an array, keep them in that array and pass its length. You cannot turn an arbitrary runtime array length into a matching ellipsis call in standard C. For a reusable formatting wrapper, consider the existing vprintf family rather than inventing an incompatible list representation.</p>
+
+<h2 id="version-notes">C17 and C23 differ at va_start</h2>
+
+<div class="callout version"><p>stdarg.h is available since C89, while va_copy was added in C99. C17 uses va_start(list, last_named_parameter) and requires a named parameter before the ellipsis. C23 relaxes these rules. These programs retain the C17 form for a clear older-standard baseline.</p></div>
+
+<h2 id="summary">Flexible arguments require exact types</h2>
+
+<p>A variadic function traverses arguments according to a count or type description supplied by its caller. Promotions, list lifetime and va_end matter as much as the calculation. Continue with <a href="topic:c-math-library">The math.h Library</a> for ordinary typed functions that perform common numerical work.</p>

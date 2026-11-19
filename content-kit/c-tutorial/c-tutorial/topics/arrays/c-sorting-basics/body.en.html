@@ -1,0 +1,115 @@
+<h2 id="introduction">Build order through a repeated small step</h2>
+
+<p class="lead">A sorted mark list makes rankings and later binary searches easier. A <dfn>sorting algorithm</dfn> rearranges elements according to an ordering rule while preserving their occurrences. Ascending integer order means each value is no greater than the next.</p>
+
+<p>Bubble, selection and insertion sort use different small steps. Bubble exchanges adjacent mistakes. Selection chooses the next smallest value. Insertion places a new key into an already sorted prefix. Each method is easier to understand when you trace its outer passes.</p>
+
+<p>The same final list does not mean the methods do the same work. They move different elements and behave differently on nearly sorted data. Their treatment of equal keys also matters when each key belongs to a larger record.</p>
+
+<h2 id="syntax">Use the same array interface for three algorithms</h2>
+
+<pre><code class="language-c">void bubble(int values[], int count);
+void selection(int values[], int count);
+void insertion(int values[], int count);</code></pre>
+
+<p>Each helper changes the caller's elements in place. The count is the used length, not the reserved capacity. A length of zero or one already needs no sorting. All three helpers leave every occurrence present, including repeated values.</p>
+
+<p><dfn>In-place</dfn> here means O(1) extra working storage beyond the input array. Each implementation uses counters and a temporary or saved key. It does not allocate another list as large as the input.</p>
+
+<h2 id="how-it-works">Trace bubble, selection and insertion separately</h2>
+
+<p>Bubble sort scans neighboring pairs from left to right. When a pair is out of order, it swaps them. The largest value in the unsorted region reaches its right edge. The next pass can therefore stop one position earlier.</p>
+
+<table class="ref"><caption>Bubble passes on 5, 1, 4, 2</caption><thead><tr><th scope="col">Pass</th><th scope="col">Array after pass</th><th scope="col">Fixed suffix</th></tr></thead><tbody><tr><td>1</td><td>1 4 2 5</td><td>5</td></tr><tr><td>2</td><td>1 2 4 5</td><td>4 5</td></tr><tr><td>3</td><td>1 2 4 5</td><td>No swaps; stop</td></tr></tbody></table>
+
+<p>The changed flag records whether a pass made a swap. If none occurred, all adjacent pairs in the remaining region were already ordered. Combined with the fixed suffix, the complete list is sorted. This gives the optimized version a fast best case.</p>
+
+<p>Selection sort scans the unsorted suffix to find its minimum. It swaps that selected value into the suffix's first position. The sorted prefix grows by one entry. The scan must finish before the swap so it truly selects the minimum of the entire remaining region.</p>
+
+<table class="ref"><caption>Selection passes on the same input</caption><thead><tr><th scope="col">Start position</th><th scope="col">Chosen minimum</th><th scope="col">Array after swap</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>1 5 4 2</td></tr><tr><td>1</td><td>2</td><td>1 2 4 5</td></tr><tr><td>2</td><td>4</td><td>1 2 4 5</td></tr></tbody></table>
+
+<p>Insertion sort begins with a one-element sorted prefix. Save the next key, shift larger prefix elements right, and place the key into the gap. The prefix remains sorted and grows by one. Saving the key is necessary because shifting can overwrite its original slot.</p>
+
+<table class="ref"><caption>Insertion passes on 5, 1, 4, 2</caption><thead><tr><th scope="col">Saved key</th><th scope="col">Shifted values</th><th scope="col">Array after insertion</th></tr></thead><tbody><tr><td>1</td><td>5</td><td>1 5 4 2</td></tr><tr><td>4</td><td>5</td><td>1 4 5 2</td></tr><tr><td>2</td><td>5, then 4</td><td>1 2 4 5</td></tr></tbody></table>
+
+<p>Each algorithm has an invariant. Bubble preserves a sorted final suffix of largest values. Selection preserves a sorted prefix of smallest values. Insertion preserves a sorted prefix containing the elements already processed. State the appropriate invariant when explaining a pass.</p>
+
+<h2 id="examples">Compare complete implementations</h2>
+
+<h3>Bubble sort adjacent pairs</h3>
+
+<p>The largest unsorted value moves right each pass. The final line is 1 2 4 5.</p>
+
+<div data-example="ex-1"></div>
+
+<h3>Selection sort chooses a minimum</h3>
+
+<p>The selected minima are 1, 2 and 4. Swapping each into the next slot produces 1 2 4 5.</p>
+
+<div data-example="ex-2"></div>
+
+<h3>Insertion sort grows a sorted prefix</h3>
+
+<p>Keys 1, 4 and 2 are inserted in turn. Shifting larger values leaves space for each saved key.</p>
+
+<div data-example="ex-3"></div>
+
+<h3>Use the standard-library sorter</h3>
+
+<p>The comparator returns negative, zero or positive using comparisons. Subtracting arbitrary ints could overflow instead.</p>
+
+<div data-example="ex-4"></div>
+
+<p>Use the same four-value input to follow each algorithm's different intermediate states. The final output alone cannot reveal a wrong pass description. Match the statements that move values to the corresponding row of its trace table.</p>
+
+<p>The qsort comparator receives pointers to two elements through const void pointers. void pointer is a generic object-pointer interface. The helper converts them to pointers to the actual element type before reading. Function pointers and generic pointer interfaces are developed in later topics.</p>
+
+<h2 id="comparison">Compare cost, adaptiveness and stability</h2>
+
+<table class="ref"><caption>Properties of the shown implementations</caption><thead><tr><th scope="col">Algorithm</th><th scope="col">Best time</th><th scope="col">Worst time</th><th scope="col">Stable?</th><th scope="col">Extra space</th></tr></thead><tbody><tr><td>Bubble with flag</td><td>O(n)</td><td>O(n squared)</td><td>Yes</td><td>O(1)</td></tr><tr><td>Selection with swaps</td><td>O(n squared)</td><td>O(n squared)</td><td>No</td><td>O(1)</td></tr><tr><td>Insertion with shifts</td><td>O(n)</td><td>O(n squared)</td><td>Yes</td><td>O(1)</td></tr></tbody></table>
+
+<p><dfn>Stable</dfn> means that equal keys retain their original relative order. Imagine two students with the same mark but different roll numbers. A stable mark sort preserves their previous roll order. Equal plain ints look identical, so labeled records make stability visible.</p>
+
+<p>The shown bubble and insertion sorts move values only for a strict greater-than comparison. They do not move an equal earlier value past an equal later value. The selection swap can do so: sorting 2A, 2B, 1 swaps 1 with 2A and leaves 1, 2B, 2A.</p>
+
+<p>Selection makes n times n-minus-one divided by two key comparisons in its full scans. Bubble and insertion have similar quadratic worst-case growth. Insertion is often useful for a short or nearly sorted range because it shifts only entries that need to move past the current key.</p>
+
+<p>For general larger arrays, consider the standard qsort interface rather than choosing a quadratic elementary sort by habit. C does not require qsort to implement quicksort, promise stability or provide a specific complexity bound. Evaluate the library implementation and requirements when those properties matter.</p>
+
+<h2 id="edge-cases">A comparator must define a consistent order</h2>
+
+<p>A qsort comparator returns a negative value when the first element should precede the second, zero when equivalent, and a positive value otherwise. The magnitude is irrelevant. The comparison must remain consistent throughout the sort.</p>
+
+<p>For ints, returning left minus right can overflow for extreme values. The example instead subtracts two boolean comparison results, each zero or one. Its result is safely minus one, zero or one. It also avoids assuming that only small classroom input will ever reach that comparator.</p>
+
+<p>The insertion loop tests position greater than zero before reading position minus one. Short-circuit evaluation protects that access. The final key write must happen after shifting finishes. If it remains inside the loop, some no-shift inputs never receive their intended insertion step.</p>
+
+<p>A duplicate-removal task changes the number of reported occurrences after sorting. Sorting itself must not discard duplicates. Keep those two operations separate so a missing occurrence cannot be mistaken for a successful sort.</p>
+
+<h2 id="common-mistakes">Preserve the value being moved</h2>
+
+<h3>Forgetting the saved insertion key</h3>
+
+<p>Right shifts overwrite slots, including the key's original location. Store the key first and write it into the final gap. A trace should distinguish that saved variable from the temporarily duplicated array entries.</p>
+
+<h3>Resetting the selection minimum incorrectly</h3>
+
+<p>At each outer start, set smallest to that start index. Reusing the previous pass's index can select an element outside the unsorted suffix. Compare values through the saved index, not the index numbers themselves.</p>
+
+<h3>Failing to reset the bubble flag</h3>
+
+<p>changed describes one pass. Set it to zero at the beginning of each pass, then set it when a swap happens. A stale true flag loses the early-exit benefit.</p>
+
+<h2 id="best-practices">Check order and preserved occurrences</h2>
+
+<p>After sorting, check that adjacent entries are nondecreasing. Also verify that every original value occurs the same number of times. A program that replaces all elements with zero may pass an order check but is not a sort.</p>
+
+<p>Include empty, one-element, sorted, reverse-sorted and repeated-value cases. Count shifts or comparisons only when the task defines exactly which operations count. A swap consists of several assignments and should not be confused with one insertion shift.</p>
+
+<h2 id="version-notes">Standard library and algorithm choices</h2>
+
+<div class="callout version"><p>qsort is available in the C standard library through stdlib.h. The shown comparator and elementary loops follow C17. Stability and time guarantees belong to the chosen algorithm or implementation, not to the existence of an array type.</p></div>
+
+<h2 id="summary">Recognize the growing sorted region</h2>
+
+<p>Bubble fixes a suffix, selection chooses prefix minima, and insertion extends a sorted prefix. Compare their costs and equal-key behavior before choosing one. Next, <a href="topic:c-variable-length-arrays">Variable-Length Arrays</a> examines arrays whose extents are known only during execution.</p>
