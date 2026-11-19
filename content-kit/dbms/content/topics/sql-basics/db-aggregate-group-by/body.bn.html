@@ -1,0 +1,77 @@
+<h2 id="introduction">অনেক row থেকে দরকারি summary</h2>
+<p class="lead">Office জানতে চায় department-পিছু কত student। সব student list করলে অন্য প্রশ্নের উত্তর। Aggregate row মিলে count,total আর অন্য summary করে।</p>
+<p><dfn>Aggregate function</dfn> কয়েক input row থেকে মান হিসাব করে। COUNT গোনে, SUM যোগ, AVG গড়, MIN-MAX সবচেয়ে ছোট-বড় known মান। GROUP BY ভাগ করে, প্রতিটি group নিজের summary পায়।</p>
+<p>আগে বলো এক output row কী বোঝায়: পুরো university,department নাকি section? কোন record হিসাবেও আসে বলো। Passing result-এর average আর সব completed result-এর average আলাদা।</p>
+<h2 id="syntax">Row,group আর result order আলাদা</h2>
+<pre><code class="language-sql">SELECT grouping_column, COUNT(*) AS row_count
+FROM source_table
+WHERE row_condition
+GROUP BY grouping_column
+HAVING COUNT(*) &gt;= required_count
+ORDER BY grouping_column;</code></pre>
+<p>WHERE grouping-এর আগে পৃথক row দেখে। GROUP BY expression-এ group, aggregate summary। HAVING সম্পূর্ণ group দেখে, ORDER BY বাকি group সাজায়। Server physical পদ্ধতি আলাদা নিলেও logical ফল রাখে।</p>
+<table class="ref"><caption>মূল aggregate-এর অর্থ</caption><thead><tr><th>Expression</th><th>অর্থ</th><th>Empty ungrouped input</th></tr></thead><tbody>
+<tr><td>COUNT(*)</td><td>Row count</td><td>0</td></tr>
+<tr><td>COUNT(column)</td><td>Non-NULL argument count</td><td>0</td></tr>
+<tr><td>SUM(column)</td><td>Non-NULL total</td><td>NULL</td></tr>
+<tr><td>AVG(column)</td><td>Non-NULL গড়</td><td>NULL</td></tr>
+<tr><td>MIN or MAX</td><td>সবচেয়ে ছোট-বড় non-NULL</td><td>NULL</td></tr>
+</tbody></table>
+<h2 id="how-it-works">সঠিক জিনিস গুনো</h2>
+<h3>Row আর known মান এক নয়</h3>
+<p>Students-এ আট row, COUNT(*) আট। দুই hometown unknown, COUNT(hometown) ছয়। এতে repeated Dhaka আলাদা গোনা, COUNT(DISTINCT hometown) পাঁচ ভিন্ন known town।</p>
+<p>বেশিরভাগ aggregate NULL argument বাদ দেয়। Unknown mark নিজে zero করবে না। Zero real মান, numerator-denominator বদলায়। Average দেখাতে missing-result policy স্পষ্ট।</p>
+<p>Empty input-এ ungrouped aggregate তবুও এক summary row: COUNT zero, SUM-AVG NULL। Grouped empty input-এ group নেই, সাধারণত row-ও নেই। তাই payment-only grouped report-এ unpaid order হারাতে পারে।</p>
+<h3>সংজ্ঞায়িত অর্থে group</h3>
+<p>Students department_id-তে group করলে তিন group, size চার,দুই,দুই। প্রতি row Students-এ represented department। নতুন department-এ student না থাকলে group বানানোর row নেই, আসে না।</p>
+<p>Empty department-ও চাইলে Departments থেকে Students-এ outer join। তখন non-NULL student ID গুনবে, COUNT(*) preserved parent row-ও গুনত। <a href="topic:db-joins">Join</a> পাঠে দেখবে। পার্থক্য joined row-এর অর্থ থেকে।</p>
+<p>কয়েক column-এ পুরো combination group। Department-hometown একসঙ্গে, শুধু department থেকে আলাদা। SQL grouping-এ দুই NULL hometown এক group, যদিও সাধারণ NULL equality TRUE নয়।</p>
+<h3>WHERE আর HAVING আলাদা ধাপ</h3>
+<p>অন্তত দুই passing result-এর section চাই। আগে WHERE marks অন্তত 40, তারপর section_id group, শেষে HAVING count অন্তত দুই। Average শুধু pass-এর।</p>
+<p>সব result group করে average অন্তত 40 চাইলে failure-ও গড়ে আসে। Condition এদিক-ওদিক নিলে প্রশ্ন বদলায়। Failure বাদ দিলে mean_pass নাম দাও, unrestricted mean নয়।</p>
+<h3>ONLY_FULL_GROUP_BY মানো</h3>
+<p>সাধারণত mode চালু। Grouped SELECT-এ arbitrary nonaggregate নেবে না। Department group-এ বহু student_name, পুরো group বোঝায় এমন একটিমাত্র নাম নেই।</p>
+<p>Grouping key আর aggregate দাও, বা selected fact অর্থপূর্ণ হয় এমন grouping। MySQL grouped primary key থেকে determined column-এর মতো কিছু functional dependency-ও বোঝে। বহু student-এর department থেকে যেকোনো নাম নেওয়ার যুক্তি নয়।</p>
+<p>Mode বন্ধে misleading query চললেও কোন নাম উত্তর জানা যায় না। এক row-এর অর্থ পরিষ্কার করাই সমাধান। প্রশ্ন নির্দিষ্ট representative না চাইলে সুবিধার জন্য MIN(name) নেবে না।</p>
+<h3>Credit আলাদা হলে weight</h3>
+<p>Grade point documented 4.00 scale-এ এক course result। CGPA completed result-কে credit weight-এ মেলায়। Point গুণ credit যোগ করে একই completed credit-এর মোট দিয়ে ভাগ।</p>
+<pre class="diagram">Student 101
+Section 31: grade point 4.00 × 3 credits = 12.00
+Section 33: grade point 3.75 × 1 credit  =  3.75
+Section 34: grade point 3.50 × 3 credits = 10.50
+                                      --------
+Weighted total                         = 26.25
+Completed credits                      =  7
+CGPA                                   =  3.75</pre>
+<p>SQL result থেকে Section হয়ে Course-এ join করে credit পায়। Join related table-এর matching row মেলায়; পরের module বিস্তারিত। Section offering চেনায়, Course credit দেয়। Grouping recorded-result থাকা student-পিছু weighted মান করে।</p>
+<p>Pending বাদ, repeated-course replacement ধরা হয়নি। University retake বা grade replacement rule আলাদা দিতে পারে। Official CGPA বলার আগে policy বলো। অদরকারি intermediate rounding নয়, final display round।</p>
+<h2 id="examples">Total আর denominator দেখো</h2>
+<h3>Student আর known hometown গুনো</h3>
+<p>Row আর value count-এর ফারাক দুই missing town থেকে, duplicate Dhaka নয়।</p>
+<div data-example="ex-1"></div>
+<h3>Completed mark summary</h3>
+<p>এগারো result-এর total 739, rounded mean 67.18, ছোট-বড় 39 আর 90।</p>
+<div data-example="ex-2"></div>
+<h3>Department membership count</h3>
+<p>তিন row student record-এ represented department বলে। ORDER BY ক্রম ঠিক করে।</p>
+<div data-example="ex-3"></div>
+<h3>অন্তত দুই pass-এর group</h3>
+<p>WHERE আগে 39 বাদ, তারপর HAVING section-এর pass count দেখে।</p>
+<div data-example="ex-4"></div>
+<h3>Weighted grade average</h3>
+<p>Result-course join credit আনে। Tanvir-এর তিন-credit failure equal-weight mean-এর চেয়ে weighted মান বেশি নামায়।</p>
+<div data-example="ex-5"></div>
+<h3>Payment total না থাকলে zero দেখাও</h3>
+<p>Order 203-এ payment নেই। Raw NULL sum আর সচেতন 0.00 fallback দুটোই দেখায়।</p>
+<div data-example="ex-6"></div>
+<h2 id="common-mistakes">দেখতে ঠিক সংখ্যাও ভুল প্রশ্ন</h2>
+<h3>আগের average আবার average</h3>
+<p>দুই section-এ result count আলাদা। Mean-এর average section-এ equal weight, প্রতিটি result-এ নয়। Overall student-result mean চাইলে underlying row থেকে বা contributing count-সহ মেলাও।</p>
+<h3>Join multiplicity না দেখে SUM</h3>
+<p>Order-এ বহু item আর payment। দুটো সরাসরি join করলে প্রতি item-এ payment repeat, SUM receipts বাড়ায়। এক row কী মানে দেখো, আগে প্রত্যেক সম্পর্ক intended level-এ summary করে মেলাও।</p>
+<h3>GROUP BY sort-ও করে ভাবা</h3>
+<p>Grouping বলে কারা summary ভাগ করে, ক্রম নয়। Department-section display-তে ORDER BY। Accidental implementation-এ report নয়।</p>
+<h2 id="version-notes">Grouping mode চালু রাখো</h2>
+<div class="callout version"><p>MySQL 8.0.16 আর 8.4-তে aggregate চলে, ONLY_FULL_GROUP_BY সাধারণত চালু। Dependency recognition কিছু expression নিতে পারে, তবু selected প্রতিটি মান group-এর জন্য স্পষ্ট অর্থ চাই।</p></div>
+<h2 id="summary">Summary-র পেছনের population বলো</h2>
+<p>Input row-ই summary, তাই count,NULL,filter,weight অর্থ ঠিক করে। WHERE row, HAVING group বাছে। Grouping স্পষ্ট, order explicit। পরের <a href="topic:db-joins">Join</a>-এ related table মিলে সাবধান summary।</p>
