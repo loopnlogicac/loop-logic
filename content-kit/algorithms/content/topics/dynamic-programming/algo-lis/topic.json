@@ -1,0 +1,437 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-lis",
+  "module": "dynamic-programming",
+  "order": 7,
+  "kind": "lesson",
+  "title": {
+    "en": "Longest Increasing Subsequence",
+    "bn": "লংগেস্ট ইনক্রিজিং সাবসিকোয়েন্স"
+  },
+  "summary": {
+    "en": "Compare quadratic ending-state DP with binary-searched smallest tails, and reconstruct actual input positions.",
+    "bn": "শেষ অবস্থানভিত্তিক DP ও binary search-এর tails পদ্ধতি তুলনা করে আসল subsequence বের করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "algo-matrix-chain"
+  ],
+  "related": [
+    "algo-rod-cutting"
+  ],
+  "keywords": [
+    "Longest Increasing Subsequence",
+    "C17",
+    "dynamic-programming",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Longest Increasing Subsequence implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Find progress without requiring adjacency"
+    },
+    {
+      "id": "syntax",
+      "title": "State by the final position"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Quadratic evaluation and recovery"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Ending states on mixed progress"
+    },
+    {
+      "id": "variations",
+      "title": "A smallest tail for every attainable length"
+    },
+    {
+      "id": "correctness",
+      "title": "Predecessor DP and tail domination"
+    },
+    {
+      "id": "complexity",
+      "title": "Count earlier pairs or binary searches"
+    },
+    {
+      "id": "comparison",
+      "title": "Changing strictness changes the search"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not print tails as a witness"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 index sentinels"
+    },
+    {
+      "id": "summary",
+      "title": "Best endings and smallest tails serve different roles"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Quadratic lengths with predecessors",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The first longest chain found is 1,2,5, with ending lengths 1,1,2,3,3.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Binary-search the smallest tails",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The faster method replaces tail 5 by 4 and reconstructs 1,2,4. Both lengths are 3.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Equal values do not increase strict length",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>A strict comparison prevents equal keys extending one another, so only one 2 is retained.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "An empty increasing subsequence",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Zero input values give length zero without reading a tail or a predecessor.</p>\n"
+    }
+  ],
+  "labs": [
+    "lis-dp"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Longest strict progress chain",
+      "statementHtml": "<p>Read n (0..16) and n integers (-99..99), after Enter n and values:. Print length = L and the sequence on the next line. In quadratic DP, scan earlier indices upward, keep first predecessors on ties, and keep the earliest best endpoint.</p>\n",
+      "hints": [
+        "Strict increase uses values[j] < values[i]."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Fast strict progress chain",
+      "statementHtml": "<p>Read the same LIS input. Print Enter n and values:, length = L, then the reconstructed sequence. Use lower_bound on smallest tails, replacing the first tail greater than or equal to each value.</p>\n",
+      "hints": [
+        "Store tail indices as well as tail values so predecessor links refer to actual input positions."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Longest Increasing Subsequence: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Longest Increasing Subsequence covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "Strict increase excludes equal adjacent chosen values."
+      ],
+      "answerHtml": "<p>For the quadratic DP, any non-singleton chain ending at i has a penultimate index j&lt;i with values[j]&lt;values[i]. Removing i leaves a chain ending at j. If that chain were shorter than dp[j], replacing it would improve the original chain. Thus one of the considered candidates attains the optimum, and every candidate is feasible.</p>\n\n<p>Initial singleton lengths are correct. Induction over i proves all ending states, and taking the maximum over endpoints covers every nonempty subsequence. Reconstruction follows links saved from attaining candidates. Indices strictly decrease during recovery, preventing cycles; values strictly decrease in backward order, so the reversed answer strictly increases.</p>\n\n<p>For smallest tails, the invariant is that tail[l] is the minimum attainable last value among processed length-l+1 chains. A new value x can extend the chain represented by the preceding lower-bound position. Replacing a larger or equal tail of the same length cannot hurt any future extension, because x is no harder to exceed.</p>\n\n<p>No longer chain is missed: if x could end a chain longer than the append or replacement position permits, its preceding chain would have a smaller tail before that position, contradicting the lower-bound location. Appending increases the maximum attainable length by one; replacement preserves it. This establishes the final length and the predecessor witness.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Longest Increasing Subsequence: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Longest Increasing Subsequence. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Different correct methods may return different optimal witnesses."
+      ],
+      "answerHtml": "<p>The quadratic version checks every earlier pair j&lt;i, for n(n-1)/2 candidate comparisons. Initialisation and reconstruction add O(n), so time is Θ(n²) for variable nonempty n. Ending lengths and predecessor arrays need Θ(n) space, and the output uses O(n) additional entries.</p>\n\n<p>The faster version performs one lower-bound search in at most n tails for each input value. Each search costs O(log n), giving O(n log n) time and O(n) storage including reconstruction links. The tail array alone may be shorter, but predecessor indices still require an entry for every original position if a witness is needed.</p>\n\n<p>The example limit of sixteen values is deliberately small enough to inspect by hand. General large inputs make the binary-search improvement useful. Both methods compare values directly and do not depend on their numeric magnitude, unlike capacity-indexed knapsack. Negative values work without an offset or frequency array.</p>\n"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Longest Increasing Subsequence: explain the worked trace",
+      "statementHtml": "<p>Reproduce the worked Longest Increasing Subsequence trace and explain each comparison or state change. State how the example handles equal candidates.</p>\n",
+      "hints": [
+        "Name the quantities in each row before making the next decision."
+      ],
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">i</th><th scope=\"col\">Value</th><th scope=\"col\">Ending length</th><th scope=\"col\">Previous index</th></tr></thead><tbody><tr><td>0</td><td>3</td><td>1</td><td>-1</td></tr><tr><td>1</td><td>1</td><td>1</td><td>-1</td></tr><tr><td>2</td><td>2</td><td>2</td><td>1</td></tr><tr><td>3</td><td>5</td><td>3</td><td>2</td></tr><tr><td>4</td><td>4</td><td>3</td><td>2</td></tr></tbody></table>\n<table class=\"ref\"><thead><tr><th scope=\"col\">i</th><th scope=\"col\">Value</th><th scope=\"col\">Ending length</th><th scope=\"col\">Previous index</th></tr></thead><tbody><tr><td>0</td><td>3</td><td>1</td><td>-1</td></tr><tr><td>1</td><td>1</td><td>1</td><td>-1</td></tr><tr><td>2</td><td>2</td><td>2</td><td>1</td></tr><tr><td>3</td><td>5</td><td>3</td><td>2</td></tr><tr><td>4</td><td>4</td><td>3</td><td>2</td></tr></tbody></table>\n\n<p>The best length after each prefix would be [1,1,2,3,3] on this particular input too, but those meanings do not coincide in general. On [1,2,3,0], ending lengths are [1,2,3,1], while prefix-best lengths are [1,2,3,3]. Use that example when checking that your state definition matches your recurrence.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the strict LIS length of [2,2,2]?",
+      "options": [
+        "1",
+        "3",
+        "2",
+        "0"
+      ],
+      "answer": 0,
+      "explanation": "Equality is not a permitted strict increase."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does quadratic LIS dp[i] mean?",
+      "options": [
+        "Best sum of the whole array",
+        "Best length ending exactly at i",
+        "Smallest tail for every length",
+        "Total number of subsequences"
+      ],
+      "answer": 1,
+      "explanation": "The endpoint restriction justifies trying earlier smaller values."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which prior index can precede i?",
+      "options": [
+        "Any j with a larger value",
+        "Only j=i-1",
+        "j<i with values[j]<values[i]",
+        "Any equal-valued later index"
+      ],
+      "answer": 2,
+      "explanation": "Both input order and strict value order must hold."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does smallest tail[l] represent?",
+      "options": [
+        "The lth value of one fixed final answer",
+        "The greatest original index",
+        "A sorted copy of all inputs",
+        "The least endpoint of an attainable length-l+1 chain"
+      ],
+      "answer": 3,
+      "explanation": "Different tail entries may come from different histories."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which binary-search boundary gives a strict LIS?",
+      "options": [
+        "First tail >= x",
+        "First tail > x",
+        "Last tail < x with no insertion adjustment",
+        "Always the final tail"
+      ],
+      "answer": 0,
+      "explanation": "Equality replaces a tail rather than extending length."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why are tail indices and predecessor links needed?",
+      "options": [
+        "Tail values are always negative",
+        "Final tails need not form an input subsequence",
+        "Binary search cannot return a position",
+        "They make the algorithm constant-space"
+      ],
+      "answer": 1,
+      "explanation": "The [2,3,1] example ends with tails [1,3] in invalid input order."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can the quadratic and fast routines return different valid witnesses?",
+      "options": [
+        "No, every LIS is unique",
+        "Only if one length is wrong",
+        "Yes, their tie rules differ",
+        "Only for sorted input"
+      ],
+      "answer": 2,
+      "explanation": "Both may attain length three with 1,2,5 or 1,2,4."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which search change supports a nondecreasing subsequence?",
+      "options": [
+        "Use first tail >= x unchanged",
+        "Reject all duplicates",
+        "Sort the input first",
+        "Use first tail > x"
+      ],
+      "answer": 3,
+      "explanation": "Equal values may extend a nondecreasing chain, so an upper bound is needed."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Can an equal value extend a strict increasing state?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int a=2,b=2;\n    printf(\"%d\\n\",a<b);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "0",
+        "1",
+        "-1",
+        "2"
+      ],
+      "answer": 0,
+      "explanation": "Strict comparison rejects equality."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which lower-bound position replaces a tail for x=4 in [1,2,5]?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int tail[]={1,2,5},x=4,lo=0,hi=3;\n    while(lo<hi){int mid=lo+(hi-lo)/2;\n        if(tail[mid]<x){lo=mid+1;}else{hi=mid;}}\n    printf(\"%d\\n\",lo);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "2",
+        "1",
+        "4"
+      ],
+      "answer": 1,
+      "explanation": "The first tail at least four is five at index two."
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What length results from extending a predecessor length two?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int previous_length=2,current=1;\n    if(previous_length+1>current){current=previous_length+1;}\n    printf(\"%d\\n\",current);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4",
+        "2",
+        "3",
+        "5"
+      ],
+      "answer": 2,
+      "explanation": "The current endpoint adds one to the chosen earlier chain."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Strict increase excludes equal adjacent chosen values.",
+      "bn": "strict increase-এ বেছে নেওয়া পাশাপাশি মান সমান হয় না।"
+    },
+    {
+      "en": "Quadratic states end at specific original positions.",
+      "bn": "quadratic state নির্দিষ্ট মূল অবস্থানে শেষ হয়।"
+    },
+    {
+      "en": "Smallest tails use lower_bound for a strict LIS.",
+      "bn": "কঠোরভাবে বাড়তে থাকা ধারায় নতুন মানের সমান বা বড় প্রথম শেষ মান খুঁজতে হয়।"
+    },
+    {
+      "en": "The tails array itself need not be a subsequence.",
+      "bn": "tails অ্যারেটি নিজে subsequence নাও হতে পারে।"
+    },
+    {
+      "en": "Saved original indices reconstruct a real chain.",
+      "bn": "মূল index সংরক্ষণ করলে আসল ধারা ফেরত পাওয়া যায়।"
+    },
+    {
+      "en": "Different correct methods may return different optimal witnesses.",
+      "bn": "ভিন্ন সঠিক পদ্ধতিতে ভিন্ন সেরা ধারা পাওয়া যায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Longest Increasing Subsequence trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">i</th><th scope=\"col\">Value</th><th scope=\"col\">Ending length</th><th scope=\"col\">Previous index</th></tr></thead><tbody><tr><td>0</td><td>3</td><td>1</td><td>-1</td></tr><tr><td>1</td><td>1</td><td>1</td><td>-1</td></tr><tr><td>2</td><td>2</td><td>2</td><td>1</td></tr><tr><td>3</td><td>5</td><td>3</td><td>2</td></tr><tr><td>4</td><td>4</td><td>3</td><td>2</td></tr></tbody></table>\n\n<p>The best length after each prefix would be [1,1,2,3,3] on this particular input too, but those meanings do not coincide in general. On [1,2,3,0], ending lengths are [1,2,3,1], while prefix-best lengths are [1,2,3,3]. Use that example when checking that your state definition matches your recurrence.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Longest Increasing Subsequence method. State its assumptions.",
+      "answerHtml": "<p>For the quadratic DP, any non-singleton chain ending at i has a penultimate index j&lt;i with values[j]&lt;values[i]. Removing i leaves a chain ending at j. If that chain were shorter than dp[j], replacing it would improve the original chain. Thus one of the considered candidates attains the optimum, and every candidate is feasible.</p>\n\n<p>Initial singleton lengths are correct. Induction over i proves all ending states, and taking the maximum over endpoints covers every nonempty subsequence. Reconstruction follows links saved from attaining candidates. Indices strictly decrease during recovery, preventing cycles; values strictly decrease in backward order, so the reversed answer strictly increases.</p>\n\n<p>For smallest tails, the invariant is that tail[l] is the minimum attainable last value among processed length-l+1 chains. A new value x can extend the chain represented by the preceding lower-bound position. Replacing a larger or equal tail of the same length cannot hurt any future extension, because x is no harder to exceed.</p>\n\n<p>No longer chain is missed: if x could end a chain longer than the append or replacement position permits, its preceding chain would have a smaller tail before that position, contradicting the lower-bound location. Appending increases the maximum attainable length by one; replacement preserves it. This establishes the final length and the predecessor witness.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Longest Increasing Subsequence from the calls, states or candidate operations.",
+      "answerHtml": "<p>The quadratic version checks every earlier pair j&lt;i, for n(n-1)/2 candidate comparisons. Initialisation and reconstruction add O(n), so time is Θ(n²) for variable nonempty n. Ending lengths and predecessor arrays need Θ(n) space, and the output uses O(n) additional entries.</p>\n\n<p>The faster version performs one lower-bound search in at most n tails for each input value. Each search costs O(log n), giving O(n log n) time and O(n) storage including reconstruction links. The tail array alone may be shorter, but predecessor indices still require an entry for every original position if a witness is needed.</p>\n\n<p>The example limit of sixteen values is deliberately small enough to inspect by hand. General large inputs make the binary-search improvement useful. Both methods compare values directly and do not depend on their numeric magnitude, unlike capacity-indexed knapsack. Negative values work without an offset or frequency array.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

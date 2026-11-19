@@ -1,0 +1,91 @@
+<h2 id="introduction">Short codes for frequent symbols</h2>
+<p class="lead">Suppose a message contains some symbols much more often than others. Giving every symbol the same number of bits wastes opportunities. A frequent symbol could use a shorter bit string, while a rare symbol uses a longer one. Huffman coding constructs such variable-length binary codes from positive symbol frequencies.</p>
+
+<p>Different code lengths create a decoding question. Where does one symbol end and the next begin? A prefix code answers it: no symbol's complete code is the prefix of another symbol's code. You can recognise a symbol as soon as its bits reach a leaf in a binary tree. No separator bit is needed between symbols.</p>
+
+<p>The optimisation target is the total encoded message length, sum of frequency×code length over all symbols. This is the weighted external path length of the tree, because a code's length equals its leaf depth. The tree or codebook must also reach the decoder. Huffman minimises the data-bit objective for the supplied frequencies; it does not claim that codebook storage is free.</p>
+
+<p>A fixed-length code for six symbols needs three bits per symbol. The frequency example contains 100 occurrences in total, so that would use 300 data bits. Huffman's tree uses 224. This saving depends on unequal frequencies and on both sides agreeing on the codebook. A very short message may not recover the cost of transmitting that codebook.</p>
+
+<h2 id="syntax">Leaves, weights and a min-heap</h2>
+<pre><code class="language-text">create a leaf for each positive frequency; push its ID
+while heap size &gt; 1
+    left = pop minimum; right = pop minimum
+    create parent with weight[left] + weight[right]
+    attach left and right; push parent
+root = final minimum; assign 0 left and 1 right
+return codes and weighted bit count</code></pre>
+<p>Each leaf stores one symbol's frequency. Internal nodes store the sum of their descendants' frequencies. The priority queue contains roots of the currently available trees. Remove two smallest roots, create their parent, and insert that parent again. Continue until only one root remains. A forest of many single-symbol trees becomes one full prefix tree.</p>
+
+<p>The C example uses arrays of Node records and a binary min-heap of node IDs. Lower weight has higher priority; lower ID breaks equal-weight ties. Leaf IDs are 0 through n-1 for symbols A onward. Internal IDs increase from n. The first minimum becomes the left child and contributes bit 0; the second contributes bit 1.</p>
+
+<p>These tie rules make the codebook reproducible. Other tie choices can produce different equally optimal codes. Reversing every left and right branch also keeps all code lengths unchanged. A decoder must use the actual chosen codebook rather than assuming that optimality determines one unique sequence of bits.</p>
+
+<h2 id="how-it-works">Repeatedly merge the two least weights</h2>
+<p>For frequencies 5,9,12,13,16,45, first join 5 and 9 into 14. Next join 12 and 13 into 25. The queue now contains 14,16,25,45. Joining 14 and 16 gives 30. Joining 25 and 30 gives 55. Finally join 45 and 55 into the root weight 100.</p>
+
+<p>The heap's push operation moves a new node upward while it is lighter than its parent. The pop operation removes the minimum root, brings the last entry down, and follows the lighter child. Each operation uses logarithmic heap height. The parent trees remain in the Node array even after their IDs leave the heap; removal from the queue is not deletion from the code tree.</p>
+
+<div data-lab="huffman-tree"></div>
+<p>The tree lab begins with every symbol as a separate leaf and no root selected. Each merge creates one internal node and attaches the two removed trees. The heap side list shows which subtree roots are still candidates. At completion, the final root reaches all leaves. The displayed codebook follows its left and right branches.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Build codes with a binary min-heap</h3>
+<p>The smallest available nodes merge first; leaf A receives 1100 under the specified ID tie rule.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Four equally frequent symbols</h3>
+<p>Ties are resolved by node ID, producing two-bit codes for all four symbols.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">One-symbol alphabet</h3>
+<p>A single leaf uses code 0 by convention so messages can carry an explicit symbol count.</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">Encode FACE and decode the same bits</h3>
+<p>The codebook concatenates FACE into 01100100111. Tree decoding emits FACE again and checks that the bit stream ends at a symbol boundary.</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">Merge costs reveal the final length</h2>
+<table class="ref"><thead><tr><th scope="col">Removed weights</th><th scope="col">New weight</th><th scope="col">Queue weights after insertion</th></tr></thead><tbody><tr><td>5, 9</td><td>14</td><td>12,13,14,16,45</td></tr><tr><td>12, 13</td><td>25</td><td>14,16,25,45</td></tr><tr><td>14, 16</td><td>30</td><td>25,30,45</td></tr><tr><td>25, 30</td><td>55</td><td>45,55</td></tr><tr><td>45, 55</td><td>100</td><td>100</td></tr></tbody></table>
+
+<p>Adding merge weights gives 14+25+30+55+100=224. Each merge increases every descendant leaf's depth by one, adding its total subtree frequency to the bit cost. Across all merges, each leaf frequency is counted once for each edge on its final root-to-leaf path. This gives another way to measure the encoded length without constructing every message bit.</p>
+
+<h2 id="encoding">Encode and decode with the same tree</h2>
+<p>To encode, walk from the root to a symbol's leaf or use a saved symbol-to-bits table. Concatenate the code strings in message order. Under the demonstrated tie rule, F is 0, C is 100, D is 101, A is 1100, B is 1101, and E is 111. The message FACE becomes 01100100111.</p>
+
+<p>To decode those bits, begin at the root. A zero chooses the left child and a one chooses the right. When a leaf is reached, emit that symbol and return to the root for the next symbol. The sequence 0 reaches F, then 1100 reaches A, 100 reaches C, and 111 reaches E. Reusing the root is essential after each completed symbol.</p>
+
+<p>A valid complete bit stream ends at the root after its last emitted leaf. Ending partway down an internal path means the message is truncated. A decoder should also reject nonbinary characters and impossible child paths. A prefix code gives unambiguous parsing for valid streams; it does not itself detect every transmission error.</p>
+
+<p>With one distinct symbol, the mathematical tree can use a zero-length code if the message length is supplied separately. These examples instead assign code 0 to that symbol. The decoder then emits one symbol per zero bit and rejects one bits. State this convention because the single-symbol bit cost differs from the sum-of-merges formula, whose merge sum is zero.</p>
+
+<h2 id="correctness">Why the two smallest weights are safe</h2>
+<p>In a full binary prefix tree, choose two sibling leaves at greatest depth. Such a pair exists because a deepest internal node has two leaf children. Let x and y be the two smallest frequencies. Moving x and y to those deepest sibling positions cannot increase weighted path length. Swapping a smaller weight downward with a larger weight upward changes cost by a nonpositive amount.</p>
+
+<p>Therefore some optimal tree places x and y as deepest siblings. Replace them by one leaf with combined frequency x+y. Every other leaf keeps its depth, while x and y each lose one edge. The original tree cost equals the reduced tree cost plus x+y. If the reduced tree were not optimal, substituting a better reduced tree would improve the original, a contradiction.</p>
+
+<p>This proves both required properties. Choosing the two least weights is a safe greedy choice, and the contracted alphabet is an optimal subproblem of the same form. Repeating the contraction reconstructs an optimal tree in reverse. The one-symbol convention is handled separately because the usual edge-depth objective has depth zero there.</p>
+
+<p>A prefix tree need not be full if it contains redundant single-child internal nodes. Removing such a node shortens all leaves below it and cannot worsen the objective. Thus for positive frequencies, an optimum can be assumed full. That observation justifies using the full-tree sibling argument rather than assuming an arbitrary tree already has the desired shape.</p>
+
+<h2 id="complexity">Separate building from message processing</h2>
+<p>For n symbols, there are n-1 merges. Each merge performs two heap pops and one push, each O(log n). Inserting the initial leaves individually also costs O(n log n), so building the shown tree takes O(n log n) time. A bottom-up heap construction can reduce only the initial preparation to O(n).</p>
+
+<p>A full tree has 2n-1 nodes, and the heap contains at most n IDs. Both use O(n) space. Printing all code strings costs time proportional to their combined lengths, which may be O(n²) in a highly skewed tree. A single traversal visits O(n) nodes, but printing every ancestor bit for every leaf is additional output work.</p>
+
+<p>Encoding a message costs O(B) to emit B encoded bits once the code table is available. Decoding also costs O(B), moving one tree edge per bit. A worst-case Huffman depth can be n-1, so neither every code length nor total codebook output is guaranteed logarithmic. The heap height and code-tree height describe different structures.</p>
+
+<h2 id="common-mistakes">Do not confuse queue removal with tree deletion</h2>
+<p>Deleting nodes after popping their IDs destroys subtrees needed later for encoding and decoding. Keep Node records alive until the codebook is no longer needed. The examples use bounded arrays, so no dynamic ownership is involved. A dynamic implementation must free each complete tree node exactly once after use.</p>
+
+<p>Using a max-heap reverses the greedy rule and tends to push frequent symbols deeper. Selecting the two least original leaves once and then ignoring new internal weights is also wrong. Every new subtree must compete in the same queue. Its weight represents all descendant occurrences that would gain a bit at the next merge.</p>
+
+<p>Assuming a fixed bit string for every tied frequency can reject a correct alternative tree. Compare weighted cost and prefix validity unless the task specifies tie rules. Also do not decode by consuming a fixed number of bits per symbol: variable lengths are precisely the feature that provides compression.</p>
+
+<h2 id="version-notes">C17 bounded node storage</h2>
+<p>The demonstrations support at most sixteen symbols with frequencies at most 99. Arrays of 31 nodes hold exactly the largest possible full tree. A path buffer of 32 characters holds every possible code plus its terminating null character. Frequency sums fit int, and symbols A onward remain within the displayed teaching alphabet.</p>
+
+<h2 id="summary">A safe merge creates an optimal code tree</h2>
+<p>Huffman coding repeatedly joins the two smallest available tree weights. A sibling exchange and contraction prove that this greedy step preserves optimality. Prefix leaves let a decoder consume variable-length codes without separators. Job sequencing next uses profit order and carefully chosen slots to preserve future scheduling possibilities.</p>
+<p>Continue with <a href="topic:algo-job-sequencing">Job Sequencing with Deadlines</a>.</p>

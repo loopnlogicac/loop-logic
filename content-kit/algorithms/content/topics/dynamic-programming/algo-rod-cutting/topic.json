@@ -1,0 +1,399 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-rod-cutting",
+  "module": "dynamic-programming",
+  "order": 8,
+  "kind": "lesson",
+  "title": {
+    "en": "Rod Cutting",
+    "bn": "রড কাটিং"
+  },
+  "summary": {
+    "en": "Choose the first piece of each rod length, maximise revenue bottom-up, and recover all sold pieces.",
+    "bn": "প্রতি দৈর্ঘ্যে প্রথম টুকরা বেছে সর্বোচ্চ আয় ও কাটা টুকরাগুলো বের করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "algo-lis"
+  ],
+  "related": [
+    "algo-bfs"
+  ],
+  "keywords": [
+    "Rod Cutting",
+    "C17",
+    "dynamic-programming",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Rod Cutting implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A cut can increase the selling value"
+    },
+    {
+      "id": "syntax",
+      "title": "State, recurrence and the empty rod"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Complete every shorter remainder first"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Revenues through length four"
+    },
+    {
+      "id": "correctness",
+      "title": "Every sale has a first piece"
+    },
+    {
+      "id": "complexity",
+      "title": "One triangular set of cut trials"
+    },
+    {
+      "id": "variations",
+      "title": "Cut fees and exact material use"
+    },
+    {
+      "id": "comparison",
+      "title": "Relation to coin change and knapsack"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not give a positive rod an empty-sale value"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 bounded lengths"
+    },
+    {
+      "id": "summary",
+      "title": "The first piece identifies a smaller sale problem"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Two pieces beat one uncut rod",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Two length-two pieces earn 5+5=10, exceeding the uncut price 9.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Selling the whole rod is allowed",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The candidate cut=length represents no further split and earns 20.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Tied revenue with a deterministic cut rule",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Every partition earns 8; scanning cuts upward and updating strictly recovers four unit cuts.</p>\n"
+    }
+  ],
+  "labs": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Best revenue while selling the whole length",
+      "statementHtml": "<p>Read length n (0..16), then n prices (-99..99) for lengths 1..n. Print Enter length and prices:, then revenue = R. All rod material must be sold, even with negative prices.</p>\n",
+      "hints": [
+        "Zero is a base for empty length; it is not a valid default for every nonempty rod."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Recover the cut lengths",
+      "statementHtml": "<p>Read the same rod format and bounds. Print Enter length and prices:, revenue = R, then cuts: followed by the chosen piece lengths. Keep the smallest first cut on revenue ties.</p>\n",
+      "hints": [
+        "Each recovered cut reduces the remaining length by at least one."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Rod Cutting: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Rod Cutting covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "All rod material must be sold in this model."
+      ],
+      "answerHtml": "<p>Any valid full sale of a positive-length rod contains a first piece of some length cut. Removing that piece leaves exactly length-cut material. If the remainder were sold for less than its optimal revenue, replacing that remainder plan would improve the whole sale. Therefore an optimum uses an optimal remainder for some considered first cut.</p>\n\n<p>Each recurrence candidate is also feasible: sell one available-length piece and then a full optimal sale of the smaller remainder. Considering every first cut covers all partitions of the rod, even though different piece orders can describe the same partition. Taking the maximum chooses an attainable revenue at least as large as every full sale.</p>\n\n<p>The empty base is correct. Induction over increasing length proves every revenue entry because all remainder lengths are smaller. The saved first cut belongs to an attaining candidate, so following it preserves the optimal revenue decomposition. Each cut is at least one, ensuring recovery terminates after at most n pieces.</p>\n\n<p>This proof allows repeated piece lengths because the price list describes a sale option for any piece of that length, not a single inventory item. There is no item-prefix dimension preventing reuse. Compare that meaning with 0/1 knapsack, where each physical input record can be taken only once.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Rod Cutting: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Rod Cutting. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Repeated piece lengths are allowed within the total material."
+      ],
+      "answerHtml": "<p>At length L, the loop tries L possible first cuts. Summing 1+2+...+n gives n(n+1)/2 trials and Θ(n²) time. The dp and first arrays use Θ(n) storage. Recovery takes Θ(number of pieces), at most O(n), and the printed plan has the same output-size bound.</p>\n\n<p>A naive recursion that tries every first piece repeatedly solves the same remaining lengths. Its work grows exponentially without caching. Memoisation can evaluate each length once, giving the same quadratic candidate count as bottom-up tabulation, but adds recursive stack storage. The bottom-up routine makes dependency order visible and needs no recursive frames for evaluation.</p>\n\n<p>Numeric bounds are separate from the number of states. With at most sixteen material units and each price between -99 and 99, any complete plan's revenue lies between -1584 and 1584. The sentinel -1000000 is safely below every attainable value. For general inputs, derive a suitable bound or initialise from the first valid candidate instead of guessing a universal sentinel.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does the rod state dp[length] optimise?",
+      "options": [
+        "Revenue while selling all that length",
+        "Number of possible cuts",
+        "Only the first piece's price",
+        "The count of unsold pieces"
+      ],
+      "answer": 0,
+      "explanation": "The contract requires all material to be used."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which candidate represents leaving the rod uncut?",
+      "options": [
+        "cut=0",
+        "cut=length",
+        "cut=length+1",
+        "No candidate can leave it uncut"
+      ],
+      "answer": 1,
+      "explanation": "That choice adds its full price to dp[0]."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can a zero default be wrong for positive lengths?",
+      "options": [
+        "Zero is not representable in C",
+        "A rod always needs two cuts",
+        "All required-sale plans may have negative revenue",
+        "Every price must be positive"
+      ],
+      "answer": 2,
+      "explanation": "Zero would allow an empty sale that discards material."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where is the price for a cut of length three stored?",
+      "options": [
+        "price[3]",
+        "price[0]",
+        "dp[3]",
+        "price[2]"
+      ],
+      "answer": 3,
+      "explanation": "The price array starts with the price for length one."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why may the same piece length be chosen again?",
+      "options": [
+        "Prices describe reusable length options, not single inventory items",
+        "Every physical item is duplicated automatically",
+        "The loop ignores the total length",
+        "All prices are equal"
+      ],
+      "answer": 0,
+      "explanation": "Repeated pieces are allowed as long as their lengths sum to n."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How does recovery make progress?",
+      "options": [
+        "Subtract its zero-based price index",
+        "Subtract the saved positive first-piece length",
+        "Keep the same remaining length",
+        "Always subtract two"
+      ],
+      "answer": 1,
+      "explanation": "Positive piece lengths guarantee eventual remaining length zero."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How should a fixed physical cut fee be charged?",
+      "options": [
+        "Once for every piece including the whole rod",
+        "Only for the final empty state",
+        "Only when a chosen first piece leaves a nonempty remainder",
+        "Never in any variant"
+      ],
+      "answer": 2,
+      "explanation": "Selling the uncut remaining rod makes no saw cut."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What revenue does a length-four rod earn with prices 1,5,8,9?",
+      "code": "#include <stdio.h>\n\nstatic int cut_rod(const int price[], int n, int first[])\n{\n    int dp[17] = {0};\n    for (int length = 1; length <= n; length++) {\n        dp[length] = -1000000;\n        for (int cut = 1; cut <= length; cut++) {\n            int candidate = price[cut - 1] + dp[length - cut];\n            if (candidate > dp[length]) { dp[length] = candidate; first[length] = cut; }\n        }\n    }\n    return dp[n];\n}\n\nint main(void)\n{\n    int price[]={1,5,8,9},first[17];\n    printf(\"%d\\n\",cut_rod(price,4,first));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "11",
+        "9",
+        "12",
+        "10"
+      ],
+      "answer": 3,
+      "explanation": "Two length-two pieces earn ten."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What required-sale revenue comes from a length-one rod priced minus seven?",
+      "code": "#include <stdio.h>\n\nstatic int cut_rod(const int price[], int n, int first[])\n{\n    int dp[17] = {0};\n    for (int length = 1; length <= n; length++) {\n        dp[length] = -1000000;\n        for (int cut = 1; cut <= length; cut++) {\n            int candidate = price[cut - 1] + dp[length - cut];\n            if (candidate > dp[length]) { dp[length] = candidate; first[length] = cut; }\n        }\n    }\n    return dp[n];\n}\n\nint main(void)\n{\n    int price[]={-7},first[17];\n    printf(\"%d\\n\",cut_rod(price,1,first));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "-7",
+        "-6",
+        "-8",
+        "-5"
+      ],
+      "answer": 0,
+      "explanation": "All material must be sold, so the answer may be negative."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What revenue belongs to the empty rod?",
+      "code": "#include <stdio.h>\n\nstatic int cut_rod(const int price[], int n, int first[])\n{\n    int dp[17] = {0};\n    for (int length = 1; length <= n; length++) {\n        dp[length] = -1000000;\n        for (int cut = 1; cut <= length; cut++) {\n            int candidate = price[cut - 1] + dp[length - cut];\n            if (candidate > dp[length]) { dp[length] = candidate; first[length] = cut; }\n        }\n    }\n    return dp[n];\n}\n\nint main(void)\n{\n    int first[17];\n    printf(\"%d\\n\",cut_rod(NULL,0,first));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "0",
+        "-1",
+        "2"
+      ],
+      "answer": 1,
+      "explanation": "The base dp[0] is zero and no price is accessed."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "All rod material must be sold in this model.",
+      "bn": "এই মডেলে রডের সব অংশ বিক্রি করতে হবে।"
+    },
+    {
+      "en": "A first piece leaves a shorter independent remainder.",
+      "bn": "প্রথম টুকরা নিলে ছোট বাকি রডের সমস্যা থাকে।"
+    },
+    {
+      "en": "The uncut rod is the candidate cut equal to length.",
+      "bn": "cut পুরো দৈর্ঘ্যের সমান হলে রড না কাটার বিকল্প হয়।"
+    },
+    {
+      "en": "Saved first-piece lengths recover the full sale.",
+      "bn": "প্রথম টুকরার দৈর্ঘ্য রাখলে পুরো বিক্রির পরিকল্পনা পাওয়া যায়।"
+    },
+    {
+      "en": "Negative prices require a nonempty-sale initial bound.",
+      "bn": "ঋণাত্মক দাম হলে খালি বিক্রির শূন্য মান রাখা যাবে না।"
+    },
+    {
+      "en": "Repeated piece lengths are allowed within the total material.",
+      "bn": "মোট দৈর্ঘ্য মেনে একই মাপের টুকরা বারবার নেওয়া যায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Rod Cutting trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Length</th><th scope=\"col\">Candidate revenues in cut order</th><th scope=\"col\">Best</th><th scope=\"col\">First piece</th></tr></thead><tbody><tr><td>0</td><td>empty sale</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1+0</td><td>1</td><td>1</td></tr><tr><td>2</td><td>1+1, 5+0</td><td>5</td><td>2</td></tr><tr><td>3</td><td>1+5, 5+1, 8+0</td><td>8</td><td>3</td></tr><tr><td>4</td><td>1+8, 5+5, 8+1, 9+0</td><td>10</td><td>2</td></tr></tbody></table>\n\n<p>Recovery lists piece lengths rather than the positions at which a physical saw is placed. The sequence 2,2 means two pieces with total length four. A plan 1,3 would correspond to different first-piece choices but the same total material. The value table compares revenues, not the number of cuts.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Rod Cutting method. State its assumptions.",
+      "answerHtml": "<p>Any valid full sale of a positive-length rod contains a first piece of some length cut. Removing that piece leaves exactly length-cut material. If the remainder were sold for less than its optimal revenue, replacing that remainder plan would improve the whole sale. Therefore an optimum uses an optimal remainder for some considered first cut.</p>\n\n<p>Each recurrence candidate is also feasible: sell one available-length piece and then a full optimal sale of the smaller remainder. Considering every first cut covers all partitions of the rod, even though different piece orders can describe the same partition. Taking the maximum chooses an attainable revenue at least as large as every full sale.</p>\n\n<p>The empty base is correct. Induction over increasing length proves every revenue entry because all remainder lengths are smaller. The saved first cut belongs to an attaining candidate, so following it preserves the optimal revenue decomposition. Each cut is at least one, ensuring recovery terminates after at most n pieces.</p>\n\n<p>This proof allows repeated piece lengths because the price list describes a sale option for any piece of that length, not a single inventory item. There is no item-prefix dimension preventing reuse. Compare that meaning with 0/1 knapsack, where each physical input record can be taken only once.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Rod Cutting from the calls, states or candidate operations.",
+      "answerHtml": "<p>At length L, the loop tries L possible first cuts. Summing 1+2+...+n gives n(n+1)/2 trials and Θ(n²) time. The dp and first arrays use Θ(n) storage. Recovery takes Θ(number of pieces), at most O(n), and the printed plan has the same output-size bound.</p>\n\n<p>A naive recursion that tries every first piece repeatedly solves the same remaining lengths. Its work grows exponentially without caching. Memoisation can evaluate each length once, giving the same quadratic candidate count as bottom-up tabulation, but adds recursive stack storage. The bottom-up routine makes dependency order visible and needs no recursive frames for evaluation.</p>\n\n<p>Numeric bounds are separate from the number of states. With at most sixteen material units and each price between -99 and 99, any complete plan's revenue lies between -1584 and 1584. The sentinel -1000000 is safely below every attainable value. For general inputs, derive a suitable bound or initialise from the first valid candidate instead of guessing a universal sentinel.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

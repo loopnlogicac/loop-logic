@@ -1,0 +1,101 @@
+<h2 id="introduction">Measure how much a label must change</h2>
+<p class="lead">A typed course label may be close to the intended label but contain an extra, missing or wrong character. Edit distance measures the least cost of converting one string into another using specified operations. Here inserting, deleting or replacing one character each costs one. Keeping an equal character costs zero.</p>
+
+<p>For CAT and CUT, keep C, replace A with U, and keep T. The distance is one. For an empty source and target AB, insert A and B, giving distance two. These examples show why the boundary states cannot all be zero as they were for LCS.</p>
+
+<p>The model matters. Swapping two adjacent letters is not a primitive operation in this lesson. AB to BA costs two, through two replacements or a deletion and an insertion. A distance model allowing transposition could give another answer. State the allowed operations before comparing two distance values.</p>
+
+<p>Edit distance is useful for approximate matching, but a small numeric distance does not automatically mean two labels have the same real meaning. The algorithm reports a character-edit cost under its model. Choosing a correction suggestion or accepting a name match also depends on the surrounding application's rules.</p>
+
+<h2 id="syntax">State and final-operation choices</h2>
+<pre><code class="language-text">dp[i][0] = i; dp[0][j] = j
+for i = 1 to length(a)
+    for j = 1 to length(b)
+        diagonal = dp[i-1][j-1] + (a[i-1] != b[j-1])
+        dp[i][j] = min(diagonal, dp[i-1][j]+1, dp[i][j-1]+1)
+        record diagonal, up, left in that tie order
+walk predecessors; reverse the alignment operations
+return distance and edits</code></pre>
+<p>Step 1, state: dp[i][j] is the minimum cost to convert the first i source characters into the first j target characters. Row zero represents an empty source, and column zero represents an empty target. Set dp[i][0]=i for deletions and dp[0][j]=j for insertions.</p>
+
+<p>Step 2, recurrence: compare three candidates. A diagonal predecessor costs dp[i-1][j-1] plus zero for equal final characters or one for replacement. An up predecessor costs dp[i-1][j]+1 for deletion of the source endpoint. A left predecessor costs dp[i][j-1]+1 for insertion of the target endpoint. Take the minimum.</p>
+
+<p>The meanings of up and left follow the direction source-to-target. Moving up removes a source character from the remaining conversion problem, so it explains a deletion. Moving left removes a target character that must have been inserted. Switching the interpretation while keeping the recurrence values gives the right number but a wrong edit explanation.</p>
+
+<h2 id="how-it-works">Fill the prefixes and save a direction</h2>
+<p>Step 3, order: fill rows i=1..n and columns j=1..m. Diagonal, up and left dependencies are complete before the current cell. The C code tries diagonal first, then replaces it only for a strictly cheaper deletion or insertion. This gives the tie order diagonal, up, left.</p>
+
+<p>At CAT versus CUT, matching C creates dp[1][1]=0. Prefix CA versus CU has unequal endpoints A and U. Its diagonal candidate is 1, while insertion and deletion candidates are 2. The table saves replacement. The final matching T extends that alignment without increasing the cost.</p>
+
+<p>Step 4, reconstruction: start at the bottom-right state. Identify a predecessor whose transition equals the stored value, using the same tie order. A diagonal with equal characters emits no paid operation; an unequal diagonal emits a replacement. Up emits deletion, and left emits insertion. Continue until both prefix lengths reach zero.</p>
+
+<div data-lab="edit-distance-dp"></div>
+<p>The lab shows those directions in a grid and highlights the recovery path. It reverses the recovered paid edits before displaying them. The C implementation instead recurses to each predecessor before printing the current paid edit. Both present a forward alignment rather than backward recovery order.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">A replacement between matching ends</h3>
+<p>C and T match for free; replacing A with U is the only paid step.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Insert and delete along an empty boundary</h3>
+<p>The empty source needs two insertions. Boundary costs are distances, not zero.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Several optimal editing alignments</h3>
+<p>Diagonal-first tie handling prints two replacements; deleting and inserting would have equal cost.</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">A longer correction</h3>
+<p>The recovered alignment has two replacements and one insertion, for total cost 3.</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">Convert CAT into CUT</h2>
+<table class="ref"><thead><tr><th scope="col">source / target</th><th scope="col">empty</th><th scope="col">C</th><th scope="col">CU</th><th scope="col">CUT</th></tr></thead><tbody><tr><td>empty</td><td>0</td><td>1</td><td>2</td><td>3</td></tr><tr><td>C</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>CA</td><td>2</td><td>1</td><td>1</td><td>2</td></tr><tr><td>CAT</td><td>3</td><td>2</td><td>2</td><td>1</td></tr></tbody></table>
+
+<p>The bottom-right value is one. Recover backward through the T match, the A-to-U replacement, and the C match. Reading the alignment forward keeps C, replaces A by U, and keeps T. The program prints only the paid replacement because matches do not change the text or add cost.</p>
+
+<h2 id="reconstruction">Read the edits as a forward alignment</h2>
+<p>The operation descriptions identify source and target characters in alignment order. They do not include mutable string indices. To apply the alignment interactively, keep a cursor in the current string. A match or replacement advances the cursor, an insertion writes before it and then advances, and a deletion removes the current source character without advancing past the next one.</p>
+
+<p>If a program must emit executable indexed edits, it should also retain matches or explicit aligned coordinates so cursor movement is known. Printing delete A alone is ambiguous when several A characters occur. The current exercise asks for an explanatory alignment, and its deterministic rule chooses one of several possible minimum explanations.</p>
+
+<p>Boundary recovery is essential. When i=0 and j&gt;0, only insertions remain. When j=0 and i&gt;0, only deletions remain. A loop that stops when either coordinate becomes zero would omit those operations. That stopping condition worked for LCS because its remaining empty-prefix length is zero, but not for edit distance.</p>
+
+<p>For identical strings, the path consists entirely of free diagonal matches and prints no paid edits. For an empty source, all operations are insertions. For an empty target, all are deletions. A complete implementation covers these with its normal boundary checks rather than inventing a mismatch symbol to stand for emptiness.</p>
+
+<h2 id="correctness">The last aligned operation is exhaustive</h2>
+<p>Take any valid alignment converting the two prefixes. Its final action either pairs their final characters, deletes the source endpoint, or inserts the target endpoint. Those actions lead exactly to the diagonal, up and left predecessor states. Removing the final action leaves a conversion of the corresponding smaller prefixes.</p>
+
+<p>If that smaller conversion were not optimal, replacing it with a cheaper one would improve the whole alignment. Thus an optimal alignment uses an optimal predecessor for one of the three actions. Conversely, adding the action to any valid predecessor creates a valid current conversion. Taking the minimum of their costs is both attainable and no greater than any other alignment.</p>
+
+<p>The boundary costs count the necessary edits against an empty string. Inducting over i+j proves the recurrence values. Every dependency decreases that sum, so the chosen table order respects the proof. During reconstruction, following a cost-equal predecessor preserves the stored optimum, and decreasing coordinates guarantees termination at (0,0).</p>
+
+<p>Unit nonnegative costs also explain some basic checks. Distance is zero for identical strings. It is at least the absolute difference of their lengths, because replacement cannot change length. It is at most max(n,m), by replacing the shared-length portion and inserting or deleting the excess. These inequalities are useful independent checks on table outputs.</p>
+
+<h2 id="complexity">Prefix pairs determine work</h2>
+<p>The full table contains (n+1)(m+1) cells. Each interior cell compares three constant-time candidates, giving Θ(nm) time for nonempty lengths and Θ(nm) table space. Recovery visits at most n+m transitions. A forward-recursive recovery uses O(n+m) stack depth in addition to the table; an iterative recovery can store and reverse the path instead.</p>
+
+<p>Two rows suffice when only the distance is needed. Retain the previous row and current row while scanning columns, using O(min(n,m)) table memory after choosing the shorter column dimension. As with LCS, that compressed calculation does not preserve every predecessor for the simple recovery routine.</p>
+
+<p>The bounded demonstrations use at most sixteen characters in either input, so distances are at most sixteen under unit costs. int easily holds all entries. A weighted variant with large operation costs needs a wider range calculation. Numeric safety must account for a predecessor plus its operation cost, not only the final answer.</p>
+
+<h2 id="variations">Different costs define different recurrences</h2>
+<p>If insertion, deletion and replacement have fixed nonnegative costs, multiply the boundary values by the corresponding operation cost and adjust each candidate. If replacement costs more than deletion plus insertion, the minimum may choose those two operations instead of a replacement. The three-candidate recurrence already permits that route.</p>
+
+<p>Character-dependent costs may reflect a keyboard or a domain-specific penalty, but their meanings must be written explicitly. Costs depending on a whole run, such as a special price for a block insertion, can require additional states. Reusing the unit-cost table unchanged would not model that dependency.</p>
+
+<p>Threshold queries ask whether the distance is at most a budget. The exercise computes the complete distance, then compares it with that budget. More advanced banded evaluation may skip cells when a small threshold restricts feasible alignments, but it needs careful unreachable handling. Returning early on the first large cell is not valid because another path may still be cheap.</p>
+
+<h2 id="common-mistakes">Keep costs and directions consistent</h2>
+<p>Zeroing the first row and column allows characters to appear or disappear for free. Initialise them to their prefix lengths under unit costs. Adding one for a matching diagonal is also wrong; keeping an equal character should cost zero. CAT to CAT is a quick test for that mistake.</p>
+
+<p>A replacement changes one source character into one target character. It does not consume only one of the strings. Decrement both coordinates for diagonal recovery. For insertion decrement only j, and for deletion decrement only i. These coordinate meanings should match the arrows and the printed operation names.</p>
+
+<p>Comparing this distance with the LCS deletion formula can expose a model mix-up. AB to AC needs one replacement here but two total deletions to make both strings equal. Both numbers are correct for their own permitted actions. Avoid applying the deletion-only identity to a problem that also permits replacement.</p>
+
+<h2 id="version-notes">C17 text limits</h2>
+<p>The programs use string.h for strlen and strcmp, with buffers of seventeen characters for sixteen input letters plus a null terminator. Whitespace-token exercises use - to represent empty input. The algorithm treats bytes as characters, suitable for the stated uppercase Latin alphabet; multi-byte Unicode text would need decoding into the intended character units first.</p>
+
+<h2 id="summary">A minimum alignment explains the number</h2>
+<p>Edit distance compares insertion, deletion and diagonal pairing over two prefix lengths. Boundary values count real edits, and recovery must continue until both prefixes are empty. The operation model determines every cost and interpretation. Matrix-chain multiplication next uses interval states whose dependencies follow increasing chain length rather than prefix rows.</p>
+<p>Continue with <a href="topic:algo-matrix-chain">Matrix Chain Multiplication</a>.</p>

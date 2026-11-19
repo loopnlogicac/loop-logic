@@ -1,0 +1,404 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-maximum-subarray",
+  "module": "divide-conquer",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Maximum Subarray",
+    "bn": "সর্বোচ্চ যোগফলের সাবঅ্যারে"
+  },
+  "summary": {
+    "en": "Compare brute force, a crossing-interval recursion and Kadane while keeping the answer nonempty.",
+    "bn": "ব্রুট ফোর্স, দুই ভাগের পদ্ধতি ও Kadane দিয়ে সর্বোচ্চ যোগফলের অবিচ্ছিন্ন অংশ বের করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "algo-divide-and-conquer"
+  ],
+  "related": [
+    "algo-fast-exponentiation"
+  ],
+  "keywords": [
+    "Maximum Subarray",
+    "C17",
+    "divide-conquer",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Maximum Subarray implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "The best consecutive run"
+    },
+    {
+      "id": "syntax",
+      "title": "Kadane's two running answers"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Restart or extend"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Daily changes through Kadane"
+    },
+    {
+      "id": "correctness",
+      "title": "Two meanings form the invariant"
+    },
+    {
+      "id": "complexity",
+      "title": "Count candidate intervals and scans"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Boundaries and equal sums"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep the answer nonempty"
+    },
+    {
+      "id": "version-notes",
+      "title": "Safe C17 totals"
+    },
+    {
+      "id": "summary",
+      "title": "An ending answer supports a global answer"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Kadane on daily balance changes",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The running best ending sum reaches 6 at index 3.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Compare both halves and a crossing interval",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The interval [1,4) crosses the root split and has sum 6.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Brute force on an all-negative array",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>A nonempty interval must choose -3; zero would incorrectly allow no elements.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "Tied zero-sum intervals",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Extending a zero sum keeps zero; several different intervals are optimal.</p>\n"
+    }
+  ],
+  "labs": [
+    "kadane"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Best contiguous sum",
+      "statementHtml": "<p>Read n (1..16) and n changes (-99..99), after Enter n and values:. Print best = S for a nonempty contiguous interval.</p>\n",
+      "hints": [
+        "Initialise from the first value so negative-only input remains valid."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Return the interval as well",
+      "statementHtml": "<p>Read n (1..16) and n changes (-99..99), after Enter n and values:. Print best = S, range = L R using half-open indices. Keep the earliest start, then earliest end, on ties.</p>\n",
+      "hints": [
+        "Enumerate starts before ends and replace only on a strict improvement."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Maximum Subarray: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Maximum Subarray covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "A subarray contains consecutive input positions."
+      ],
+      "answerHtml": "<p>Before processing index i, ending is the best sum ending at i-1, and best is the best sum inside [0,i). Any interval ending at i either contains only a[i] or extends an interval ending at i-1. The recurrence chooses the better of those exhaustive possibilities. Updating best then compares the previous prefix answer with the best newly ending interval.</p>\n\n<p>At the beginning, the only nonempty interval in the first-element prefix is that element itself. The invariant therefore holds after initialisation. Each iteration preserves both meanings. When the final index is processed, every possible nonempty interval ends somewhere in the processed prefix, so best covers all candidates. The loop terminates because i increases toward n.</p>\n\n<p>For divide and conquer, the three location cases are exhaustive. A crossing interval must use a suffix of the left half and a prefix of the right half. Their choices are independent, so taking each greatest sum maximises their total. The nonempty base case returns its sole value. Induction over interval length proves the recursive results.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Maximum Subarray: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Maximum Subarray. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Best ending and best overall are separate quantities."
+      ],
+      "answerHtml": "<p>Brute force performs n+(n-1)+...+1 interval extensions, which is Θ(n²). It needs Θ(1) auxiliary storage. The recursive method does two half-size calls plus linear crossing scans. Its recurrence T(n)=2T(n/2)+Θ(n) gives Θ(n log n) time. The active recursion path uses Θ(log n) stack space.</p>\n\n<p>Kadane visits each value once and uses a fixed number of arithmetic operations and comparisons per visit. Its time is Θ(n), and its two totals use Θ(1) auxiliary space. Returning interval boundaries adds only a few indices. Copying every candidate interval would destroy that constant-space advantage, so store boundaries and copy only the final answer when needed.</p>\n\n<p>The loop bounds remain linear for positive, negative and mixed input. There is no sorting or early finish. Arithmetic width remains a separate concern: summing many large changes can overflow an int. The exercise bounds of sixteen values between -99 and 99 keep all intermediate sums safe, including the quadratic reference and crossing scans.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is the required maximum sum of [-8,-3,-6]?",
+      "options": [
+        "-3",
+        "0",
+        "-8",
+        "-17"
+      ],
+      "answer": 0,
+      "explanation": "A nonempty answer chooses the largest single negative value."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does ending mean in Kadane?",
+      "options": [
+        "Best sum anywhere in the full array",
+        "Best nonempty sum ending at the current index",
+        "Sum of all positive values",
+        "Length of the current interval"
+      ],
+      "answer": 1,
+      "explanation": "The endpoint restriction makes the two-candidate transition possible."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When should Kadane restart instead of extending?",
+      "options": [
+        "Whenever the current value is negative",
+        "Only at index zero",
+        "When the previous ending sum is negative",
+        "Whenever best is positive"
+      ],
+      "answer": 2,
+      "explanation": "Adding a negative previous sum makes the current singleton better."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which recursive case can two child maxima miss?",
+      "options": [
+        "A singleton in the left half",
+        "An interval entirely in the right half",
+        "An empty child maximum",
+        "An interval crossing the split"
+      ],
+      "answer": 3,
+      "explanation": "A crossing optimum combines a left suffix and a right prefix."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many nonempty intervals does quadratic brute force extend?",
+      "options": [
+        "n(n+1)/2",
+        "n²+n",
+        "2n",
+        "n log n"
+      ],
+      "answer": 0,
+      "explanation": "For each start there are n-start possible ends."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which cost belongs to the crossing-scan divide-and-conquer method?",
+      "options": [
+        "Θ(log n)",
+        "Θ(n log n)",
+        "Θ(n² log n)",
+        "Θ(1)"
+      ],
+      "answer": 1,
+      "explanation": "Each level has linear scanning work across balanced recursive nodes."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is sorting before maximum-subarray search invalid?",
+      "options": [
+        "It always causes overflow",
+        "It removes negative numbers",
+        "It changes which values are consecutive",
+        "It makes Kadane recursive"
+      ],
+      "answer": 2,
+      "explanation": "The answer must refer to a contiguous interval of the original sequence."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After the -1 change, what is Kadane ending?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int ending=3, x=-1;\n    ending=x>ending+x?x:ending+x;\n    printf(\"%d\\n\",ending);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "1",
+        "4",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "Extending gives 2, better than restarting at -1."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What nonempty best sum does Kadane return for two negative days?",
+      "code": "#include <stdio.h>\n\nstatic int kadane(const int a[], int n)\n{\n    int ending = a[0], best = a[0];\n    for (int i = 1; i < n; i++) {\n        ending = a[i] > ending + a[i] ? a[i] : ending + a[i];\n        if (ending > best) { best = ending; }\n    }\n    return best;\n}\n\nint main(void)\n{\n    int a[]={-8,-3};\n    printf(\"%d\\n\",kadane(a,2));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "-3",
+        "-2",
+        "-4",
+        "-1"
+      ],
+      "answer": 0,
+      "explanation": "The second singleton improves the best from -8 to -3."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What sum remains best after the final -5?",
+      "code": "#include <stdio.h>\n\nstatic int kadane(const int a[], int n)\n{\n    int ending = a[0], best = a[0];\n    for (int i = 1; i < n; i++) {\n        ending = a[i] > ending + a[i] ? a[i] : ending + a[i];\n        if (ending > best) { best = ending; }\n    }\n    return best;\n}\n\nint main(void)\n{\n    int a[]={-2,3,-1,4,-5};\n    printf(\"%d\\n\",kadane(a,5));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "7",
+        "6",
+        "5",
+        "8"
+      ],
+      "answer": 1,
+      "explanation": "The earlier interval 3,-1,4 remains best at 6."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A subarray contains consecutive input positions.",
+      "bn": "সাবঅ্যারের অবস্থানগুলো পরপর থাকে।"
+    },
+    {
+      "en": "Nonempty maximum sums can be negative.",
+      "bn": "খালি অংশ না নিলে সর্বোচ্চ যোগফল ঋণাত্মকও হয়।"
+    },
+    {
+      "en": "Kadane compares restarting with extending.",
+      "bn": "Kadane নতুন শুরু আর আগের অংশ বাড়ানো তুলনা করে।"
+    },
+    {
+      "en": "Crossing intervals combine a left suffix and right prefix.",
+      "bn": "মাঝ পেরোনো অংশে বাঁয়ের suffix ও ডানের prefix লাগে।"
+    },
+    {
+      "en": "Best ending and best overall are separate quantities.",
+      "bn": "এখানে শেষ হওয়া সেরা যোগফল আর মোট সেরা যোগফল আলাদা।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Maximum Subarray trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">i</th><th scope=\"col\">value</th><th scope=\"col\">ending</th><th scope=\"col\">best</th></tr></thead><tbody><tr><td>0</td><td>-2</td><td>-2</td><td>-2</td></tr><tr><td>1</td><td>3</td><td>3</td><td>3</td></tr><tr><td>2</td><td>-1</td><td>2</td><td>3</td></tr><tr><td>3</td><td>4</td><td>6</td><td>6</td></tr><tr><td>4</td><td>-5</td><td>1</td><td>6</td></tr></tbody></table>\n\n<p>The running totals explain why a temporary negative value inside the answer need not end it. The -1 day is worth keeping between profitable days 3 and 4. Kadane discards an earlier prefix only when its total would make every future extension worse. It does not discard every individual negative number.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Maximum Subarray method. State its assumptions.",
+      "answerHtml": "<p>Before processing index i, ending is the best sum ending at i-1, and best is the best sum inside [0,i). Any interval ending at i either contains only a[i] or extends an interval ending at i-1. The recurrence chooses the better of those exhaustive possibilities. Updating best then compares the previous prefix answer with the best newly ending interval.</p>\n\n<p>At the beginning, the only nonempty interval in the first-element prefix is that element itself. The invariant therefore holds after initialisation. Each iteration preserves both meanings. When the final index is processed, every possible nonempty interval ends somewhere in the processed prefix, so best covers all candidates. The loop terminates because i increases toward n.</p>\n\n<p>For divide and conquer, the three location cases are exhaustive. A crossing interval must use a suffix of the left half and a prefix of the right half. Their choices are independent, so taking each greatest sum maximises their total. The nonempty base case returns its sole value. Induction over interval length proves the recursive results.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Maximum Subarray from the calls, states or candidate operations.",
+      "answerHtml": "<p>Brute force performs n+(n-1)+...+1 interval extensions, which is Θ(n²). It needs Θ(1) auxiliary storage. The recursive method does two half-size calls plus linear crossing scans. Its recurrence T(n)=2T(n/2)+Θ(n) gives Θ(n log n) time. The active recursion path uses Θ(log n) stack space.</p>\n\n<p>Kadane visits each value once and uses a fixed number of arithmetic operations and comparisons per visit. Its time is Θ(n), and its two totals use Θ(1) auxiliary space. Returning interval boundaries adds only a few indices. Copying every candidate interval would destroy that constant-space advantage, so store boundaries and copy only the final answer when needed.</p>\n\n<p>The loop bounds remain linear for positive, negative and mixed input. There is no sorting or early finish. Arithmetic width remains a separate concern: summing many large changes can overflow an int. The exercise bounds of sixteen values between -99 and 99 keep all intermediate sums safe, including the quadratic reference and crossing scans.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

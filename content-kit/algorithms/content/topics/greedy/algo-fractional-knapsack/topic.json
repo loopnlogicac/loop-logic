@@ -1,0 +1,391 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-fractional-knapsack",
+  "module": "greedy",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Fractional Knapsack",
+    "bn": "ফ্র্যাকশনাল ন্যাপস্যাক"
+  },
+  "summary": {
+    "en": "Fill divisible capacity by value per weight, and see why the same ratio rule fails for whole items.",
+    "bn": "ওজনপ্রতি মূল্য দিয়ে ভাগ করা যায় এমন জিনিস নাও, আর ০/১ ক্ষেত্রে নিয়মটি কেন ব্যর্থ তা দেখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "algo-activity-selection"
+  ],
+  "related": [
+    "algo-huffman-coding"
+  ],
+  "keywords": [
+    "Fractional Knapsack",
+    "C17",
+    "greedy",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Fractional Knapsack implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "You may take part of an item"
+    },
+    {
+      "id": "syntax",
+      "title": "Order by value density"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Spend capacity where it earns most"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Filling a fifty-unit bag"
+    },
+    {
+      "id": "correctness",
+      "title": "Exchange weight rather than whole items"
+    },
+    {
+      "id": "complexity",
+      "title": "Sorting dominates the scan"
+    },
+    {
+      "id": "comparison",
+      "title": "Whole-item and zero-weight variants"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep the fraction in the arithmetic"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 numeric choices"
+    },
+    {
+      "id": "summary",
+      "title": "The ratio proof depends on divisibility"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "A final partial item",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Ratios 6, 5 and 4 fill the capacity with all of the first two items and two-thirds of the last.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Enough capacity for every item",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>All three items fit, so unused capacity has no further value.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Equal ratios need no special choice",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Every unit is worth 2. Any feasible mixture of total weight 15 earns 30.</p>\n"
+    }
+  ],
+  "labs": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Best divisible shipment value",
+      "statementHtml": "<p>Read n (0..16), capacity (0..1000), then weight value pairs (weight 1..1000, value 0..1000). Print Enter n capacity and weight value pairs: first, then value = V to two decimal places.</p>\n",
+      "hints": [
+        "Use integer cross products to order ratios and floating point only for the earned value."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Value gained by one extra capacity unit",
+      "statementHtml": "<p>Read the same shipment format. Print Enter n capacity and weight value pairs:, then gain = G to two decimal places, comparing capacity with capacity+1.</p>\n",
+      "hints": [
+        "After everything fits, an extra capacity unit adds no value."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Fractional Knapsack: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Fractional Knapsack covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "Fractional value scales with the amount taken."
+      ],
+      "answerHtml": "<p>Suppose a feasible solution takes some material from a lower-density lot while leaving material available in a higher-density lot. Exchange a small equal weight between those two lots. The capacity used stays unchanged. Because the replacement density is higher, the earned value increases. Such a solution cannot have been optimal.</p>\n\n<p>Repeat this exchange until the higher-density lot is full or the lower-density material is removed. An optimum can therefore fill the highest-density available lot before using any strictly lower-density material. Equal densities may be exchanged without changing value. After fixing that amount, apply the same reasoning to the remaining capacity and lots.</p>\n\n<p>This proof relies on arbitrary fractions. A small equal-weight exchange may be impossible when items must remain whole. For example, capacity 50 and the three example items allow only value 220 from whole items 1 and 2. Ratio-first whole-item selection takes the first two items for value 160 and cannot fit the last. Fractional selection reaches 240 because the final 20 units are permitted.</p>\n\n<p>The invariant for the scan is that the processed material has been taken in decreasing density order, and an optimal solution exists agreeing with those choices. The exchange establishes the next choice. When no capacity or no material remains, there is no positive-value feasible extension that improves that agreed optimum.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Fractional Knapsack: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Fractional Knapsack. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Whole items can defeat the density-first rule."
+      ],
+      "answerHtml": "<p>For n lots, a suitable comparison sort takes O(n log n), and the fill loop takes Θ(n) in the worst case. If capacity fills early, the loop may stop sooner, but the initial sort still happened. Sorting the same list again for many capacity queries is unnecessary if the order can be reused.</p>\n\n<p>The shown value routine changes the input record order and keeps only a running double total and integer capacity. Its scan uses Θ(1) auxiliary space. Outputting every taken fraction would require up to O(n) output records. Sorting's internal storage depends on the library implementation; C does not promise qsort's algorithm or complexity.</p>\n\n<p>The ratio proof concerns exact proportional values. The C examples use double only when adding a fractional value and print two decimals. Small rounding differences do not decide the ordering because the comparator uses exact integer cross products. If exact accounting fractions are required, keep rational numerators and denominators or specify a rounding policy.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which fractional-knapsack ratio comes first?",
+      "options": [
+        "Greatest value per weight",
+        "Greatest weight per value",
+        "Smallest total value",
+        "Longest original ID"
+      ],
+      "answer": 0,
+      "explanation": "An equal-weight exchange favours larger value density."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "For weight 30 and value 120, what is the value of 20 weight units?",
+      "options": [
+        "120",
+        "80",
+        "40",
+        "20"
+      ],
+      "answer": 1,
+      "explanation": "Proportional value is 20×120/30."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why compare ratios using cross multiplication?",
+      "options": [
+        "To allow zero denominators",
+        "To avoid sorting records",
+        "To order them exactly under safe integer bounds",
+        "To make partial items whole"
+      ],
+      "answer": 2,
+      "explanation": "Positive weights permit comparing v1×w2 against v2×w1."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which assumption makes the exchange proof possible?",
+      "options": [
+        "Every item must be taken",
+        "All weights are equal",
+        "Values are always negative",
+        "Arbitrary fractions can be taken"
+      ],
+      "answer": 3,
+      "explanation": "A small equal-weight replacement need not be possible for whole items."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many partial lots are necessary in a ratio-ordered optimum?",
+      "options": [
+        "At most one",
+        "Exactly n",
+        "At least two",
+        "None even when capacity is fractional"
+      ],
+      "answer": 0,
+      "explanation": "Fill earlier lots completely, then use a final partial lot if needed."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens after all available material fits?",
+      "options": [
+        "The algorithm invents more material",
+        "Extra capacity adds no value",
+        "The optimum becomes negative",
+        "The ratios double"
+      ],
+      "answer": 1,
+      "explanation": "Each lot has limited available weight even though it is divisible."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How does the fractional optimum relate to the 0/1 optimum on the same data?",
+      "options": [
+        "It is always equal",
+        "It is always smaller",
+        "It is an upper bound",
+        "They cannot be compared"
+      ],
+      "answer": 2,
+      "explanation": "Every whole-item selection is allowed in the larger fractional feasible set."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What value comes from taking twenty units of a thirty-unit lot worth 120?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int take=20,value=120,weight=30;\n    printf(\"%.2f\\n\",(double)take*value/weight);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "81.00",
+        "79.00",
+        "82.00",
+        "80.00"
+      ],
+      "answer": 3,
+      "explanation": "The proportional fraction is two-thirds, giving 80.00."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which sign shows density 60/10 is greater than 100/20?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    long long left=60LL*20,right=100LL*10;\n    printf(\"%d\\n\",left>right);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "2",
+        "0",
+        "3"
+      ],
+      "answer": 0,
+      "explanation": "1200 exceeds 1000, so the first density is greater."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How much capacity remains after taking a full ten-unit lot from fifty?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int capacity=50,weight=10;\n    int take=weight<capacity?weight:capacity;\n    capacity-=take;\n    printf(\"%d\\n\",capacity);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "41",
+        "40",
+        "39",
+        "42"
+      ],
+      "answer": 1,
+      "explanation": "The full lot consumes ten units, leaving forty."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Fractional value scales with the amount taken.",
+      "bn": "যতটুকু নেওয়া হয় মূল্যও সেই অনুপাতে আসে।"
+    },
+    {
+      "en": "Sort by decreasing value per unit weight.",
+      "bn": "ওজনপ্রতি মূল্য বেশি থেকে কম সাজাও।"
+    },
+    {
+      "en": "Cross multiplication compares positive-weight ratios exactly.",
+      "bn": "ধনাত্মক ওজনে cross multiplication দিয়ে ratio ঠিকভাবে তুলনা করা যায়।"
+    },
+    {
+      "en": "At most one selected lot needs to be partial.",
+      "bn": "বেছে নেওয়া সর্বোচ্চ একটি lot আংশিক নিতে হয়।"
+    },
+    {
+      "en": "Whole items can defeat the density-first rule.",
+      "bn": "জিনিস ভাগ করা না গেলে ratio-ভিত্তিক নিয়ম ব্যর্থ হতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Fractional Knapsack trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Lot ID</th><th scope=\"col\">Density</th><th scope=\"col\">Weight taken</th><th scope=\"col\">Value gained</th><th scope=\"col\">Capacity left</th></tr></thead><tbody><tr><td>0</td><td>6</td><td>10</td><td>60</td><td>40</td></tr><tr><td>1</td><td>5</td><td>20</td><td>100</td><td>20</td></tr><tr><td>2</td><td>4</td><td>20</td><td>80</td><td>0</td></tr></tbody></table>\n\n<p>The second exercise asks how much value one extra capacity unit earns. At capacity 50 in the example, the next unit still comes from the density-four lot, so it adds 4. Once all 60 available weight units fit, the extra unit adds zero. This marginal value comes from the next unconsumed material.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Fractional Knapsack method. State its assumptions.",
+      "answerHtml": "<p>Suppose a feasible solution takes some material from a lower-density lot while leaving material available in a higher-density lot. Exchange a small equal weight between those two lots. The capacity used stays unchanged. Because the replacement density is higher, the earned value increases. Such a solution cannot have been optimal.</p>\n\n<p>Repeat this exchange until the higher-density lot is full or the lower-density material is removed. An optimum can therefore fill the highest-density available lot before using any strictly lower-density material. Equal densities may be exchanged without changing value. After fixing that amount, apply the same reasoning to the remaining capacity and lots.</p>\n\n<p>This proof relies on arbitrary fractions. A small equal-weight exchange may be impossible when items must remain whole. For example, capacity 50 and the three example items allow only value 220 from whole items 1 and 2. Ratio-first whole-item selection takes the first two items for value 160 and cannot fit the last. Fractional selection reaches 240 because the final 20 units are permitted.</p>\n\n<p>The invariant for the scan is that the processed material has been taken in decreasing density order, and an optimal solution exists agreeing with those choices. The exchange establishes the next choice. When no capacity or no material remains, there is no positive-value feasible extension that improves that agreed optimum.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Fractional Knapsack from the calls, states or candidate operations.",
+      "answerHtml": "<p>For n lots, a suitable comparison sort takes O(n log n), and the fill loop takes Θ(n) in the worst case. If capacity fills early, the loop may stop sooner, but the initial sort still happened. Sorting the same list again for many capacity queries is unnecessary if the order can be reused.</p>\n\n<p>The shown value routine changes the input record order and keeps only a running double total and integer capacity. Its scan uses Θ(1) auxiliary space. Outputting every taken fraction would require up to O(n) output records. Sorting's internal storage depends on the library implementation; C does not promise qsort's algorithm or complexity.</p>\n\n<p>The ratio proof concerns exact proportional values. The C examples use double only when adding a fractional value and print two decimals. Small rounding differences do not decide the ordering because the comparator uses exact integer cross products. If exact accounting fractions are required, keep rational numerators and denominators or specify a rounding policy.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

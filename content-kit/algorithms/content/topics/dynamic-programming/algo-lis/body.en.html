@@ -1,0 +1,101 @@
+<h2 id="introduction">Find progress without requiring adjacency</h2>
+<p class="lead">A sequence of practice scores may rise overall even when some sessions go badly. You want the longest strict improvement chain while preserving session order. A longest increasing subsequence, or LIS, may skip scores, but every retained value must be greater than the preceding retained value.</p>
+
+<p>For [3,1,2,5,4], both [1,2,5] and [1,2,4] have length three. Values 5 and 4 cannot both follow one another in a strict increasing chain because their input order is decreasing. Sorting the array would destroy this order requirement and answer a different question.</p>
+
+<p>Strict increase means equal values cannot extend a chain. For [2,2,2], the LIS length is one. A nondecreasing subsequence permits equality and could have length three. This single word changes both the quadratic comparison and the binary-search boundary in the faster algorithm.</p>
+
+<p>An empty input has LIS length zero and an empty answer. A nonempty input always has at least a one-element increasing subsequence. The routines handle both conventions directly, avoiding a read from an empty array. Several optimal witnesses may exist, so each implementation states how it resolves ties.</p>
+
+<h2 id="syntax">State by the final position</h2>
+<pre><code class="language-text">for i = 0 to n-1: dp[i] = 1; previous[i] = -1
+for i = 0 to n-1
+    for j = 0 to i-1
+        if values[j] &lt; values[i] and dp[j]+1 &gt; dp[i]
+            dp[i] = dp[j]+1; previous[i] = j
+    keep earliest index with greatest dp value
+follow previous indices backward and reverse
+return length and sequence</code></pre>
+<p>Step 1, state: dp[i] is the greatest length of a strict increasing subsequence ending exactly at input position i. It is not the best length of the entire prefix. A separate best endpoint identifies the global result. Initialise dp[i]=1 and previous[i]=-1 for every real position.</p>
+
+<p>Step 2, recurrence: consider each j&lt;i with values[j]&lt;values[i]. Such a position can precede i, giving candidate dp[j]+1. Choose the largest candidate or keep the singleton length one when none applies. Store j in previous[i] when its candidate strictly improves the length.</p>
+
+<h2 id="how-it-works">Quadratic evaluation and recovery</h2>
+<p>Step 3, order: process i from left to right. Every possible predecessor j is earlier, so dp[j] is complete. Scan j upward and update only on strict improvement. Keep the earliest endpoint when global lengths tie. These choices produce [1,2,5] for the five-value example.</p>
+
+<p>The ending lengths are [1,1,2,3,3]. Position 2 with value 2 extends position 1 with value 1. Position 3 with value 5 extends position 2, giving length three. Position 4 with value 4 can also extend position 2, but its tied global length does not replace the earlier best endpoint.</p>
+
+<p>Step 4, reconstruction: start at best and follow previous indices until -1. Collect the corresponding input values, then reverse them. Each link points to a strictly earlier index and a strictly smaller value. That proves the collected reversed chain uses real input positions in valid increasing order.</p>
+
+<div data-lab="lis-dp"></div>
+<p>The grid shows three rows: original value, ending length, and predecessor index. It compares the original values rather than the DP lengths when deciding whether an extension is allowed. The empty preset reserves a visual column labelled empty but creates no fictitious value or length-one state there.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Quadratic lengths with predecessors</h3>
+<p>The first longest chain found is 1,2,5, with ending lengths 1,1,2,3,3.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Binary-search the smallest tails</h3>
+<p>The faster method replaces tail 5 by 4 and reconstructs 1,2,4. Both lengths are 3.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Equal values do not increase strict length</h3>
+<p>A strict comparison prevents equal keys extending one another, so only one 2 is retained.</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">An empty increasing subsequence</h3>
+<p>Zero input values give length zero without reading a tail or a predecessor.</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">Ending states on mixed progress</h2>
+<table class="ref"><thead><tr><th scope="col">i</th><th scope="col">Value</th><th scope="col">Ending length</th><th scope="col">Previous index</th></tr></thead><tbody><tr><td>0</td><td>3</td><td>1</td><td>-1</td></tr><tr><td>1</td><td>1</td><td>1</td><td>-1</td></tr><tr><td>2</td><td>2</td><td>2</td><td>1</td></tr><tr><td>3</td><td>5</td><td>3</td><td>2</td></tr><tr><td>4</td><td>4</td><td>3</td><td>2</td></tr></tbody></table>
+
+<p>The best length after each prefix would be [1,1,2,3,3] on this particular input too, but those meanings do not coincide in general. On [1,2,3,0], ending lengths are [1,2,3,1], while prefix-best lengths are [1,2,3,3]. Use that example when checking that your state definition matches your recurrence.</p>
+
+<h2 id="variations">A smallest tail for every attainable length</h2>
+<p>The O(n log n) method stores tail[l], the smallest possible ending value of a length l+1 increasing subsequence in the processed prefix. Smaller tails are more flexible because more future values can extend them. The tails form a strictly increasing array, so a binary search can locate where the next input value belongs.</p>
+
+<p>For a value x, find the first tail greater than or equal to x. Replace that tail by x, or append x when all tails are smaller. This lower-bound position says how many strictly smaller tails can precede x. Equality replaces an existing length instead of creating a longer chain, preserving the strict-increase contract.</p>
+
+<p>For [3,1,2,5,4], tails evolve as [3], [1], [1,2], [1,2,5], [1,2,4]. Replacing 3 by 1 does not claim that 3 was never part of an increasing subsequence. It records a more useful endpoint for the same length. Replacing 5 by 4 similarly preserves length three while improving its tail.</p>
+
+<p>The tails array alone is not necessarily an input subsequence. Consider [2,3,1]. Final tails [1,3] uses values that occur in the opposite order in the input. The array stores independently best endpoints for different lengths, not one chain that contains all those endpoints together.</p>
+
+<p>To reconstruct, also store tail_index[l], the input index currently providing tail[l]. Before replacing a length-l tail for position i, save previous[i] as tail_index[l-1], or -1 for l=0. Then update the tail and its index. At completion, follow predecessors from tail_index[length-1]. Historical links remain valid even if a later value replaces a tail entry.</p>
+
+<h2 id="correctness">Predecessor DP and tail domination</h2>
+<p>For the quadratic DP, any non-singleton chain ending at i has a penultimate index j&lt;i with values[j]&lt;values[i]. Removing i leaves a chain ending at j. If that chain were shorter than dp[j], replacing it would improve the original chain. Thus one of the considered candidates attains the optimum, and every candidate is feasible.</p>
+
+<p>Initial singleton lengths are correct. Induction over i proves all ending states, and taking the maximum over endpoints covers every nonempty subsequence. Reconstruction follows links saved from attaining candidates. Indices strictly decrease during recovery, preventing cycles; values strictly decrease in backward order, so the reversed answer strictly increases.</p>
+
+<p>For smallest tails, the invariant is that tail[l] is the minimum attainable last value among processed length-l+1 chains. A new value x can extend the chain represented by the preceding lower-bound position. Replacing a larger or equal tail of the same length cannot hurt any future extension, because x is no harder to exceed.</p>
+
+<p>No longer chain is missed: if x could end a chain longer than the append or replacement position permits, its preceding chain would have a smaller tail before that position, contradicting the lower-bound location. Appending increases the maximum attainable length by one; replacement preserves it. This establishes the final length and the predecessor witness.</p>
+
+<h2 id="complexity">Count earlier pairs or binary searches</h2>
+<p>The quadratic version checks every earlier pair j&lt;i, for n(n-1)/2 candidate comparisons. Initialisation and reconstruction add O(n), so time is Θ(n²) for variable nonempty n. Ending lengths and predecessor arrays need Θ(n) space, and the output uses O(n) additional entries.</p>
+
+<p>The faster version performs one lower-bound search in at most n tails for each input value. Each search costs O(log n), giving O(n log n) time and O(n) storage including reconstruction links. The tail array alone may be shorter, but predecessor indices still require an entry for every original position if a witness is needed.</p>
+
+<p>The example limit of sixteen values is deliberately small enough to inspect by hand. General large inputs make the binary-search improvement useful. Both methods compare values directly and do not depend on their numeric magnitude, unlike capacity-indexed knapsack. Negative values work without an offset or frequency array.</p>
+
+<h2 id="comparison">Changing strictness changes the search</h2>
+<p>For a nondecreasing subsequence, allow values[j]&lt;=values[i] in the quadratic recurrence. The faster version then uses the first tail strictly greater than x, an upper bound. Equal values can extend a chain under that model. Mixing a strict quadratic comparison with an upper-bound fast version causes disagreements on duplicate-heavy inputs.</p>
+
+<p>The two shown strict implementations may recover different optimal sequences. The quadratic routine keeps the earliest best endpoint, returning [1,2,5]. The fast routine replaces the last tail and returns [1,2,4]. Their lengths agree, and each sequence is valid. Comparing only exact witness text without accounting for tie rules would wrongly treat one as incorrect.</p>
+
+<p>Finding the lexicographically smallest LIS is another output requirement. Neither arbitrary first-predecessor DP nor ordinary smallest-tail replacement automatically supplies every desired tie convention. Define that requirement explicitly and design suitable recovery information. The current lessons guarantee one maximum-length strict subsequence.</p>
+
+<h2 id="common-mistakes">Do not print tails as a witness</h2>
+<p>A final tails array can combine endpoints from different histories. Print the predecessor chain through tail_index instead. The [2,3,1] counterexample is short enough to reveal the error immediately: printing [1,3] violates the original order even though its values are increasing.</p>
+
+<p>Using &lt;= in the strict DP makes equal values extend each other. Using the first tail greater than x has the same effect in the fast method. Test [2,2,2] before trusting either implementation. Both strict routines must return length one.</p>
+
+<p>Saving the predecessor after overwriting tail_index at the same position can link to the wrong history. Read the preceding length's saved index first, then update the current tail. For empty input, do not read tail_index[-1] or dp[0]; return zero before attempting to recover an endpoint.</p>
+
+<h2 id="version-notes">C17 index sentinels</h2>
+<p>The arrays hold at most sixteen input positions, with -1 representing the absence of a predecessor. Signed int indices make that sentinel natural. The fast routine's half-open binary search uses lo=0 and hi=length, avoiding access at hi until the insertion position is determined. Values stay in -99..99 in the exercises, but the algorithms need only safe comparisons rather than sums.</p>
+
+<h2 id="summary">Best endings and smallest tails serve different roles</h2>
+<p>Quadratic LIS DP asks for the best chain ending at each original index. The faster method keeps the smallest attainable tail for each length. Both need predecessor indices for a real witness. Rod cutting next returns to an amount-like dimension, choosing a first piece and recovering repeated cut lengths.</p>
+<p>Continue with <a href="topic:algo-rod-cutting">Rod Cutting</a>.</p>

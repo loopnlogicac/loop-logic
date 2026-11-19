@@ -1,0 +1,83 @@
+<h2 id="introduction">Keep order while skipping letters</h2>
+<p class="lead">Two course labels may contain similar letter patterns with extra characters in different places. A subsequence is formed by deleting zero or more positions while preserving the order of the positions kept. The longest common subsequence, or LCS, is a longest sequence that can be kept from both strings.</p>
+
+<p>For ABC and AC, AC is a subsequence because you can skip B. It is not a substring of ABC, because its letters are not adjacent there. A common substring problem requires adjacency and uses a different recurrence. Here gaps are allowed in either string.</p>
+
+<p>The answer may not be unique. ABCBDAB and BDCABA have LCS length four, with several possible sequences. The shown code returns BCBA because it prefers moving up when unequal-character predecessor values tie. A different valid tie rule can return another length-four sequence without being incorrect.</p>
+
+<h2 id="syntax">State on two prefixes</h2>
+<pre><code class="language-text">zero row 0 and column 0
+for i = 1 to length(a)
+    for j = 1 to length(b)
+        if a[i-1] = b[j-1]: dp[i][j] = dp[i-1][j-1]+1; arrow diag
+        else: max(up,left); prefer up on ties
+walk from bottom right; collect diagonal matches backward
+reverse collected matches and return</code></pre>
+<p>Step 1, state: dp[i][j] is the LCS length of the first i letters of a and the first j letters of b. Prefix lengths range from zero through their respective full lengths. An empty prefix shares no letters, so row zero and column zero contain zeros.</p>
+
+<p>Step 2, recurrence: if a[i-1] equals b[j-1], set dp[i][j]=dp[i-1][j-1]+1. Otherwise choose max(dp[i-1][j],dp[i][j-1]). The character indices are one less than the table coordinates because a state counts letters rather than naming the last index.</p>
+
+<h2 id="how-it-works">Letters match or one endpoint is skipped</h2>
+<p>Matching endpoint letters can extend an LCS of the two shorter prefixes. A diagonal arrow records that match. Unequal endpoints cannot both be the same final common letter. At least one endpoint must be omitted, so compare the answer after dropping a's endpoint with the answer after dropping b's endpoint.</p>
+
+<p>Step 3, filling order: increase i and, inside each row, increase j. The recurrence reads above, left or diagonally above-left, all already filled. The table has (n+1) rows and (m+1) columns for lengths n and m. The extra boundary is meaningful, not unused padding.</p>
+
+<p>Step 4, reconstruction: begin at (n,m). When characters match, save that character and move diagonally. Otherwise move to a predecessor with the stored maximum value, choosing up on ties. Stop when either prefix length reaches zero. The saved matches were discovered from last to first, so reverse them or write directly into an answer buffer from the end.</p>
+
+<div data-lab="lcs-dp"></div>
+<p>The grid lab uses character row and column labels after an empty-prefix label. Every interior cell records its predecessor arrow. During recovery, highlighted cells show one path through those choices. An unequal-letter move can leave the LCS length unchanged, while a matching diagonal decreases the remaining length by one.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Build one common subsequence</h3>
+<p>The chosen up-on-tie rule returns BCBA, one of several length-four answers.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Repeated letters still use separate positions</h3>
+<p>Two matched positions give AA; no position can be consumed twice.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">An empty prefix</h3>
+<p>The zero row represents the empty string and yields length zero with an empty recovered sequence.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Prefix rows for ABCBDAB and BDCABA</h2>
+<table class="ref"><thead><tr><th scope="col">a prefix / b prefix</th><th scope="col">empty</th><th scope="col">B</th><th scope="col">BD</th><th scope="col">BDC</th><th scope="col">BDCA</th><th scope="col">BDCAB</th><th scope="col">BDCABA</th></tr></thead><tbody><tr><td>empty</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>A</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td></tr><tr><td>AB</td><td>0</td><td>1</td><td>1</td><td>1</td><td>1</td><td>2</td><td>2</td></tr><tr><td>ABC</td><td>0</td><td>1</td><td>1</td><td>2</td><td>2</td><td>2</td><td>2</td></tr><tr><td>ABCB</td><td>0</td><td>1</td><td>1</td><td>2</td><td>2</td><td>3</td><td>3</td></tr><tr><td>ABCBD</td><td>0</td><td>1</td><td>2</td><td>2</td><td>2</td><td>3</td><td>3</td></tr><tr><td>ABCBDA</td><td>0</td><td>1</td><td>2</td><td>2</td><td>3</td><td>3</td><td>4</td></tr><tr><td>ABCBDAB</td><td>0</td><td>1</td><td>2</td><td>2</td><td>3</td><td>4</td><td>4</td></tr></tbody></table>
+
+<p>The table uses ABCBDAB and BDCABA, matching the first C example and the lab's initial input. Bottom-right length four is the optimum, and up-on-tie recovery returns BCBA. Other recovery paths can attain the same length. Arrows select one witness, not every witness.</p>
+
+<h2 id="correctness">Why the prefix recurrence is complete</h2>
+<p>If final letters differ, any common subsequence omits at least one of them as a matched endpoint. It therefore belongs to one of the two shorter-prefix problems. Choosing the larger optimum considers both possibilities. Either predecessor sequence remains a valid common subsequence after adding unused endpoint letters to the inputs.</p>
+
+<p>If final letters match, some optimum can use them as its last matched pair. Any common subsequence using an earlier occurrence of the same final letter can move that last match to the endpoints without breaking order. Removing this matched pair leaves a common subsequence of the two shorter prefixes. Extending their optimum by the shared letter is therefore optimal.</p>
+
+<p>The base row and column are correct because an empty string has no nonempty subsequence. Induction over increasing prefix lengths now proves the entire table. The filling order follows those smaller prefixes, so the C implementation reads established values rather than relying on uninitialised entries.</p>
+
+<p>For recovery, every diagonal match contributes one letter valid in both prefixes. Up and left moves discard letters without decreasing the best achievable length. The path ends with exactly dp[n][m] saved matches. Reversing them restores increasing positions in both strings, proving the returned text is a common subsequence of optimal length.</p>
+
+<h2 id="complexity">Count prefix pairs and recovery moves</h2>
+<p>There are (n+1)(m+1) states, each taking constant work. Full-table time and storage are Θ(nm) for positive lengths. Recovery decreases i or j at every step, giving O(n+m) time, and the output has at most min(n,m) letters. The answer buffer therefore needs that many characters plus a terminating null character.</p>
+
+<p>Two rows are enough if only the LCS length is required. Orient the shorter string as the column dimension to use O(min(n,m)) row storage. This space compression loses the simple arrow table for recovery. More advanced divide-and-conquer reconstruction can recover a sequence with linear space, but it is a separate algorithm with its own reasoning.</p>
+
+<p>The demonstrations use at most sixteen characters per string. A seventeen-by-seventeen table includes the empty boundaries, and a seventeen-character answer buffer fits the longest result plus its terminator. General applications should calculate allocation sizes from validated lengths rather than assuming that all labels are short.</p>
+
+<h2 id="comparison">Length, one sequence and all sequences</h2>
+<p>Printing only the optimum length is easier than printing all optimal sequences. Tied predecessor paths may lead to the same string, so enumerating arrows can produce duplicates. The number of different LCS strings can itself be large. This lesson deliberately returns one deterministic witness rather than promising every optimal string in polynomial output time.</p>
+
+<p>A useful application asks for the fewest deletions needed to make two strings equal. Keep an LCS in both. Delete n-L letters from the first and m-L from the second, for n+m-2L deletions. Any common remaining string has length at most L, so no deletion-only strategy can do better.</p>
+
+<p>That deletion identity is not ordinary edit distance with replacements. A replacement can fix a mismatch in one operation while deletion-only matching may require deleting from both sides. For AB and AC, LCS length one gives two deletions, while unit-cost edit distance is one replacement. Keep the permitted operations attached to the numeric answer.</p>
+
+<h2 id="common-mistakes">Do not reset on unequal characters</h2>
+<p>Setting an unequal-character cell to zero solves a common-substring style problem instead. LCS must preserve the best answer from dropping either endpoint. An earlier match remains useful even when the next letters differ. Test ABC against AC to expose this adjacency confusion.</p>
+
+<p>Reading a[i] at state i treats a prefix length as a character index and skips the first letter. Use a[i-1] and b[j-1] only when i and j are positive. During recovery, stop before reading index -1. The empty-string example verifies those boundary conditions without special fake letters in the actual string.</p>
+
+<p>Printing matches immediately while walking backward reverses the result. The C code begins the answer position at dp[n][m] and fills it downward, then prints the completed string. Also do not reject a different valid LCS merely because it differs from BCBA unless the task explicitly fixes the same tie convention.</p>
+
+<h2 id="version-notes">C17 strings and safe buffers</h2>
+<p>strlen returns size_t; the small bounded examples convert it to int for table indices. The output buffer is null-terminated before backward filling. Input exercises reserve - as an empty-string marker because whitespace-token input cannot directly read an empty token. The lessons' direct function calls can pass an ordinary empty C string.</p>
+
+<h2 id="summary">A table of paired prefixes remembers skipped letters</h2>
+<p>LCS compares smaller prefix pairs and saves arrows for one optimal common sequence. Its recurrence permits gaps while preserving order. The returned text can vary under ties, but its length cannot. Edit distance next uses the same prefix-grid shape to minimise the cost of changing one string into another.</p>
+<p>Continue with <a href="topic:algo-edit-distance">Edit Distance</a>.</p>

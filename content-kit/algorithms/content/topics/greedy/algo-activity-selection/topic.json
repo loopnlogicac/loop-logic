@@ -1,0 +1,393 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-activity-selection",
+  "module": "greedy",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Activity Selection",
+    "bn": "অ্যাক্টিভিটি সিলেকশন"
+  },
+  "summary": {
+    "en": "Choose the largest compatible meeting set by finishing early, then prove the exchange and scan invariant.",
+    "bn": "আগে শেষ হওয়া সভা বেছে সর্বাধিক মিলহীন সময়ের সভা নাও এবং সঠিকতা প্রমাণ করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "algo-greedy-method"
+  ],
+  "related": [
+    "algo-fractional-knapsack"
+  ],
+  "keywords": [
+    "Activity Selection",
+    "C17",
+    "greedy",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Activity Selection implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Share one room between meetings"
+    },
+    {
+      "id": "syntax",
+      "title": "Sort whole meeting records"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Keep the earliest available finish"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "One decision per finish-ordered meeting"
+    },
+    {
+      "id": "correctness",
+      "title": "Exchange the first meeting"
+    },
+    {
+      "id": "complexity",
+      "title": "Preparation and selection costs"
+    },
+    {
+      "id": "comparison",
+      "title": "What changes the problem"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Use finish time and an inclusive boundary test"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 sorting and IDs"
+    },
+    {
+      "id": "summary",
+      "title": "Finish early to keep the future open"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Choose compatible club meetings",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Finish order selects IDs 0, 3 and 4. The last meeting may begin after the preceding finish.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Meetings that touch at a boundary",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>With half-open time intervals, six back-to-back meetings are compatible.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "A long early meeting blocks shorter meetings",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Choosing the earliest start would take ID 0 alone; earliest finish admits five shorter meetings.</p>\n"
+    }
+  ],
+  "labs": [
+    "activity-selection"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Maximum meeting count",
+      "statementHtml": "<p>Read n (0..16) and n start finish pairs (0 &lt;= start &lt; finish &lt;= 100). Print Enter n and start finish pairs: first, then count = C.</p>\n",
+      "hints": [
+        "Sort whole records, keeping each finish attached to its start."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Report selected original meeting IDs",
+      "statementHtml": "<p>Read the same meeting format and bounds. Print Enter n and start finish pairs:, then selected: followed by space-separated zero-based IDs. Break finish ties by original ID.</p>\n",
+      "hints": [
+        "The selection function already returns the retained record IDs."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Activity Selection: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Activity Selection covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "Earliest finish maximises the compatible meeting count."
+      ],
+      "answerHtml": "<p>Let g be a request with earliest finish. Consider an optimal compatible schedule and let o be its first meeting. Because g finishes no later than o, replace o with g. Every later meeting in the optimal schedule starts at or after o finishes, and therefore at or after g finishes. The replacement keeps all later meetings feasible and preserves the count.</p>\n\n<p>Thus an optimal schedule exists beginning with g. After accepting g, discard requests starting before g finishes. The remaining task is the same meeting-count problem restricted to the available later window. Apply the same exchange argument again. Induction gives an optimal full schedule constructed by the greedy scan.</p>\n\n<p>The scan invariant can be stated more precisely: after choosing k meetings, their final finish is no later than the kth finish in any compatible k-meeting schedule considered by the earliest-finish reasoning. This is sometimes called staying ahead. Finishing earlier cannot reduce the possibilities for later meetings under the current objective.</p>\n\n<p>The sorting tie rule does not harm optimal count. If two possible first requests share the same finish, either leaves the same later time boundary. Their original IDs merely choose a repeatable answer among optima. A later weighted scheduling problem would need different reasoning because equal finish does not imply equal value.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Activity Selection: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Activity Selection. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Weighted meeting value needs a different optimisation rule."
+      ],
+      "answerHtml": "<p>With a suitable comparison sort, ordering n meetings costs O(n log n). The selection loop checks each request once, giving Θ(n) scan time. If requests already arrive in finish order and that precondition is trusted, the algorithm needs only the linear scan. Do not include a sort twice when analysing repeated scans over a preserved ordered list.</p>\n\n<p>The shown implementation stores an output array containing up to n IDs, so output space is O(n). Its selection variables use Θ(1) auxiliary space beyond input and output. Sorting space depends on the chosen sorting implementation. C qsort does not specify its internal time or storage guarantees, so the textbook sorting bound assumes an appropriate comparison-sort implementation.</p>\n\n<p>An exhaustive method could enumerate subsets and test their overlaps. That is useful only for small independent correctness checks. The exchange argument explains why examining one finish-ordered path is sufficient here. It is not merely a shortcut inferred from the examples.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which key is used first for unweighted activity selection?",
+      "options": [
+        "Increasing finish time",
+        "Increasing start time",
+        "Decreasing duration",
+        "Decreasing original ID"
+      ],
+      "answer": 0,
+      "explanation": "Finishing early preserves at least as much room for later meetings."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Can [1,4) and [4,6) both be selected?",
+      "options": [
+        "No, they share the number 4",
+        "Yes, the second starts at the first finish",
+        "Only if durations match",
+        "Only when they were adjacent in input"
+      ],
+      "answer": 1,
+      "explanation": "Half-open intervals allow back-to-back meetings."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why keep an original ID in every Activity record?",
+      "options": [
+        "IDs determine meeting duration",
+        "qsort cannot sort two fields",
+        "Sorting changes record positions",
+        "The algorithm needs a hash table"
+      ],
+      "answer": 2,
+      "explanation": "Chosen IDs must still identify the caller's original requests."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does last store after an accepted meeting?",
+      "options": [
+        "The first input start",
+        "The largest rejected ID",
+        "The number of selected meetings",
+        "The most recent chosen finish"
+      ],
+      "answer": 3,
+      "explanation": "Compatibility needs only the final boundary of the chosen prefix."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can an optimum's first meeting be exchanged for earliest finish?",
+      "options": [
+        "All later meetings still start late enough",
+        "The earliest finish always starts earliest",
+        "It makes every duration equal",
+        "It increases every later profit"
+      ],
+      "answer": 0,
+      "explanation": "The replacement finishes no later than the removed meeting."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does earliest finish maximise weighted meeting value?",
+      "options": [
+        "Yes, regardless of weights",
+        "Not in general",
+        "Only if all starts differ",
+        "Only for three meetings"
+      ],
+      "answer": 1,
+      "explanation": "The exchange preserves count, not arbitrary unequal values."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What scan work remains after finish order is already available?",
+      "options": [
+        "Θ(n²)",
+        "Θ(2^n)",
+        "Θ(n)",
+        "Θ(log n)"
+      ],
+      "answer": 2,
+      "explanation": "The selection loop visits each meeting once."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does a meeting starting at four fit after finish four?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int start=4,last=4;\n    printf(\"%d\\n\",start>=last);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "0",
+        "3",
+        "1"
+      ],
+      "answer": 3,
+      "explanation": "The inclusive comparison permits touching half-open boundaries."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many meetings survive this finish-ordered compatibility scan?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int start[]={1,3,5,8},finish[]={4,5,7,9},count=0,last=0;\n    for(int i=0;i<4;i++){\n        if(count==0||start[i]>=last){count++;last=finish[i];}\n    }\n    printf(\"%d\\n\",count);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "4",
+        "2",
+        "5"
+      ],
+      "answer": 0,
+      "explanation": "Take [1,4), reject [3,5), then take [5,7) and [8,9)."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What final finish is retained after selecting [0,2) and [2,3)?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int start[]={0,2},finish[]={2,3},last=0;\n    for(int i=0;i<2;i++){if(start[i]>=last){last=finish[i];}}\n    printf(\"%d\\n\",last);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4",
+        "3",
+        "2",
+        "5"
+      ],
+      "answer": 1,
+      "explanation": "Both meetings fit and the last accepted finish becomes 3."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Earliest finish maximises the compatible meeting count.",
+      "bn": "আগে শেষ হওয়া সভা আগে নিলে সর্বাধিক সভা নেওয়া যায়।"
+    },
+    {
+      "en": "Back-to-back half-open meetings are compatible.",
+      "bn": "half-open সময়ে একটি শেষ হতেই পরেরটি শুরু হতে পারে।"
+    },
+    {
+      "en": "Sort each start and finish together with its ID.",
+      "bn": "শুরু, শেষ ও ID একই রেকর্ডে রেখে সাজাও।"
+    },
+    {
+      "en": "An exchange preserves all later meetings.",
+      "bn": "প্রথম সভা বদলালেও পরের সভাগুলো নেওয়া যায়।"
+    },
+    {
+      "en": "Weighted meeting value needs a different optimisation rule.",
+      "bn": "সভার মূল্য আলাদা হলে অন্য নিয়মে সেরা সমাধান লাগবে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Activity Selection trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">ID</th><th scope=\"col\">Interval</th><th scope=\"col\">Decision</th><th scope=\"col\">last after decision</th></tr></thead><tbody><tr><td>0</td><td>[1,4)</td><td>take</td><td>4</td></tr><tr><td>1</td><td>[3,5)</td><td>overlap</td><td>4</td></tr><tr><td>2</td><td>[0,6)</td><td>overlap</td><td>4</td></tr><tr><td>3</td><td>[5,7)</td><td>take</td><td>7</td></tr><tr><td>4</td><td>[8,9)</td><td>take</td><td>9</td></tr><tr><td>5</td><td>[5,9)</td><td>overlap</td><td>9</td></tr></tbody></table>\n\n<p>A trace should include rejected candidates as well as accepted ones. Rejection is where the compatibility condition does useful work. At each accepted meeting, write the new last finish. Testing all later requests against the very first finish instead would accidentally allow overlaps among later selected meetings.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Activity Selection method. State its assumptions.",
+      "answerHtml": "<p>Let g be a request with earliest finish. Consider an optimal compatible schedule and let o be its first meeting. Because g finishes no later than o, replace o with g. Every later meeting in the optimal schedule starts at or after o finishes, and therefore at or after g finishes. The replacement keeps all later meetings feasible and preserves the count.</p>\n\n<p>Thus an optimal schedule exists beginning with g. After accepting g, discard requests starting before g finishes. The remaining task is the same meeting-count problem restricted to the available later window. Apply the same exchange argument again. Induction gives an optimal full schedule constructed by the greedy scan.</p>\n\n<p>The scan invariant can be stated more precisely: after choosing k meetings, their final finish is no later than the kth finish in any compatible k-meeting schedule considered by the earliest-finish reasoning. This is sometimes called staying ahead. Finishing earlier cannot reduce the possibilities for later meetings under the current objective.</p>\n\n<p>The sorting tie rule does not harm optimal count. If two possible first requests share the same finish, either leaves the same later time boundary. Their original IDs merely choose a repeatable answer among optima. A later weighted scheduling problem would need different reasoning because equal finish does not imply equal value.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Activity Selection from the calls, states or candidate operations.",
+      "answerHtml": "<p>With a suitable comparison sort, ordering n meetings costs O(n log n). The selection loop checks each request once, giving Θ(n) scan time. If requests already arrive in finish order and that precondition is trusted, the algorithm needs only the linear scan. Do not include a sort twice when analysing repeated scans over a preserved ordered list.</p>\n\n<p>The shown implementation stores an output array containing up to n IDs, so output space is O(n). Its selection variables use Θ(1) auxiliary space beyond input and output. Sorting space depends on the chosen sorting implementation. C qsort does not specify its internal time or storage guarantees, so the textbook sorting bound assumes an appropriate comparison-sort implementation.</p>\n\n<p>An exhaustive method could enumerate subsets and test their overlaps. That is useful only for small independent correctness checks. The exchange argument explains why examining one finish-ordered path is sufficient here. It is not merely a shortcut inferred from the examples.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

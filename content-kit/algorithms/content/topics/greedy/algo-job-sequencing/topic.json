@@ -1,0 +1,391 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-job-sequencing",
+  "module": "greedy",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Job Sequencing with Deadlines",
+    "bn": "ডেডলাইনসহ জব সিকোয়েন্সিং"
+  },
+  "summary": {
+    "en": "Schedule optional unit-time jobs by profit and use the latest free slot before each deadline.",
+    "bn": "একক সময়ের ঐচ্ছিক কাজ লাভ অনুযায়ী নিয়ে deadline-এর আগের শেষ ফাঁকা slot-এ বসাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "algo-huffman-coding"
+  ],
+  "related": [
+    "algo-dp-introduction"
+  ],
+  "keywords": [
+    "Job Sequencing with Deadlines",
+    "C17",
+    "greedy",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Job Sequencing with Deadlines implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Earn profit before a deadline"
+    },
+    {
+      "id": "syntax",
+      "title": "Choose profit, then place late"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Leave early slots for tight deadlines"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Profit order and slot choices"
+    },
+    {
+      "id": "correctness",
+      "title": "Why higher profit can be accepted first"
+    },
+    {
+      "id": "complexity",
+      "title": "The slot search can be quadratic"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Check what each deadline means"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Reject only after searching allowed earlier slots"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 records and slot bounds"
+    },
+    {
+      "id": "summary",
+      "title": "Protect scarce early slots"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Leave earlier slots free",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Job 0 occupies slot 2, leaving slot 1 for job 2. Job 4 fills slot 3; profit is 142.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Every job expires after slot one",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Only the most profitable job fits the common deadline.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Ignore unprofitable optional jobs",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Jobs are optional. Taking a negative-profit job would reduce the objective.</p>\n"
+    }
+  ],
+  "labs": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Maximum deadline profit",
+      "statementHtml": "<p>Read n (0..16), then deadline profit pairs (deadline 0..100, profit -99..999). Print Enter n and deadline profit pairs: first, then profit = P. Each optional job takes one slot and earns profit only if finished by its deadline.</p>\n",
+      "hints": [
+        "Use slots numbered 1..n in the argument and array positions 0..n-1 in C."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Print the selected slot schedule",
+      "statementHtml": "<p>Read the same job format and bounds. Print Enter n and deadline profit pairs:, profit = P, then n original IDs separated by spaces, using -1 for an idle slot.</p>\n",
+      "hints": [
+        "Place each accepted job in the latest available slot before its deadline."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Job Sequencing with Deadlines: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Job Sequencing with Deadlines covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "Each job occupies exactly one completion slot."
+      ],
+      "answerHtml": "<p>For unit jobs with deadlines, a chosen set is feasible exactly when, for every time t, at most t chosen jobs have deadlines at most t. Necessity follows because those jobs must all finish in the first t slots. Sufficiency follows by sorting the chosen jobs by deadline and placing them in that order: the kth job's deadline must be at least k.</p>\n\n<p>These feasible sets have an exchange property. Suppose feasible sets A and B satisfy |A|&lt;|B|. Some job in B outside A can be added to A feasibly. One way to see this is to inspect tight deadline prefixes of A. A prefix is tight when its t early-deadline jobs already fill all t slots. If every outside job were blocked by a tight prefix, the largest such prefix would contain every outside job, contradicting B's feasibility and greater size.</p>\n\n<p>This exchange property is the reason profit order is safe. Maintain an optimal feasible set agreeing with decisions already accepted. If the next accepted greedy job is missing from that optimum, exchange it with a conflicting later-considered job while preserving feasibility. That removed job has no larger profit because of the ordering. The optimum can therefore agree with one more greedy choice without losing value.</p>\n\n<p>The latest-free-slot procedure is a correct feasibility test for the accepted set. If no slot through a new deadline is free, those slots are occupied. Any earlier-deadline occupant cannot move later; a more flexible occupant was already placed as late as possible when inserted. Following such blocking relationships yields a saturated deadline prefix. The new job would exceed its capacity, so rejection is necessary.</p>\n\n<p>Equivalently, you can independently test the selected set using the deadline-prefix condition after every insertion. This provides a useful small-input reference for the placement routine. The proof depends on unit durations: counting jobs and counting occupied slots then measure the same resource.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Job Sequencing with Deadlines: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Job Sequencing with Deadlines. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "A linear slot search gives quadratic placement time."
+      ],
+      "answerHtml": "<p>Sorting n jobs costs O(n log n) with a suitable comparison sort. The shown routine may inspect n slots for each of n jobs, giving O(n²) worst-case placement time. This dominates the sorting bound. Merely seeing a sort at the beginning does not make the complete algorithm O(n log n).</p>\n\n<p>The slots array has n entries, and the sort modifies the input order. Placement uses Θ(1) additional variables beyond the arrays. A more advanced implementation can find the latest free slot with a disjoint-set structure. That improvement changes the data structure, while profit ordering and the scheduling argument stay the same.</p>\n\n<p>Skipping zero or negative profits avoids filling slots with choices that cannot improve the objective. If a problem requires every job to run or penalises missing jobs, that is a different objective. The optional-job version may leave idle time even when unprofitable work exists.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which duration assumption supports this job-sequencing routine?",
+      "options": [
+        "Every job takes one slot",
+        "Every job takes its deadline slots",
+        "Durations may be arbitrary",
+        "Every profit equals duration"
+      ],
+      "answer": 0,
+      "explanation": "Unit duration gives the deadline-prefix exchange property."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Where should an accepted job be placed?",
+      "options": [
+        "Always in the first free slot",
+        "The latest free slot through its deadline",
+        "One slot after its deadline",
+        "At its original input position"
+      ],
+      "answer": 1,
+      "explanation": "Late placement leaves earlier slots available to tighter deadlines."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which job is considered first?",
+      "options": [
+        "The smallest deadline regardless of profit",
+        "The longest job",
+        "The greatest positive profit",
+        "The greatest original ID"
+      ],
+      "answer": 2,
+      "explanation": "Profit order protects valuable jobs while feasibility controls admission."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does deadline two permit?",
+      "options": [
+        "Starting only at time two",
+        "Only slot three",
+        "Any slot if profit is high",
+        "Completion in slot one or two"
+      ],
+      "answer": 3,
+      "explanation": "A deadline is an upper bound on completion time."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can deadlines be capped at n for n jobs?",
+      "options": [
+        "A feasible selected set can be shifted into the first n slots",
+        "Every deadline must originally equal n",
+        "Jobs after n earn double profit",
+        "C arrays forbid larger times"
+      ],
+      "answer": 0,
+      "explanation": "At most n unit jobs can be selected."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the worst placement cost of backward linear slot scans?",
+      "options": [
+        "O(log n)",
+        "O(n²)",
+        "O(n log log n)",
+        "O(1)"
+      ],
+      "answer": 1,
+      "explanation": "Each job may inspect up to n allowed slots."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why skip a negative-profit optional job?",
+      "options": [
+        "It always has deadline zero",
+        "It must run after all others",
+        "It cannot improve the total earned profit",
+        "Sorting cannot compare negative values"
+      ],
+      "answer": 2,
+      "explanation": "Optional selection allows leaving an unprofitable slot idle."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which array position is the latest free slot through deadline two?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int slots[]={-1,-1,-1},position=-1;\n    for(int i=1;i>=0;i--){if(slots[i]==-1){position=i;break;}}\n    printf(\"%d\\n\",position);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "0",
+        "3",
+        "1"
+      ],
+      "answer": 3,
+      "explanation": "Slot two is stored at zero-based position one."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which total profit comes from jobs earning 100,27 and 15?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int profit[]={100,27,15},total=0;\n    for(int i=0;i<3;i++){total+=profit[i];}\n    printf(\"%d\\n\",total);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "142",
+        "143",
+        "141",
+        "144"
+      ],
+      "answer": 0,
+      "explanation": "The three feasible jobs earn 142 altogether."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many positive slots are inspected for deadline zero?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int last=0,visits=0;\n    for(int slot=last-1;slot>=0;slot--){visits++;}\n    printf(\"%d\\n\",visits);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "0",
+        "-1",
+        "2"
+      ],
+      "answer": 1,
+      "explanation": "The initial index is -1, so no positive completion slot is legal."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Each job occupies exactly one completion slot.",
+      "bn": "প্রতি কাজ ঠিক একটি slot নেয়।"
+    },
+    {
+      "en": "Consider optional jobs in decreasing positive profit.",
+      "bn": "ঐচ্ছিক কাজ ধনাত্মক লাভের বড় থেকে ছোট ক্রমে দেখো।"
+    },
+    {
+      "en": "Place accepted jobs as late as their deadlines permit.",
+      "bn": "deadline-এর মধ্যে যত দেরির ফাঁকা slot সম্ভব সেখানে বসাও।"
+    },
+    {
+      "en": "A deadline is a latest completion time.",
+      "bn": "deadline হলো কাজ শেষ করার সর্বশেষ সময়।"
+    },
+    {
+      "en": "A linear slot search gives quadratic placement time.",
+      "bn": "প্রতি কাজে slot খুঁজলে মোট সময় quadratic হতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Job Sequencing with Deadlines trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Profit-order ID</th><th scope=\"col\">Profit</th><th scope=\"col\">Chosen slot</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>0</td><td>100</td><td>2</td><td>latest free through 2</td></tr><tr><td>2</td><td>27</td><td>1</td><td>slot 2 occupied</td></tr><tr><td>3</td><td>25</td><td>rejected</td><td>slot 1 occupied</td></tr><tr><td>1</td><td>19</td><td>rejected</td><td>slot 1 occupied</td></tr><tr><td>4</td><td>15</td><td>3</td><td>latest free through 3</td></tr></tbody></table>\n\n<p>The final C array contains IDs 2,0,4,-1,-1. It records the schedule in time order, not the order in which jobs were considered. The -1 entries represent idle optional capacity. When explaining an exam schedule, show both the profit ordering and the final slot arrangement so the distinction is visible.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Job Sequencing with Deadlines method. State its assumptions.",
+      "answerHtml": "<p>For unit jobs with deadlines, a chosen set is feasible exactly when, for every time t, at most t chosen jobs have deadlines at most t. Necessity follows because those jobs must all finish in the first t slots. Sufficiency follows by sorting the chosen jobs by deadline and placing them in that order: the kth job's deadline must be at least k.</p>\n\n<p>These feasible sets have an exchange property. Suppose feasible sets A and B satisfy |A|&lt;|B|. Some job in B outside A can be added to A feasibly. One way to see this is to inspect tight deadline prefixes of A. A prefix is tight when its t early-deadline jobs already fill all t slots. If every outside job were blocked by a tight prefix, the largest such prefix would contain every outside job, contradicting B's feasibility and greater size.</p>\n\n<p>This exchange property is the reason profit order is safe. Maintain an optimal feasible set agreeing with decisions already accepted. If the next accepted greedy job is missing from that optimum, exchange it with a conflicting later-considered job while preserving feasibility. That removed job has no larger profit because of the ordering. The optimum can therefore agree with one more greedy choice without losing value.</p>\n\n<p>The latest-free-slot procedure is a correct feasibility test for the accepted set. If no slot through a new deadline is free, those slots are occupied. Any earlier-deadline occupant cannot move later; a more flexible occupant was already placed as late as possible when inserted. Following such blocking relationships yields a saturated deadline prefix. The new job would exceed its capacity, so rejection is necessary.</p>\n\n<p>Equivalently, you can independently test the selected set using the deadline-prefix condition after every insertion. This provides a useful small-input reference for the placement routine. The proof depends on unit durations: counting jobs and counting occupied slots then measure the same resource.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Job Sequencing with Deadlines from the calls, states or candidate operations.",
+      "answerHtml": "<p>Sorting n jobs costs O(n log n) with a suitable comparison sort. The shown routine may inspect n slots for each of n jobs, giving O(n²) worst-case placement time. This dominates the sorting bound. Merely seeing a sort at the beginning does not make the complete algorithm O(n log n).</p>\n\n<p>The slots array has n entries, and the sort modifies the input order. Placement uses Θ(1) additional variables beyond the arrays. A more advanced implementation can find the latest free slot with a disjoint-set structure. That improvement changes the data structure, while profit ordering and the scheduling argument stay the same.</p>\n\n<p>Skipping zero or negative profits avoids filling slots with choices that cannot improve the objective. If a problem requires every job to run or penalises missing jobs, that is a different objective. The optional-job version may leave idle time even when unprofitable work exists.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

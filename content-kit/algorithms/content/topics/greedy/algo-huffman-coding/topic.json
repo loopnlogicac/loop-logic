@@ -1,0 +1,433 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-huffman-coding",
+  "module": "greedy",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Huffman Coding",
+    "bn": "হাফম্যান কোডিং"
+  },
+  "summary": {
+    "en": "Build a deterministic min-heap Huffman tree, encode and decode messages, and justify minimum weighted path length.",
+    "bn": "min-heap দিয়ে Huffman ট্রি বানিয়ে বার্তা encode ও decode করো এবং কম বিট লাগার কারণ বোঝো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "algo-fractional-knapsack"
+  ],
+  "related": [
+    "algo-job-sequencing"
+  ],
+  "keywords": [
+    "Huffman Coding",
+    "C17",
+    "greedy",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Huffman Coding implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Short codes for frequent symbols"
+    },
+    {
+      "id": "syntax",
+      "title": "Leaves, weights and a min-heap"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Repeatedly merge the two least weights"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Merge costs reveal the final length"
+    },
+    {
+      "id": "encoding",
+      "title": "Encode and decode with the same tree"
+    },
+    {
+      "id": "correctness",
+      "title": "Why the two smallest weights are safe"
+    },
+    {
+      "id": "complexity",
+      "title": "Separate building from message processing"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not confuse queue removal with tree deletion"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 bounded node storage"
+    },
+    {
+      "id": "summary",
+      "title": "A safe merge creates an optimal code tree"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Build codes with a binary min-heap",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The smallest available nodes merge first; leaf A receives 1100 under the specified ID tie rule.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Four equally frequent symbols",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Ties are resolved by node ID, producing two-bit codes for all four symbols.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "One-symbol alphabet",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>A single leaf uses code 0 by convention so messages can carry an explicit symbol count.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "Encode FACE and decode the same bits",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The codebook concatenates FACE into 01100100111. Tree decoding emits FACE again and checks that the bit stream ends at a symbol boundary.</p>\n"
+    }
+  ],
+  "labs": [
+    "huffman-tree"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Print a deterministic codebook",
+      "statementHtml": "<p>Read n (1..16), then positive frequencies (1..99) for symbols A onward. Print Enter symbol count and positive frequencies: first. Print each leaf symbol and its bits in left-to-right leaf order, breaking heap ties by node ID.</p>\n",
+      "hints": [
+        "New internal nodes receive increasing IDs after all leaf IDs."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Measure encoded length",
+      "statementHtml": "<p>Read the same alphabet format. Print Enter symbol count and positive frequencies:, the codebook, then bits = B. A single symbol costs one bit per occurrence.</p>\n",
+      "hints": [
+        "Each leaf contributes frequency times code length."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Huffman Coding: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Huffman Coding covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "No complete prefix code is the start of another code."
+      ],
+      "answerHtml": "<p>In a full binary prefix tree, choose two sibling leaves at greatest depth. Such a pair exists because a deepest internal node has two leaf children. Let x and y be the two smallest frequencies. Moving x and y to those deepest sibling positions cannot increase weighted path length. Swapping a smaller weight downward with a larger weight upward changes cost by a nonpositive amount.</p>\n\n<p>Therefore some optimal tree places x and y as deepest siblings. Replace them by one leaf with combined frequency x+y. Every other leaf keeps its depth, while x and y each lose one edge. The original tree cost equals the reduced tree cost plus x+y. If the reduced tree were not optimal, substituting a better reduced tree would improve the original, a contradiction.</p>\n\n<p>This proves both required properties. Choosing the two least weights is a safe greedy choice, and the contracted alphabet is an optimal subproblem of the same form. Repeating the contraction reconstructs an optimal tree in reverse. The one-symbol convention is handled separately because the usual edge-depth objective has depth zero there.</p>\n\n<p>A prefix tree need not be full if it contains redundant single-child internal nodes. Removing such a node shortens all leaves below it and cannot worsen the objective. Thus for positive frequencies, an optimum can be assumed full. That observation justifies using the full-tree sibling argument rather than assuming an arbitrary tree already has the desired shape.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Huffman Coding: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Huffman Coding. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "The one-symbol code convention must be stated."
+      ],
+      "answerHtml": "<p>For n symbols, there are n-1 merges. Each merge performs two heap pops and one push, each O(log n). Inserting the initial leaves individually also costs O(n log n), so building the shown tree takes O(n log n) time. A bottom-up heap construction can reduce only the initial preparation to O(n).</p>\n\n<p>A full tree has 2n-1 nodes, and the heap contains at most n IDs. Both use O(n) space. Printing all code strings costs time proportional to their combined lengths, which may be O(n²) in a highly skewed tree. A single traversal visits O(n) nodes, but printing every ancestor bit for every leaf is additional output work.</p>\n\n<p>Encoding a message costs O(B) to emit B encoded bits once the code table is available. Decoding also costs O(B), moving one tree edge per bit. A worst-case Huffman depth can be n-1, so neither every code length nor total codebook output is guaranteed logarithmic. The heap height and code-tree height describe different structures.</p>\n"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Huffman Coding: explain the worked trace",
+      "statementHtml": "<p>Reproduce the worked Huffman Coding trace and explain each comparison or state change. State how the example handles equal candidates.</p>\n",
+      "hints": [
+        "Name the quantities in each row before making the next decision."
+      ],
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Removed weights</th><th scope=\"col\">New weight</th><th scope=\"col\">Queue weights after insertion</th></tr></thead><tbody><tr><td>5, 9</td><td>14</td><td>12,13,14,16,45</td></tr><tr><td>12, 13</td><td>25</td><td>14,16,25,45</td></tr><tr><td>14, 16</td><td>30</td><td>25,30,45</td></tr><tr><td>25, 30</td><td>55</td><td>45,55</td></tr><tr><td>45, 55</td><td>100</td><td>100</td></tr></tbody></table>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Removed weights</th><th scope=\"col\">New weight</th><th scope=\"col\">Queue weights after insertion</th></tr></thead><tbody><tr><td>5, 9</td><td>14</td><td>12,13,14,16,45</td></tr><tr><td>12, 13</td><td>25</td><td>14,16,25,45</td></tr><tr><td>14, 16</td><td>30</td><td>25,30,45</td></tr><tr><td>25, 30</td><td>55</td><td>45,55</td></tr><tr><td>45, 55</td><td>100</td><td>100</td></tr></tbody></table>\n\n<p>Adding merge weights gives 14+25+30+55+100=224. Each merge increases every descendant leaf's depth by one, adding its total subtree frequency to the bit cost. Across all merges, each leaf frequency is counted once for each edge on its final root-to-leaf path. This gives another way to measure the encoded length without constructing every message bit.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What makes a code prefix-free?",
+      "options": [
+        "No complete code begins another complete code",
+        "Every code has equal length",
+        "Every code begins with zero",
+        "Every symbol occurs once"
+      ],
+      "answer": 0,
+      "explanation": "A leaf cannot be an ancestor of another symbol leaf."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which two entries are merged by Huffman?",
+      "options": [
+        "The two greatest original frequencies",
+        "The least available subtree weights",
+        "The two deepest heap indices",
+        "The first two alphabet letters"
+      ],
+      "answer": 1,
+      "explanation": "New internal subtrees compete with leaves in the same minimum queue."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does an internal node's weight equal?",
+      "options": [
+        "Its depth",
+        "Its code length",
+        "The sum of descendant frequencies",
+        "Its left child's ID"
+      ],
+      "answer": 2,
+      "explanation": "That sum measures the added bit cost when the subtree becomes one edge deeper."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can the two least frequencies be deepest siblings in some optimum?",
+      "options": [
+        "A max-heap forces it",
+        "All optimal trees are unique",
+        "Their alphabet positions are adjacent",
+        "Exchanging smaller weights downward cannot increase weighted cost"
+      ],
+      "answer": 3,
+      "explanation": "The exchange supports contraction into one combined-frequency symbol."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "After decoding a leaf, where does the next symbol begin?",
+      "options": [
+        "At the root",
+        "At the current leaf's parent",
+        "At the leftmost leaf",
+        "At the heap minimum"
+      ],
+      "answer": 0,
+      "explanation": "Each symbol is an independent root-to-leaf path."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many tree nodes exist for n>=2 symbols?",
+      "options": [
+        "n²",
+        "2n-1",
+        "n+1",
+        "2n+1"
+      ],
+      "answer": 1,
+      "explanation": "A full binary tree with n leaves has n-1 internal nodes."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a Huffman tree always have logarithmic height?",
+      "options": [
+        "Yes, because it uses a heap",
+        "Only when n is even",
+        "No, its worst-case height can be n-1",
+        "Only when bits are binary"
+      ],
+      "answer": 2,
+      "explanation": "The min-heap shape and the resulting code-tree shape are different structures."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Under the lesson's one-symbol convention, what is its code?",
+      "options": [
+        "An obligatory empty string",
+        "1 followed by its frequency",
+        "No code is permitted",
+        "0"
+      ],
+      "answer": 3,
+      "explanation": "The explicit one-bit convention makes the single-symbol data length equal its frequency."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What total data-bit cost equals these Huffman merge weights?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int merges[]={14,25,30,55,100},bits=0;\n    for(int i=0;i<5;i++){bits+=merges[i];}\n    printf(\"%d\\n\",bits);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "224",
+        "225",
+        "223",
+        "226"
+      ],
+      "answer": 0,
+      "explanation": "Every merge adds its subtree weight once, totalling 224."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many internal nodes are created from six leaves?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int trees=6,merges=0;\n    while(trees>1){trees--;merges++;}\n    printf(\"%d\\n\",merges);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "6",
+        "5",
+        "4",
+        "7"
+      ],
+      "answer": 1,
+      "explanation": "Each merge reduces the forest size by one, so five merges remain."
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What bit cost follows the one-symbol code 0 for frequency seven?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int frequency=7,length=1;\n    printf(\"%d\\n\",frequency*length);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "8",
+        "6",
+        "7",
+        "9"
+      ],
+      "answer": 2,
+      "explanation": "The explicit one-bit convention uses seven data bits."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "No complete prefix code is the start of another code.",
+      "bn": "কোনো সম্পূর্ণ কোড অন্য সিম্বলের কোডের শুরুর অংশ নয়।"
+    },
+    {
+      "en": "Huffman merges the two smallest available subtree weights.",
+      "bn": "Huffman সবচেয়ে ছোট দুই subtree-এর ওজন মেলায়।"
+    },
+    {
+      "en": "The min-heap stores subtree root IDs.",
+      "bn": "সবচেয়ে কম ওজন আগে পেতে হিপে ছোট ট্রিগুলোর মূল নোডের পরিচয় রাখা হয়।"
+    },
+    {
+      "en": "Weighted code length equals the sum of merge weights for multiple symbols.",
+      "bn": "একাধিক সিম্বলে ব্যবহৃত মোট বিট পাওয়া যায় প্রতিবারের জোড়া ওজন যোগ করে।"
+    },
+    {
+      "en": "A decoder returns to the root after every leaf.",
+      "bn": "প্রতি leaf পড়ার পর decoder আবার root-এ যায়।"
+    },
+    {
+      "en": "The one-symbol code convention must be stated.",
+      "bn": "একটি সিম্বল থাকলে কোন কোড হবে তা ঠিক করে বলতে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Huffman Coding trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Removed weights</th><th scope=\"col\">New weight</th><th scope=\"col\">Queue weights after insertion</th></tr></thead><tbody><tr><td>5, 9</td><td>14</td><td>12,13,14,16,45</td></tr><tr><td>12, 13</td><td>25</td><td>14,16,25,45</td></tr><tr><td>14, 16</td><td>30</td><td>25,30,45</td></tr><tr><td>25, 30</td><td>55</td><td>45,55</td></tr><tr><td>45, 55</td><td>100</td><td>100</td></tr></tbody></table>\n\n<p>Adding merge weights gives 14+25+30+55+100=224. Each merge increases every descendant leaf's depth by one, adding its total subtree frequency to the bit cost. Across all merges, each leaf frequency is counted once for each edge on its final root-to-leaf path. This gives another way to measure the encoded length without constructing every message bit.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Huffman Coding method. State its assumptions.",
+      "answerHtml": "<p>In a full binary prefix tree, choose two sibling leaves at greatest depth. Such a pair exists because a deepest internal node has two leaf children. Let x and y be the two smallest frequencies. Moving x and y to those deepest sibling positions cannot increase weighted path length. Swapping a smaller weight downward with a larger weight upward changes cost by a nonpositive amount.</p>\n\n<p>Therefore some optimal tree places x and y as deepest siblings. Replace them by one leaf with combined frequency x+y. Every other leaf keeps its depth, while x and y each lose one edge. The original tree cost equals the reduced tree cost plus x+y. If the reduced tree were not optimal, substituting a better reduced tree would improve the original, a contradiction.</p>\n\n<p>This proves both required properties. Choosing the two least weights is a safe greedy choice, and the contracted alphabet is an optimal subproblem of the same form. Repeating the contraction reconstructs an optimal tree in reverse. The one-symbol convention is handled separately because the usual edge-depth objective has depth zero there.</p>\n\n<p>A prefix tree need not be full if it contains redundant single-child internal nodes. Removing such a node shortens all leaves below it and cannot worsen the objective. Thus for positive frequencies, an optimum can be assumed full. That observation justifies using the full-tree sibling argument rather than assuming an arbitrary tree already has the desired shape.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Huffman Coding from the calls, states or candidate operations.",
+      "answerHtml": "<p>For n symbols, there are n-1 merges. Each merge performs two heap pops and one push, each O(log n). Inserting the initial leaves individually also costs O(n log n), so building the shown tree takes O(n log n) time. A bottom-up heap construction can reduce only the initial preparation to O(n).</p>\n\n<p>A full tree has 2n-1 nodes, and the heap contains at most n IDs. Both use O(n) space. Printing all code strings costs time proportional to their combined lengths, which may be O(n²) in a highly skewed tree. A single traversal visits O(n) nodes, but printing every ancestor bit for every leaf is additional output work.</p>\n\n<p>Encoding a message costs O(B) to emit B encoded bits once the code table is available. Decoding also costs O(B), moving one tree edge per bit. A worst-case Huffman depth can be n-1, so neither every code length nor total codebook output is guaranteed logarithmic. The heap height and code-tree height describe different structures.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

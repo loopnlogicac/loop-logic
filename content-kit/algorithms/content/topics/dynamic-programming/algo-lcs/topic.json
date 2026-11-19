@@ -1,0 +1,397 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-lcs",
+  "module": "dynamic-programming",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Longest Common Subsequence",
+    "bn": "লংগেস্ট কমন সাবসিকোয়েন্স"
+  },
+  "summary": {
+    "en": "Fill a prefix-pair table with arrows and reconstruct one longest sequence shared by two strings.",
+    "bn": "দুই স্ট্রিংয়ের prefix টেবিল ও arrow দিয়ে একটি দীর্ঘতম সাধারণ subsequence বের করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "algo-knapsack-01"
+  ],
+  "related": [
+    "algo-edit-distance"
+  ],
+  "keywords": [
+    "Longest Common Subsequence",
+    "C17",
+    "dynamic-programming",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Longest Common Subsequence implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Keep order while skipping letters"
+    },
+    {
+      "id": "syntax",
+      "title": "State on two prefixes"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Letters match or one endpoint is skipped"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Prefix rows for ABCBDAB and BDCABA"
+    },
+    {
+      "id": "correctness",
+      "title": "Why the prefix recurrence is complete"
+    },
+    {
+      "id": "complexity",
+      "title": "Count prefix pairs and recovery moves"
+    },
+    {
+      "id": "comparison",
+      "title": "Length, one sequence and all sequences"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not reset on unequal characters"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 strings and safe buffers"
+    },
+    {
+      "id": "summary",
+      "title": "A table of paired prefixes remembers skipped letters"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Build one common subsequence",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The chosen up-on-tie rule returns BCBA, one of several length-four answers.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Repeated letters still use separate positions",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Two matched positions give AA; no position can be consumed twice.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "An empty prefix",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The zero row represents the empty string and yields length zero with an empty recovered sequence.</p>\n"
+    }
+  ],
+  "labs": [
+    "lcs-dp"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Recover an LCS of two labels",
+      "statementHtml": "<p>Read two whitespace-free uppercase strings of at most 16 characters; - denotes empty. Print Enter two strings (- means empty): first. Print length = L and sequence = S on separate lines. On unequal characters, move up on a tie.</p>\n",
+      "hints": [
+        "Write matched letters backwards into their final output positions."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Deletion count to make two labels equal",
+      "statementHtml": "<p>Read the same LCS string format. Print Enter two strings (- means empty):, then deletions = D for the fewest total deletions from both strings.</p>\n",
+      "hints": [
+        "Retain a longest common subsequence in both strings."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Longest Common Subsequence: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Longest Common Subsequence covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "A subsequence may skip letters while preserving their order."
+      ],
+      "answerHtml": "<p>If final letters differ, any common subsequence omits at least one of them as a matched endpoint. It therefore belongs to one of the two shorter-prefix problems. Choosing the larger optimum considers both possibilities. Either predecessor sequence remains a valid common subsequence after adding unused endpoint letters to the inputs.</p>\n\n<p>If final letters match, some optimum can use them as its last matched pair. Any common subsequence using an earlier occurrence of the same final letter can move that last match to the endpoints without breaking order. Removing this matched pair leaves a common subsequence of the two shorter prefixes. Extending their optimum by the shared letter is therefore optimal.</p>\n\n<p>The base row and column are correct because an empty string has no nonempty subsequence. Induction over increasing prefix lengths now proves the entire table. The filling order follows those smaller prefixes, so the C implementation reads established values rather than relying on uninitialised entries.</p>\n\n<p>For recovery, every diagonal match contributes one letter valid in both prefixes. Up and left moves discard letters without decreasing the best achievable length. The path ends with exactly dp[n][m] saved matches. Reversing them restores increasing positions in both strings, proving the returned text is a common subsequence of optimal length.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Longest Common Subsequence: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Longest Common Subsequence. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Different tied paths can produce different valid LCS strings."
+      ],
+      "answerHtml": "<p>There are (n+1)(m+1) states, each taking constant work. Full-table time and storage are Θ(nm) for positive lengths. Recovery decreases i or j at every step, giving O(n+m) time, and the output has at most min(n,m) letters. The answer buffer therefore needs that many characters plus a terminating null character.</p>\n\n<p>Two rows are enough if only the LCS length is required. Orient the shorter string as the column dimension to use O(min(n,m)) row storage. This space compression loses the simple arrow table for recovery. More advanced divide-and-conquer reconstruction can recover a sequence with linear space, but it is a separate algorithm with its own reasoning.</p>\n\n<p>The demonstrations use at most sixteen characters per string. A seventeen-by-seventeen table includes the empty boundaries, and a seventeen-character answer buffer fits the longest result plus its terminator. General applications should calculate allocation sizes from validated lengths rather than assuming that all labels are short.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which sequence is a subsequence of ABC but not a substring?",
+      "options": [
+        "AC",
+        "CA",
+        "BA",
+        "CB"
+      ],
+      "answer": 0,
+      "explanation": "A and C keep their original order but skip B."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does dp[i][j] describe for LCS?",
+      "options": [
+        "A suffix edit cost",
+        "The LCS length of two prefixes",
+        "The count of all subsequences",
+        "The index of the next match"
+      ],
+      "answer": 1,
+      "explanation": "Both coordinates count how many input characters are available."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a matching endpoint pair contribute?",
+      "options": [
+        "Always zero",
+        "Up length plus two",
+        "Diagonal length plus one",
+        "Left length minus one"
+      ],
+      "answer": 2,
+      "explanation": "Matching letters can extend an optimum for both shorter prefixes."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens when the endpoint letters differ?",
+      "options": [
+        "Reset the cell to zero",
+        "Replace one letter at cost one",
+        "Add both predecessor lengths",
+        "Choose the larger up or left value"
+      ],
+      "answer": 3,
+      "explanation": "At least one unequal endpoint is omitted from a common subsequence."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why reverse letters found during backward recovery?",
+      "options": [
+        "They were encountered last-to-first",
+        "The alphabet is reversed",
+        "The input strings were sorted",
+        "Every LCS is a palindrome"
+      ],
+      "answer": 0,
+      "explanation": "Recovery begins with the end of the common subsequence."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can two different strings both be correct LCS answers?",
+      "options": [
+        "No, LCS is always unique",
+        "Yes, when optimal choices tie",
+        "Only if their lengths differ",
+        "Only for empty strings"
+      ],
+      "answer": 1,
+      "explanation": "Different witnesses can share the same maximum length."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For lengths n,m and LCS length L, how many total deletions make both strings equal?",
+      "options": [
+        "n+m-L",
+        "L",
+        "n+m-2L",
+        "abs(n-m) in every case"
+      ],
+      "answer": 2,
+      "explanation": "Keep the L shared letters and delete all others from both strings."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which LCS length follows a matching diagonal of length two?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int diagonal=2;\n    printf(\"%d\\n\",diagonal+1);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4",
+        "2",
+        "5",
+        "3"
+      ],
+      "answer": 3,
+      "explanation": "A shared endpoint adds one matched letter."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which length is chosen from unequal-letter predecessors three and two?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int up=3,left=2;\n    printf(\"%d\\n\",up>=left?up:left);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "4",
+        "2",
+        "5"
+      ],
+      "answer": 0,
+      "explanation": "The maximum retains the three-letter common subsequence."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many deletions follow LCS length two for strings of lengths three and two?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int n=3,m=2,length=2;\n    printf(\"%d\\n\",n+m-2*length);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "1",
+        "0",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "Keep two common letters in each string and delete the one extra letter."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A subsequence may skip letters while preserving their order.",
+      "bn": "subsequence-এ অক্ষর বাদ যায়, কিন্তু ক্রম বদলায় না।"
+    },
+    {
+      "en": "LCS states describe pairs of prefix lengths.",
+      "bn": "LCS state দুই prefix-এর দৈর্ঘ্য বোঝায়।"
+    },
+    {
+      "en": "Matching endpoints extend the diagonal value by one.",
+      "bn": "শেষ অক্ষর মিললে তির্যক ঘরের মানে এক যোগ হয়।"
+    },
+    {
+      "en": "Unequal endpoints compare the up and left answers.",
+      "bn": "শেষ অক্ষর আলাদা হলে ওপর ও বাঁয়ের উত্তর তুলনা করো।"
+    },
+    {
+      "en": "Reverse backward matches to obtain the forward LCS.",
+      "bn": "পেছন থেকে পাওয়া মিল উল্টে সামনে থেকে LCS লেখো।"
+    },
+    {
+      "en": "Different tied paths can produce different valid LCS strings.",
+      "bn": "সমান মানের ভিন্ন পথে ভিন্ন সঠিক LCS পাওয়া যায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Longest Common Subsequence trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">a prefix / b prefix</th><th scope=\"col\">empty</th><th scope=\"col\">B</th><th scope=\"col\">BD</th><th scope=\"col\">BDC</th><th scope=\"col\">BDCA</th><th scope=\"col\">BDCAB</th><th scope=\"col\">BDCABA</th></tr></thead><tbody><tr><td>empty</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>A</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td></tr><tr><td>AB</td><td>0</td><td>1</td><td>1</td><td>1</td><td>1</td><td>2</td><td>2</td></tr><tr><td>ABC</td><td>0</td><td>1</td><td>1</td><td>2</td><td>2</td><td>2</td><td>2</td></tr><tr><td>ABCB</td><td>0</td><td>1</td><td>1</td><td>2</td><td>2</td><td>3</td><td>3</td></tr><tr><td>ABCBD</td><td>0</td><td>1</td><td>2</td><td>2</td><td>2</td><td>3</td><td>3</td></tr><tr><td>ABCBDA</td><td>0</td><td>1</td><td>2</td><td>2</td><td>3</td><td>3</td><td>4</td></tr><tr><td>ABCBDAB</td><td>0</td><td>1</td><td>2</td><td>2</td><td>3</td><td>4</td><td>4</td></tr></tbody></table>\n\n<p>The table uses ABCBDAB and BDCABA, matching the first C example and the lab's initial input. Bottom-right length four is the optimum, and up-on-tie recovery returns BCBA. Other recovery paths can attain the same length. Arrows select one witness, not every witness.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Longest Common Subsequence method. State its assumptions.",
+      "answerHtml": "<p>If final letters differ, any common subsequence omits at least one of them as a matched endpoint. It therefore belongs to one of the two shorter-prefix problems. Choosing the larger optimum considers both possibilities. Either predecessor sequence remains a valid common subsequence after adding unused endpoint letters to the inputs.</p>\n\n<p>If final letters match, some optimum can use them as its last matched pair. Any common subsequence using an earlier occurrence of the same final letter can move that last match to the endpoints without breaking order. Removing this matched pair leaves a common subsequence of the two shorter prefixes. Extending their optimum by the shared letter is therefore optimal.</p>\n\n<p>The base row and column are correct because an empty string has no nonempty subsequence. Induction over increasing prefix lengths now proves the entire table. The filling order follows those smaller prefixes, so the C implementation reads established values rather than relying on uninitialised entries.</p>\n\n<p>For recovery, every diagonal match contributes one letter valid in both prefixes. Up and left moves discard letters without decreasing the best achievable length. The path ends with exactly dp[n][m] saved matches. Reversing them restores increasing positions in both strings, proving the returned text is a common subsequence of optimal length.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Longest Common Subsequence from the calls, states or candidate operations.",
+      "answerHtml": "<p>There are (n+1)(m+1) states, each taking constant work. Full-table time and storage are Θ(nm) for positive lengths. Recovery decreases i or j at every step, giving O(n+m) time, and the output has at most min(n,m) letters. The answer buffer therefore needs that many characters plus a terminating null character.</p>\n\n<p>Two rows are enough if only the LCS length is required. Orient the shorter string as the column dimension to use O(min(n,m)) row storage. This space compression loses the simple arrow table for recovery. More advanced divide-and-conquer reconstruction can recover a sequence with linear space, but it is a separate algorithm with its own reasoning.</p>\n\n<p>The demonstrations use at most sixteen characters per string. A seventeen-by-seventeen table includes the empty boundaries, and a seventeen-character answer buffer fits the longest result plus its terminator. General applications should calculate allocation sizes from validated lengths rather than assuming that all labels are short.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

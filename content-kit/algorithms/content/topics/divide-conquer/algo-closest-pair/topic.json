@@ -1,0 +1,416 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-closest-pair",
+  "module": "divide-conquer",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Closest Pair of Points",
+    "bn": "দুই নিকটতম বিন্দু"
+  },
+  "summary": {
+    "en": "Use y-ordered merging and a narrow strip to find the closest planar pair in O(n log n) time.",
+    "bn": "y অনুযায়ী মার্জ ও মাঝের strip দিয়ে দ্রুত দুই নিকটতম বিন্দু খুঁজে বের করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "algo-fast-exponentiation"
+  ],
+  "related": [
+    "algo-greedy-method"
+  ],
+  "keywords": [
+    "Closest Pair of Points",
+    "C17",
+    "divide-conquer",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Closest Pair of Points implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Find nearby locations"
+    },
+    {
+      "id": "syntax",
+      "title": "A recursive ordering contract"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Combine through the middle strip"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "A close pair across the split"
+    },
+    {
+      "id": "correctness",
+      "title": "Why only a few neighbours matter"
+    },
+    {
+      "id": "complexity",
+      "title": "Pay linear work at each level"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Coordinates, duplicates and output goals"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Preserve the merge contract"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 record comparisons"
+    },
+    {
+      "id": "summary",
+      "title": "Geometry makes combining affordable"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Merge y order through the recursion",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The points (2,1) and (3,1) are one unit apart; the squared result is 1.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Brute-force squared distances",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Ten pairs confirm the same squared distance without recursion.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Coincident points",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Distinct records may share coordinates. Their distance is zero, so no smaller pair exists.</p>\n"
+    }
+  ],
+  "labs": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Nearest two campus locations",
+      "statementHtml": "<p>Read n (2..16) and n coordinate pairs (-99..99), after Enter n and points:. Print squared distance = D for the closest distinct records.</p>\n",
+      "hints": [
+        "Save the dividing x coordinate before recursive calls rearrange points by y."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Count equally close pairs",
+      "statementHtml": "<p>Read the same coordinate format and bounds. Print Enter n and points:, then nearest pairs = C. Count unordered pairs attaining the minimum squared distance.</p>\n",
+      "hints": [
+        "The final counting scan is quadratic even though the minimum search is faster."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Closest Pair of Points: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Closest Pair of Points covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "Squared distances preserve nearest-pair ordering."
+      ],
+      "answerHtml": "<p>Any optimal pair lies within a child slice or crosses the split. Recursive answers handle the within-child cases. For a crossing improvement over distance d, both endpoints lie in the strip and their vertical difference is below d. Thus scanning strip points in y order cannot miss an improving pair if it checks the relevant nearby successors.</p>\n\n<p>The packing argument bounds those successors. Consider a strip window of width 2d and height d above a point. Its left and right half-windows each have width d. Subdivide each half into four squares of side d/2. Within one child slice, two points in one small square would be less than d apart, contradicting the child's minimum-distance bound.</p>\n\n<p>There are at most eight occupied small squares across both sides, counting the starting point. Consequently at most seven later points need comparison. Boundary equality can be assigned consistently to neighbouring boxes; only pairs strictly closer than d matter. Points sharing the dividing x coordinate retain their child identity from the original split, so the same per-child separation argument applies.</p>\n\n<p>If the best distance becomes zero, no smaller nonnegative distance exists. The strip tests may then admit no candidates, which is safe. The algorithm seeks the minimum value rather than all tied pairs. Counting every closest pair is a different output requirement and may require considering many duplicates.</p>\n\n<p>Induction now completes correctness. Small slices are checked exhaustively. Larger slices return correct child values by assumption, merge y order correctly, and inspect every possible crossing improvement under the strip bound. The minimum of those cases is the global minimum. Each child is shorter, so recursion reaches a base.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Closest Pair of Points: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Closest Pair of Points. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Duplicate coordinates make the minimum distance zero."
+      ],
+      "answerHtml": "<p>The initial x ordering costs O(n log n) with a comparison sort that guarantees that bound. At each recursive node, merging y orders takes Θ(n) work. Collecting the strip takes Θ(n), and at most seven comparisons per strip point add O(n). Thus T(n)=2T(n/2)+Θ(n), giving Θ(n log n) recursive time.</p>\n\n<p>The shared scratch array holds O(n) records. Active recursion adds O(log n) stack frames. This makes auxiliary space O(n), excluding the input records. Do not allocate a fresh n-element array in every live call without accounting for those allocations. Passing one reusable buffer keeps the memory argument tied to the implementation.</p>\n\n<p>The C example uses qsort for the initial x ordering. C specifies its ordering behavior but does not guarantee a particular complexity. The O(n log n) algorithm bound assumes a suitable initial sorting routine, such as guaranteed merge sort. The closest routine itself has the stated recurrence independently of which correct initial sorter is chosen.</p>\n"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Closest Pair of Points: explain the worked trace",
+      "statementHtml": "<p>Reproduce the worked Closest Pair of Points trace and explain each comparison or state change. State how the example handles equal candidates.</p>\n",
+      "hints": [
+        "Name the quantities in each row before making the next decision."
+      ],
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">Squared bound</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>Left pair (0,0),(2,1)</td><td>5</td><td>Only two left points</td></tr><tr><td>Right minimum</td><td>20</td><td>(3,1) to (5,5)</td></tr><tr><td>Cross (2,1),(3,1)</td><td>1</td><td>Inside the strip</td></tr><tr><td>Final</td><td>1</td><td>No closer pair</td></tr></tbody></table>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">Squared bound</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>Left pair (0,0),(2,1)</td><td>5</td><td>Only two left points</td></tr><tr><td>Right minimum</td><td>20</td><td>(3,1) to (5,5)</td></tr><tr><td>Cross (2,1),(3,1)</td><td>1</td><td>Inside the strip</td></tr><tr><td>Final</td><td>1</td><td>No closer pair</td></tr></tbody></table>\n\n<p>The x-sorted root slices are [(0,0),(2,1)] and [(3,1),(5,5),(9,9)]. The left answer has squared distance 5, and the right answer is 20. The cross-boundary points (2,1) and (3,1) improve the result to 1. Solving only the two halves would therefore return the wrong value 5.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why compare squared distances instead of distances?",
+      "options": [
+        "Squaring preserves nonnegative distance order",
+        "It changes the nearest pair",
+        "It removes the need to subtract coordinates",
+        "It makes coordinate ties impossible"
+      ],
+      "answer": 0,
+      "explanation": "Square root is increasing, so it is unnecessary for deciding the minimum."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What ordering must each closest call return?",
+      "options": [
+        "Original input order",
+        "Nondecreasing y order within its slice",
+        "Decreasing distance from the origin",
+        "Only x order"
+      ],
+      "answer": 1,
+      "explanation": "The parent merges child y orders in linear time."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When must split_x be saved?",
+      "options": [
+        "After the final y merge",
+        "Only after gathering the strip",
+        "Before recursive calls reorder points",
+        "After returning the distance"
+      ],
+      "answer": 2,
+      "explanation": "a[mid] may refer to a different point after child calls."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many later strip neighbours suffice per point?",
+      "options": [
+        "Every other strip point",
+        "Exactly n/2",
+        "One regardless of geometry",
+        "At most seven"
+      ],
+      "answer": 3,
+      "explanation": "The packing argument bounds possible closer points in the vertical window."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens when two point records share coordinates?",
+      "options": [
+        "The minimum distance is zero",
+        "One record must be deleted",
+        "The problem has no answer",
+        "The minimum is one"
+      ],
+      "answer": 0,
+      "explanation": "Distinct records may coincide and form a zero-distance pair."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What cost results from sorting every strip afresh?",
+      "options": [
+        "O(log n)",
+        "O(n log² n)",
+        "Θ(n)",
+        "O(n² log² n)"
+      ],
+      "answer": 1,
+      "explanation": "A logarithmic sort factor appears in the combine work at every level."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is n>=2 a public closest-pair precondition?",
+      "options": [
+        "The array cannot hold one point",
+        "A singleton always has distance zero",
+        "One point has no distinct pair",
+        "qsort requires at least two records"
+      ],
+      "answer": 2,
+      "explanation": "Absence of a pair is different from a real zero-distance pair."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does C guarantee qsort takes O(n log n) time?",
+      "options": [
+        "Yes, in every C17 library",
+        "Only when IDs are unique",
+        "Only for Point records",
+        "No, its complexity is not specified"
+      ],
+      "answer": 3,
+      "explanation": "The theoretical presort bound assumes an appropriate sorting implementation."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which squared distance joins (2,1) and (3,1)?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    long long dx=2LL-3,dy=1LL-1;\n    printf(\"%lld\\n\",dx*dx+dy*dy);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "2",
+        "0",
+        "3"
+      ],
+      "answer": 0,
+      "explanation": "Only the x coordinates differ by one."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many unordered pairs does a five-point brute-force loop inspect?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int count=0;\n    for(int i=0;i<5;i++){for(int j=i+1;j<5;j++){count++;}}\n    printf(\"%d\\n\",count);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "11",
+        "10",
+        "9",
+        "12"
+      ],
+      "answer": 1,
+      "explanation": "There are 5×4/2=10 unordered distinct pairs."
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does a point at dx=3 enter a strict strip with squared bound 9?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    long long dx=3,best=9;\n    printf(\"%d\\n\",dx*dx<best);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "-1",
+        "0",
+        "2"
+      ],
+      "answer": 2,
+      "explanation": "Equality cannot improve the current distance, so the strict test is false."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Squared distances preserve nearest-pair ordering.",
+      "bn": "দূরত্বের বর্গ তুলনা করলেও নিকটতম জোড়া একই থাকে।"
+    },
+    {
+      "en": "Children return their points ordered by y.",
+      "bn": "ছোট অংশগুলো y অনুযায়ী সাজিয়ে ফেরত দেয়।"
+    },
+    {
+      "en": "Save the split coordinate before recursive rearrangement.",
+      "bn": "রিকারশনে সাজানো বদলানোর আগে ভাগের x মান রাখো।"
+    },
+    {
+      "en": "The strip needs at most seven later neighbours per point.",
+      "bn": "strip-এ প্রতি বিন্দুর পরের সর্বোচ্চ সাতটি দেখলেই হয়।"
+    },
+    {
+      "en": "Duplicate coordinates make the minimum distance zero.",
+      "bn": "দুই রেকর্ডের স্থান একই হলে ন্যূনতম দূরত্ব শূন্য।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Closest Pair of Points trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Stage</th><th scope=\"col\">Squared bound</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>Left pair (0,0),(2,1)</td><td>5</td><td>Only two left points</td></tr><tr><td>Right minimum</td><td>20</td><td>(3,1) to (5,5)</td></tr><tr><td>Cross (2,1),(3,1)</td><td>1</td><td>Inside the strip</td></tr><tr><td>Final</td><td>1</td><td>No closer pair</td></tr></tbody></table>\n\n<p>The x-sorted root slices are [(0,0),(2,1)] and [(3,1),(5,5),(9,9)]. The left answer has squared distance 5, and the right answer is 20. The cross-boundary points (2,1) and (3,1) improve the result to 1. Solving only the two halves would therefore return the wrong value 5.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Closest Pair of Points method. State its assumptions.",
+      "answerHtml": "<p>Any optimal pair lies within a child slice or crosses the split. Recursive answers handle the within-child cases. For a crossing improvement over distance d, both endpoints lie in the strip and their vertical difference is below d. Thus scanning strip points in y order cannot miss an improving pair if it checks the relevant nearby successors.</p>\n\n<p>The packing argument bounds those successors. Consider a strip window of width 2d and height d above a point. Its left and right half-windows each have width d. Subdivide each half into four squares of side d/2. Within one child slice, two points in one small square would be less than d apart, contradicting the child's minimum-distance bound.</p>\n\n<p>There are at most eight occupied small squares across both sides, counting the starting point. Consequently at most seven later points need comparison. Boundary equality can be assigned consistently to neighbouring boxes; only pairs strictly closer than d matter. Points sharing the dividing x coordinate retain their child identity from the original split, so the same per-child separation argument applies.</p>\n\n<p>If the best distance becomes zero, no smaller nonnegative distance exists. The strip tests may then admit no candidates, which is safe. The algorithm seeks the minimum value rather than all tied pairs. Counting every closest pair is a different output requirement and may require considering many duplicates.</p>\n\n<p>Induction now completes correctness. Small slices are checked exhaustively. Larger slices return correct child values by assumption, merge y order correctly, and inspect every possible crossing improvement under the strip bound. The minimum of those cases is the global minimum. Each child is shorter, so recursion reaches a base.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Closest Pair of Points from the calls, states or candidate operations.",
+      "answerHtml": "<p>The initial x ordering costs O(n log n) with a comparison sort that guarantees that bound. At each recursive node, merging y orders takes Θ(n) work. Collecting the strip takes Θ(n), and at most seven comparisons per strip point add O(n). Thus T(n)=2T(n/2)+Θ(n), giving Θ(n log n) recursive time.</p>\n\n<p>The shared scratch array holds O(n) records. Active recursion adds O(log n) stack frames. This makes auxiliary space O(n), excluding the input records. Do not allocate a fresh n-element array in every live call without accounting for those allocations. Passing one reusable buffer keeps the memory argument tied to the implementation.</p>\n\n<p>The C example uses qsort for the initial x ordering. C specifies its ordering behavior but does not guarantee a particular complexity. The O(n log n) algorithm bound assumes a suitable initial sorting routine, such as guaranteed merge sort. The closest routine itself has the stated recurrence independently of which correct initial sorter is chosen.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

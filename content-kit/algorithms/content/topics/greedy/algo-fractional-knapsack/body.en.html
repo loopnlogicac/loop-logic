@@ -1,0 +1,80 @@
+<h2 id="introduction">You may take part of an item</h2>
+<p class="lead">A storage bag can carry a limited weight of divisible material. Each available lot has a weight and a total value. You may take any fraction of a lot, and its earned value changes in the same fraction. Fractional knapsack asks for the greatest value within the weight capacity.</p>
+
+<p>Think of grain sold by weight. Taking half of a 20-kilogram lot worth 100 taka contributes 10 kilograms and 50 taka. This proportional-value assumption is essential. An indivisible device cannot generally be split into equally useful fractions. The later 0/1 knapsack problem therefore requires another method.</p>
+
+<p>All item weights here are positive, values are nonnegative, and leaving capacity unused is allowed. Each lot has a finite available weight. You cannot repeatedly take copies of a lot beyond that limit. A zero-value lot may fit but adds nothing to the objective.</p>
+
+<h2 id="syntax">Order by value density</h2>
+<pre><code class="language-text">sort items by decreasing value / weight; tie by id
+total = 0
+for each item while capacity &gt; 0
+    take = min(weight, capacity)
+    total = total + take * value / weight
+    capacity = capacity - take
+return total</code></pre>
+<p>An item's ratio value/weight is its value density: the value earned by one unit of weight. Sort lots by decreasing ratio. For each lot, take min(weight,remaining capacity). Add take×value/weight to the total and subtract take from the remaining capacity. The last selected lot may be partial; later lots are unnecessary once capacity reaches zero.</p>
+
+<p>The record comparator uses cross multiplication. Compare valueA×weightB with valueB×weightA rather than dividing integers. Positive weights preserve the direction of this comparison. The products use long long under the stated bounds. Original ID resolves equal ratios deterministically without changing the optimal value.</p>
+
+<h2 id="how-it-works">Spend capacity where it earns most</h2>
+<p>The example lots have (weight,value) pairs (10,60),(20,100),(30,120). Their densities are 6,5,4. With capacity 50, take all 10 units of the first lot and all 20 units of the second. The remaining capacity is 20, so take two-thirds of the third lot. The earned value is 60+100+80=240.</p>
+
+<p>The optimal plan has at most one partially selected lot when processed in this ratio order. All earlier positive-density lots are full, the final selected lot fills any remaining capacity, and all later lots are absent. Equal-density lots may be split in many equivalent ways, but their total value per consumed unit is identical.</p>
+
+<p>Enough capacity for all lots gives the sum of all values. Increasing capacity beyond the available total weight changes nothing. With zero capacity, take nothing and return zero. These cases follow from the same loop because the loop condition requires positive remaining capacity.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">A final partial item</h3>
+<p>Ratios 6, 5 and 4 fill the capacity with all of the first two items and two-thirds of the last.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Enough capacity for every item</h3>
+<p>All three items fit, so unused capacity has no further value.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Equal ratios need no special choice</h3>
+<p>Every unit is worth 2. Any feasible mixture of total weight 15 earns 30.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Filling a fifty-unit bag</h2>
+<table class="ref"><thead><tr><th scope="col">Lot ID</th><th scope="col">Density</th><th scope="col">Weight taken</th><th scope="col">Value gained</th><th scope="col">Capacity left</th></tr></thead><tbody><tr><td>0</td><td>6</td><td>10</td><td>60</td><td>40</td></tr><tr><td>1</td><td>5</td><td>20</td><td>100</td><td>20</td></tr><tr><td>2</td><td>4</td><td>20</td><td>80</td><td>0</td></tr></tbody></table>
+
+<p>The second exercise asks how much value one extra capacity unit earns. At capacity 50 in the example, the next unit still comes from the density-four lot, so it adds 4. Once all 60 available weight units fit, the extra unit adds zero. This marginal value comes from the next unconsumed material.</p>
+
+<h2 id="correctness">Exchange weight rather than whole items</h2>
+<p>Suppose a feasible solution takes some material from a lower-density lot while leaving material available in a higher-density lot. Exchange a small equal weight between those two lots. The capacity used stays unchanged. Because the replacement density is higher, the earned value increases. Such a solution cannot have been optimal.</p>
+
+<p>Repeat this exchange until the higher-density lot is full or the lower-density material is removed. An optimum can therefore fill the highest-density available lot before using any strictly lower-density material. Equal densities may be exchanged without changing value. After fixing that amount, apply the same reasoning to the remaining capacity and lots.</p>
+
+<p>This proof relies on arbitrary fractions. A small equal-weight exchange may be impossible when items must remain whole. For example, capacity 50 and the three example items allow only value 220 from whole items 1 and 2. Ratio-first whole-item selection takes the first two items for value 160 and cannot fit the last. Fractional selection reaches 240 because the final 20 units are permitted.</p>
+
+<p>The invariant for the scan is that the processed material has been taken in decreasing density order, and an optimal solution exists agreeing with those choices. The exchange establishes the next choice. When no capacity or no material remains, there is no positive-value feasible extension that improves that agreed optimum.</p>
+
+<h2 id="complexity">Sorting dominates the scan</h2>
+<p>For n lots, a suitable comparison sort takes O(n log n), and the fill loop takes Θ(n) in the worst case. If capacity fills early, the loop may stop sooner, but the initial sort still happened. Sorting the same list again for many capacity queries is unnecessary if the order can be reused.</p>
+
+<p>The shown value routine changes the input record order and keeps only a running double total and integer capacity. Its scan uses Θ(1) auxiliary space. Outputting every taken fraction would require up to O(n) output records. Sorting's internal storage depends on the library implementation; C does not promise qsort's algorithm or complexity.</p>
+
+<p>The ratio proof concerns exact proportional values. The C examples use double only when adding a fractional value and print two decimals. Small rounding differences do not decide the ordering because the comparator uses exact integer cross products. If exact accounting fractions are required, keep rational numerators and denominators or specify a rounding policy.</p>
+
+<h2 id="comparison">Whole-item and zero-weight variants</h2>
+<p>The fractional answer is an upper bound on the best 0/1 answer for the same lots and capacity. Every whole-item solution is also a permitted fractional solution. A larger feasible set cannot have a smaller maximum. However, rounding fractional choices to whole items does not generally preserve optimality.</p>
+
+<p>The examples reject zero weights. A positive-value zero-weight item would be a special free contribution, and its ratio is not defined by ordinary division. Negative values would also need an explicit rule to skip them rather than filling capacity mechanically. Defining these contracts keeps the ratio loop and its proof aligned.</p>
+
+<p>Sometimes a problem gives unit prices directly. Then compare those prices rather than treating total value as a density. Conversely, a large total value may come from an extremely heavy lot with a poor unit value. Always check what each input number measures before choosing the sorting key.</p>
+
+<h2 id="common-mistakes">Keep the fraction in the arithmetic</h2>
+<p>Writing take/weight with integer operands truncates a proper fraction to zero. Convert before division, as in (double)take*value/weight. The multiplication and division then describe proportional value. Do not round every partial contribution to an integer unless the problem explicitly defines that accounting rule.</p>
+
+<p>Sorting by total value alone can choose a heavy low-density lot first. Sorting by smallest weight alone can choose nearly worthless material. The exchange proof uses density, so both shortcuts break its premise. Use a concrete two-lot example to test a proposed alternative sorting key.</p>
+
+<p>Cross multiplication also needs a range check. Casting only after two int values multiply does not prevent overflow in that multiplication. The comparator casts an operand to long long before multiplication. Under weights and values at most 1000, the resulting products are comfortably representable.</p>
+
+<h2 id="version-notes">C17 numeric choices</h2>
+<p>The ratio comparator uses C17 structs and the standard qsort interface. Weight and remaining capacity stay integral because the final partial lot may be described by an integer consumed weight in these examples. The earned monetary value uses double and %.2f for display. This is a teaching calculation with a stated display precision, not an unspecified rounding scheme for financial records.</p>
+
+<h2 id="summary">The ratio proof depends on divisibility</h2>
+<p>Fractional knapsack spends capacity on the greatest value per weight first. An equal-weight exchange proves that lower-density material cannot be preferred while higher-density material remains. Whole-item constraints remove that exchange freedom. Huffman coding next uses a different greedy fact: the two least frequent symbols can share the deepest sibling leaves.</p>
+<p>Continue with <a href="topic:algo-huffman-coding">Huffman Coding</a>.</p>

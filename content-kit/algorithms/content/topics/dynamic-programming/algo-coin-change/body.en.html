@@ -1,0 +1,84 @@
+<h2 id="introduction">Two questions about the same coins</h2>
+<p class="lead">With denominations 1,3,4, how should you pay an exact amount of 6? If you want the fewest coins, 3+3 is best. If you want the number of different payments, you must also count six ones, 3+1+1+1 and 4+1+1. The same inputs lead to different DP meanings and different combination operations.</p>
+
+<p>Coins are available without limit. Denominations are positive integers, and each distinct denomination represents one coin type. The payment must equal the target exactly. A payment of 7 is not acceptable for target 6 even if it uses fewer coins. Zero target has one empty payment and needs zero coins.</p>
+
+<p>Largest-first fails on 6 because it chooses 4 and then two ones. Dynamic programming compares every possible final coin instead of committing to that local choice. The stored smaller-amount answers make those comparisons efficient. You still need to define what each state counts before writing its update.</p>
+
+<h2 id="syntax">Minimum state and recurrence</h2>
+<pre><code class="language-text">dp[0] = 0; take[0] = 0
+for amount a = 1 to target
+    dp[a] = infinity; take[a] = 0
+    for each distinct coin in increasing order
+        if coin &lt;= a and dp[a-coin]+1 &lt; dp[a]
+            dp[a] = dp[a-coin]+1; take[a] = coin
+if reachable: repeatedly take take[a] and subtract it
+return minimum and recovered coins</code></pre>
+<p>Step 1, state: dp[a] is the fewest coins making exact amount a. Step 2, recurrence: dp[a]=1+min(dp[a-coin]) over denominations coin&lt;=a with reachable smaller amounts. The base is dp[0]=0. If no candidate reaches a, it is unreachable rather than an ordinary large valid count.</p>
+
+<p>The C minimum routine uses sentinel 21 because targets are at most 20 and every coin is positive. Any reachable target needs at most 20 coins. A candidate from an unreachable predecessor becomes 22 and cannot improve the sentinel. The lab displays unreachable counts as -1, while its internal calculations retain the same sentinel convention.</p>
+
+<h2 id="how-it-works">Fill smaller amounts before larger amounts</h2>
+<p>Step 3, filling order: increase a from 1 through the target. Since every coin is positive, a-coin is smaller than a. Thus each candidate reads a completed entry. Scan denominations in increasing order and update only on strict improvement. This specifies which witness is retained when several minimum payments exist.</p>
+
+<p>At amount 4, coin 1 gives dp[3]+1=2, coin 3 gives dp[1]+1=2, and coin 4 gives dp[0]+1=1. At amount 6, coin 1 offers 3 coins, coin 3 offers 2, and coin 4 offers 3. Therefore the saved final coin at 6 is 3.</p>
+
+<p>Step 4, reconstruction: store that final denomination in take[a]. Start at the target, emit take[a], and replace a by a-take[a]. Stop at zero. At 6, emit 3 and continue at 3; emit 3 again and finish. Check reachability first so an unreachable entry's zero predecessor cannot cause an endless loop.</p>
+
+<div data-lab="coin-change-dp"></div>
+<p>The grid has a minimum row and a take row. Column labels are amounts, so the animation keeps the quantity being solved visible. The unavailable-payment preset uses denominations 4 and 6 with target 5. The zero-target preset has only the two base cells and an empty recovered payment.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Minimum coins and a witness</h3>
+<p>The predecessor at amount 6 chooses coin 3, leaving 3, which also chooses 3.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Count unordered combinations</h3>
+<p>Four combinations make 6: six ones, 3+1+1+1, 3+3, and 4+1+1.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">An unreachable amount</h3>
+<p>Neither coin fits an exact total of 5, so -1 is printed and no predecessor is followed.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Minimum counts through six</h2>
+<table class="ref"><thead><tr><th scope="col">Amount</th><th scope="col">Minimum</th><th scope="col">take</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td><td>1</td></tr><tr><td>2</td><td>2</td><td>1</td></tr><tr><td>3</td><td>1</td><td>3</td></tr><tr><td>4</td><td>1</td><td>4</td></tr><tr><td>5</td><td>2</td><td>1</td></tr><tr><td>6</td><td>2</td><td>3</td></tr></tbody></table>
+
+<p>A reconstruction need not list coins in sorted order; it follows saved final choices backward. The printed sequence still represents a valid multiset whose sum is the target. The exercise fixes the predecessor tie rule so its particular sequence is predictable, even when several equally short payments are possible.</p>
+
+<h2 id="counting">A second state counts combinations</h2>
+<p>For unordered payment counts, let ways[a] count combinations using the denominations processed so far. Begin with ways[0]=1 and every positive amount zero. For each coin in the outer loop, visit amounts from coin upward and add ways[a-coin] into ways[a]. Increasing amounts allow repeated use of the current coin.</p>
+
+<p>The coin-outer order is essential. Before processing a denomination, each payment uses only earlier denominations. The update either keeps a payment without the new coin or adds one new coin to a payment that may already use it. Every multiset has one final largest processed denomination, so it is counted once.</p>
+
+<p>Putting amount in the outer loop and coins inside instead counts ordered sequences. For target 4 with coins 1 and 3, the payments 1+3 and 3+1 then count separately. That is correct only if order matters in the question. Calling both algorithms coin change without defining ways hides this important distinction.</p>
+
+<p>The denomination list must also be distinct for combination counting. Repeating denomination 3 as another type makes identical payments appear multiple times. A user-input implementation can sort and deduplicate denominations before applying the recurrence. The minimum lab normalises duplicates too, giving students one consistent interpretation of coin types.</p>
+
+<h2 id="correctness">Every payment has a final coin</h2>
+<p>For minimum coins, any nonempty exact payment for a ends with some allowed coin. Removing it leaves an exact payment for a-coin. If that remainder were not minimum, replacing it with a shorter remainder would improve the original payment. Therefore a minimum solution uses a minimum smaller solution for one of the candidates.</p>
+
+<p>The recurrence examines every possible final denomination, so it cannot miss a better payment. Each chosen candidate also constructs a valid payment from a reachable smaller amount. Starting at dp[0]=0 and inducting upward over amounts proves every minimum entry. If no candidate is reachable, no exact payment exists.</p>
+
+<p>For reconstruction, take[a] was saved only when it produced dp[a]=dp[a-take[a]]+1. Each emitted coin preserves the optimal count relationship and decreases the remaining amount. At zero, the emitted coins sum to the target and their number equals its minimum count. This proves the witness as well as the scalar answer.</p>
+
+<h2 id="complexity">Targets are a numeric dimension</h2>
+<p>For k distinct denominations and target A, both shown DPs take O(kA) time and O(A) storage. The minimum predecessor row adds another O(A), leaving the same asymptotic space. Reconstruction uses one step per recovered coin, at most A when denominations are positive integers.</p>
+
+<p>This dependence is pseudo-polynomial: A is a numeric value, while writing A in binary uses only logarithmically many input bits. A bound linear in A can still be huge for a compactly written large target. Read numeric constraints before allocating an amount-indexed table or promising a fast solution.</p>
+
+<p>Combination counts can grow much faster than minimum counts. The examples use three small fixed denominations and targets at most twenty, so int is sufficient. Larger counting tasks may require a wider type, arbitrary precision, or a stated output modulus. An unreachable minimum marker and a large valid count are different issues.</p>
+
+<h2 id="common-mistakes">Choose the right meaning for zero</h2>
+<p>Initialising every minimum to zero falsely claims every amount needs no coins. Only amount zero has that answer. For ways, the empty payment gives ways[0]=1; using zero there prevents every later count from growing. The two problems require different base meanings even though both use an amount-indexed row.</p>
+
+<p>Decreasing the amount loop in unlimited combination counting prevents reuse of the current coin and turns it into a bounded-use update. Increasing the capacity loop is correct here but incorrect for compact 0/1 knapsack. Learn why a direction respects the state instead of memorising one loop direction for all DP.</p>
+
+<p>Never follow take[a] after reporting -1. A zero take value means no saved coin, not a free coin. Reject nonpositive denominations too: zero creates a self-dependency, and negative coins break the smaller-amount order. The positive-denomination contract supports both correctness and termination.</p>
+
+<h2 id="version-notes">C17 sentinels and exact totals</h2>
+<p>The minimum programs reserve 21 amount entries for targets 0..20. Sentinel 21 is derived from those bounds, not chosen as a universal infinity. All arithmetic in the demonstrations is exact integer arithmetic. The printed coin sequence uses ordinary decimal denominations, and a zero target intentionally prints an empty coins: line.</p>
+
+<h2 id="summary">Match the table to the question</h2>
+<p>Minimum coin change chooses among final coins and stores predecessors for recovery. Unordered counting instead processes coin types outside the increasing amount loop. Their bases and meanings differ. The next topic, 0/1 knapsack, adds an item-prefix dimension so each indivisible item can be used at most once.</p>
+<p>Continue with <a href="topic:algo-knapsack-01">0/1 Knapsack</a>.</p>

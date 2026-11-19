@@ -1,0 +1,78 @@
+<h2 id="introduction">A large task made smaller</h2>
+<p class="lead">Imagine adding the fees collected from several classroom rows. You can ask two groups to total separate rows, then add their answers. Each group may divide its own rows again. This is the picture behind divide and conquer. You split a problem, solve the smaller problems, and combine their answers. The smaller problems must eventually become easy enough to solve directly.</p>
+
+<p>A recursive function is one way to express this process. Recursion alone does not guarantee a useful divide-and-conquer algorithm. A function that calls itself on the same input forever has no progress. A function that recomputes many overlapping pieces may waste work. You need to identify the size that decreases and the information returned by each call.</p>
+
+<p>The method appears in algorithms you already know. Binary search keeps one promising half. Merge sort solves both halves and merges ordered results. Quick sort partitions around a pivot before solving its remaining regions. Their recursion shapes differ because their dividing and combining work differ. Reviewing these examples helps you design a new recursive solution without guessing its cost.</p>
+
+<h2 id="syntax">A contract for a recursive interval</h2>
+<pre><code class="language-text">sum_range(a, lo, hi):
+    if hi = lo: return 0
+    if hi - lo = 1: return a[lo]
+    mid = lo + (hi - lo) / 2
+    left = sum_range(a, lo, mid)
+    right = sum_range(a, mid, hi)
+    return left + right</code></pre>
+<p>The sum routine uses a half-open interval [lo,hi). It includes lo and excludes hi, so its length is hi-lo. An empty interval has equal boundaries. A singleton has length one. Computing mid as lo+(hi-lo)/2 gives two disjoint child intervals. Neither child overlaps the other, and together they contain exactly the original elements.</p>
+
+<p>Write the function's promise before writing its calls: sum_range returns the sum of a[lo] through a[hi-1]. The array itself is never changed. A call may use an empty interval because zero is a valid sum. The recursive maximum example has a different promise: its interval must contain at least one element. Maximum has no ordinary integer identity suitable for every possible input.</p>
+
+<h2 id="how-it-works">Divide, conquer and combine</h2>
+<p>Start with the array [7,3,5,3,1]. The root interval [0,5) splits at index 2. Its children return 10 for [0,2) and 9 for [2,5). The root adds those two answers and returns 19. Notice that the odd extra element belongs to the right half. Equal child lengths are helpful for analysis, but exact equality is unnecessary.</p>
+
+<p>At a leaf, the sum routine returns one stored value. At an internal call, local variables hold the two completed child totals. The parent does not inspect every element again. Its combine operation is one addition. This choice makes total work linear rather than linear work at every recursion level. Good analysis follows the code's real combine step.</p>
+
+<p>You can replace addition with another operation when the returned information remains sufficient. The maximum example returns the larger child maximum. Counting a target returns the sum of two child match counts. However, a median cannot generally be recovered from only the two child medians. Think about what the parent needs before choosing the child's return type.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Split a fee total into two halves</h3>
+<p>The left total is 10 and the right total is 9, so the root returns 19.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">A recursive maximum instead of a sum</h3>
+<p>The combine operation chooses the larger child answer; negative input still returns -2.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Empty and singleton intervals</h3>
+<p>The empty interval contributes zero, while the one-element interval returns 8 without splitting.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Follow the returning answers</h2>
+<table class="ref"><thead><tr><th scope="col">Interval</th><th scope="col">Child answers</th><th scope="col">Returned sum</th></tr></thead><tbody><tr><td>[0,2)</td><td>7 and 3</td><td>10</td></tr><tr><td>[2,5)</td><td>5 and 4</td><td>9</td></tr><tr><td>[3,5)</td><td>3 and 1</td><td>4</td></tr><tr><td>[0,5)</td><td>10 and 9</td><td>19</td></tr></tbody></table>
+
+<p>Read the trace from leaves toward the root when checking returned values. Read it from the root toward leaves when checking call boundaries. These are different views of the same computation. A frequent exam error is to show only the split tree and never show how answers travel back. Include both the interval and the answer for each important node.</p>
+
+<h2 id="correctness">Prove the contract by interval length</h2>
+<p>For an empty interval, returning zero matches the definition of an empty sum. For a singleton, returning a[lo] also matches the contract. Now assume the routine correctly totals every shorter interval. A longer interval splits into two shorter, disjoint intervals covering its elements. By the assumption, each child returns its exact sum. Adding them therefore returns the exact parent sum.</p>
+
+<p>Termination follows from the same interval sizes. When the length is at least two, mid lies strictly between lo and hi. Each recursive child has a smaller nonnegative length. Repeated splitting must reach length zero or one. This is a complete proof: the base case establishes truth, the combine step preserves it, and decreasing length prevents an endless chain.</p>
+
+<p>For recursive maximum, keep the nonempty precondition explicit. The base is length one, and neither child of a larger nonempty interval is empty. Choosing the larger of two correct maxima returns the maximum of their union. The proof looks similar to the sum proof, but the different base contract matters on negative-only inputs.</p>
+
+<h2 id="complexity">Build the recurrence from actual calls</h2>
+<p>For the sum, let T(n) count operations on n elements. The base cost is constant. The general recurrence is T(n)=T(floor(n/2))+T(ceil(n/2))+Θ(1). A recursion tree has n singleton leaves and n-1 internal nodes for nonempty input. Each node does constant local work, giving Θ(n) total time. Its depth is Θ(log n).</p>
+
+<p>The implementation runs its two children one after another. Their stack frames are not all alive together. Peak auxiliary storage follows the longest active path, giving Θ(log n) stack space. Counting every node as simultaneous memory would confuse total calls with peak storage. A loop can total the same array in Θ(n) time and Θ(1) space, so splitting is educational here rather than a speed improvement.</p>
+
+<p>Merge sort instead spends Θ(n) merging at a level's root, giving T(n)=2T(n/2)+Θ(n). Binary search follows only one child, giving T(n)=T(n/2)+Θ(1). Quick sort has T(n)=T(k)+T(n-k-1)+Θ(n), where k depends on partition balance. These equations explain why the word recursive does not identify one complexity class.</p>
+
+<h2 id="comparison">Choose a useful division</h2>
+<p>Before applying this method to a new problem, ask four concrete questions. What input region does a call own? Which regions belong to its children? What small case can be answered immediately? What information must the parent receive? Answering those questions usually exposes a missing boundary case before you run the program.</p>
+
+<p>Balanced children help only when the extra organisation is affordable. Copying both halves on every call may add allocations or copying work. Passing boundaries into a shared array avoids those copies. Merge sort still needs merging storage, whereas the sum does not. State the storage required by your chosen implementation rather than borrowing another algorithm's bound.</p>
+
+<p>Divide and conquer also suggests parallel work because independent children can run separately. That does not remove the parent's combine work or communication cost. The C examples execute sequentially, so their reported bounds describe sequential operations. Do not claim that two recursive calls automatically run on two processors.</p>
+
+<h2 id="common-mistakes">Boundary and recurrence mistakes</h2>
+<p>Using mid in both children as an included element double-counts that position. With half-open intervals, the children are [lo,mid) and [mid,hi). Using [lo,mid] conventions in only one call mixes two different contracts. Draw the five indices and put each into exactly one child to detect the mistake.</p>
+
+<p>Stopping only at length zero while splitting a singleton can recreate the singleton forever. Check the singleton base before the general split. Also avoid writing 2T(n/2) for binary search merely because the input has two halves. Only one half is searched, so only one recursive term belongs in its recurrence.</p>
+
+<p>Returning zero as a default maximum silently changes negative-only answers. Use a real element for the nonempty maximum contract. For sums, use an arithmetic type wide enough for the permitted number of elements and values. An asymptotic proof cannot protect a C addition that overflows its signed type.</p>
+
+<h2 id="version-notes">C17 interval arithmetic</h2>
+<p>The sum examples limit inputs to sixteen values between -99 and 99, so int safely holds every partial total. The recursive calls pass the same array with integer boundaries. C17 permits the declarations used here; the divide-and-conquer idea itself has no dependence on a newer C feature. No heap allocation is needed for these routines.</p>
+
+<h2 id="summary">Describe the split before the cost</h2>
+<p>A divide-and-conquer solution needs a shrinking contract, correct small cases, and enough returned information to combine answers. Its recurrence records the calls and the local work separately. Next, study maximum subarray to see why two child maxima alone cannot describe the best interval crossing a split.</p>
+<p>Continue with <a href="topic:algo-maximum-subarray">Maximum Subarray</a>.</p>

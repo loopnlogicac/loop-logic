@@ -1,0 +1,83 @@
+<h2 id="introduction">The best consecutive run</h2>
+<p class="lead">Suppose a club records daily changes to its cash balance. Positive numbers add money, and negative numbers spend it. You want the most profitable consecutive run of days. You cannot skip a bad day inside that run. A subarray is a contiguous interval of array positions, so choosing days one, three and five alone is not allowed.</p>
+
+<p>Here the answer must contain at least one element. For [-8,-3,-6], the best sum is -3. Returning zero would mean choosing no day, which solves a different problem. Fix this convention before comparing algorithms. Several intervals can have the same best sum, so a task asking for boundaries also needs a tie rule.</p>
+
+<p>The example [-2,3,-1,4,-5] has best interval [1,4), containing 3,-1,4. Its sum is 6. This lesson solves that same problem three ways. Brute force is useful as a small-input reference. Divide and conquer explains crossing intervals. Kadane compresses the information needed to extend a prefix into two running totals.</p>
+
+<h2 id="syntax">Kadane's two running answers</h2>
+<pre><code class="language-text">ending = values[0]; best = ending
+for i = 1 to n - 1
+    ending = max(values[i], ending + values[i])
+    best = max(best, ending)
+return best</code></pre>
+<p>The variable ending means the greatest sum of a nonempty interval ending exactly at the current index. The variable best means the greatest sum anywhere in the processed prefix. Those meanings are different. An earlier profitable interval may remain best even when the most recent day makes ending negative.</p>
+
+<p>The C implementation starts both variables from a[0]. It then begins its loop at index one. That arrangement establishes the nonempty requirement without a special negative-infinity constant. The caller must provide at least one value. If an application allows an empty dataset, it must define a separate response rather than reading a[0].</p>
+
+<h2 id="how-it-works">Restart or extend</h2>
+<p>Consider the next value x. A nonempty interval ending here either begins here or extends an interval ending one position earlier. The best extension uses the previous ending, because every possible extension adds the same x. Therefore the new ending is max(x,ending+x). Comparing this with best maintains the best answer over the whole prefix.</p>
+
+<p>For the daily changes, the first ending is -2. At value 3, starting anew gives 3 while extending gives 1, so restart. At -1, extension gives 2 and restart gives -1, so keep the existing run. At 4, extension reaches 6. The final -5 lowers ending to 1, while best correctly remains 6.</p>
+
+<div data-lab="kadane"></div>
+<p>Brute force fixes a start lo and grows an end hi. Keep a running sum as hi moves right. That evaluates every nonempty interval using n(n+1)/2 additions. Recomputing each interval's sum from scratch would add an unnecessary third loop. The quadratic version is easier to trust when checking a faster implementation on short arrays.</p>
+
+<p>Divide and conquer splits at mid. An optimal interval lies wholly left, wholly right, or crosses the boundary. The first two cases come from recursive calls. For the third, scan left from mid-1 for the greatest suffix sum and right from mid for the greatest prefix sum. Adding those two sums gives the best crossing interval.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Kadane on daily balance changes</h3>
+<p>The running best ending sum reaches 6 at index 3.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Compare both halves and a crossing interval</h3>
+<p>The interval [1,4) crosses the root split and has sum 6.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Brute force on an all-negative array</h3>
+<p>A nonempty interval must choose -3; zero would incorrectly allow no elements.</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">Tied zero-sum intervals</h3>
+<p>Extending a zero sum keeps zero; several different intervals are optimal.</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">Daily changes through Kadane</h2>
+<table class="ref"><thead><tr><th scope="col">i</th><th scope="col">value</th><th scope="col">ending</th><th scope="col">best</th></tr></thead><tbody><tr><td>0</td><td>-2</td><td>-2</td><td>-2</td></tr><tr><td>1</td><td>3</td><td>3</td><td>3</td></tr><tr><td>2</td><td>-1</td><td>2</td><td>3</td></tr><tr><td>3</td><td>4</td><td>6</td><td>6</td></tr><tr><td>4</td><td>-5</td><td>1</td><td>6</td></tr></tbody></table>
+
+<p>The running totals explain why a temporary negative value inside the answer need not end it. The -1 day is worth keeping between profitable days 3 and 4. Kadane discards an earlier prefix only when its total would make every future extension worse. It does not discard every individual negative number.</p>
+
+<h2 id="correctness">Two meanings form the invariant</h2>
+<p>Before processing index i, ending is the best sum ending at i-1, and best is the best sum inside [0,i). Any interval ending at i either contains only a[i] or extends an interval ending at i-1. The recurrence chooses the better of those exhaustive possibilities. Updating best then compares the previous prefix answer with the best newly ending interval.</p>
+
+<p>At the beginning, the only nonempty interval in the first-element prefix is that element itself. The invariant therefore holds after initialisation. Each iteration preserves both meanings. When the final index is processed, every possible nonempty interval ends somewhere in the processed prefix, so best covers all candidates. The loop terminates because i increases toward n.</p>
+
+<p>For divide and conquer, the three location cases are exhaustive. A crossing interval must use a suffix of the left half and a prefix of the right half. Their choices are independent, so taking each greatest sum maximises their total. The nonempty base case returns its sole value. Induction over interval length proves the recursive results.</p>
+
+<h2 id="complexity">Count candidate intervals and scans</h2>
+<p>Brute force performs n+(n-1)+...+1 interval extensions, which is Θ(n²). It needs Θ(1) auxiliary storage. The recursive method does two half-size calls plus linear crossing scans. Its recurrence T(n)=2T(n/2)+Θ(n) gives Θ(n log n) time. The active recursion path uses Θ(log n) stack space.</p>
+
+<p>Kadane visits each value once and uses a fixed number of arithmetic operations and comparisons per visit. Its time is Θ(n), and its two totals use Θ(1) auxiliary space. Returning interval boundaries adds only a few indices. Copying every candidate interval would destroy that constant-space advantage, so store boundaries and copy only the final answer when needed.</p>
+
+<p>The loop bounds remain linear for positive, negative and mixed input. There is no sorting or early finish. Arithmetic width remains a separate concern: summing many large changes can overflow an int. The exercise bounds of sixteen values between -99 and 99 keep all intermediate sums safe, including the quadratic reference and crossing scans.</p>
+
+<h2 id="edge-cases">Boundaries and equal sums</h2>
+<p>To recover Kadane's interval, keep a tentative start for ending and final boundaries for best. When restarting is strictly better, move the tentative start to i. When ending strictly improves best, save that start and i+1. If ties must prefer the earliest start, extending on equal totals avoids throwing that earlier start away.</p>
+
+<p>A single negative value returns itself. An all-positive array returns the full array sum. An all-zero array has many optimal intervals; the boundary exercise chooses the earliest start and earliest end. These cases test different parts of the contract. They do not require changing the recurrence or allowing an empty answer.</p>
+
+<p>Do not confuse maximum subarray with maximum subsequence. A subsequence may skip positions, so it could add separated positive values. Also distinguish maximum sum from maximum length. An interval of length one may be the best sum, and a longer tied interval is not automatically preferred unless the problem says so.</p>
+
+<h2 id="common-mistakes">Keep the answer nonempty</h2>
+<p>Initialising best and ending to zero makes negative-only input return the empty sum. Initialise from a real first value instead. Updating best before updating ending also misses intervals that improve at the current position. Compute the ending candidate first, then compare it with the global answer.</p>
+
+<p>For crossing scans, force both sides to contribute at least one element. Starting suffix and prefix maxima at zero would again permit an empty side. The recursive code starts them at a[mid-1] and a[mid]. Half-open child calls keep those two positions distinct and cover the split correctly.</p>
+
+<p>Sorting values before applying Kadane changes the sequence of days. It can produce an attractive sum for an interval that never existed in the original order. Keep the input order fixed and use brute force to check short cases. A useful disagreement case is [-2,3,-1,4,-5], where adjacency affects the winning run.</p>
+
+<h2 id="version-notes">Safe C17 totals</h2>
+<p>The maximum-subarray programs use signed int values and integer indices. Their stated small bounds avoid signed overflow and permit negative input naturally. No special C17 library routine is needed for max; the conditional operator compares the two candidates explicitly. A production program with wider input bounds should widen both running and partial sums together.</p>
+
+<h2 id="summary">An ending answer supports a global answer</h2>
+<p>Kadane keeps exactly the information needed for the next extension: the best interval ending here. A second total remembers earlier winners. Divide and conquer reaches the same answer by considering left, right and crossing locations. Fast exponentiation next shows how a different split can reuse one computed half rather than solve it twice.</p>
+<p>Continue with <a href="topic:algo-fast-exponentiation">Fast Exponentiation</a>.</p>
