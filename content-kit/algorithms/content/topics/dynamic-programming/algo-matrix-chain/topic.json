@@ -1,0 +1,426 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-matrix-chain",
+  "module": "dynamic-programming",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Matrix Chain Multiplication",
+    "bn": "ম্যাট্রিক্স চেইন মাল্টিপ্লিকেশন"
+  },
+  "summary": {
+    "en": "Optimise parenthesisation with interval DP and recover the chosen split tree without reordering matrices.",
+    "bn": "ম্যাট্রিক্সের ক্রম না বদলে interval DP দিয়ে কম খরচের বন্ধনী বের করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "algo-edit-distance"
+  ],
+  "related": [
+    "algo-lis"
+  ],
+  "keywords": [
+    "Matrix Chain Multiplication",
+    "C17",
+    "dynamic-programming",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Matrix Chain Multiplication implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Same product, different work"
+    },
+    {
+      "id": "syntax",
+      "title": "State an interval of matrices"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Fill short intervals before long ones"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Compare final splits of the same chain"
+    },
+    {
+      "id": "correctness",
+      "title": "Every parenthesisation has a final split"
+    },
+    {
+      "id": "complexity",
+      "title": "Intervals times split positions"
+    },
+    {
+      "id": "comparison",
+      "title": "Why a local dimension rule is unsafe"
+    },
+    {
+      "id": "applications",
+      "title": "Read dimension chains before allocating"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Use the boundary dimensions at the split"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 triangular data in rectangular arrays"
+    },
+    {
+      "id": "summary",
+      "title": "Save the best final split of each interval"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Choose a cheap multiplication order",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>(A1A2)A3 costs 1500+3000=4500 scalar multiplications, versus 27000 for A1(A2A3).</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Only one matrix",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The diagonal costs zero because a lone matrix needs no multiplication.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Equal dimensions create ties",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Either order costs 250. Scanning split points upward and retaining the first gives A1(A2A3).</p>\n"
+    }
+  ],
+  "labs": [
+    "matrix-chain-dp"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Print minimum matrix-chain work",
+      "statementHtml": "<p>Read n (1..12), then n+1 dimensions (1..100). Matrix i has dimensions dims[i-1] by dims[i]. Print Enter matrix count and dimensions:, then cost = C and an optimal parenthesisation using A1 onward. Keep the smallest tied split.</p>\n",
+      "hints": [
+        "Fill intervals by length so every child interval is already solved."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Savings against left-to-right multiplication",
+      "statementHtml": "<p>Read n (1..12), then n+1 dimensions (1..100). Print Enter matrix count and dimensions:, saving = S compared with left-associated multiplication, then an optimal parenthesisation. Keep the smallest tied split.</p>\n",
+      "hints": [
+        "After multiplying the first i matrices, the intermediate row count is dims[0]."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Matrix Chain Multiplication: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Matrix Chain Multiplication covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "Parentheses change multiplication work without reordering matrices."
+      ],
+      "answerHtml": "<p>A complete parenthesisation is a binary tree with the matrices as leaves in their original order. At the root, the final multiplication separates two consecutive nonempty groups. Therefore it corresponds to exactly one k between i and j-1. Trying every k covers every possible final split.</p>\n\n<p>For a fixed split, any optimal parenthesisation must use optimal orders inside both children. If a child were more expensive than necessary, replacing only that child's parentheses would preserve its result dimensions and reduce total cost. The final multiplication cost would remain unchanged. This is the optimal-substructure property supporting the recurrence.</p>\n\n<p>The diagonal is correct because evaluating one existing matrix costs no multiplication. Assume all intervals shorter than the current length have correct costs. Each candidate then combines two correct child minima with the exact final product cost. Taking the minimum chooses an attainable cost no worse than any parenthesisation. Induction over length proves the top-right answer.</p>\n\n<p>The saved split records an attaining candidate. Recursively following it ends at singleton matrices because both children are shorter. The printed plan keeps all original matrices exactly once and preserves their order. Its total arithmetic count equals the stored optimum, proving the recovered witness as well as the numeric cost.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Matrix Chain Multiplication: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Matrix Chain Multiplication. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "The planning algorithm takes cubic time and quadratic storage."
+      ],
+      "answerHtml": "<p>There are Θ(n²) nonempty matrix intervals. Each interval may try O(n) splits, giving O(n³) time. More exactly, summing split counts over all intervals yields n(n-1)(n+1)/6 candidates. That cubic count comes from the combination search within every interval, not from multiplying actual matrix entries.</p>\n\n<p>The cost and split tables each require Θ(n²) space. The reconstruction tree has n leaves and n-1 internal nodes, so writing its matrix names and parentheses takes O(n) structural steps, aside from the digits in names. A skewed chosen order can require O(n) recursion depth during printing.</p>\n\n<p>The examples bound n by twelve and each dimension by 100. Every scalar product cost is at most 100³, and at most eleven matrix products occur, so the optimum fits int. Candidate totals also stay well below the sentinel 1000000000. Larger dimensions require checking products before multiplication and may need a wider integer type.</p>\n"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Matrix Chain Multiplication: explain the worked trace",
+      "statementHtml": "<p>Reproduce the worked Matrix Chain Multiplication trace and explain each comparison or state change. State how the example handles equal candidates.</p>\n",
+      "hints": [
+        "Name the quantities in each row before making the next decision."
+      ],
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Interval</th><th scope=\"col\">Split k</th><th scope=\"col\">Child cost</th><th scope=\"col\">Final product cost</th><th scope=\"col\">Total</th></tr></thead><tbody><tr><td>A1A2</td><td>0</td><td>0</td><td>1500</td><td>1500</td></tr><tr><td>A2A3</td><td>1</td><td>0</td><td>9000</td><td>9000</td></tr><tr><td>A1..A3</td><td>0</td><td>9000</td><td>18000</td><td>27000</td></tr><tr><td>A1..A3</td><td>1</td><td>1500</td><td>3000</td><td>4500</td></tr></tbody></table>\n<table class=\"ref\"><thead><tr><th scope=\"col\">Interval</th><th scope=\"col\">Split k</th><th scope=\"col\">Child cost</th><th scope=\"col\">Final product cost</th><th scope=\"col\">Total</th></tr></thead><tbody><tr><td>A1A2</td><td>0</td><td>0</td><td>1500</td><td>1500</td></tr><tr><td>A2A3</td><td>1</td><td>0</td><td>9000</td><td>9000</td></tr><tr><td>A1..A3</td><td>0</td><td>9000</td><td>18000</td><td>27000</td></tr><tr><td>A1..A3</td><td>1</td><td>1500</td><td>3000</td><td>4500</td></tr></tbody></table>\n\n<p>A table row should identify which interval is being solved and which final split is being tried. Listing only 1500 and 9000 without their final multiplication costs misses the expensive part of the three-matrix decision. Intermediate result dimensions are the link between the chosen split and its cost.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What may change in matrix-chain optimisation?",
+      "options": [
+        "Parentheses",
+        "The order of matrices",
+        "The numerical entries",
+        "The number of input matrices"
+      ],
+      "answer": 0,
+      "explanation": "Associativity permits regrouping, not arbitrary reordering."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why does a single-matrix diagonal have cost zero?",
+      "options": [
+        "Every scalar entry is zero",
+        "No multiplication is needed",
+        "Its dimensions are one",
+        "The matrix is an identity matrix"
+      ],
+      "answer": 1,
+      "explanation": "An existing matrix is already its own evaluated chain."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For matrices i..j split after k, which final scalar product count applies?",
+      "options": [
+        "dims[i]×dims[k]×dims[j]",
+        "dims[k]×dims[k+1]",
+        "dims[i]×dims[k+1]×dims[j+1]",
+        "dims[i]+dims[j]"
+      ],
+      "answer": 2,
+      "explanation": "The two intermediate shapes share boundary dimension dims[k+1]."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which table order makes matrix-chain dependencies ready?",
+      "options": [
+        "Decreasing start index alone with arbitrary ends",
+        "Only increasing diagonal values",
+        "Any random cell order",
+        "Increasing interval length"
+      ],
+      "answer": 3,
+      "explanation": "Both children of a final split are shorter intervals."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does split[i][j] store?",
+      "options": [
+        "The last index of the chosen left child",
+        "The total number of cuts",
+        "The resulting matrix's row count",
+        "The optimum cost itself"
+      ],
+      "answer": 0,
+      "explanation": "Recovery uses i..k and k+1..j."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many dimensions describe n compatible matrices?",
+      "options": [
+        "n",
+        "n+1",
+        "2n+1",
+        "n-1"
+      ],
+      "answer": 1,
+      "explanation": "Adjacent matrices share a dimension boundary."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What are the classical planning time and table space?",
+      "options": [
+        "O(n²) time and O(n) space",
+        "O(log n) time and O(n³) space",
+        "O(n³) time and O(n²) space",
+        "O(2^n) time and O(1) space"
+      ],
+      "answer": 2,
+      "explanation": "There are quadratic intervals and linearly many possible splits per interval."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does minimum scalar count automatically minimise peak memory?",
+      "options": [
+        "Yes, for every matrix layout",
+        "Only for square matrices",
+        "Only in C17",
+        "No, that is a different cost objective"
+      ],
+      "answer": 3,
+      "explanation": "Evaluation-order memory costs need their own model."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What scalar count multiplies a ten-by-thirty matrix by thirty-by-five?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    printf(\"%d\\n\",10*30*5);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1500",
+        "1501",
+        "1499",
+        "1502"
+      ],
+      "answer": 0,
+      "explanation": "The final dimensions multiply to 1500 scalar products."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which three-matrix candidate is cheaper, 27000 or 4500?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int first=27000,second=4500;\n    printf(\"%d\\n\",first<second?first:second);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4501",
+        "4500",
+        "4499",
+        "4502"
+      ],
+      "answer": 1,
+      "explanation": "The split after A2 gives total 4500."
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many split candidates exist for an interval containing four matrices?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int i=0,j=3,count=0;\n    for(int k=i;k<j;k++){count++;}\n    printf(\"%d\\n\",count);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "4",
+        "2",
+        "3",
+        "5"
+      ],
+      "answer": 2,
+      "explanation": "The final split may follow the first, second or third matrix."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Parentheses change multiplication work without reordering matrices.",
+      "bn": "ম্যাট্রিক্সের ক্রম না বদলে বন্ধনী কাজের পরিমাণ বদলায়।"
+    },
+    {
+      "en": "An interval state stores its minimum multiplication count.",
+      "bn": "interval state-এ ওই অংশের ন্যূনতম গুণের সংখ্যা থাকে।"
+    },
+    {
+      "en": "The split determines both intermediate result shapes.",
+      "bn": "split থেকে দুই পাশের ফলের dimension জানা যায়।"
+    },
+    {
+      "en": "Increasing interval length makes child costs available.",
+      "bn": "ছোট interval আগে পূরণ করলে দুই পাশের খরচ পাওয়া যায়।"
+    },
+    {
+      "en": "A split table prints the optimal parenthesisation recursively.",
+      "bn": "split টেবিল ধরে রিকারশনে সেরা বন্ধনী লেখা যায়।"
+    },
+    {
+      "en": "The planning algorithm takes cubic time and quadratic storage.",
+      "bn": "পরিকল্পনার সময় cubic ও storage quadratic।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Matrix Chain Multiplication trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Interval</th><th scope=\"col\">Split k</th><th scope=\"col\">Child cost</th><th scope=\"col\">Final product cost</th><th scope=\"col\">Total</th></tr></thead><tbody><tr><td>A1A2</td><td>0</td><td>0</td><td>1500</td><td>1500</td></tr><tr><td>A2A3</td><td>1</td><td>0</td><td>9000</td><td>9000</td></tr><tr><td>A1..A3</td><td>0</td><td>9000</td><td>18000</td><td>27000</td></tr><tr><td>A1..A3</td><td>1</td><td>1500</td><td>3000</td><td>4500</td></tr></tbody></table>\n\n<p>A table row should identify which interval is being solved and which final split is being tried. Listing only 1500 and 9000 without their final multiplication costs misses the expensive part of the three-matrix decision. Intermediate result dimensions are the link between the chosen split and its cost.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Matrix Chain Multiplication method. State its assumptions.",
+      "answerHtml": "<p>A complete parenthesisation is a binary tree with the matrices as leaves in their original order. At the root, the final multiplication separates two consecutive nonempty groups. Therefore it corresponds to exactly one k between i and j-1. Trying every k covers every possible final split.</p>\n\n<p>For a fixed split, any optimal parenthesisation must use optimal orders inside both children. If a child were more expensive than necessary, replacing only that child's parentheses would preserve its result dimensions and reduce total cost. The final multiplication cost would remain unchanged. This is the optimal-substructure property supporting the recurrence.</p>\n\n<p>The diagonal is correct because evaluating one existing matrix costs no multiplication. Assume all intervals shorter than the current length have correct costs. Each candidate then combines two correct child minima with the exact final product cost. Taking the minimum chooses an attainable cost no worse than any parenthesisation. Induction over length proves the top-right answer.</p>\n\n<p>The saved split records an attaining candidate. Recursively following it ends at singleton matrices because both children are shorter. The printed plan keeps all original matrices exactly once and preserves their order. Its total arithmetic count equals the stored optimum, proving the recovered witness as well as the numeric cost.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Matrix Chain Multiplication from the calls, states or candidate operations.",
+      "answerHtml": "<p>There are Θ(n²) nonempty matrix intervals. Each interval may try O(n) splits, giving O(n³) time. More exactly, summing split counts over all intervals yields n(n-1)(n+1)/6 candidates. That cubic count comes from the combination search within every interval, not from multiplying actual matrix entries.</p>\n\n<p>The cost and split tables each require Θ(n²) space. The reconstruction tree has n leaves and n-1 internal nodes, so writing its matrix names and parentheses takes O(n) structural steps, aside from the digits in names. A skewed chosen order can require O(n) recursion depth during printing.</p>\n\n<p>The examples bound n by twelve and each dimension by 100. Every scalar product cost is at most 100³, and at most eleven matrix products occur, so the optimum fits int. Candidate totals also stay well below the sentinel 1000000000. Larger dimensions require checking products before multiplication and may need a wider integer type.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

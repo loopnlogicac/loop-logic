@@ -1,0 +1,88 @@
+<h2 id="introduction">Find nearby locations</h2>
+<p class="lead">A campus map may contain many classroom and service locations. To find the nearest two, you could measure every pair. That is easy to explain but expensive as the number of points grows. The planar closest-pair problem asks for the smallest Euclidean distance between two distinct point records in two dimensions.</p>
+
+<p>Two records may occupy identical coordinates. Their distance is zero, and that is a valid answer. A dataset with fewer than two records has no pair at all. The examples and practice therefore require at least two points. Distinguish identical coordinates from using the same record twice.</p>
+
+<p>For integer coordinates, compare squared distances. The square root function is increasing on nonnegative values, so the pair with smallest squared distance also has smallest distance. Squared comparisons avoid rounding in decisions. If a map needs the distance in metres, take a square root only when displaying the final value.</p>
+
+<p>The challenge is the combine step. After solving two halves, a better pair may cross their boundary. Examining every cross-boundary pair would return to quadratic work. Geometry limits where a better pair can lie and how many nearby y-neighbours need comparison.</p>
+
+<h2 id="syntax">A recursive ordering contract</h2>
+<pre><code class="language-text">sort points by (x, original ID)
+closest(a, lo, hi):
+    if at most 3 points: check pairs; sort slice by y; return best
+    save mid and split_x before recursive calls
+    best = min(closest(left), closest(right))
+    merge both child slices by y
+    gather strip where (x - split_x)^2 &lt; best
+    for each strip point: check at most 7 later y-neighbours
+    return best squared distance</code></pre>
+<p>Sort points by x coordinate, breaking ties by an original ID. Each recursive call receives a consecutive slice in this x order. It returns the minimum squared distance in that slice and rearranges the slice into nondecreasing y order. This change of order is part of the contract, not an accidental side effect.</p>
+
+<p>The parent saves split_x before either recursive call. It also fixes mid from the number of point records. Membership of the halves stays tied to those original slices. Equal x coordinates do not make the children ambiguous: IDs provide a deterministic initial ordering, and the recursion splits by position.</p>
+
+<h2 id="how-it-works">Combine through the middle strip</h2>
+<p>Let the smaller child distance be d. A crossing pair closer than d must have both points within d of the dividing vertical line. Otherwise their horizontal separation alone is already too large. Select that strip from the merged y-ordered slice. Compare only later strip points whose y difference remains below the current best distance.</p>
+
+<p>The routine keeps squared distances throughout. A point enters the strip when dx² is below the best squared distance. A candidate comparison stops when dy² reaches that bound. Those tests use the same strict convention as updating the best answer. Equal-distance pairs need not be revisited when only the minimum value is required.</p>
+
+<p>Each child already returns y order. Merge those two orders in linear time, as in merge sort. Sorting the entire strip from scratch in every recursive call would add another logarithmic factor. Maintaining the ordering contract is the step that keeps the recurrence's combine work linear.</p>
+
+<p>The base handles at most three records. It measures every local pair, then insertion-sorts that tiny slice by y. Such a base has constant size, so the simple quadratic scan and small sort cost constant time. The same scratch array can support both merging and gathering the strip after the merge is copied back.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Merge y order through the recursion</h3>
+<p>The points (2,1) and (3,1) are one unit apart; the squared result is 1.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Brute-force squared distances</h3>
+<p>Ten pairs confirm the same squared distance without recursion.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Coincident points</h3>
+<p>Distinct records may share coordinates. Their distance is zero, so no smaller pair exists.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">A close pair across the split</h2>
+<table class="ref"><thead><tr><th scope="col">Stage</th><th scope="col">Squared bound</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>Left pair (0,0),(2,1)</td><td>5</td><td>Only two left points</td></tr><tr><td>Right minimum</td><td>20</td><td>(3,1) to (5,5)</td></tr><tr><td>Cross (2,1),(3,1)</td><td>1</td><td>Inside the strip</td></tr><tr><td>Final</td><td>1</td><td>No closer pair</td></tr></tbody></table>
+
+<p>The x-sorted root slices are [(0,0),(2,1)] and [(3,1),(5,5),(9,9)]. The left answer has squared distance 5, and the right answer is 20. The cross-boundary points (2,1) and (3,1) improve the result to 1. Solving only the two halves would therefore return the wrong value 5.</p>
+
+<h2 id="correctness">Why only a few neighbours matter</h2>
+<p>Any optimal pair lies within a child slice or crosses the split. Recursive answers handle the within-child cases. For a crossing improvement over distance d, both endpoints lie in the strip and their vertical difference is below d. Thus scanning strip points in y order cannot miss an improving pair if it checks the relevant nearby successors.</p>
+
+<p>The packing argument bounds those successors. Consider a strip window of width 2d and height d above a point. Its left and right half-windows each have width d. Subdivide each half into four squares of side d/2. Within one child slice, two points in one small square would be less than d apart, contradicting the child's minimum-distance bound.</p>
+
+<p>There are at most eight occupied small squares across both sides, counting the starting point. Consequently at most seven later points need comparison. Boundary equality can be assigned consistently to neighbouring boxes; only pairs strictly closer than d matter. Points sharing the dividing x coordinate retain their child identity from the original split, so the same per-child separation argument applies.</p>
+
+<p>If the best distance becomes zero, no smaller nonnegative distance exists. The strip tests may then admit no candidates, which is safe. The algorithm seeks the minimum value rather than all tied pairs. Counting every closest pair is a different output requirement and may require considering many duplicates.</p>
+
+<p>Induction now completes correctness. Small slices are checked exhaustively. Larger slices return correct child values by assumption, merge y order correctly, and inspect every possible crossing improvement under the strip bound. The minimum of those cases is the global minimum. Each child is shorter, so recursion reaches a base.</p>
+
+<h2 id="complexity">Pay linear work at each level</h2>
+<p>The initial x ordering costs O(n log n) with a comparison sort that guarantees that bound. At each recursive node, merging y orders takes Θ(n) work. Collecting the strip takes Θ(n), and at most seven comparisons per strip point add O(n). Thus T(n)=2T(n/2)+Θ(n), giving Θ(n log n) recursive time.</p>
+
+<p>The shared scratch array holds O(n) records. Active recursion adds O(log n) stack frames. This makes auxiliary space O(n), excluding the input records. Do not allocate a fresh n-element array in every live call without accounting for those allocations. Passing one reusable buffer keeps the memory argument tied to the implementation.</p>
+
+<p>The C example uses qsort for the initial x ordering. C specifies its ordering behavior but does not guarantee a particular complexity. The O(n log n) algorithm bound assumes a suitable initial sorting routine, such as guaranteed merge sort. The closest routine itself has the stated recurrence independently of which correct initial sorter is chosen.</p>
+
+<h2 id="edge-cases">Coordinates, duplicates and output goals</h2>
+<p>Compute coordinate differences in a wide type before subtracting. Casting only after int subtraction would be too late if that subtraction overflowed. The code writes (long long)a.x-b.x and squares that wide difference. Its small practice bounds make the squares and their sum safe; unrestricted extreme coordinates need a separate range calculation.</p>
+
+<p>Original IDs remain attached to points even after y rearrangement. If you need the actual pair, store both IDs whenever a distance improves. Returning only the distance is enough for the current examples. A tie rule for IDs would require care when equality is skipped by strict strip tests, because equal candidates are otherwise intentionally ignored.</p>
+
+<p>The counting exercise first finds the distance and then scans all unordered pairs. That second stage is quadratic, so the whole counting program is quadratic. It is useful for small datasets and illustrates how a larger requested output can change complexity. Do not advertise its cost as O(n log n) merely because it calls closest once.</p>
+
+<h2 id="common-mistakes">Preserve the merge contract</h2>
+<p>Sorting a strip afresh at each node leads to O(n log² n) time. Return y order from each child and merge it. Splitting the already y-sorted array again by its current indices would also be wrong: the next split must belong to the original x-ordered recursive region. The recursion arranges its child calls before converting the parent region to y order.</p>
+
+<p>Saving a[mid].x after the left or right call can read a different point, because those calls reorder records. Save split_x first. Also avoid comparing all strip pairs after proving a seven-neighbour bound; that discards the performance benefit even if the answer stays correct.</p>
+
+<p>Testing n=1 by returning zero suggests a pair exists when it does not. Keep the public precondition n&gt;=2. Small internal singleton slices can use a very large sentinel because another child supplies a real pair before combination. The chosen sentinel must exceed every possible squared distance under the stated coordinate bounds.</p>
+
+<h2 id="version-notes">C17 record comparisons</h2>
+<p>The Point record stores integer coordinates and an original ID. Its qsort comparator returns signs through relational comparisons rather than subtracting potentially large coordinates. The distance routine uses long long for products. No variable-length arrays or heap ownership are needed for the bounded examples; the reusable arrays live for the complete search.</p>
+
+<h2 id="summary">Geometry makes combining affordable</h2>
+<p>Closest pair succeeds because the parent keeps y order and uses the child's distance as a geometric exclusion bound. The strip packing argument limits comparisons to seven later neighbours per point. A correct recursive value and an efficient ordering contract are both essential. The greedy method next asks when one local choice can safely replace all alternatives.</p>
+<p>Continue with <a href="topic:algo-greedy-method">The Greedy Method</a>.</p>

@@ -1,0 +1,81 @@
+<h2 id="introduction">Earn profit before a deadline</h2>
+<p class="lead">A laboratory has one machine and several one-slot jobs. Each job earns a profit only if it finishes by its deadline. Jobs are optional, and only one job can run in a slot. You want the largest total earned profit. This is job sequencing with deadlines under the unit-processing-time assumption.</p>
+
+<p>Slots are numbered 1,2,... and each slot's number is its completion time. A deadline of 2 permits slots 1 or 2. A deadline of zero permits no positive slot. The code stores slot t at array index t-1, so keep the mathematical numbering separate from the C index.</p>
+
+<p>Every job takes exactly one slot. A two-slot job would consume a different resource amount and invalidate the simple feasibility test. Jobs are all available before slot 1, with no precedence constraints. These assumptions are part of the algorithm, not optional details that can be ignored when reading a scheduling problem.</p>
+
+<h2 id="syntax">Choose profit, then place late</h2>
+<pre><code class="language-text">sort jobs by decreasing profit; tie by id
+mark slots 1 through n free; total = 0
+for each job with positive profit
+    search slots backward from min(deadline, n)
+    if a free slot exists: put job there; add its profit
+return total and slots</code></pre>
+<p>Sort Job records by decreasing profit, breaking equal profits by original ID. For each positive-profit job, inspect free slots backward from min(deadline,n). Put the job in the latest free allowed slot. If no allowed slot is free, reject it. There is no benefit to placing a nonpositive-profit optional job.</p>
+
+<p>Only n slots are needed for n jobs even if a deadline is much larger. Any feasible chosen set contains at most n jobs and can be shifted left to finish within the first n slots. Capping inspected deadlines at n therefore preserves feasibility while preventing an unnecessarily large slot array.</p>
+
+<h2 id="how-it-works">Leave early slots for tight deadlines</h2>
+<p>The example jobs have (deadline,profit) pairs (2,100),(1,19),(2,27),(1,25),(3,15). Profit order begins with ID 0, then ID 2, ID 3, ID 1 and ID 4. Place ID 0 in slot 2 rather than slot 1. ID 2 then uses slot 1. Jobs 3 and 1 both need slot 1 and cannot fit.</p>
+
+<p>Finally ID 4 uses slot 3. The total is 100+27+15=142. Placing ID 0 in slot 1 would leave slot 2 open initially, but that free later slot cannot help jobs expiring at 1. Latest placement keeps the earlier flexible resource available for tighter deadlines.</p>
+
+<p>The backward search considers every allowed slot when deciding that a job cannot fit. It must not stop at an occupied deadline slot and reject immediately. A job whose deadline is 3 may still use slot 1 or 2. Conversely, an empty slot after the deadline is irrelevant because that job would earn no profit there.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Leave earlier slots free</h3>
+<p>Job 0 occupies slot 2, leaving slot 1 for job 2. Job 4 fills slot 3; profit is 142.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Every job expires after slot one</h3>
+<p>Only the most profitable job fits the common deadline.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Ignore unprofitable optional jobs</h3>
+<p>Jobs are optional. Taking a negative-profit job would reduce the objective.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Profit order and slot choices</h2>
+<table class="ref"><thead><tr><th scope="col">Profit-order ID</th><th scope="col">Profit</th><th scope="col">Chosen slot</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>0</td><td>100</td><td>2</td><td>latest free through 2</td></tr><tr><td>2</td><td>27</td><td>1</td><td>slot 2 occupied</td></tr><tr><td>3</td><td>25</td><td>rejected</td><td>slot 1 occupied</td></tr><tr><td>1</td><td>19</td><td>rejected</td><td>slot 1 occupied</td></tr><tr><td>4</td><td>15</td><td>3</td><td>latest free through 3</td></tr></tbody></table>
+
+<p>The final C array contains IDs 2,0,4,-1,-1. It records the schedule in time order, not the order in which jobs were considered. The -1 entries represent idle optional capacity. When explaining an exam schedule, show both the profit ordering and the final slot arrangement so the distinction is visible.</p>
+
+<h2 id="correctness">Why higher profit can be accepted first</h2>
+<p>For unit jobs with deadlines, a chosen set is feasible exactly when, for every time t, at most t chosen jobs have deadlines at most t. Necessity follows because those jobs must all finish in the first t slots. Sufficiency follows by sorting the chosen jobs by deadline and placing them in that order: the kth job's deadline must be at least k.</p>
+
+<p>These feasible sets have an exchange property. Suppose feasible sets A and B satisfy |A|&lt;|B|. Some job in B outside A can be added to A feasibly. One way to see this is to inspect tight deadline prefixes of A. A prefix is tight when its t early-deadline jobs already fill all t slots. If every outside job were blocked by a tight prefix, the largest such prefix would contain every outside job, contradicting B's feasibility and greater size.</p>
+
+<p>This exchange property is the reason profit order is safe. Maintain an optimal feasible set agreeing with decisions already accepted. If the next accepted greedy job is missing from that optimum, exchange it with a conflicting later-considered job while preserving feasibility. That removed job has no larger profit because of the ordering. The optimum can therefore agree with one more greedy choice without losing value.</p>
+
+<p>The latest-free-slot procedure is a correct feasibility test for the accepted set. If no slot through a new deadline is free, those slots are occupied. Any earlier-deadline occupant cannot move later; a more flexible occupant was already placed as late as possible when inserted. Following such blocking relationships yields a saturated deadline prefix. The new job would exceed its capacity, so rejection is necessary.</p>
+
+<p>Equivalently, you can independently test the selected set using the deadline-prefix condition after every insertion. This provides a useful small-input reference for the placement routine. The proof depends on unit durations: counting jobs and counting occupied slots then measure the same resource.</p>
+
+<h2 id="complexity">The slot search can be quadratic</h2>
+<p>Sorting n jobs costs O(n log n) with a suitable comparison sort. The shown routine may inspect n slots for each of n jobs, giving O(n²) worst-case placement time. This dominates the sorting bound. Merely seeing a sort at the beginning does not make the complete algorithm O(n log n).</p>
+
+<p>The slots array has n entries, and the sort modifies the input order. Placement uses Θ(1) additional variables beyond the arrays. A more advanced implementation can find the latest free slot with a disjoint-set structure. That improvement changes the data structure, while profit ordering and the scheduling argument stay the same.</p>
+
+<p>Skipping zero or negative profits avoids filling slots with choices that cannot improve the objective. If a problem requires every job to run or penalises missing jobs, that is a different objective. The optional-job version may leave idle time even when unprofitable work exists.</p>
+
+<h2 id="edge-cases">Check what each deadline means</h2>
+<p>When every deadline is one, only the greatest positive profit can be earned. When all deadlines are at least n, every positive-profit job fits. A deadline of zero rejects that job even if its profit is enormous. These examples test profit ordering, slot bounds and feasibility independently.</p>
+
+<p>Tied profits permit several optimal selected sets. The ID tie rule makes the output deterministic. It is not part of the profit-optimality argument. After sorting, preserve original IDs in slots so the final result still refers to the input jobs rather than their new sorted positions.</p>
+
+<p>Do not interpret a deadline as a release time. A job with deadline 4 may run earlier than slot 4. Requiring it to start exactly at 4 would define another problem. Likewise, profit is earned once per completed job; it is not multiplied by the number of available slots.</p>
+
+<h2 id="common-mistakes">Reject only after searching allowed earlier slots</h2>
+<p>Searching forward and taking the earliest free slot can block a tight-deadline job later. Search backward from the current deadline instead. Searching beyond that deadline may produce a schedule with an attractive total whose jobs actually finish too late and earn nothing.</p>
+
+<p>Initialise every slot to -1 before considering jobs. Uninitialised entries may look occupied or may accidentally name real jobs. Reusing zero as the free marker is ambiguous because zero is a valid original ID. The explicit negative marker keeps the schedule representation unambiguous.</p>
+
+<p>Do not apply this routine to arbitrary durations. Consider one long high-profit job competing with several shorter jobs whose combined profit is greater. A profit-only ordering can take the long job and lose value. Unit duration is what makes the deadline-prefix exchange property and one-slot insertion work.</p>
+
+<h2 id="version-notes">C17 records and slot bounds</h2>
+<p>The exercises support at most sixteen jobs, deadlines up to 100, and profits from -99 through 999. Capping deadlines to n keeps all slot accesses inside the fixed array. The largest possible earned total fits int. qsort orders complete records with relational comparisons; the C standard does not guarantee its internal complexity.</p>
+
+<h2 id="summary">Protect scarce early slots</h2>
+<p>Job sequencing considers optional unit jobs by decreasing profit and places each as late as possible before its deadline. The deadline-prefix exchange property supports the profit rule. A backward linear slot search gives quadratic worst-case placement. Dynamic programming next handles problems where several local choices must remain available for comparison.</p>
+<p>Continue with <a href="topic:algo-dp-introduction">Introduction to Dynamic Programming</a>.</p>

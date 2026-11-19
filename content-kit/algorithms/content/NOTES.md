@@ -1,3 +1,73 @@
+# Algorithms – Batch 2
+
+Package version: **0.2.0**, schema **1.1**, track **algorithms**.
+
+This delivery adds all **17 topics and 10 labs** in `divide-conquer`, `greedy` and `dynamic-programming`. The cumulative package contains **33 of 56 topics and 19 of 32 labs**. Earlier lessons are retained. All new topics remain `review.status: draft` for subject and language review.
+
+Batch 2 contains **58 complete C17 examples, 34 code-practice solutions with 68 captured test outputs, 41 worked written exercises, and 175 quiz questions, including 51 compiled output questions**. Titles, summaries and key points are bilingual. Full Bangla lesson bodies are optional and are not included.
+
+## Batch 2 coverage
+
+| Topic | Included material and reviewer focus |
+| --- | --- |
+| `algo-divide-and-conquer` | Divide/conquer/combine contracts, half-open recursive sum and maximum, empty/singleton cases, induction, binary-search/merge-sort/quick-sort recurrence comparison and sequential peak stack. |
+| `algo-maximum-subarray` | Quadratic interval enumeration, left/right/crossing recursion and Kadane; nonempty negative-only answers, interval recovery and tie rules; `kadane` array lab. |
+| `algo-fast-exponentiation` | One-call recursive squaring, iterative product invariant, modular exponentiation, exponent-zero/modulus-one cases, multiplication overflow bounds and fixed-width versus bit-cost analysis. |
+| `algo-closest-pair` | Exhaustive pair reference, initial x order, recursive y-order contract, shared merge buffer, saved split coordinate, seven-successor strip packing, coincident records and squared-distance arithmetic. |
+| `algo-greedy-method` | Greedy-choice property versus optimal substructure, feasible exchanges, shortest-task completion-time exchange, proved 1/5/10 change and the 1/3/4 counterexample at six. |
+| `algo-activity-selection` | Finish-order record sorting, half-open compatibility, original IDs, exchange/staying-ahead reasoning and scan costs; `activity-selection` array lab. |
+| `algo-fractional-knapsack` | Exact ratio comparison by integer cross products, partial selection, equal-weight exchange, marginal capacity value and a concrete 0/1 failure of ratio-first. |
+| `algo-huffman-coding` | Real binary min-heap, deterministic merge ties, prefix-tree construction, codebook, complete FACE encoding/decoding program, malformed/truncated stream handling, sibling exchange/contraction and weighted cost; `huffman-tree` tree lab. |
+| `algo-job-sequencing` | Optional unit jobs, profit sorting, latest allowed free slot, capped deadlines, deadline-prefix feasibility/exchange, nonpositive profits and quadratic slot-search analysis. |
+| `algo-dp-introduction` | Fibonacci naive recursion, memoisation, tabulation and rolling values; distinct states, cache sentinel, dependency order, stack cost and why a scalar answer needs no choice recovery; `fibonacci-dp` grid lab. |
+| `algo-coin-change` | Minimum counts versus unordered combinations, unreachable states, both loop-order meanings, saved-coin recovery and pseudo-polynomial bounds; `coin-change-dp` grid lab. |
+| `algo-knapsack-01` | Item-prefix/capacity state, both previous-row branches, selected-item recovery, downward compact capacities and the reuse counterexample; `knapsack-dp` grid lab. |
+| `algo-lcs` | Prefix-pair recurrence, arrows, up-on-tie recovery of BCBA, empty/repeated inputs, subsequence versus substring, deletion identity and space/reconstruction tradeoff; `lcs-dp` grid lab. |
+| `algo-edit-distance` | Unit insertion/deletion/replacement costs, nonzero boundaries, direction meanings, forward recovered alignment, weighted variants and differences from deletion-only LCS; `edit-distance-dp` grid lab. |
+| `algo-matrix-chain` | Dimension boundaries, interval recurrence, increasing-length evaluation, split recovery, scalar-count objective, equal-cost splits and cubic candidate count; `matrix-chain-dp` grid lab. |
+| `algo-lis` | Quadratic ending states, predecessors, strict versus nondecreasing comparisons, binary-search smallest tails, actual tail indices and why tails alone are not a witness; `lis-dp` grid lab. |
+| `algo-rod-cutting` | First-piece recurrence, full-material sale, uncut candidate, negative prices, bottom-up evaluation, recovered cuts, tie conventions and cut-fee variants. |
+
+No point in these 17 topics' `covers` lists is intentionally omitted. The remaining 23 topics and 13 labs belong to later modules. No extra topic IDs are proposed.
+
+## Grid-kind correction authorised by the user
+
+The original curriculum listed `fibonacci-dp` and `lis-dp` as `array`, conflicting with the request that DP tables use `grid`. The user explicitly approved correcting those two kind values in `algorithms/spec/curriculum.json`. Those **two scalar replacements are the only changes outside `algorithms/content/`**. All seven Batch 2 DP labs now use grids; the other new kinds are two arrays and one tree. No checker or player code was changed.
+
+## Batch 2 verification
+
+Run from `content-kit/`:
+
+```bash
+node tools/check.mjs algorithms/content --sanitize --report algorithms/content/CHECK_REPORT.txt
+```
+
+The cumulative report records **0 errors and 0 warnings**. Real GCC executions produced every new example and practice `.out` file. All 51 new output-quiz programs were also compiled and executed to select their correct options. The required command repeats compilation/output comparisons and runs examples and practice cases with AddressSanitizer and UndefinedBehaviorSanitizer. It exercises all lab presets, explicit checks and generated inputs with the shared player model.
+
+Actual tools: GCC 14.2.0 (Debian 14.2.0-19), Node.js v24.22.1 and Python 3.12.14. Learner programs use C17; JavaScript lab traces follow the required pure trace interface. Temporary authoring and independent validation programs are not included in the package.
+
+Additional independent checks passed **40,563 assertions**:
+
+- **4,038 lab cases / 26,196 assertions:** repeat-call determinism, valid player operations, exhaustive subset references for strict LIS/LCS and equipment/meeting choices, breadth-first exact payments, separate recursive edit/matrix references, exhaustive tree-partition Huffman costs, and validation of recovered sequences, alignments, payments and matrix plans.
+- **4,402 C executions / 14,367 assertions:** exhaustive short ternary arrays and seeded bounded inputs; comparison of all three maximum-subarray methods; recursive/iterative/modular power against exact integer arithmetic; closest pair against all pairs; meeting/job/knapsack choices against subset enumeration; fractional value against exact rational vertices; Fibonacci variants; minimum/combination payments; LCS and edit recovery; matrix split plans; quadratic/fast LIS witnesses; full-material rod plans; and Huffman prefix validity and optimal bit cost.
+
+The independent runs use seeds 28539 (labs) and 20931 (C). They validate algorithmic results beyond the lesson examples; the committed report remains the result of the exact required command. There are no unreviewed checker warnings.
+
+## Conventions and reviewer attention for Batch 2
+
+- Default lab inputs match the corresponding first C examples. The LCS trace table also uses ABCBDAB / BDCABA. Additional presets cover simple, difficult and boundary cases within each lab's input domain.
+- Maximum subarray is nonempty. Rod cutting sells all material, even at negative prices. Knapsack means at most the given capacity. Coin change means an exact amount with unlimited positive distinct denominations; its lab normalises duplicate denominations.
+- Full DP evaluation, recurrence, state and reconstruction are explained separately. Fibonacci returns a scalar, with no optimisation witness. Grid answer sequences and edit/matrix plans use side lists, respecting the player's short variable-value limit. Knapsack take dependencies point to the actual reduced-capacity cell, not a misleading one-column diagonal.
+- Each algorithm states tie rules. Quadratic LIS returns 1,2,5 on its default input; fast LIS returns 1,2,4. Both are valid. LCS moves up on unequal-letter ties. Edit recovery prefers diagonal, deletion, then insertion. Matrix-chain keeps the smallest tied split; rod cutting keeps the smallest first piece on a revenue tie.
+- Huffman leaf IDs precede internal IDs, equal heap weights use increasing IDs, and first/second minima become left/right children. The one-symbol convention uses code 0, costing one bit per occurrence. Multi-symbol merge sums exclude codebook overhead. The complete codec uses a fixed small FACE message, so its concatenation buffer is proven sufficient for that demonstration.
+- Edit output describes paid operations in forward alignment order, without mutable text positions. Applying an indexed edit script requires the cursor/match information explained in the lesson. The model operates on uppercase Latin bytes, not Unicode grapheme clusters.
+- The closest-pair recursion is O(n log n) once initially ordered by x and retains y order by merging. The examples use standard `qsort` for preparation; C does not guarantee that library routine's complexity. The text explicitly qualifies sorting assumptions for closest pair and greedy routines.
+- Fixed arrays and integer sentinels are justified by each exercise's input limits. Matrix-chain allows dimensions 1..100; modular products use modulus at most 10^9. The lessons distinguish bounded demonstrations, general asymptotic bounds and arbitrary-precision arithmetic costs.
+- Bangla wording and all proof arguments, especially strip packing, deadline-prefix exchange and Huffman contraction, deserve normal specialist review before publication. Video lists remain empty because no specific catalogue match was verified.
+- Empty answers deliberately produce empty result lines in some captured outputs. Preserve these fixtures. Whitespace validation excludes captured `.out` fixtures: empty results can end in a blank line or a label's separating space, exactly as the C program printed them. No binaries or temporary authoring artifacts are included.
+
+---
+
 # Algorithms – Batch 1
 
 Package version: **0.1.0**, schema **1.1**, track **algorithms**.

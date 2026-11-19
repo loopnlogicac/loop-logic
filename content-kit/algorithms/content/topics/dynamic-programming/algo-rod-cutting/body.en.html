@@ -1,0 +1,90 @@
+<h2 id="introduction">A cut can increase the selling value</h2>
+<p class="lead">A workshop sells rod pieces of integer lengths. It has a price for each length from one through n and one rod of length n. You may split that rod into shorter pieces and sell all of them. Rod cutting asks for the greatest total revenue and, when requested, the lengths of the sold pieces.</p>
+
+<p>The whole rod may be sold without a cut. That is one candidate, not a separate special problem. Several pieces of the same length may be used as long as their total length equals n. No material is lost to cutting in this model, and cuts have no fee. Changing those assumptions changes the recurrence.</p>
+
+<p>For prices [1,5,8,9], an uncut length-four rod earns 9. Two length-two pieces earn 5+5=10, so cutting helps. Taking the greatest price per length first is not a general proof of optimum under integer lengths. DP compares every possible first piece for each remaining length.</p>
+
+<h2 id="syntax">State, recurrence and the empty rod</h2>
+<pre><code class="language-text">dp[0] = 0
+for length = 1 to n
+    dp[length] = a lower bound than every feasible revenue
+    for cut = 1 to length
+        candidate = price[cut-1] + dp[length-cut]
+        if candidate &gt; dp[length]: save candidate and cut
+follow first[length] while subtracting each saved positive cut
+return revenue and piece lengths</code></pre>
+<p>Step 1, state: dp[length] is the greatest revenue from selling all material of a rod with that length. The base dp[0]=0 represents no material and no sale. For each positive length, every allowed first piece has cut between one and length.</p>
+
+<p>Step 2, recurrence: dp[length]=max(price[cut-1]+dp[length-cut]) over those possible cuts. Price index cut-1 reflects the array's zero-based storage of lengths one onward. Choosing cut=length gives the uncut rod's own price plus the empty remainder value zero.</p>
+
+<p>The all-material requirement matters when prices can be negative. A nonempty rod may then have a negative optimum. Initialising every positive-length optimum to zero would silently permit discarding material. The C code starts each such state with a sufficiently low bound before comparing real candidates.</p>
+
+<h2 id="how-it-works">Complete every shorter remainder first</h2>
+<p>Step 3, order: increase length from one through n. Every candidate remainder length-cut is smaller than the current length because cut is positive. All dependencies are therefore ready. Scan cut lengths upward and replace only on strictly larger revenue; this keeps the smallest first cut when revenue ties.</p>
+
+<p>For length one, only its price 1 is possible. For length two, two unit pieces earn 2 but the whole piece earns 5. For length three, the whole piece earns 8, beating 1+5. For length four, first cut two gives price 5 plus dp[2]=5, producing the optimum 10.</p>
+
+<p>Step 4, reconstruction: save the attaining cut in first[length]. Begin with remaining length n, print first[remaining], and subtract it. Continue until remaining becomes zero. For the example, first[4]=2 and first[2]=2, so the recovered piece lengths are 2 and 2.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Two pieces beat one uncut rod</h3>
+<p>Two length-two pieces earn 5+5=10, exceeding the uncut price 9.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Selling the whole rod is allowed</h3>
+<p>The candidate cut=length represents no further split and earns 20.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Tied revenue with a deterministic cut rule</h3>
+<p>Every partition earns 8; scanning cuts upward and updating strictly recovers four unit cuts.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Revenues through length four</h2>
+<table class="ref"><thead><tr><th scope="col">Length</th><th scope="col">Candidate revenues in cut order</th><th scope="col">Best</th><th scope="col">First piece</th></tr></thead><tbody><tr><td>0</td><td>empty sale</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1+0</td><td>1</td><td>1</td></tr><tr><td>2</td><td>1+1, 5+0</td><td>5</td><td>2</td></tr><tr><td>3</td><td>1+5, 5+1, 8+0</td><td>8</td><td>3</td></tr><tr><td>4</td><td>1+8, 5+5, 8+1, 9+0</td><td>10</td><td>2</td></tr></tbody></table>
+
+<p>Recovery lists piece lengths rather than the positions at which a physical saw is placed. The sequence 2,2 means two pieces with total length four. A plan 1,3 would correspond to different first-piece choices but the same total material. The value table compares revenues, not the number of cuts.</p>
+
+<h2 id="correctness">Every sale has a first piece</h2>
+<p>Any valid full sale of a positive-length rod contains a first piece of some length cut. Removing that piece leaves exactly length-cut material. If the remainder were sold for less than its optimal revenue, replacing that remainder plan would improve the whole sale. Therefore an optimum uses an optimal remainder for some considered first cut.</p>
+
+<p>Each recurrence candidate is also feasible: sell one available-length piece and then a full optimal sale of the smaller remainder. Considering every first cut covers all partitions of the rod, even though different piece orders can describe the same partition. Taking the maximum chooses an attainable revenue at least as large as every full sale.</p>
+
+<p>The empty base is correct. Induction over increasing length proves every revenue entry because all remainder lengths are smaller. The saved first cut belongs to an attaining candidate, so following it preserves the optimal revenue decomposition. Each cut is at least one, ensuring recovery terminates after at most n pieces.</p>
+
+<p>This proof allows repeated piece lengths because the price list describes a sale option for any piece of that length, not a single inventory item. There is no item-prefix dimension preventing reuse. Compare that meaning with 0/1 knapsack, where each physical input record can be taken only once.</p>
+
+<h2 id="complexity">One triangular set of cut trials</h2>
+<p>At length L, the loop tries L possible first cuts. Summing 1+2+...+n gives n(n+1)/2 trials and Θ(n²) time. The dp and first arrays use Θ(n) storage. Recovery takes Θ(number of pieces), at most O(n), and the printed plan has the same output-size bound.</p>
+
+<p>A naive recursion that tries every first piece repeatedly solves the same remaining lengths. Its work grows exponentially without caching. Memoisation can evaluate each length once, giving the same quadratic candidate count as bottom-up tabulation, but adds recursive stack storage. The bottom-up routine makes dependency order visible and needs no recursive frames for evaluation.</p>
+
+<p>Numeric bounds are separate from the number of states. With at most sixteen material units and each price between -99 and 99, any complete plan's revenue lies between -1584 and 1584. The sentinel -1000000 is safely below every attainable value. For general inputs, derive a suitable bound or initialise from the first valid candidate instead of guessing a universal sentinel.</p>
+
+<h2 id="variations">Cut fees and exact material use</h2>
+<p>If every physical cut costs a fixed fee, subtract that fee only when a chosen first piece leaves a nonempty remainder. Taking the whole remaining rod makes no cut. Charging a fee for every piece would charge one extra fee and optimise a different objective. The distinction is easiest to test on a one-piece sale.</p>
+
+<p>If unsold material may be discarded, zero becomes a valid candidate for every length. That is a different contract from the exercises, where all material must be sold. Negative-price examples reveal the difference: a required-sale length-one rod priced -7 returns -7, whereas a discard-allowed version returns zero.</p>
+
+<p>A maximum permitted number of pieces requires another state parameter, such as dp[length][pieces]. The one-dimensional state does not know how many pieces earlier choices used. Likewise, a loss of material at every saw cut changes which remainder length follows a piece. State design must include constraints that affect future feasibility.</p>
+
+<h2 id="comparison">Relation to coin change and knapsack</h2>
+<p>Rod cutting resembles unlimited coin use because a length can be selected repeatedly, but it maximises price while exactly consuming total length. Minimum coin change minimises a count while exactly reaching an amount. The similar amount-like dimension does not make their objective operation or unreachable handling identical.</p>
+
+<p>Here a price is available for every length from one through n, so every nonnegative remaining length is reachable. If some lengths were unavailable, the table would need an unreachable marker and candidate checks. A very low revenue is not the same thing as impossible: negative-price full sales may still be valid.</p>
+
+<p>Tied plans can differ in number of pieces and first-cut lengths. The current rule keeps the smallest first cut on revenue ties. It does not minimise the number of cuts. If that secondary objective is required, compare pairs such as revenue and negative piece count rather than relying on loop order accidentally producing the desired result.</p>
+
+<h2 id="common-mistakes">Do not give a positive rod an empty-sale value</h2>
+<p>Starting every state at zero loses required negative-revenue answers. Use an actual candidate or a bound below every feasible plan. Also do not omit cut=length; that would force an unnecessary split and can miss an excellent uncut price such as 20 for length four.</p>
+
+<p>Price[cut] is off by one because price[0] describes length one. Check a single-unit rod first: it must read price[0] and use remainder zero. In recovery, subtract the saved piece length, not its array index. Subtracting zero for a unit piece would never terminate.</p>
+
+<p>Returning the first cut alone is not the complete sale plan. Continue through each remaining length until zero, printing all pieces. Verify that their lengths sum to n and their prices sum to dp[n]. Those two independent checks catch a witness error even when the optimum revenue happens to be correct.</p>
+
+<h2 id="version-notes">C17 bounded lengths</h2>
+<p>The demonstrations reserve seventeen dp and first entries for lengths zero through sixteen. Prices have sixteen entries for lengths one through sixteen. No input price is read when n=0, and recovery prints an empty cuts: line. The routines use C17 integer arithmetic, with signed types so negative prices retain their intended meaning.</p>
+
+<h2 id="summary">The first piece identifies a smaller sale problem</h2>
+<p>Rod cutting tries every first piece after shorter remainders are solved. Saving that choice recovers a complete optimal full sale, including negative-price and uncut cases. The eight DP topics now show how state meaning controls recurrence, order and reconstruction. Continue to graph algorithms to reuse invariants and dependency reasoning on connected vertices.</p>
+<p>Continue with <a href="topic:algo-bfs">Breadth-First Search</a>.</p>

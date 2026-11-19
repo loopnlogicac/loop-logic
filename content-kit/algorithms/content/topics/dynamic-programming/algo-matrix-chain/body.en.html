@@ -1,0 +1,95 @@
+<h2 id="introduction">Same product, different work</h2>
+<p class="lead">Matrix multiplication is associative: (A1A2)A3 and A1(A2A3) represent the same mathematical product when dimensions match. Yet the number of scalar multiplications can differ greatly. Matrix-chain multiplication chooses parentheses that minimise this arithmetic work while keeping the original matrix order.</p>
+
+<p>Suppose A1 is 10×30, A2 is 30×5, and A3 is 5×60. Computing A1A2 first costs 10×30×5=1500 scalar multiplications and produces a 10×5 result. Multiplying that by A3 costs another 10×5×60=3000. The total is 4500.</p>
+
+<p>Computing A2A3 first costs 30×5×60=9000 and creates a 30×60 result. Multiplying A1 by it costs 10×30×60=18000, for total 27000. Both orders produce a 10×60 result. Choosing parentheses saves work without changing which matrices are multiplied.</p>
+
+<p>This DP computes the cost and order; it does not multiply the actual matrix entries. Its input is a sequence of dimensions. Once the order is known, a separate matrix routine can evaluate that plan. Floating-point rounding can make differently associated numeric evaluations differ slightly even though the algebraic product is associative; the optimisation here counts scalar arithmetic work.</p>
+
+<h2 id="syntax">State an interval of matrices</h2>
+<pre><code class="language-text">dp[i][i] = 0
+for length = 2 to n
+    for i = 0 to n-length: j = i+length-1
+        for k = i to j-1
+            try dp[i][k]+dp[k+1][j]+dims[i]*dims[k+1]*dims[j+1]
+            keep smaller cost and its split k
+print recursively using split[i][j]
+return dp[0][n-1] and order</code></pre>
+<p>Write dims with n+1 entries for n matrices. Zero-based matrix i has shape dims[i]×dims[i+1]. Step 1, state: dp[i][j] is the minimum scalar multiplication count for matrices i through j inclusive. A single matrix requires no multiplication, so dp[i][i]=0.</p>
+
+<p>Step 2, recurrence: the final multiplication splits the interval after some k with i&lt;=k&lt;j. Its left result has shape dims[i]×dims[k+1], and its right result has shape dims[k+1]×dims[j+1]. That last product costs dims[i]×dims[k+1]×dims[j+1]. Add the two optimal child costs and minimise over k.</p>
+
+<p>The split table stores the k producing the best candidate. Scan k upward and replace only on a strictly smaller cost, so the smallest tied split is retained. Labels A1,A2,... in the printed answer are one-based names for the zero-based matrices in C. Keep this naming conversion separate from array indexing.</p>
+
+<h2 id="how-it-works">Fill short intervals before long ones</h2>
+<p>Step 3, order: increase interval length from two through n. For each start i, set j=i+length-1 and test every final split k. Both child intervals are shorter than the parent, even when one contains a single matrix. Their costs are therefore available before the parent is evaluated.</p>
+
+<p>For three matrices, first calculate intervals [0,1] and [1,2]. Their costs are 1500 and 9000. Only then evaluate [0,2]. Split k=0 uses cost 0+9000+18000=27000. Split k=1 uses 1500+0+3000=4500. Save cost 4500 and split 1.</p>
+
+<p>Step 4, reconstruction: if i==j, print that matrix name. Otherwise print an opening parenthesis, recursively print [i,split[i][j]], recursively print [split[i][j]+1,j], and close the parenthesis. The example returns ((A1A2)A3). Reconstruction follows a tree of saved decisions rather than a simple up-left grid path.</p>
+
+<div data-lab="matrix-chain-dp"></div>
+<p>The grid displays only the upper triangular interval states, including the zero diagonal. Lower triangular cells remain empty because i&gt;j is not a matrix interval. Each considered split highlights its two child cells, and the variable panel shows the candidate cost. During recovery, the selected interval cells form the parenthesisation tree.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Choose a cheap multiplication order</h3>
+<p>(A1A2)A3 costs 1500+3000=4500 scalar multiplications, versus 27000 for A1(A2A3).</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Only one matrix</h3>
+<p>The diagonal costs zero because a lone matrix needs no multiplication.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Equal dimensions create ties</h3>
+<p>Either order costs 250. Scanning split points upward and retaining the first gives A1(A2A3).</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Compare final splits of the same chain</h2>
+<table class="ref"><thead><tr><th scope="col">Interval</th><th scope="col">Split k</th><th scope="col">Child cost</th><th scope="col">Final product cost</th><th scope="col">Total</th></tr></thead><tbody><tr><td>A1A2</td><td>0</td><td>0</td><td>1500</td><td>1500</td></tr><tr><td>A2A3</td><td>1</td><td>0</td><td>9000</td><td>9000</td></tr><tr><td>A1..A3</td><td>0</td><td>9000</td><td>18000</td><td>27000</td></tr><tr><td>A1..A3</td><td>1</td><td>1500</td><td>3000</td><td>4500</td></tr></tbody></table>
+
+<p>A table row should identify which interval is being solved and which final split is being tried. Listing only 1500 and 9000 without their final multiplication costs misses the expensive part of the three-matrix decision. Intermediate result dimensions are the link between the chosen split and its cost.</p>
+
+<h2 id="correctness">Every parenthesisation has a final split</h2>
+<p>A complete parenthesisation is a binary tree with the matrices as leaves in their original order. At the root, the final multiplication separates two consecutive nonempty groups. Therefore it corresponds to exactly one k between i and j-1. Trying every k covers every possible final split.</p>
+
+<p>For a fixed split, any optimal parenthesisation must use optimal orders inside both children. If a child were more expensive than necessary, replacing only that child's parentheses would preserve its result dimensions and reduce total cost. The final multiplication cost would remain unchanged. This is the optimal-substructure property supporting the recurrence.</p>
+
+<p>The diagonal is correct because evaluating one existing matrix costs no multiplication. Assume all intervals shorter than the current length have correct costs. Each candidate then combines two correct child minima with the exact final product cost. Taking the minimum chooses an attainable cost no worse than any parenthesisation. Induction over length proves the top-right answer.</p>
+
+<p>The saved split records an attaining candidate. Recursively following it ends at singleton matrices because both children are shorter. The printed plan keeps all original matrices exactly once and preserves their order. Its total arithmetic count equals the stored optimum, proving the recovered witness as well as the numeric cost.</p>
+
+<h2 id="complexity">Intervals times split positions</h2>
+<p>There are Θ(n²) nonempty matrix intervals. Each interval may try O(n) splits, giving O(n³) time. More exactly, summing split counts over all intervals yields n(n-1)(n+1)/6 candidates. That cubic count comes from the combination search within every interval, not from multiplying actual matrix entries.</p>
+
+<p>The cost and split tables each require Θ(n²) space. The reconstruction tree has n leaves and n-1 internal nodes, so writing its matrix names and parentheses takes O(n) structural steps, aside from the digits in names. A skewed chosen order can require O(n) recursion depth during printing.</p>
+
+<p>The examples bound n by twelve and each dimension by 100. Every scalar product cost is at most 100³, and at most eleven matrix products occur, so the optimum fits int. Candidate totals also stay well below the sentinel 1000000000. Larger dimensions require checking products before multiplication and may need a wider integer type.</p>
+
+<h2 id="comparison">Why a local dimension rule is unsafe</h2>
+<p>It is tempting to multiply the currently cheapest adjacent pair first. That local product changes the dimensions of future products, so a cheap early choice can create expensive later work. The DP compares complete child costs and the resulting parent dimensions. A rule inspecting only one immediate multiplication lacks that information.</p>
+
+<p>Matrix order cannot be changed. Multiplication is generally not commutative, so swapping A1 and A2 may be invalid even if their dimensions happen to permit it. Parenthesisation changes grouping alone. A plan that sorts matrices by size solves neither the same algebraic product nor the same optimisation problem.</p>
+
+<p>The uncut analogue here is a single matrix: zero work, no split, and one printed name. Two matrices have exactly one possible split. Equal-size square matrices may have many equally cheap orders because each multiplication costs the same amount. The tie rule chooses a reproducible answer without claiming a unique optimum.</p>
+
+<h2 id="applications">Read dimension chains before allocating</h2>
+<p>A chain of matrices is represented compactly because adjacent dimensions match. If matrices are given as independent row-column pairs, first verify that each matrix's columns equal the next matrix's rows. Without that compatibility, no full parenthesisation can repair the mismatch. Every grouping preserves the required adjacency of the mathematical product.</p>
+
+<p>The dimension-only DP is useful when matrices are large enough that evaluation dominates planning. For a fixed sequence of dimensions used repeatedly, the optimal split tree can be reused. If dimensions change between runs, the stored costs no longer describe the new problem and must be recomputed.</p>
+
+<p>Alternative cost models can optimise memory footprint or parallel completion time instead of scalar multiplication count. Those objectives may depend on evaluation order as well as parentheses. The current recurrence does not automatically minimise memory or runtime on every machine. Its guarantee is the explicitly stated arithmetic-count objective.</p>
+
+<h2 id="common-mistakes">Use the boundary dimensions at the split</h2>
+<p>For zero-based matrices i..j, the final product uses dims[i], dims[k+1] and dims[j+1]. Using dims[k] or dims[j] confuses matrix indices with dimension boundaries. Write the left and right result shapes beside a candidate to derive the factors rather than guessing offsets.</p>
+
+<p>Filling the table in ordinary row-major order may read a longer uncomputed dependency. Increasing interval length makes availability clear. Also do not initialise all nontrivial intervals to zero: every multiplication cost is positive under positive dimensions, so zero would incorrectly defeat every real candidate.</p>
+
+<p>A loop with k&lt;=j creates an empty right child and accesses beyond the intended interval. Require k&lt;j. During printing, use split+1 as the right start. Reusing split as both the left end and right start repeats a matrix and can prevent recovery from shrinking.</p>
+
+<h2 id="version-notes">C17 triangular data in rectangular arrays</h2>
+<p>The C implementation reserves rectangular twelve-by-twelve arrays and uses their upper triangles. Zero initialisation supplies the diagonal costs; nontrivial intervals receive a large sentinel before their split loop. The mathematical interval convention is inclusive here, unlike earlier half-open array recursion. The lesson states that difference so each call and table coordinate has a consistent meaning.</p>
+
+<h2 id="summary">Save the best final split of each interval</h2>
+<p>Matrix-chain DP tries the final multiplication of every interval after solving shorter intervals. The split table reconstructs an optimal parenthesisation without changing matrix order. Dimensions determine the combination cost. Longest increasing subsequence next studies predecessor states in one sequence and a binary-search improvement based on smallest tails.</p>
+<p>Continue with <a href="topic:algo-lis">Longest Increasing Subsequence</a>.</p>

@@ -1,0 +1,83 @@
+<h2 id="introduction">Multiply fewer times</h2>
+<p class="lead">Computing 3 to the thirteenth power by repeated multiplication takes thirteen factor updates. You can do much less work by reusing squares. First obtain 3², then 3⁴, then 3⁸. Since 13=8+4+1, multiply the selected powers 3⁸, 3⁴ and 3. This is exponentiation by squaring, also called binary exponentiation.</p>
+
+<p>The exponent is a nonnegative integer. An exponent of zero returns the multiplicative identity 1. In these integer routines, the same convention defines power(0,0) as 1. Negative exponents would require reciprocal values and another numeric model, so they are outside this contract. State that restriction when using the function.</p>
+
+<p>Large powers quickly outgrow fixed C integer types. Modular exponentiation asks only for the remainder after division by a positive modulus. Reducing intermediate products preserves that remainder while keeping stored values small. It does not automatically prevent overflow during the multiplication before reduction, so the permitted modulus still matters.</p>
+
+<h2 id="syntax">One half-power is enough</h2>
+<pre><code class="language-text">result = 1
+while exponent &gt; 0
+    if exponent is odd: result = result * base
+    exponent = exponent / 2
+    if exponent &gt; 0: base = base * base
+return result</code></pre>
+<p>The recursive identity is base^exponent=(base^(exponent/2))², multiplied by one extra base when the exponent is odd. Integer division discards the final odd bit. Save the recursive half-power in a variable and use it twice. Writing two identical recursive calls recomputes the half-power and changes the recurrence from logarithmic work to linear work.</p>
+
+<p>The iterative form keeps result, base and exponent. It consumes the exponent's binary digits from right to left. An odd exponent means the current squared base belongs in the result. Dividing exponent by two shifts attention to the next bit. Squaring base prepares the power associated with that next bit.</p>
+
+<h2 id="how-it-works">Track what remains to multiply</h2>
+<p>Start iterative power with result=1, base=3 and exponent=13. Because 13 is odd, multiply result by 3. Divide the exponent to get 6, and square the base to get 9. Six is even, so keep result unchanged. Another division and square produce exponent=3 and base=81. The remaining decisions select 81 and then 6561.</p>
+
+<p>The plain integer routine avoids a final unused squaring after the exponent becomes zero. This detail matters near the type limit. The returned power can fit even when an unnecessary square would exceed the type. The exercise restricts base to 0..10 and exponent to 0..18, so every multiplication used to form the answer fits unsigned long long.</p>
+
+<p>For modular power, replace multiplication by multiplication followed by remainder. Reduce the starting base first. Initialise result as 1 % modulus so modulus one is handled correctly. A modulus of zero is invalid because C remainder by zero has undefined behavior. The modular exercise rejects it before calling the function.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Iterative squaring</h3>
+<p>The exponent bits select powers 3, 81 and 6561; their product is 1594323.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">One recursive half-power</h3>
+<p>One recursive call computes 2 to the fifth power, then one multiplication squares 32.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Reduce each product modulo 13</h3>
+<p>Residues stay below 13, and the final residue is 3.</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">Zero exponent, including modulus one</h3>
+<p>The multiplicative identity reduces to 1 modulo 11 and 0 modulo 1.</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">Bits of exponent thirteen</h2>
+<table class="ref"><thead><tr><th scope="col">Before iteration</th><th scope="col">result</th><th scope="col">base</th><th scope="col">exponent</th><th scope="col">Decision</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>3</td><td>13</td><td>multiply result by 3</td></tr><tr><td>2</td><td>3</td><td>9</td><td>6</td><td>skip factor 9</td></tr><tr><td>3</td><td>3</td><td>81</td><td>3</td><td>multiply result by 81</td></tr><tr><td>4</td><td>243</td><td>6561</td><td>1</td><td>multiply result by 6561</td></tr></tbody></table>
+
+<p>The final result is 3×81×6561=1594323. The factor 9 is prepared but never selected because the second binary digit of 13 is zero. This is why the number of selections depends on the number of one bits, while the number of loop iterations depends on the total bit length.</p>
+
+<h2 id="correctness">Keep the original power factored</h2>
+<p>For the iterative routine, the invariant is result×base^exponent equals the original requested power. Initially result=1, so this is true. For an odd exponent 2q+1, multiplying result by base and replacing the remaining base by base² with exponent q preserves the product. For an even exponent 2q, only the squaring and halving are needed.</p>
+
+<p>When exponent reaches zero, base^0 is 1 and the invariant says result equals the original power. The loop terminates because every positive exponent is replaced by a smaller integer exponent/2. The plain routine may skip a last squaring because there is no remaining positive exponent to use that value.</p>
+
+<p>For the recursive routine, exponent zero is the base case. Assuming the half-power is correct, its square gives the even power. Multiplying by one more base gives the odd power. This induction follows exponent size rather than array length. Only one recursive child is needed because both halves are the same calculation.</p>
+
+<p>Modular correctness uses the product rule for congruences: reducing factors before or after multiplication gives the same residue. Apply the factoring invariant modulo the positive modulus. The result need only match the original power's residue, not its full value. This argument assumes the C multiplication itself represents the exact residue product before remainder.</p>
+
+<h2 id="complexity">Halving gives the logarithm</h2>
+<p>A positive exponent e has floor(log₂ e)+1 binary digits. Each loop iteration removes one digit and performs at most a constant number of multiplications. The iterative time is Θ(log(e+1)) for the fixed-width arithmetic model, with Θ(1) auxiliary storage. The recursive version follows T(e)=T(floor(e/2))+Θ(1) and uses Θ(log(e+1)) stack space.</p>
+
+<p>These bounds count machine arithmetic operations. If the full power uses arbitrarily large integers, multiplication cost grows with the number of digits. Then a multiplication is not a constant-time operation. A logarithmic count of multiplications remains useful, but it is not a complete bit-complexity bound for enormous exact powers.</p>
+
+<p>For e=0, both routines do constant work. For base zero and positive e, the answer is zero, although the general loop still inspects the exponent bits. You could add an early return for that special base, but it does not improve the worst-case complexity over all permitted bases.</p>
+
+<h2 id="edge-cases">Overflow before remainder</h2>
+<p>The modular exercise permits modulus at most 1000000000. After reduction, each factor is smaller than that modulus. Their product is below 10¹⁸, which fits the C minimum range of unsigned long long. The bound makes ordinary multiplication followed by % safe. An unrestricted 64-bit modulus would need a different multiplication method or a suitably wider implementation type.</p>
+
+<p>Unsigned arithmetic wraps when it exceeds its range. Wrapping is defined by C, but it is generally the wrong remainder for an arbitrary modulus. Applying % after a wrapped product cannot restore the lost high bits. Therefore using unsigned long long avoids undefined signed overflow but does not remove the need for a numeric bound.</p>
+
+<p>This pattern also works for associative operations with an identity. For example, square matrices can be raised to powers by matrix multiplication. The operation need not be ordinary scalar multiplication, but its order must remain consistent. That connection later explains fast Fibonacci methods, although the current routines use ordinary integer factors.</p>
+
+<h2 id="common-mistakes">Do not recompute the half</h2>
+<p>A recursive expression with recursive_power(base,e/2) written twice creates duplicate work. Save it once as half. Another error tests oddness after halving, which reads the next bit too early. Decide whether to multiply result using the current exponent, then update exponent and base for the next iteration.</p>
+
+<p>Starting result at zero makes every positive exponent return zero. The correct identity for multiplication is one. For modulus one, that identity must itself be reduced to zero. Distinguish these initial values rather than adding an unexplained special case after the loop.</p>
+
+<p>A negative value read into an unsigned exponent may become a huge value. The exercises accept only the stated nonnegative input range. General user interfaces should validate text before conversion if malformed or negative tokens are possible. The algorithm's logarithmic loop does not make an incorrectly parsed request meaningful.</p>
+
+<h2 id="version-notes">Integer operations in C17</h2>
+<p>C17 provides unsigned long long with at least 64 value bits, enough for the bounded powers and modular products here. The output conversion %llu matches that type. All exponents are unsigned int and are halved by ordinary integer division. No floating-point pow call is used, so the answers avoid rounding errors from converting through double.</p>
+
+<h2 id="summary">Reuse repeated factors</h2>
+<p>Exponentiation by squaring saves work by computing one half-power and reusing it. The iterative invariant explains every odd-bit selection. Modular reduction supports large exponents only when residue multiplication is also safe. Closest pair next uses a geometric combine step to avoid checking every possible pair of points.</p>
+<p>Continue with <a href="topic:algo-closest-pair">Closest Pair of Points</a>.</p>

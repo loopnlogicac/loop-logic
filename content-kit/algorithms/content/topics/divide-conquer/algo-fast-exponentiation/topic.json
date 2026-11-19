@@ -1,0 +1,402 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-fast-exponentiation",
+  "module": "divide-conquer",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Fast Exponentiation",
+    "bn": "দ্রুত ঘাত নির্ণয়"
+  },
+  "summary": {
+    "en": "Reuse squared powers to compute integer and modular powers with logarithmically many multiplications.",
+    "bn": "বর্গ করা মান কাজে লাগিয়ে কম গুণে সাধারণ ও modular ঘাত বের করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "algo-maximum-subarray"
+  ],
+  "related": [
+    "algo-closest-pair"
+  ],
+  "keywords": [
+    "Fast Exponentiation",
+    "C17",
+    "divide-conquer",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Fast Exponentiation implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Multiply fewer times"
+    },
+    {
+      "id": "syntax",
+      "title": "One half-power is enough"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Track what remains to multiply"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Bits of exponent thirteen"
+    },
+    {
+      "id": "correctness",
+      "title": "Keep the original power factored"
+    },
+    {
+      "id": "complexity",
+      "title": "Halving gives the logarithm"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Overflow before remainder"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not recompute the half"
+    },
+    {
+      "id": "version-notes",
+      "title": "Integer operations in C17"
+    },
+    {
+      "id": "summary",
+      "title": "Reuse repeated factors"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Iterative squaring",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The exponent bits select powers 3, 81 and 6561; their product is 1594323.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "One recursive half-power",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>One recursive call computes 2 to the fifth power, then one multiplication squares 32.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Reduce each product modulo 13",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Residues stay below 13, and the final residue is 3.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "Zero exponent, including modulus one",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The multiplicative identity reduces to 1 modulo 11 and 0 modulo 1.</p>\n"
+    }
+  ],
+  "labs": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Bounded integer power",
+      "statementHtml": "<p>Read base (0..10) and exponent (0..18). Print Enter base and exponent: first, then power = P. Define base to exponent zero as 1, including base zero.</p>\n",
+      "hints": [
+        "Avoid the final unused squaring after the exponent becomes zero."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Modular power for large exponents",
+      "statementHtml": "<p>Read base (0..1000000000), exponent (0..1000000000), modulus (1..1000000000). Print Enter base exponent modulus: first, then residue = R.</p>\n",
+      "hints": [
+        "The modulus bound keeps every residue product below 10 to the eighteenth power."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Fast Exponentiation: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Fast Exponentiation covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "One recursive half-power can be squared and reused."
+      ],
+      "answerHtml": "<p>For the iterative routine, the invariant is result×base^exponent equals the original requested power. Initially result=1, so this is true. For an odd exponent 2q+1, multiplying result by base and replacing the remaining base by base² with exponent q preserves the product. For an even exponent 2q, only the squaring and halving are needed.</p>\n\n<p>When exponent reaches zero, base^0 is 1 and the invariant says result equals the original power. The loop terminates because every positive exponent is replaced by a smaller integer exponent/2. The plain routine may skip a last squaring because there is no remaining positive exponent to use that value.</p>\n\n<p>For the recursive routine, exponent zero is the base case. Assuming the half-power is correct, its square gives the even power. Multiplying by one more base gives the odd power. This induction follows exponent size rather than array length. Only one recursive child is needed because both halves are the same calculation.</p>\n\n<p>Modular correctness uses the product rule for congruences: reducing factors before or after multiplication gives the same residue. Apply the factoring invariant modulo the positive modulus. The result need only match the original power's residue, not its full value. This argument assumes the C multiplication itself represents the exact residue product before remainder.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Fast Exponentiation: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Fast Exponentiation. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "A positive exponent loses one binary digit per iteration."
+      ],
+      "answerHtml": "<p>A positive exponent e has floor(log₂ e)+1 binary digits. Each loop iteration removes one digit and performs at most a constant number of multiplications. The iterative time is Θ(log(e+1)) for the fixed-width arithmetic model, with Θ(1) auxiliary storage. The recursive version follows T(e)=T(floor(e/2))+Θ(1) and uses Θ(log(e+1)) stack space.</p>\n\n<p>These bounds count machine arithmetic operations. If the full power uses arbitrarily large integers, multiplication cost grows with the number of digits. Then a multiplication is not a constant-time operation. A logarithmic count of multiplications remains useful, but it is not a complete bit-complexity bound for enormous exact powers.</p>\n\n<p>For e=0, both routines do constant work. For base zero and positive e, the answer is zero, although the general loop still inspects the exponent bits. You could add an early return for that special base, but it does not improve the worst-case complexity over all permitted bases.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which identity handles an odd exponent 2q+1?",
+      "options": [
+        "base^(2q+1)=(base^q)²×base",
+        "base^(2q+1)=2×base^q",
+        "base^(2q+1)=base^(q+1)",
+        "base^(2q+1)=base^q+base"
+      ],
+      "answer": 0,
+      "explanation": "Squaring supplies 2q factors and one extra base supplies the odd factor."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why save the recursive half-power in a variable?",
+      "options": [
+        "To make recursion use no stack",
+        "To avoid solving the same half twice",
+        "To permit negative exponents",
+        "To change integer division into real division"
+      ],
+      "answer": 1,
+      "explanation": "One reused call gives the logarithmic recurrence."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the iterative power invariant?",
+      "options": [
+        "result+base equals the original exponent",
+        "base never changes",
+        "result×base^exponent equals the original power",
+        "result always equals the final answer"
+      ],
+      "answer": 2,
+      "explanation": "Odd-bit selection and squaring preserve the remaining factored product."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why initialise modular result as 1 % modulus?",
+      "options": [
+        "To avoid reading exponent",
+        "To make modulus zero legal",
+        "To force every result to one",
+        "To handle modulus one correctly"
+      ],
+      "answer": 3,
+      "explanation": "The multiplicative identity has residue zero modulo one."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a final remainder operation repair overflow in a residue product?",
+      "options": [
+        "No, high product information is already lost",
+        "Yes, for every positive modulus",
+        "Yes, if the type is unsigned",
+        "Only when the exponent is odd"
+      ],
+      "answer": 0,
+      "explanation": "Unsigned wrapping is defined but generally is not the desired modular product."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many loop iterations does positive exponent e need?",
+      "options": [
+        "e",
+        "floor(log₂ e)+1",
+        "e²",
+        "The number of one bits only"
+      ],
+      "answer": 1,
+      "explanation": "Each iteration consumes one binary digit, including zero bits."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What changes for arbitrarily large exact integer powers?",
+      "options": [
+        "Exponent bits stop being useful",
+        "The identity becomes false",
+        "Multiplication is no longer constant-cost",
+        "Recursion always becomes linear-depth"
+      ],
+      "answer": 2,
+      "explanation": "The number of multiplications stays logarithmic while operand lengths grow."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which exact value results from squaring for 3^5?",
+      "code": "#include <stdio.h>\n\nstatic unsigned long long power(unsigned long long base, unsigned int exponent)\n{\n    unsigned long long result = 1;\n    while (exponent > 0) {\n        if (exponent % 2 == 1) { result *= base; }\n        exponent /= 2;\n        if (exponent > 0) { base *= base; }\n    }\n    return result;\n}\n\nint main(void)\n{\n    printf(\"%llu\\n\",power(3,5));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "244",
+        "242",
+        "245",
+        "243"
+      ],
+      "answer": 3,
+      "explanation": "Powers 3 and 81 are selected for exponent bits 101."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What residue is 3^13 modulo 13?",
+      "code": "#include <stdio.h>\n\nstatic unsigned long long modular_power(unsigned long long base, unsigned int exponent,\n                                        unsigned long long modulus)\n{\n    unsigned long long result = 1 % modulus;\n    base %= modulus;\n    while (exponent > 0) {\n        if (exponent % 2 == 1) { result = result * base % modulus; }\n        base = base * base % modulus;\n        exponent /= 2;\n    }\n    return result;\n}\n\nint main(void)\n{\n    printf(\"%llu\\n\",modular_power(3,13,13));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "4",
+        "2",
+        "5"
+      ],
+      "answer": 0,
+      "explanation": "The repeated modular products end at residue 3."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What residue represents exponent zero modulo one?",
+      "code": "#include <stdio.h>\n\nstatic unsigned long long modular_power(unsigned long long base, unsigned int exponent,\n                                        unsigned long long modulus)\n{\n    unsigned long long result = 1 % modulus;\n    base %= modulus;\n    while (exponent > 0) {\n        if (exponent % 2 == 1) { result = result * base % modulus; }\n        base = base * base % modulus;\n        exponent /= 2;\n    }\n    return result;\n}\n\nint main(void)\n{\n    printf(\"%llu\\n\",modular_power(9,0,1));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "1",
+        "0",
+        "-1",
+        "2"
+      ],
+      "answer": 1,
+      "explanation": "The initial identity is reduced as 1%1=0."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "One recursive half-power can be squared and reused.",
+      "bn": "অর্ধেক ঘাত একবার বের করেই বর্গ করা যায়।"
+    },
+    {
+      "en": "An odd exponent contributes one extra base factor.",
+      "bn": "বিজোড় ঘাতে base আরেকবার গুণ করতে হয়।"
+    },
+    {
+      "en": "The iterative product invariant explains bit choices.",
+      "bn": "চলতি গুণফলের invariant দিয়ে বিট বাছাই বোঝা যায়।"
+    },
+    {
+      "en": "Modulo reduction does not repair an overflowed product.",
+      "bn": "গুণে overflow হলে পরে modulo নিয়ে ঠিক করা যায় না।"
+    },
+    {
+      "en": "A positive exponent loses one binary digit per iteration.",
+      "bn": "প্রতি ধাপে ধনাত্মক ঘাতের একটি binary digit কমে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Fast Exponentiation trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">Before iteration</th><th scope=\"col\">result</th><th scope=\"col\">base</th><th scope=\"col\">exponent</th><th scope=\"col\">Decision</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>3</td><td>13</td><td>multiply result by 3</td></tr><tr><td>2</td><td>3</td><td>9</td><td>6</td><td>skip factor 9</td></tr><tr><td>3</td><td>3</td><td>81</td><td>3</td><td>multiply result by 81</td></tr><tr><td>4</td><td>243</td><td>6561</td><td>1</td><td>multiply result by 6561</td></tr></tbody></table>\n\n<p>The final result is 3×81×6561=1594323. The factor 9 is prepared but never selected because the second binary digit of 13 is zero. This is why the number of selections depends on the number of one bits, while the number of loop iterations depends on the total bit length.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Fast Exponentiation method. State its assumptions.",
+      "answerHtml": "<p>For the iterative routine, the invariant is result×base^exponent equals the original requested power. Initially result=1, so this is true. For an odd exponent 2q+1, multiplying result by base and replacing the remaining base by base² with exponent q preserves the product. For an even exponent 2q, only the squaring and halving are needed.</p>\n\n<p>When exponent reaches zero, base^0 is 1 and the invariant says result equals the original power. The loop terminates because every positive exponent is replaced by a smaller integer exponent/2. The plain routine may skip a last squaring because there is no remaining positive exponent to use that value.</p>\n\n<p>For the recursive routine, exponent zero is the base case. Assuming the half-power is correct, its square gives the even power. Multiplying by one more base gives the odd power. This induction follows exponent size rather than array length. Only one recursive child is needed because both halves are the same calculation.</p>\n\n<p>Modular correctness uses the product rule for congruences: reducing factors before or after multiplication gives the same residue. Apply the factoring invariant modulo the positive modulus. The result need only match the original power's residue, not its full value. This argument assumes the C multiplication itself represents the exact residue product before remainder.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Fast Exponentiation from the calls, states or candidate operations.",
+      "answerHtml": "<p>A positive exponent e has floor(log₂ e)+1 binary digits. Each loop iteration removes one digit and performs at most a constant number of multiplications. The iterative time is Θ(log(e+1)) for the fixed-width arithmetic model, with Θ(1) auxiliary storage. The recursive version follows T(e)=T(floor(e/2))+Θ(1) and uses Θ(log(e+1)) stack space.</p>\n\n<p>These bounds count machine arithmetic operations. If the full power uses arbitrarily large integers, multiplication cost grows with the number of digits. Then a multiplication is not a constant-time operation. A logarithmic count of multiplications remains useful, but it is not a complete bit-complexity bound for enormous exact powers.</p>\n\n<p>For e=0, both routines do constant work. For base zero and positive e, the answer is zero, although the general loop still inspects the exponent bits. You could add an early return for that special base, but it does not improve the worst-case complexity over all permitted bases.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

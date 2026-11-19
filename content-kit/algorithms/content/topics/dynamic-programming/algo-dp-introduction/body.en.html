@@ -1,0 +1,84 @@
+<h2 id="introduction">Remember an answer instead of repeating work</h2>
+<p class="lead">Imagine being asked the same small calculation several times while solving a larger problem. You could recalculate every time, or write the answer down and reuse it. Dynamic programming, often shortened to DP, organises this reuse. It solves a family of related subproblems and stores their answers.</p>
+
+<p>A state describes exactly which smaller problem an entry answers. A transition explains how one state depends on others. A base case gives an answer without further dependencies. Once those pieces are clear, you can decide whether to compute states on demand or fill them in a planned order.</p>
+
+<p>Fibonacci numbers make the mechanics visible. Define F(0)=0, F(1)=1 and F(n)=F(n-1)+F(n-2) for n&gt;=2. The first values are 0,1,1,2,3,5,8,13. Fibonacci is not an optimisation problem, but its repeated dependencies clearly demonstrate why remembering states helps.</p>
+
+<p>For optimisation problems, you also need optimal substructure: an optimal answer can be assembled from appropriate optimal subproblem answers. Overlap and optimal substructure are different properties. Overlap explains saved work; optimal substructure justifies the recurrence used to select the best answer. Fibonacci demonstrates overlap without requiring a maximum or minimum objective.</p>
+
+<h2 id="syntax">State and recurrence before a table</h2>
+<pre><code class="language-text">dp[0] = 0; if n &gt;= 1: dp[1] = 1
+for i = 2 to n
+    dp[i] = dp[i - 1] + dp[i - 2]
+return dp[n]</code></pre>
+<p>Step 1, state: dp[i] means the exact Fibonacci value F(i). The index is not a recursion depth or a count of calls. Step 2, recurrence: for i&gt;=2, dp[i]=dp[i-1]+dp[i-2]. Set dp[0]=0 and dp[1]=1 when the requested range includes index one. These meanings completely specify each table entry.</p>
+
+<p>Step 3, filling order: increasing i works because both dependency indices are smaller. Step 4, reconstruction: Fibonacci returns one number, so there is no chosen path or sequence to recover. Read dp[n]. You can still follow the dependency edges to explain that value, but those edges describe a sum of both children, not a choice between alternatives.</p>
+
+<h2 id="how-it-works">Three ways to evaluate the same recurrence</h2>
+<p>Naive recursion directly follows the definition. To compute F(7), it asks for F(6) and F(5). F(6) asks for F(5) again, so that whole calculation repeats. Smaller values are repeated still more often. The recursion is correct but its call tree is much larger than the set of distinct indices.</p>
+
+<p>Memoisation keeps the recursive structure and adds a cache. Start unknown entries at -1, because valid Fibonacci values are nonnegative. Before solving a nonbase state, check the cache. If it is known, return it immediately. Otherwise compute its two dependencies once, store their sum, and return the stored value.</p>
+
+<p>Tabulation starts from the bases and fills i=2,3,...,n. It never needs an unknown sentinel because the loop order guarantees every read is ready. Both approaches evaluate the same dependency graph. Memoisation follows requests from the desired answer; tabulation follows a known order from the bases.</p>
+
+<div data-lab="fibonacci-dp"></div>
+<p>The grid lab displays one row with columns numbered by index. Before setting a new value, it highlights the two dependencies to its left. The n=0 preset has one cell, so it never writes an absent column 1. This small boundary checks that the table's shape follows the requested state range.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Fibonacci by row order</h3>
+<p>The row 0,1,1,2,3,5,8,13 stores each repeated subproblem once.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">The repeated recursive calls</h3>
+<p>The naive recursion gets 13 too, but revisits indices such as 3 many times.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Cache results only when requested</h3>
+<p>The -1 sentinel distinguishes an unknown entry from the valid value F(0)=0.</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">Two live values instead of a whole row</h3>
+<p>Only the last two values are needed when the earlier row will not be inspected again.</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">A row for index seven</h2>
+<table class="ref"><thead><tr><th scope="col">Index</th><th scope="col">Dependencies</th><th scope="col">F value</th></tr></thead><tbody><tr><td>0</td><td>base</td><td>0</td></tr><tr><td>1</td><td>base</td><td>1</td></tr><tr><td>2</td><td>1+0</td><td>1</td></tr><tr><td>3</td><td>1+1</td><td>2</td></tr><tr><td>4</td><td>2+1</td><td>3</td></tr><tr><td>5</td><td>3+2</td><td>5</td></tr><tr><td>6</td><td>5+3</td><td>8</td></tr><tr><td>7</td><td>8+5</td><td>13</td></tr></tbody></table>
+
+<p>There are eight distinct states from 0 through 7. Repeated recursion creates more than eight calls because it reaches the same state through different parents. The table makes that sharing explicit. When explaining why DP helps, count distinct states and work per state rather than counting only the final loop iterations.</p>
+
+<h2 id="correctness">Evaluate dependencies after their bases</h2>
+<p>For tabulation, use the invariant that all entries below i equal their defined Fibonacci values. The bases establish it before i=2. At iteration i, the previous two entries are correct by the invariant. Their sum is F(i) by the recurrence, so the new entry is also correct. At the end, dp[n] has its required value.</p>
+
+<p>For memoisation, prove the same recurrence by induction on n. A cache hit returns a value stored by an earlier correct computation. A cache miss recursively computes smaller indices, combines correct values, and stores the correct result. The sentinel must be distinguishable from every valid result so a known zero is never mistaken for unknown.</p>
+
+<p>Termination follows because recursive indices decrease until reaching 0 or 1. The tabulation loop instead increases toward n. Neither traversal can cycle in this dependency graph. In another DP, a recurrence referring back to a state currently being evaluated could cause a cycle, so dependency direction needs explicit attention.</p>
+
+<h2 id="complexity">Distinct states replace repeated calls</h2>
+<p>Naive Fibonacci recursion satisfies a branching recurrence and takes Θ(φ^n) time, where φ is the golden ratio. O(2^n) is a valid simpler upper bound. Its active stack depth is Θ(n), because one branch repeatedly subtracts one. Exponential total calls do not mean exponential simultaneous stack storage.</p>
+
+<p>Memoisation solves n+1 distinct states, with constant work and at most two dependency calls per state. It takes Θ(n) time and Θ(n) cache space, plus Θ(n) stack depth. Tabulation also takes Θ(n) time and Θ(n) table space, but avoids recursive frames. These are fixed-width arithmetic bounds under the numeric limits used here.</p>
+
+<p>When only F(n) is needed, keep the previous two values instead of the entire table. The rolling example uses Θ(1) auxiliary space and Θ(n) time. This removes access to old entries, so use a table when you need to inspect or answer many stored indices. Space compression should follow actual future dependencies.</p>
+
+<h2 id="comparison">When top-down and bottom-up differ</h2>
+<p>Memoisation can avoid states that no request reaches. Fibonacci reaches every smaller index, so it offers no such saving here. In sparse state spaces, demand-driven evaluation may be easier or cheaper. Tabulation can be simpler when dependencies have a clear rectangular or increasing-size order and most states are needed.</p>
+
+<p>A cache belongs to a particular problem definition. If a state also depends on capacity, remaining items or another parameter, caching only n mixes different subproblems. Include every parameter that changes the answer. Correct state design is usually more important than choosing recursion or loops.</p>
+
+<p>Fibonacci grows beyond fixed integer ranges. These demonstrations restrict n to at most 30 in table storage and at most 20 in recursion exercises. F(30)=832040 fits int on the recorded toolchain. General large-index Fibonacci requires a wider type, modular arithmetic, or arbitrary-precision arithmetic with a revised cost model.</p>
+
+<h2 id="common-mistakes">Do not use a valid value as unknown</h2>
+<p>Initialising a cache to zero and interpreting zero as unknown fails to recognise the valid result F(0)=0. Use a separate known flag or an impossible sentinel such as -1 under a nonnegative contract. The memo example handles base values directly before consulting the cache.</p>
+
+<p>Adding a cache but forgetting to return stored answers still repeats the original recursion. Store on a miss and reuse on a hit. Also avoid clearing the cache inside every recursive call, which discards all remembered work. Initialise it once before the initial request.</p>
+
+<p>Reading dp[i-2] when i starts at one accesses a negative index. Begin transitions at two after setting the bases. Writing dp[1] unconditionally into a one-cell n=0 allocation is a different boundary error. The grid lab and the bounded C array use their own safe representations for these bases.</p>
+
+<h2 id="version-notes">C17 recurrence storage</h2>
+<p>The C programs use int arrays with a fixed size sufficient for their documented index limits. The rolling version saves the new sum before replacing old values, preventing an update-order mistake. None of these techniques requires a C feature beyond the C17 baseline. Overflow remains a mathematical-range issue even when every array index is valid.</p>
+
+<h2 id="summary">DP begins with a precise state</h2>
+<p>Fibonacci shows how storing distinct subproblem results removes repeated evaluation. Memoisation computes on demand; tabulation uses a dependency-respecting order. A scalar Fibonacci answer needs no choice reconstruction. Coin change next adds optimisation, unreachable states, and predecessors that recover an actual payment.</p>
+<p>Continue with <a href="topic:algo-coin-change">Coin Change</a>.</p>

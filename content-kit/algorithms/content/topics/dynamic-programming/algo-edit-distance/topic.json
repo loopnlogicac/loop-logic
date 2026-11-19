@@ -1,0 +1,437 @@
+{
+  "schemaVersion": "1.1",
+  "id": "algo-edit-distance",
+  "module": "dynamic-programming",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Edit Distance",
+    "bn": "এডিট ডিসট্যান্স"
+  },
+  "summary": {
+    "en": "Find unit-cost insertion, deletion and replacement distance, then recover a forward editing alignment.",
+    "bn": "যোগ, মোছা ও বদলের ন্যূনতম খরচ বের করে সম্পাদনার ক্রম দেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "algo-lcs"
+  ],
+  "related": [
+    "algo-matrix-chain"
+  ],
+  "keywords": [
+    "Edit Distance",
+    "C17",
+    "dynamic-programming",
+    "correctness"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "The Edit Distance implementations use C17 and the numeric limits stated in their input contracts."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Measure how much a label must change"
+    },
+    {
+      "id": "syntax",
+      "title": "State and final-operation choices"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Fill the prefixes and save a direction"
+    },
+    {
+      "id": "examples",
+      "title": "C implementations and results"
+    },
+    {
+      "id": "trace",
+      "title": "Convert CAT into CUT"
+    },
+    {
+      "id": "reconstruction",
+      "title": "Read the edits as a forward alignment"
+    },
+    {
+      "id": "correctness",
+      "title": "The last aligned operation is exhaustive"
+    },
+    {
+      "id": "complexity",
+      "title": "Prefix pairs determine work"
+    },
+    {
+      "id": "variations",
+      "title": "Different costs define different recurrences"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep costs and directions consistent"
+    },
+    {
+      "id": "version-notes",
+      "title": "C17 text limits"
+    },
+    {
+      "id": "summary",
+      "title": "A minimum alignment explains the number"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "A replacement between matching ends",
+      "level": "basic",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-1.c",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>C and T match for free; replacing A with U is the only paid step.</p>\n"
+    },
+    {
+      "id": "ex-2",
+      "title": "Insert and delete along an empty boundary",
+      "level": "intermediate",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-2.c",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The empty source needs two insertions. Boundary costs are distances, not zero.</p>\n"
+    },
+    {
+      "id": "ex-3",
+      "title": "Several optimal editing alignments",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-3.c",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Diagonal-first tie handling prints two replacements; deleting and inserting would have equal cost.</p>\n"
+    },
+    {
+      "id": "ex-4",
+      "title": "A longer correction",
+      "level": "advanced",
+      "language": "c",
+      "standard": "c17",
+      "file": "examples/ex-4.c",
+      "output": "examples/ex-4.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The recovered alignment has two replacements and one insertion, for total cost 3.</p>\n"
+    }
+  ],
+  "labs": [
+    "edit-distance-dp"
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Explain a minimum correction",
+      "statementHtml": "<p>Read two uppercase strings of at most 16 letters; - denotes empty. Print Enter two strings (- means empty):. Print distance = D, then forward alignment edits as replace X with Y, delete X, or insert Y. Prefer diagonal, deletion, insertion on ties.</p>\n",
+      "hints": [
+        "Recurse to the predecessor before printing the current edit."
+      ],
+      "solution": "practice/p-1.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Check a correction budget",
+      "statementHtml": "<p>Read two uppercase strings of at most 16 letters (- means empty), followed by budget (0..32). Print Enter two strings (- means empty):, distance = D, within budget or over budget, then the forward paid edits. Use diagonal, deletion, insertion tie order.</p>\n",
+      "hints": [
+        "Compare the finished distance with the budget; matching characters cost zero."
+      ],
+      "solution": "practice/p-2.c",
+      "standard": "c17",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Edit Distance: justify the decisions",
+      "statementHtml": "<p>Explain why the recurrence or decision rule for Edit Distance covers every valid candidate, and why evaluation terminates.</p>\n",
+      "hints": [
+        "Unit edit distance permits insertion, deletion and replacement."
+      ],
+      "answerHtml": "<p>Take any valid alignment converting the two prefixes. Its final action either pairs their final characters, deletes the source endpoint, or inserts the target endpoint. Those actions lead exactly to the diagonal, up and left predecessor states. Removing the final action leaves a conversion of the corresponding smaller prefixes.</p>\n\n<p>If that smaller conversion were not optimal, replacing it with a cheaper one would improve the whole alignment. Thus an optimal alignment uses an optimal predecessor for one of the three actions. Conversely, adding the action to any valid predecessor creates a valid current conversion. Taking the minimum of their costs is both attainable and no greater than any other alignment.</p>\n\n<p>The boundary costs count the necessary edits against an empty string. Inducting over i+j proves the recurrence values. Every dependency decreases that sum, so the chosen table order respects the proof. During reconstruction, following a cost-equal predecessor preserves the stored optimum, and decreasing coordinates guarantees termination at (0,0).</p>\n\n<p>Unit nonnegative costs also explain some basic checks. Distance is zero for identical strings. It is at least the absolute difference of their lengths, because replacement cannot change length. It is at most max(n,m), by replacing the shared-length portion and inserting or deleting the excess. These inequalities are useful independent checks on table outputs.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Edit Distance: derive resource bounds",
+      "statementHtml": "<p>Derive the time and auxiliary-space bounds for the implementations of Edit Distance. Separate input, working storage and returned information.</p>\n",
+      "hints": [
+        "Changing operation costs changes the distance model."
+      ],
+      "answerHtml": "<p>The full table contains (n+1)(m+1) cells. Each interior cell compares three constant-time candidates, giving Θ(nm) time for nonempty lengths and Θ(nm) table space. Recovery visits at most n+m transitions. A forward-recursive recovery uses O(n+m) stack depth in addition to the table; an iterative recovery can store and reverse the path instead.</p>\n\n<p>Two rows suffice when only the distance is needed. Retain the previous row and current row while scanning columns, using O(min(n,m)) table memory after choosing the shorter column dimension. As with LCS, that compressed calculation does not preserve every predecessor for the simple recovery routine.</p>\n\n<p>The bounded demonstrations use at most sixteen characters in either input, so distances are at most sixteen under unit costs. int easily holds all entries. A weighted variant with large operation costs needs a wider range calculation. Numeric safety must account for a predecessor plus its operation cost, not only the final answer.</p>\n"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Edit Distance: explain the worked trace",
+      "statementHtml": "<p>Reproduce the worked Edit Distance trace and explain each comparison or state change. State how the example handles equal candidates.</p>\n",
+      "hints": [
+        "Name the quantities in each row before making the next decision."
+      ],
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">source / target</th><th scope=\"col\">empty</th><th scope=\"col\">C</th><th scope=\"col\">CU</th><th scope=\"col\">CUT</th></tr></thead><tbody><tr><td>empty</td><td>0</td><td>1</td><td>2</td><td>3</td></tr><tr><td>C</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>CA</td><td>2</td><td>1</td><td>1</td><td>2</td></tr><tr><td>CAT</td><td>3</td><td>2</td><td>2</td><td>1</td></tr></tbody></table>\n<table class=\"ref\"><thead><tr><th scope=\"col\">source / target</th><th scope=\"col\">empty</th><th scope=\"col\">C</th><th scope=\"col\">CU</th><th scope=\"col\">CUT</th></tr></thead><tbody><tr><td>empty</td><td>0</td><td>1</td><td>2</td><td>3</td></tr><tr><td>C</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>CA</td><td>2</td><td>1</td><td>1</td><td>2</td></tr><tr><td>CAT</td><td>3</td><td>2</td><td>2</td><td>1</td></tr></tbody></table>\n\n<p>The bottom-right value is one. Recover backward through the T match, the A-to-U replacement, and the C match. Reading the alignment forward keeps C, replaces A by U, and keeps T. The program prints only the paid replacement because matches do not change the text or add cost.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which operation has zero cost in the unit edit model?",
+      "options": [
+        "Keeping a matching character",
+        "Inserting a letter",
+        "Deleting a letter",
+        "Replacing unequal letters"
+      ],
+      "answer": 0,
+      "explanation": "A diagonal match makes no change."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What is dp[i][0] under unit costs?",
+      "options": [
+        "0",
+        "i",
+        "1 for every i",
+        "The full target length"
+      ],
+      "answer": 1,
+      "explanation": "All i source-prefix letters must be deleted."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which predecessor represents deleting the source endpoint?",
+      "options": [
+        "Left",
+        "Diagonal only",
+        "Up",
+        "The same cell"
+      ],
+      "answer": 2,
+      "explanation": "Deletion consumes one source character and no target character."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which predecessor represents inserting the target endpoint?",
+      "options": [
+        "Up",
+        "The row below",
+        "The same cell",
+        "Left"
+      ],
+      "answer": 3,
+      "explanation": "Insertion consumes one target character in the prefix recurrence."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When must edit recovery stop?",
+      "options": [
+        "Only when both coordinates are zero",
+        "When either coordinate is zero",
+        "After the first replacement",
+        "After exactly min(n,m) moves"
+      ],
+      "answer": 0,
+      "explanation": "Remaining boundary characters still need insertions or deletions."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the unit distance from AB to BA without transposition?",
+      "options": [
+        "1",
+        "2",
+        "0",
+        "4"
+      ],
+      "answer": 1,
+      "explanation": "Two replacements or a delete-insert pair suffice; one permitted edit does not."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does the printed alignment identify mutable string indices?",
+      "options": [
+        "Yes, every line includes a numeric position",
+        "Only for deletion",
+        "No, it gives forward character-edit descriptions",
+        "Only when the strings differ in length"
+      ],
+      "answer": 2,
+      "explanation": "Applying indexed edits requires retaining positions or matching cursor advances too."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is a lower bound on unit edit distance?",
+      "options": [
+        "The sum of lengths plus one",
+        "The number of equal letters",
+        "Always the shorter length",
+        "The absolute length difference"
+      ],
+      "answer": 3,
+      "explanation": "Only insertion and deletion change length by one per operation."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which unit edit cost fills an empty-source prefix of length three?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int j=3;\n    printf(\"%d\\n\",j);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "4",
+        "2",
+        "5"
+      ],
+      "answer": 0,
+      "explanation": "Three insertions build the target prefix from emptiness."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What cost wins when replacement costs one and insertion or deletion costs two?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    int diagonal=1,up=2,left=2;\n    int best=diagonal;\n    if(up<best){best=up;}\n    if(left<best){best=left;}\n    printf(\"%d\\n\",best);\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "2",
+        "1",
+        "0",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "The replacement candidate is the cheapest."
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many paid operations does a matching diagonal add?",
+      "code": "#include <stdio.h>\n\n\n\nint main(void)\n{\n    char source='A',target='A';\n    int before=2;\n    printf(\"%d\\n\",before+(source!=target));\n    return 0;\n}\n",
+      "standard": "c17",
+      "options": [
+        "3",
+        "1",
+        "2",
+        "4"
+      ],
+      "answer": 2,
+      "explanation": "The equality adds zero, so the prior cost two is preserved."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Unit edit distance permits insertion, deletion and replacement.",
+      "bn": "unit edit distance-এ যোগ, মোছা ও বদল করা যায়।"
+    },
+    {
+      "en": "Empty-prefix boundaries count insertions or deletions.",
+      "bn": "খালি prefix-এর সীমানায় যোগ বা মোছার খরচ থাকে।"
+    },
+    {
+      "en": "A matching diagonal costs zero.",
+      "bn": "অক্ষর মিললে তির্যক ধাপে খরচ শূন্য।"
+    },
+    {
+      "en": "Recovery continues until both prefix lengths reach zero.",
+      "bn": "দুই prefix-এর দৈর্ঘ্য শূন্য না হওয়া পর্যন্ত ফিরে যেতে হয়।"
+    },
+    {
+      "en": "Forward edit descriptions follow alignment order.",
+      "bn": "সম্পাদনার বিবরণ alignment-এর সামনের ক্রমে থাকে।"
+    },
+    {
+      "en": "Changing operation costs changes the distance model.",
+      "bn": "কাজের খরচ বদলালে distance-এর মডেলও বদলে যায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "marks": 6,
+      "question": "Show the worked Edit Distance trace, including each rejected candidate or completed dependency. Explain the final answer.",
+      "answerHtml": "<table class=\"ref\"><thead><tr><th scope=\"col\">source / target</th><th scope=\"col\">empty</th><th scope=\"col\">C</th><th scope=\"col\">CU</th><th scope=\"col\">CUT</th></tr></thead><tbody><tr><td>empty</td><td>0</td><td>1</td><td>2</td><td>3</td></tr><tr><td>C</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>CA</td><td>2</td><td>1</td><td>1</td><td>2</td></tr><tr><td>CAT</td><td>3</td><td>2</td><td>2</td><td>1</td></tr></tbody></table>\n\n<p>The bottom-right value is one. Recover backward through the T match, the A-to-U replacement, and the C match. Reading the alignment forward keeps C, replaces A by U, and keeps T. The program prints only the paid replacement because matches do not change the text or add cost.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 6,
+      "question": "Prove correctness and termination of the main Edit Distance method. State its assumptions.",
+      "answerHtml": "<p>Take any valid alignment converting the two prefixes. Its final action either pairs their final characters, deletes the source endpoint, or inserts the target endpoint. Those actions lead exactly to the diagonal, up and left predecessor states. Removing the final action leaves a conversion of the corresponding smaller prefixes.</p>\n\n<p>If that smaller conversion were not optimal, replacing it with a cheaper one would improve the whole alignment. Thus an optimal alignment uses an optimal predecessor for one of the three actions. Conversely, adding the action to any valid predecessor creates a valid current conversion. Taking the minimum of their costs is both attainable and no greater than any other alignment.</p>\n\n<p>The boundary costs count the necessary edits against an empty string. Inducting over i+j proves the recurrence values. Every dependency decreases that sum, so the chosen table order respects the proof. During reconstruction, following a cost-equal predecessor preserves the stored optimum, and decreasing coordinates guarantees termination at (0,0).</p>\n\n<p>Unit nonnegative costs also explain some basic checks. Distance is zero for identical strings. It is at least the absolute difference of their lengths, because replacement cannot change length. It is at most max(n,m), by replacing the shared-length portion and inserting or deleting the excess. These inequalities are useful independent checks on table outputs.</p>\n"
+    },
+    {
+      "type": "long",
+      "marks": 5,
+      "question": "Derive the time and working-space cost of Edit Distance from the calls, states or candidate operations.",
+      "answerHtml": "<p>The full table contains (n+1)(m+1) cells. Each interior cell compares three constant-time candidates, giving Θ(nm) time for nonempty lengths and Θ(nm) table space. Recovery visits at most n+m transitions. A forward-recursive recovery uses O(n+m) stack depth in addition to the table; an iterative recovery can store and reverse the path instead.</p>\n\n<p>Two rows suffice when only the distance is needed. Retain the previous row and current row while scanning columns, using O(min(n,m)) table memory after choosing the shorter column dimension. As with LCS, that compressed calculation does not preserve every predecessor for the simple recovery routine.</p>\n\n<p>The bounded demonstrations use at most sixteen characters in either input, so distances are at most sixteen under unit costs. int easily holds all entries. A weighted variant with large operation costs needs a wider range calculation. Numeric safety must account for a predecessor plus its operation cost, not only the final answer.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT Introduction to Algorithms",
+      "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/"
+    },
+    {
+      "title": "C language and library reference",
+      "url": "https://en.cppreference.com/w/c"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,81 @@
+<h2 id="introduction">Make one choice and commit</h2>
+<p class="lead">Suppose several students wait for short printing tasks. Serving a shorter task first can reduce the total time everyone spends waiting. A greedy algorithm chooses what looks best at the current step, commits to that choice, and continues on the remaining problem. It does not normally explore every complete solution before deciding.</p>
+
+<p>The word best needs a precise objective. You might want the most meetings, the greatest value, the smallest waiting sum, or the fewest coins. A rule that helps one objective can fail for another. Choosing the highest-profit meeting first does not necessarily maximise the number of meetings. Define feasibility and the quantity being optimised before proposing the rule.</p>
+
+<p>A convincing example cannot prove a greedy rule always works. The hard part is showing that an optimal complete solution can agree with the local choice. That is the greedy-choice property. If you cannot justify it, look for a counterexample on a small input. A failed rule can still teach you which information a stronger algorithm must remember.</p>
+
+<h2 id="syntax">A greedy decision pattern</h2>
+<pre><code class="language-text">define the objective and feasible partial solutions
+propose a local priority rule
+prove an exchange preserves feasibility and objective
+order candidates by that justified rule
+accept a candidate when the partial solution remains feasible
+continue on the remaining problem</code></pre>
+<p>A typical greedy algorithm orders candidates by a priority, then accepts a candidate if the partial solution remains feasible. The priority might be finishing time, value per unit weight, or profit. The feasibility test might compare times, remaining capacity, or available slots. Neither the ordering nor the test is universal across greedy problems.</p>
+
+<p>Optimal substructure means that, after fixing an appropriate first decision, the remaining decisions form an optimal solution to a smaller problem. Many dynamic-programming problems also have this property. Greedy algorithms need something stronger: at least one optimal solution must use the particular local choice without requiring a search across alternatives.</p>
+
+<h2 id="how-it-works">Try an exchange before writing a loop</h2>
+<p>An exchange argument begins with an arbitrary optimal solution. If that solution already uses your greedy choice, continue with its remainder. Otherwise, replace some of its decisions with the greedy choice. Prove that the replacement preserves feasibility and cannot worsen the objective. Then an optimal solution agreeing with the greedy choice exists.</p>
+
+<p>For shortest processing time first, consider adjacent tasks of lengths x and y with x&gt;y. Let t be the time before those tasks begin. Their completion times contribute (t+x)+(t+x+y). Swapping them contributes (t+y)+(t+y+x). The earlier expression exceeds the later by x-y. Tasks after the pair finish at the same time because total pair length is unchanged.</p>
+
+<p>Repeatedly exchange such inverted adjacent pairs. The process ends with tasks sorted by nondecreasing length and never increases total completion time. This proves the ordering for independent tasks available at time zero on one machine. Release times, precedence requirements, and priorities would change the problem and need a fresh argument.</p>
+
+<p>Coin change shows why the proof matters. With denominations 1,5,10, replacing five ones by one five improves coin count. Replacing two fives by one ten also improves it. An optimal payment therefore has fewer than five ones and fewer than two fives. Taking as many tens as possible follows from those replacements.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Largest coins on a divisible denomination system</h3>
+<p>Two tens, one five and three ones make six coins.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">A largest-first counterexample</h3>
+<p>Largest-first takes 4+1+1, but 3+3 needs only two coins.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Exchange adjacent out-of-order waiting times</h3>
+<p>Shorter tasks first reduce the sum of completion times from 33 to 24.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">Largest-first fails on a different currency</h2>
+<table class="ref"><thead><tr><th scope="col">Coin system</th><th scope="col">Amount</th><th scope="col">Largest-first</th><th scope="col">Better alternative</th></tr></thead><tbody><tr><td>1,5,10</td><td>28</td><td>10+10+5+1+1+1</td><td>6 coins is optimal</td></tr><tr><td>1,3,4</td><td>6</td><td>4+1+1: 3 coins</td><td>3+3: 2 coins</td></tr></tbody></table>
+
+<p>The amount 6 with denominations 1,3,4 defeats largest-first. Taking 4 leaves 2, requiring two ones and three coins overall. Taking 3 twice reaches the same amount using two coins. The local attraction of a larger denomination does not imply a globally smaller number of coins.</p>
+
+<h2 id="correctness">What must survive an exchange</h2>
+<p>Write the exchange proof in two separate claims. First, the altered solution remains feasible: no time conflict, capacity excess, missing requirement or invalid resource appears. Second, the objective does not get worse. Only after both claims may you replace the original optimal solution with the altered one.</p>
+
+<p>The remaining subproblem must also have the same useful structure. In a meeting problem, choosing an earliest-finishing meeting leaves meetings starting after its finish. In fractional knapsack, consuming the best ratio leaves reduced capacity and the remaining divisible material. Those remainders still support the same kind of local decision.</p>
+
+<p>A proof that compares only the first two candidates is incomplete when an exchange affects later choices. For waiting-time order, explicitly show that later completion times stay unchanged. For a time-interval algorithm, show that replacing the first interval leaves later intervals compatible. The untouched remainder is often where a seemingly plausible proof fails.</p>
+
+<p>For coins 1,3,4, no exchange can turn the optimal 3+3 into a payment starting with 4 without worsening the count. That is a direct obstruction to the greedy-choice property. Optimal substructure still holds: after choosing a coin, the remaining minimum payment is a smaller coin-change problem. Dynamic programming will compare those first-coin choices.</p>
+
+<h2 id="complexity">The rule is not the running time</h2>
+<p>Greedy describes a decision strategy, not one time complexity. A candidate sort may cost O(n log n), followed by an O(n) scan. A min-priority queue may add logarithmic removal and insertion costs. A slot search may take linear time for every accepted or rejected job. Count the data-structure operations used by the actual implementation.</p>
+
+<p>For largest-first coins with sorted denominations, quotient and remainder handle all coins of one denomination at once. The loop takes Θ(k) machine operations for k denominations, not Θ(amount) repeated subtractions. If the denominations first need sorting, add that preparation cost. The returned count still lacks an optimality guarantee on an arbitrary currency.</p>
+
+<p>The small greedy-failure practice deliberately enumerates counts of threes and fours. It is a search used to test a conjecture over amounts at most twenty. It is not presented as the most efficient coin-change solver. Keeping a trusted small exhaustive method is often helpful when inventing or debugging an optimisation rule.</p>
+
+<h2 id="comparison">When a counterexample is useful</h2>
+<p>To challenge a greedy rule, make its favourite candidate block a valuable combination. For meeting count, use one attractive long meeting against several short compatible meetings. For indivisible knapsack, give the highest-ratio item a weight that leaves unusable space. For coins, choose a large denomination leaving an expensive remainder.</p>
+
+<p>Check the smallest input where the rule fails. Reducing a counterexample often reveals the exact missing property. The coin example needs only three denominations and amount six. Its failure comes from the interaction between 4 and two 3s, rather than from a large amount or a complicated input order.</p>
+
+<p>Some greedy algorithms produce useful approximations when exact optimisation is hard. An approximation guarantee still needs proof and a stated ratio. A rule that often looks good in experiments has no automatic worst-case guarantee. Keep exact optimality, proved approximation, and an unproved heuristic as different claims.</p>
+
+<h2 id="common-mistakes">Name the objective and the assumptions</h2>
+<p>Saying always take the best candidate merely restates the intended strategy. Define best numerically and prove why that number is appropriate. A high raw value differs from high value per weight. An early start differs from an early finish. These distinctions change complete schedules and payments.</p>
+
+<p>Testing only the familiar denominations 1,5,10 can hide a coin-change failure. Test unfamiliar systems and amounts just above a large coin. Also do not conclude that one failed greedy rule means every greedy approach to the problem is impossible. It disproves that particular rule under those assumptions.</p>
+
+<p>Optimal substructure alone does not justify committing to the largest coin. You still need the greedy-choice property. Conversely, an exchange proof should not silently assume the solution already begins with the proposed choice. Begin with any optimum and show how to transform it while preserving its quality.</p>
+
+<h2 id="version-notes">C17 integer demonstrations</h2>
+<p>The coin routines use positive denominations in increasing order and nonnegative amounts. Quotient and remainder then match the count-and-remainder interpretation. Negative denominations and division by zero are rejected by the problem contract. The waiting-time example uses small fixed durations, so its int totals are exact and deterministic.</p>
+
+<h2 id="summary">A local rule needs a global reason</h2>
+<p>A greedy algorithm becomes trustworthy when an exchange shows that some optimum can follow its local choice. Optimal substructure then supports continuing on the remainder. Counterexamples reveal where that reasoning breaks. Activity selection next gives a complete earliest-finish proof and a concrete feasibility scan.</p>
+<p>Continue with <a href="topic:algo-activity-selection">Activity Selection</a>.</p>

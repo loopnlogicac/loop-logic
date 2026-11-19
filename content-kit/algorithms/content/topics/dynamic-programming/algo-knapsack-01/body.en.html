@@ -1,0 +1,91 @@
+<h2 id="introduction">Each item is all or nothing</h2>
+<p class="lead">A club wants to carry useful equipment within a weight limit. Each device has a weight and a value, and each device can be taken once or left behind. You cannot take half a projector. This is 0/1 knapsack: each item has a binary decision, zero for skip and one for take.</p>
+
+<p>The capacity is an upper limit, not a requirement to fill the bag exactly. Empty selection is allowed, so zero value is always feasible. Weights are positive integers and values are nonnegative in these examples. Those assumptions give zero base rows and make capacity-indexed tables convenient.</p>
+
+<p>Fractional knapsack's ratio rule no longer works. A high-density item may leave unusable space while a different combination of whole items earns more. DP remembers alternatives across item prefixes and capacities instead of committing to a single ratio-ordered path. The extra item dimension prevents accidental reuse.</p>
+
+<h2 id="syntax">State and recurrence for item prefixes</h2>
+<pre><code class="language-text">dp[0][c] = 0 for every capacity c
+for i = 1 to n
+    for c = 0 to capacity
+        dp[i][c] = dp[i-1][c]
+        if weight[i-1] &lt;= c: try value[i-1]+dp[i-1][c-weight[i-1]]
+        retain a larger candidate; skip on ties
+walk backward: changed row means take item and reduce c
+return value and increasing chosen IDs</code></pre>
+<p>Step 1, state: dp[i][c] is the greatest value using only the first i items with total weight at most c. Item i-1 is the last item available in row i. Row zero means no items, so every entry is zero. Column zero is also zero because all weights are positive.</p>
+
+<p>Step 2, recurrence: skipping item i-1 gives dp[i-1][c]. If its weight fits, taking it gives value[i-1]+dp[i-1][c-weight[i-1]]. Choose the larger candidate. Both branches read row i-1. That is the mathematical reason an item cannot contribute twice.</p>
+
+<h2 id="how-it-works">Fill rows before recovering choices</h2>
+<p>Step 3, order: increase i from one to n, filling capacities from zero through C. Every dependency lies in the completed previous row, so either capacity direction would work for the full two-dimensional table. The example uses increasing capacities to make the row easier to read.</p>
+
+<p>For weights [2,3,4] and values [4,5,7], the first item offers value 4 wherever capacity is at least 2. The second item offers 5 at capacity 3 and 9 at capacity 5 by joining the first. The third item improves capacity 4 to 7, but at capacity 5 its value 7 still loses to 9.</p>
+
+<p>Step 4, reconstruction: start at row n and capacity C. If dp[i][c] equals dp[i-1][c], skip item i-1. Otherwise take it and reduce c by its weight. In either case decrease i. On equal values, this convention skips the later item and produces a deterministic witness.</p>
+
+<div data-lab="knapsack-dp"></div>
+<p>The grid labels rows with the new item's ID, weight and value. A skip arrow points upward. A take uses the previous row at a capacity reduced by the item's weight; that horizontal jump can exceed one column. The notes identify the actual dependency rather than treating every take as a one-column diagonal move.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Fill rows and recover original items</h3>
+<p>Items 0 and 1 weigh 5 and earn 9, beating item 2 alone.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Compress capacities into one row</h3>
+<p>Descending capacity updates preserve previous-item values and return the same optimum 9.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">No item fits zero capacity</h3>
+<p>Every row at capacity zero stays zero, and reconstruction skips all items.</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">One item cannot be reused</h3>
+<p>Even though capacity is 4, the single item can contribute only 3 once.</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">Three equipment rows</h2>
+<table class="ref"><thead><tr><th scope="col">Items available</th><th scope="col">c=0</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th><th scope="col">4</th><th scope="col">5</th></tr></thead><tbody><tr><td>none</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>item 0</td><td>0</td><td>0</td><td>4</td><td>4</td><td>4</td><td>4</td></tr><tr><td>items 0..1</td><td>0</td><td>0</td><td>4</td><td>5</td><td>5</td><td>9</td></tr><tr><td>items 0..2</td><td>0</td><td>0</td><td>4</td><td>5</td><td>7</td><td>9</td></tr></tbody></table>
+
+<p>At the final capacity 5, row three equals row two, so skip item 2. Row two at capacity 5 differs from row one, so take item 1 and move to capacity 2. Row one at 2 differs from row zero, so take item 0. Their weights sum to 5 and values sum to 9.</p>
+
+<h2 id="correctness">The last item divides all solutions</h2>
+<p>Every feasible subset from the first i items either excludes item i-1 or includes it. Excluding it leaves a feasible subset from the first i-1 items at capacity c. Including it leaves capacity c-weight[i-1] and forbids using that same item again. The previous-row optimum therefore gives the best possible value in each case.</p>
+
+<p>The recurrence takes the larger value among these exhaustive, feasible cases. An empty item prefix has optimum zero. Induction on i proves each row, regardless of whether the bag uses every unit of capacity. This is an at-most-capacity argument; exact-fill knapsack would require unreachable states and a different base treatment.</p>
+
+<p>Reconstruction follows a branch that attains the stored value. A changed row value must have come from taking the item, because skipping would copy the previous row. An unchanged value can be attained by skipping, even if taking also ties. The row always decreases, so recovery stops after at most n decisions and never repeats an item.</p>
+
+<h2 id="complexity">Capacity controls the table size</h2>
+<p>There are (n+1)(C+1) states and constant work per state. Time and table storage are Θ(nC) for positive variable n and C, with boundary dimensions included when either is zero. Reconstruction takes O(n) time and at most O(n) output space for chosen IDs. Fixed demonstration bounds do not turn the general algorithm into constant time.</p>
+
+<p>Capacity is a numeric magnitude rather than its number of input bits. Consequently the bound is pseudo-polynomial. A huge capacity can make this table impractical even when n is moderate. Other approaches may use value-indexed DP, meet-in-the-middle search, or a different formulation depending on constraints.</p>
+
+<p>The exercises permit at most twelve items, capacity twenty, and values at most 99. The largest possible value is at most 1188, so int is sufficient. Positive weights prevent a free repeated-use ambiguity, though zero-weight 0/1 items could be handled with a carefully stated model. They are excluded here to keep the contract consistent.</p>
+
+<h2 id="variations">Compress storage with descending capacity</h2>
+<p>The recurrence uses only the previous row, so optimum value alone can be stored in one array. For each item, visit capacities downward from C to its weight. Then dp[c-weight] still belongs to the previous item stage, because that smaller capacity has not yet been overwritten during the current stage.</p>
+
+<p>Visiting capacities upward changes the meaning. Once dp[2] includes a weight-two item, a later update of dp[4] can reuse that newly updated entry and take the same item again. For one item of weight 2 and value 3 with capacity 4, the wrong direction returns 6 instead of 3. This is an unbounded-use update, not 0/1 selection.</p>
+
+<p>A compact value row by itself does not preserve the earlier rows needed for the shown reconstruction. Do not attach a single mutable predecessor to each capacity and assume it always describes distinct items after later overwrites. Keep the full decision information, use two-dimensional rows, or implement a separately justified recovery method.</p>
+
+<h2 id="comparison">Value ties and identity</h2>
+<p>Two items may have the same weight and value while still being different available records. Both can be taken if capacity permits. This differs from duplicate coin denominations, which describe one unlimited type. The item ID identifies a particular device, and the row transition controls its one allowed use.</p>
+
+<p>Sorting items is unnecessary for this DP. A reordered list still has the same optimal value, but it changes the relationship between row numbers and original IDs. Preserve those IDs if you choose to reorder. The demonstrations keep original order so their recovered choices and ties are easy to compare with the table.</p>
+
+<h2 id="common-mistakes">Do not read a current-row take state</h2>
+<p>Writing value+dp[i][c-weight] in the full table allows reuse of item i-1. The take branch must read dp[i-1]. Check that index before debugging numeric values. The same conceptual mistake appears as an upward loop in the compact version.</p>
+
+<p>Subtracting a weight without first checking weight&lt;=c can read a negative capacity. Keep the fit condition outside the access. Also avoid initialising every entry to an impossible negative value for this at-most-capacity problem: empty selection is feasible at every capacity, so zero is the correct initial value.</p>
+
+<p>During reconstruction, a take reduces capacity but a skip does not. Both reduce the row. Reducing capacity on every row would lose valid earlier items. Printing the sorted row position instead of the original item ID would also misidentify the chosen equipment if records had been rearranged.</p>
+
+<h2 id="version-notes">C17 table and index choices</h2>
+<p>The full C table has thirteen rows and twenty-one columns, matching item counts 0..12 and capacities 0..20. Chosen flags are written during the backward walk before the caller reads them. Arrays are fixed-size under the documented teaching limits, and all table values fit int. The compact routine uses the same C17 arithmetic and a signed capacity counter for its downward loop.</p>
+
+<h2 id="summary">Use an item dimension to enforce one use</h2>
+<p>0/1 knapsack compares skip and take from the previous item row. Its table yields both the optimum value and recoverable item IDs. Descending compact updates preserve the same one-use meaning. Longest common subsequence next replaces item-capacity states with pairs of string prefixes.</p>
+<p>Continue with <a href="topic:algo-lcs">Longest Common Subsequence</a>.</p>

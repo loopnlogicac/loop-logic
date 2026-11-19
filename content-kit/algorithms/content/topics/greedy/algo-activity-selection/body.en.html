@@ -1,0 +1,80 @@
+<h2 id="introduction">Share one room between meetings</h2>
+<p class="lead">A student club has one room and several meeting requests. Each request has a start and finish time. You want to hold as many complete meetings as possible, with no overlap. Every meeting contributes one to the objective, regardless of its duration. You may reject a request, but cannot shorten or move it.</p>
+
+<p>Represent a meeting as [start,finish). Its finish instant is available to the next meeting, so a meeting ending at 4 is compatible with one starting at 4. The examples require start&lt;finish. This excludes zero-duration meetings and makes the scheduling model easy to interpret.</p>
+
+<p>Choosing the earliest start can reserve the room for one long meeting. Choosing the shortest duration can also place a meeting awkwardly between two useful alternatives. Earliest finish has a different benefit: after choosing a first meeting, it leaves the largest possible remaining time window. That observation leads to a proof as well as an algorithm.</p>
+
+<h2 id="syntax">Sort whole meeting records</h2>
+<pre><code class="language-text">sort activities by (finish, id)
+count = 0
+for each activity in finish order
+    if count = 0 or start &gt;= last
+        select id; last = finish; count++
+return selected IDs</code></pre>
+<p>Each Activity record stores start, finish and its original id. Sort records by increasing finish, then original ID for deterministic ties. Do not sort starts and finishes in separate arrays. Those numbers belong to the same request. Losing their pairing changes the requests and invalidates the schedule.</p>
+
+<p>The selected prefix is represented by chosen IDs, a count, and last, the finish of its most recent meeting. The first meeting can always be taken. After that, accept a candidate exactly when start&gt;=last. The C code uses count==0 for the first-choice condition rather than inventing a minimum possible time sentinel.</p>
+
+<h2 id="how-it-works">Keep the earliest available finish</h2>
+<p>For the club requests, finish order is ID 0 at 4, ID 1 at 5, ID 2 at 6, ID 3 at 7, ID 4 at 9 and ID 5 at 9. Take ID 0, which occupies [1,4). ID 1 starts at 3, so it overlaps. ID 2 starts at 0, so it also overlaps. ID 3 starts at 5 and fits.</p>
+
+<p>After ID 3 finishes at 7, ID 4 starts at 8 and fits. ID 5 starts at 5 and fails the new boundary 9. The selected IDs are 0,3,4. Gaps between chosen meetings are permitted. The goal is the number of meetings, not the total occupied room time.</p>
+
+<div data-lab="activity-selection"></div>
+<p>The array lab displays finish times in sorted record order. Its meeting list shows each original ID and interval. A rejected mark means a time conflict with the last selected meeting. A retained ID stays meaningful even though its record moved during sorting. The empty-meeting preset finishes with count zero and an empty selection.</p>
+
+<h2 id="examples">C implementations and results</h2>
+<h3 id="example-1">Choose compatible club meetings</h3>
+<p>Finish order selects IDs 0, 3 and 4. The last meeting may begin after the preceding finish.</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Meetings that touch at a boundary</h3>
+<p>With half-open time intervals, six back-to-back meetings are compatible.</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">A long early meeting blocks shorter meetings</h3>
+<p>Choosing the earliest start would take ID 0 alone; earliest finish admits five shorter meetings.</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">One decision per finish-ordered meeting</h2>
+<table class="ref"><thead><tr><th scope="col">ID</th><th scope="col">Interval</th><th scope="col">Decision</th><th scope="col">last after decision</th></tr></thead><tbody><tr><td>0</td><td>[1,4)</td><td>take</td><td>4</td></tr><tr><td>1</td><td>[3,5)</td><td>overlap</td><td>4</td></tr><tr><td>2</td><td>[0,6)</td><td>overlap</td><td>4</td></tr><tr><td>3</td><td>[5,7)</td><td>take</td><td>7</td></tr><tr><td>4</td><td>[8,9)</td><td>take</td><td>9</td></tr><tr><td>5</td><td>[5,9)</td><td>overlap</td><td>9</td></tr></tbody></table>
+
+<p>A trace should include rejected candidates as well as accepted ones. Rejection is where the compatibility condition does useful work. At each accepted meeting, write the new last finish. Testing all later requests against the very first finish instead would accidentally allow overlaps among later selected meetings.</p>
+
+<h2 id="correctness">Exchange the first meeting</h2>
+<p>Let g be a request with earliest finish. Consider an optimal compatible schedule and let o be its first meeting. Because g finishes no later than o, replace o with g. Every later meeting in the optimal schedule starts at or after o finishes, and therefore at or after g finishes. The replacement keeps all later meetings feasible and preserves the count.</p>
+
+<p>Thus an optimal schedule exists beginning with g. After accepting g, discard requests starting before g finishes. The remaining task is the same meeting-count problem restricted to the available later window. Apply the same exchange argument again. Induction gives an optimal full schedule constructed by the greedy scan.</p>
+
+<p>The scan invariant can be stated more precisely: after choosing k meetings, their final finish is no later than the kth finish in any compatible k-meeting schedule considered by the earliest-finish reasoning. This is sometimes called staying ahead. Finishing earlier cannot reduce the possibilities for later meetings under the current objective.</p>
+
+<p>The sorting tie rule does not harm optimal count. If two possible first requests share the same finish, either leaves the same later time boundary. Their original IDs merely choose a repeatable answer among optima. A later weighted scheduling problem would need different reasoning because equal finish does not imply equal value.</p>
+
+<h2 id="complexity">Preparation and selection costs</h2>
+<p>With a suitable comparison sort, ordering n meetings costs O(n log n). The selection loop checks each request once, giving Θ(n) scan time. If requests already arrive in finish order and that precondition is trusted, the algorithm needs only the linear scan. Do not include a sort twice when analysing repeated scans over a preserved ordered list.</p>
+
+<p>The shown implementation stores an output array containing up to n IDs, so output space is O(n). Its selection variables use Θ(1) auxiliary space beyond input and output. Sorting space depends on the chosen sorting implementation. C qsort does not specify its internal time or storage guarantees, so the textbook sorting bound assumes an appropriate comparison-sort implementation.</p>
+
+<p>An exhaustive method could enumerate subsets and test their overlaps. That is useful only for small independent correctness checks. The exchange argument explains why examining one finish-ordered path is sufficient here. It is not merely a shortcut inferred from the examples.</p>
+
+<h2 id="comparison">What changes the problem</h2>
+<p>If meetings earn different profits, earliest finish may reject one valuable meeting in favour of several cheap ones. The count objective has changed to a weight objective. Weighted interval scheduling normally compares choices with dynamic programming. Reusing this greedy loop without a new proof would optimise the wrong quantity.</p>
+
+<p>If there are several rooms, acceptance depends on which room becomes free. That leads to another scheduling problem and often a priority queue. If meetings can be moved, their original intervals no longer describe feasibility. These variations are useful reminders to keep assumptions attached to the algorithm's guarantee.</p>
+
+<p>For one room and fixed positive-duration intervals, the start&gt;=last test completely describes compatibility after finish sorting. There is no need to compare the candidate with every chosen meeting. All earlier selected meetings finish no later than last. That ordering turns a potentially long feasibility check into one comparison.</p>
+
+<h2 id="common-mistakes">Use finish time and an inclusive boundary test</h2>
+<p>Sorting by start instead of finish fails on a long request [0,20) followed by short requests [1,2),[2,3),[3,4). Taking the long request admits one meeting; the short requests admit three. Earliest finish avoids committing that long block of room time.</p>
+
+<p>Using start&gt;last rejects back-to-back meetings that the half-open model allows. Write the interval convention beside the comparison. If a real room needs cleaning time, add that required gap explicitly and prove the modified feasibility test rather than changing &gt;= without explanation.</p>
+
+<p>Returning sorted positions instead of original IDs confuses the caller about which requests were chosen. Store the ID in each record and copy that ID into chosen. For n=0, the code must not read a[0]. The count-based first-choice condition and a loop with zero iterations handle that case naturally.</p>
+
+<h2 id="version-notes">C17 sorting and IDs</h2>
+<p>The finish comparator returns a negative, zero or positive sign using relational comparisons. It avoids subtracting arbitrary finish values, which could overflow for a wider input range. The bounded exercises accept times from 0 through 100 and at most sixteen requests. Each accepted ID fits in int and refers to its original input position.</p>
+
+<h2 id="summary">Finish early to keep the future open</h2>
+<p>Activity selection sorts by finish, then retains a meeting when its start reaches the last selected finish. Exchanging the first meeting of an optimum proves that this local rule preserves maximum count. Fractional knapsack next uses an exchange of material instead of a replacement of whole meetings.</p>
+<p>Continue with <a href="topic:algo-fractional-knapsack">Fractional Knapsack</a>.</p>
