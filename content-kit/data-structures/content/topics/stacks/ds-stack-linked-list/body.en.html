@@ -1,0 +1,50 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Think of a stack of slips joined by strings. Each slip stores a value and points to the slip underneath. You keep only the address of the top slip. Adding a slip changes that address; removing it reveals the next slip. This is a linked stack.</p>
+<p>The stack still follows LIFO. Its storage differs from the fixed array in <a href="topic:ds-stack-array">the previous lesson</a>. Instead of reserving every possible cell in advance, a successful push allocates one node. The stack has no built-in cell limit, although available memory is always finite.</p>
+<p>A linked representation is helpful when the maximum depth is difficult to predict. It also gives you responsibility for every allocated node. Correct values are only half the job: every removed node must be released, and the remaining chain must stay reachable.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>A <code>Node</code> contains an integer value and a next pointer. The pointer named top identifies the head node. An empty linked stack uses NULL. The final node also has next equal to NULL, marking the end of the chain.</p>
+<p>Push accepts <code>Node **top</code> because it must change the caller’s head pointer. A pointer passed by value would only change a local copy. The double pointer lets the helper publish a new head through <code>*top</code>.</p>
+<p>Allocation uses <code>malloc(sizeof *node)</code>. This reserves enough space for the entire node, including padding and its pointer. Check for NULL before writing fields. Initialize value and next before replacing the caller’s top.</p>
+<p>Pop also needs access to the head pointer itself. Its output parameter receives the removed integer. The output pointer must refer to a valid int supplied by the caller. These helpers assume valid pointer arguments; they check empty state, not arbitrary invalid addresses.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>Push has three stages. Allocate a new node. Set its next link to the old top. Finally set top to the new node. Publishing the node last keeps the existing stack usable if allocation fails. No old node needs to move.</p>
+<p>Pop starts by checking whether top is NULL. If so, there is no value to remove. Otherwise save the old node address, copy its payload, and advance top to old->next. Free old only after both needed fields have been read.</p>
+<p>A pop from a singleton sets top to NULL. This is not a separate algorithm; the old node’s next was already NULL. The same sequence also works for a longer chain, because next already identifies the new top.</p><pre class="diagram">push 30:
+before: top -&gt; [20|next] -&gt; [10|NULL]
+new:            [30|next] --+
+                           v
+after:  top -&gt; [30|next] -&gt; [20|next] -&gt; [10|NULL]
+pop:
+before: top -&gt; [30|next] -&gt; [20|next] -&gt; [10|NULL]
+after:  top -------------&gt; [20|next] -&gt; [10|NULL]
+        old [30] freed; returned=30</pre><p>The draining loop repeatedly calls pop until it returns zero. Each successful iteration obtains one integer and frees exactly one node. After the loop, top is NULL. The examples use this loop both for normal completion and for cleanup after an input or allocation failure.</p>
+<p>The summing example deliberately consumes its stack. A read-only traversal would instead walk a temporary cursor without calling free. Decide whether a function observes or destroys the structure before naming and using it. Callers should not expect a consumed stack to remain available.</p>
+<p>Suppose input contains twelve, twenty-four and thirty-six. The first push creates the bottom twelve. The next nodes point toward it. Draining prints thirty-six, twenty-four, twelve. Equal payloads would still occupy distinct nodes and require distinct frees.</p><h3>A closer trace</h3><p>A useful ownership check is to count allocations and releases during a short trace. Start with no nodes. Three successful pushes create three owned nodes. One pop releases one, leaving two reachable from top. Clearing those two restores the count to zero. A failed allocation changes neither count. This reasoning catches leaks even before you look at addresses.</p>
+<p>Consider a push that fails after several earlier pushes succeeded. The helper should report failure and preserve the earlier stack. The caller may retry, process the existing entries, or destroy them. In the input examples, continuing would lose an intended value, so cleanup followed by an error return is the clearest policy.</p>
+<p>A read-only count operation walks a separate Node pointer from top to NULL. Its time is O(n) and it uses O(1) temporary space. It must not overwrite the owning top as it walks. Otherwise the nodes passed along the way remain allocated but become unreachable to later cleanup.</p>
+<p>Node addresses are intentionally absent from printed output. Their concrete numbers vary between runs and do not explain LIFO behavior. The arrows in a memory diagram stand for stored addresses, while the integer inside each box is the payload. Keep those two roles distinct when two neighboring nodes contain the same value.</p>
+<p>For an exam comparison, list update cost, reserved storage, per-entry overhead and failure conditions separately. An array can be full because its fixed bound is reached. A linked stack can reject growth because allocation fails. Neither representation changes the order of successful pushes and pops.</p>
+
+<h2 id="examples">Examples</h2>
+<h3>Push at head, then drain</h3><p>Nodes leave in the order 36, 24, 12. Each pop saves next before freeing the old head.</p><div data-example="ex-1"></div><h3>Accumulate while releasing nodes</h3><p>The sum is independent of removal order. No node remains allocated after the loop.</p><div data-example="ex-2"></div><h3>Inspect values during a destructive traversal</h3><p>Three even values are counted while their nodes are removed.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Push and pop perform O(1) link work and require O(1) temporary variables. A linked stack holding n integers occupies O(n) total storage. Each node adds a pointer and possibly padding beyond the payload. Allocation and release also have real runtime costs; the abstract constant-time update counts local pointer work.</p>
+<p>An array usually stores integers more compactly and offers better locality. A linked stack grows one node at a time and avoids a fixed reserved capacity. A dynamic array stack is another option: it combines compact storage with occasional resizing, usually giving amortized constant-time push.</p>
+<p>Allocation failure is the linked stack’s growth boundary. It must not destroy existing nodes. On malformed later input, the caller releases all nodes already stored before returning failure. Empty and one-node cases deserve particular attention because they change whether top is NULL.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Reading a freed node</h3><p>Freeing old and then evaluating old->next uses an object after its lifetime ended. The address may look unchanged, but the access is invalid. Save the successor before free.</p><h3>Losing the old head</h3><p>Assigning top to a new node before saving the old top can disconnect the chain. Initialize node->next from the old head first. Keep publication as the final step of push.</p><h3>Ignoring an unsuccessful push</h3><p>If allocation fails, silently continuing can produce an incomplete result. Return a status and let the caller choose recovery. The examples clean up and return failure rather than pretending that the value was stored.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Draw separate boxes for equal-valued nodes. Ownership follows node addresses, not integer equality. A cleanup routine must visit every allocation even when all values are identical.</p>
+<p>Use a temporary cursor for inspection and the owning head for destructive updates. After complete destruction, leave the owner NULL. That makes later emptiness checks reliable and prevents accidental reuse of a freed node.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>C17 does not provide automatic node destruction. malloc reserves raw storage and free ends the allocated object’s lifetime. A cast is unnecessary for malloc in C when stdlib.h is included; the examples use the returned void pointer directly.</p>
+
+<h2 id="summary">Summary</h2>
+<p>A linked stack updates the head and releases removed nodes. Its flexibility comes with link storage and ownership duties. Apply the LIFO rule to nesting in <a href="topic:ds-balanced-parentheses">balanced parentheses</a>.</p>

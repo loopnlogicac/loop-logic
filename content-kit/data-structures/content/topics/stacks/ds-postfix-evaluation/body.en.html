@@ -1,0 +1,56 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Postfix gives you an expression in the order needed for calculation. When you read a number, keep it ready. When you read an operator, its operands have already appeared. A stack holds those available values until their operator arrives.</p>
+<p>Consider <code>12 3 4 * +</code>. Twelve waits while three and four are multiplied. The product then joins twelve in the addition. Parentheses are unnecessary because token order describes which values each operator consumes.</p>
+<p>This is an <dfn>operand stack</dfn>, unlike the operator stack used for conversion. It contains numbers rather than delayed symbols. The result of one calculation can become an operand of the next. Naming that difference helps you avoid applying the wrong push/pop rule.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>Input begins with a token count from one through twelve. Each token is either a signed integer from minus ninety-nine through ninety-nine, or one of +, -, * and /. Whitespace separates tokens, so twelve is one operand rather than two digits.</p>
+<p>The program reads bounded token strings, then uses strtol to attempt integer conversion. A token is numeric only if at least one digit was consumed and the entire token was used. The errno check catches conversion range failure before accepting its value. Otherwise a one-character token may be an operator.</p>
+<p>The evaluate helper stores integers in items and tracks the latest with top. It accepts a prefix flag so one algorithm can select scan direction and operand roles. The apply helper checks the operator and arithmetic result separately.</p>
+<p>Intermediate values are restricted to magnitude ten thousand. Addition, subtraction and multiplication first use long arithmetic. Their bounded operands keep the temporary within the minimum range guaranteed for long. Division checks a nonzero right operand before evaluating it. This arithmetic policy is part of the problem definition.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>For postfix, scan tokens left to right. Push each valid integer. An operator needs two available operands. Pop right first and left second. Compute left operator right, then push the result. Checking the operand count before either pop prevents underflow on malformed expressions.</p>
+<p>For twelve, three, four, multiplication and addition, the live stack states are [12], [12,3], [12,3,4], [12,12], [24]. The product replaces two entries with one. Addition then reduces the remaining pair to a single answer.</p><pre class="diagram">postfix subtraction 20 5 -:
+before operator: [20][5]   top=1
+pop right=5:     [20]      top=0
+pop left=20:     []        top=-1
+push 20-5:       [15]      top=0
+prefix - 20 5, scan from right:
+[5] -&gt; [5,20] -&gt; [] -&gt; [15]</pre><p>After scanning every token, require top equal to zero. No entries means there is no answer. More than one entry means some operands were never combined. Local underflow checks alone cannot detect that second problem.</p>
+<p>Prefix evaluation scans from right to left. On an operator, the first popped value is left and the second is right. In - 20 5, reverse scanning pushes five and then twenty, so twenty is on top. This change of operand roles preserves the expression’s meaning.</p>
+<p>Signed literals deserve care. A token -8 is a number, while a token - is an operator. A token 8x is neither. The parser checks the whole token rather than accepting a numeric prefix and silently ignoring the remaining character.</p>
+<p>The lab uses whitespace-separated tokens and the same arithmetic bounds. Its default expression matches the first C example. On invalid input it stops with a diagnostic note while preserving the stack values that were available before the rejected operation.</p><h3>A closer trace</h3><p>A useful invariant says that each live stack value is the result of one complete subexpression in the consumed prefix. Those subexpressions occur in left-to-right order. A numeric token creates a one-token subexpression. A valid operator joins the final two complete subexpressions into one. Earlier values remain available for later operators.</p>
+<p>This also explains the final-size requirement. One value represents one expression covering the whole token sequence. Two values represent two neighboring subexpressions without an operator joining them. An operator shortage is therefore detected at the end even if every individual token was recognized correctly.</p>
+<p>Compare 20 5 - with 5 20 -. Both have valid shapes, but their results are fifteen and minus fifteen. A stack-shape check cannot catch a caller’s mistaken intended order. The notation itself defines left and right. Your trace should name both operands at every subtraction or division.</p>
+<p>The intermediate bound is checked after each arithmetic step, not only on the final result. An expression that temporarily exceeds ten thousand is rejected even if a later subtraction would bring it back. This makes every stored operand obey the same bound and keeps later multiplication within the chosen wider type.</p>
+<p>Integer tokens may include a leading plus or minus sign. The single-character plus and minus tokens remain operators because strtol consumes no digit from them. A token such as --2 also fails numeric conversion and is too long to be a supported operator. Recognizing whole tokens keeps those cases unambiguous.</p><h3>Operation plan</h3><pre><code class="language-text">items = []; top = -1
+for each whitespace-separated token
+    if integer -99..99: push number
+    else require one operator and two operands
+    right = items[top]; left = items[top - 1]
+    reject zero division or result outside -10000..10000
+    pop right; pop left; push result
+require exactly one final value</code></pre><div data-lab="postfix-eval"></div>
+
+<h2 id="examples">Examples</h2>
+<h3>Evaluate multi-digit operands</h3><p>Twelve waits while three times four becomes twelve; addition then produces twenty-four.</p><div data-example="ex-1"></div><h3>Respect subtraction operand order</h3><p>Five is popped first as right; twenty is left, so the answer is fifteen.</p><div data-example="ex-2"></div><h3>Scan prefix from the right</h3><p>Right-to-left prefix scanning builds twelve before subtracting it from twenty.</p><div data-example="ex-3"></div><h3>Reject arithmetic and stack errors</h3><p>Division by zero is rejected before the C division expression runs.</p><div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>With n tokens, evaluation takes O(n) arithmetic and stack work under this fixed-width integer model. Every token is examined once. Numeric text parsing also costs time proportional to its character length. The worst operand-stack requirement is O(n).</p>
+<p>Many numbers followed by operators create the largest pending stack. A single numeric token is already a valid expression. A single operator is invalid because it has no operands. Two numeric tokens without an operator fail the final-size test.</p>
+<p>C integer division truncates toward zero. Seven divided by three produces two; minus seven divided by three produces minus two. This differs from rounding down for negative numbers. State the arithmetic model when comparing with a calculator.</p>
+<p>Malformed expressions produce Invalid rather than a guessed result. Zero division, unsupported operators, out-of-range numbers and oversized intermediates all use that outcome. The parser’s input bound also limits stack occupancy, so no valid token sequence can exceed twelve operand entries.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Reversing subtraction</h3><p>Using the first postfix pop as left changes twenty minus five into five minus twenty. Store explicit right and left variables before applying the operator. Addition can hide this bug because its operand order does not change the answer.</p><h3>Accepting leftover operands</h3><p>The tokens five and six each parse correctly but do not form one expression. Reject the final stack unless it contains exactly one value.</p><h3>Running invalid arithmetic first</h3><p>Testing the quotient after dividing by zero is too late. The check must guard the division expression. Likewise, calculate bounded multiplication in a sufficiently wide type before narrowing the result.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Trace noncommutative operators when checking a new evaluator. Subtraction and division reveal operand-order mistakes that addition and multiplication often hide.</p>
+<p>Keep token recognition, stack shape and arithmetic validity as separate questions. A syntactically numeric token can still be out of range. A recognized operator can still lack operands. Two valid operands can still request forbidden division.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>The code uses C17 conversion and integer rules. strtol reports range errors through errno, declared in errno.h. C integer division has truncated toward zero since C99. These examples avoid floating-point rounding and exponentiation.</p>
+
+<h2 id="summary">Summary</h2>
+<p>An operand stack turns completed subexpressions into reusable values. Preserve operand order, validate arithmetic before using it, and demand one final result. Next, inspect how <a href="topic:ds-recursion-and-stack">recursive calls keep their unfinished work</a>.</p>
