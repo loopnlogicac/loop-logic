@@ -24,6 +24,7 @@ import { AdminService } from '../app/admin.ts';
 import { ClassService } from '../app/classes.ts';
 import { OrderService } from '../app/orders.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
+import { StudyPlanService } from '../app/study-plan.ts';
 import { SearchService } from '../app/search.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -90,6 +91,7 @@ const server = createApp({
   orders,
   runner,
   search,
+  studyPlan: new StudyPlanService(store, tutorials),
   store,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),

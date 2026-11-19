@@ -8,6 +8,7 @@ import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts'
 import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
+import type { StudyPlanService } from '../app/study-plan.ts';
 import type { ReadingService } from '../reading/service.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
@@ -54,6 +55,7 @@ export interface AppDeps {
   orders?: OrderService;
   runner?: RunnerService;
   search?: SearchService;
+  studyPlan?: StudyPlanService;
   store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
@@ -172,6 +174,12 @@ export function buildRoutes(d: AppDeps): Route[] {
     // catalog, dashboard, profile
     route('GET', '/api/courses', ({ query }) => learner.catalog(lang(query.get('lang'))), 'none'),
     route('GET', '/api/courses/:id', ({ params, query, learnerId }) => learner.course(params.id!, learnerId, lang(query.get('lang')))),
+    route('GET', '/api/study-plan', ({ learnerId, query }) => {
+      if (!d.studyPlan) throw new AppError('unavailable', 503, 'Study plans are unavailable.');
+      const track = query.get('track'), topic = query.get('topic');
+      if (Boolean(track) !== Boolean(topic)) throw new AppError('bad_input', 400, 'Provide both track and topic.');
+      return d.studyPlan.plan(learnerId, lang(query.get('lang')), track && topic ? { track, topic } : undefined);
+    }, 'learner'),
     route('GET', '/api/dashboard', ({ query, learnerId }) => learner.dashboard(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile', ({ query, learnerId }) => learner.profileView(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile/export', ({ learnerId }) => learner.exportData(learnerId)),

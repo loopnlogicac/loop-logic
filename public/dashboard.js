@@ -1,9 +1,11 @@
+import { studyPlanStrings, studyPlan } from './study-plan.js';
 import { masteryStrings, masteryDashboard } from './mastery.js';
 // Learner dashboard: continue reading, progress, practice, focus areas, receipts.
 import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn, currentUser, showSignIn, toast } from './common.js';
 
 const T = {
   en: {
+    ...studyPlanStrings.en,
     tagline: 'Learn with purpose', foot: 'Loop & Logic · answers come only from reviewed notes and approved websites',
     hello: 'Your learning', helloSub: 'Pick up where you left off. Everything here comes from what you did on Loop & Logic.',
     welcome: 'Welcome to Loop & Logic', welcomeSub: 'Start with a five-minute lesson. Select any line you don’t understand — you’ll get a short answer with its source.',
@@ -19,6 +21,7 @@ const T = {
     ...masteryStrings.en,
   },
   bn: {
+    ...studyPlanStrings.bn,
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
     hello: 'তোমার শেখা', helloSub: 'যেখানে থেমেছিলে সেখান থেকে শুরু করো। এখানের সবকিছু লুপ অ্যান্ড লজিকে তোমার কাজ থেকে।',
     welcome: 'লুপ অ্যান্ড লজিকে স্বাগতম', welcomeSub: 'পাঁচ মিনিটের একটা পাঠ দিয়ে শুরু করো। যে লাইন বোঝোনি তা সিলেক্ট করো — উৎসসহ ছোট উত্তর পাবে।',
@@ -144,6 +147,7 @@ function render(d) {
   nodes.push(el('div', { class: 'dash-grid' },
     el('div', { style: 'display:grid;gap:20px' }, lessons, practice),
     el('div', { style: 'display:grid;gap:20px' }, focus, receipts)));
+  nodes.splice(1, 0, studyPlan(L));
   main.replaceChildren(...nodes);
 }
 
