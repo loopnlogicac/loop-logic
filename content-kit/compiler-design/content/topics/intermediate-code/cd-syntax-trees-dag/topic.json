@@ -1,0 +1,303 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-syntax-trees-dag",
+  "module": "intermediate-code",
+  "order": 2,
+  "kind": "theory",
+  "title": {
+    "en": "Syntax Trees and DAGs",
+    "bn": "সিনট্যাক্স ট্রি আর DAG"
+  },
+  "summary": {
+    "en": "Build abstract syntax trees, share proven common subexpressions with value numbers, and invalidate sharing when values change.",
+    "bn": "তুমি ট্রিতে এক্সপ্রেশনের গঠন দেখবে, আর একই হিসাব নিরাপদে একবার করতে DAG বানাবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-three-address-code"
+  ],
+  "related": [
+    "cd-code-optimization"
+  ],
+  "keywords": [
+    "Syntax Trees and DAGs",
+    "AST",
+    "value numbering"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked trees and value numbers"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Equivalence rules and costs"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Compare tree structures",
+      "statementHtml": "<p>Draw an AST and DAG for (a+b)*(a+b), and explain the difference in parent relationships.</p>",
+      "hints": [
+        "One DAG node may have two incoming uses."
+      ],
+      "answerHtml": "\n<p>For <code>(a + b) * (a + b)</code>, a concrete parse tree includes E, T, F and punctuation nodes. The AST needs only multiplication, two additions, and their operand leaves. Parentheses disappear because the tree shape preserves their grouping.</p>\n<table class=\"ref\"><caption>Structural comparison</caption><thead><tr><th scope=\"col\">Representation</th><th scope=\"col\">Nodes retained</th><th scope=\"col\">Parent rule</th><th scope=\"col\">Main use</th></tr></thead><tbody><tr><td>Concrete parse tree</td><td>Grammar symbols and punctuation</td><td>One parent per non-root node</td><td>Explain a derivation</td></tr><tr><td>AST</td><td>Operations and meaningful operands</td><td>One parent per non-root node</td><td>Semantic processing and translation</td></tr><tr><td>Expression DAG</td><td>Operations and shared values</td><td>A node may have several parents</td><td>Expose repeated computations</td></tr></tbody></table>\n<pre class=\"diagram\">AST:                    DAG:\n       *                       *\n     /   \\                   /   \\\n    +     +                 v     v\n   / \\   / \\                 (+)\n  a   b a   b                / \\\n                            a   b</pre>\n<p>An AST occurrence represents a particular use of an operator in source. In the DAG, the multiplication node has two edges to the same addition node. The graph has no directed cycle because a value cannot depend on itself through an unfinished arithmetic computation.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Assign value numbers",
+      "statementHtml": "<p>Number every occurrence in (a+b)*(a+b) and give the resulting shared TAC.</p>",
+      "hints": [
+        "Reuse an existing operator-and-operand key."
+      ],
+      "answerHtml": "\n<p>A <dfn>value number</dfn> is an internal identity for a value known to be equivalent to another occurrence. Keep a map from leaf values or operator-and-operand keys to numbers. When a key already exists, reuse its number. Otherwise create a node and assign a new number.</p>\n<table class=\"ref\"><caption>Complete value numbering for (a+b)*(a+b)</caption><thead><tr><th scope=\"col\">Visit</th><th scope=\"col\">Lookup key</th><th scope=\"col\">Number returned</th><th scope=\"col\">New node?</th></tr></thead><tbody><tr><td>First a</td><td>leaf(a0)</td><td>v1</td><td>Yes</td></tr><tr><td>First b</td><td>leaf(b0)</td><td>v2</td><td>Yes</td></tr><tr><td>Left addition</td><td>(+, v1, v2)</td><td>v3</td><td>Yes</td></tr><tr><td>Second a</td><td>leaf(a0)</td><td>v1</td><td>No</td></tr><tr><td>Second b</td><td>leaf(b0)</td><td>v2</td><td>No</td></tr><tr><td>Right addition</td><td>(+, v1, v2)</td><td>v3</td><td>No</td></tr><tr><td>Multiplication</td><td>(*, v3, v3)</td><td>v4</td><td>Yes</td></tr></tbody></table>\n<p>The suffix 0 identifies the incoming version of each name. The resulting TAC needs <code>t1 = a + b</code> and <code>t2 = t1 * t1</code>. Generate nodes in dependency order so an operation appears after its operand nodes. Sharing the graph is not enough if your code emitter still recomputes a node for each incoming edge.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Handle a reassignment",
+      "statementHtml": "<p>Value-number x=a+b; a=a+1; y=a+b without reusing an invalid sum.</p>",
+      "hints": [
+        "The current value of a changes after its assignment."
+      ],
+      "answerHtml": "\n<p>Consider <code>x = a + b; a = a + 1; y = a + b</code>. The final addition is not the first addition. The new a value needs a fresh value number, while b can keep its incoming identity. Keep a current-name map and update the destination after computing each right-hand side.</p>\n<table class=\"ref\"><caption>Value numbers across a reassignment</caption><thead><tr><th scope=\"col\">Statement or leaf</th><th scope=\"col\">Key</th><th scope=\"col\">New identity</th><th scope=\"col\">Current name mapping</th></tr></thead><tbody><tr><td>Incoming a, b, 1</td><td>leaf(a0), leaf(b0), constant(1)</td><td>v1, v2, v3</td><td>a:v1, b:v2</td></tr><tr><td>x = a + b</td><td>(+, v1, v2)</td><td>v4</td><td>x:v4</td></tr><tr><td>a = a + 1</td><td>(+, v1, v3)</td><td>v5</td><td>a:v5, x:v4</td></tr><tr><td>y = a + b</td><td>(+, v5, v2)</td><td>v6</td><td>y:v6</td></tr></tbody></table>\n<p>The old value v1 remains a valid graph input for x even after a stops naming it. This is why value numbering separates a variable's current spelling from the value already captured by an earlier computation. An implementation that mutates leaf a in place would incorrectly change x's meaning.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Evaluate sharing safety",
+      "statementHtml": "<p>Decide whether repeated scalar sums, loads, calls and volatile reads can be shared.</p>",
+      "hints": [
+        "Look for changes to the values or visible effects."
+      ],
+      "answerHtml": "\n<p>Scalar names are the easy case. Now imagine p and q can point to the same location. A store through q may change the next load through p. Even if the text <code>*p</code> appears twice, sharing those loads needs alias information or a conservative invalidation rule.</p>\n<table class=\"ref\"><caption>When repeated text does not prove a shared value</caption><thead><tr><th scope=\"col\">Sequence</th><th scope=\"col\">Tempting reuse</th><th scope=\"col\">Why more evidence is needed</th></tr></thead><tbody><tr><td>x = a+b; y = a+b</td><td>Reuse scalar sum</td><td>Safe if neither operand changes</td></tr><tr><td>x = a+b; a = 1; y = a+b</td><td>Reuse first sum</td><td>a now names a new value</td></tr><tr><td>x = *p; *q = 7; y = *p</td><td>Reuse first load</td><td>p and q may alias</td></tr><tr><td>x = f(); y = f()</td><td>Reuse first call</td><td>f may change state or return another value</td></tr><tr><td>x = volatile_input; y = volatile_input</td><td>Reuse first read</td><td>Reads can be separately observable</td></tr></tbody></table>\n<p>A classroom DAG can clear memory-expression entries after an unknown store or call. That loses some optimisation opportunities but preserves correctness. Better alias analysis can prove that particular locations are independent. Never turn an absence of information into a claim that two memory accesses are unrelated.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many addition nodes remain in the DAG for (a+b)*(a+b) with unchanged inputs?",
+      "options": [
+        "Two",
+        "Three",
+        "One",
+        "Zero"
+      ],
+      "answer": 2,
+      "explanation": "Both additions have the same operator and operand value numbers."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does an AST omit from the concrete parse tree?",
+      "options": [
+        "Operator grouping",
+        "Every operand",
+        "The root operation",
+        "Grammar-only scaffolding"
+      ],
+      "answer": 3,
+      "explanation": "Punctuation and pass-through grammar nodes can disappear while structure preserves meaning."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is a+b after assigning a a different value-number key?",
+      "options": [
+        "The operand identity for a changed",
+        "Addition is no longer binary",
+        "b must become zero",
+        "The grammar has changed"
+      ],
+      "answer": 0,
+      "explanation": "Keys describe operand values rather than only their source spellings."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which expression order must a subtraction key preserve?",
+      "options": [
+        "Alphabetical variable order",
+        "Left and right operand order",
+        "Declaration file order only",
+        "Register number order"
+      ],
+      "answer": 1,
+      "explanation": "Subtraction is not commutative."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What extra mechanism lets a DAG emitter avoid duplicate instructions?",
+      "options": [
+        "A larger token buffer",
+        "More parentheses",
+        "A visited set or topological schedule",
+        "An LR lookahead"
+      ],
+      "answer": 2,
+      "explanation": "Shared nodes must be emitted once rather than once per incoming edge."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why may a store through q invalidate a cached load through p?",
+      "options": [
+        "All stores change every scalar",
+        "Loads cannot have values",
+        "q is necessarily a keyword",
+        "The pointers may alias"
+      ],
+      "answer": 3,
+      "explanation": "Both pointers could address the same location without a proof to the contrary."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What can increase after common-expression sharing?",
+      "options": [
+        "The shared result's live range",
+        "The number of source tokens",
+        "The number of parse errors",
+        "The grammar's terminal alphabet"
+      ],
+      "answer": 0,
+      "explanation": "Retaining a value for several uses can increase register pressure."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which key can safely reuse the pure integer sum v1+v2 under the stated rule?",
+      "options": [
+        "(-,v1,v2)",
+        "(+,v1,v2)",
+        "(+,v1,v3)",
+        "(*,v1,v2)"
+      ],
+      "answer": 1,
+      "explanation": "The operator and both operand identities must agree unless an additional proven equivalence applies."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is floating-point reassociation risky?",
+      "options": [
+        "Floating-point has no operators",
+        "Parentheses are always ignored",
+        "Rounding can change the result",
+        "Integers and reals have identical semantics"
+      ],
+      "answer": 2,
+      "explanation": "Changing grouping can change rounded intermediate results."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does the current-name map track?",
+      "options": [
+        "Every token's character offset",
+        "Only global memory addresses",
+        "The parser state stack",
+        "The value number presently denoted by each name"
+      ],
+      "answer": 3,
+      "explanation": "Assignments update this map while earlier value nodes remain available to their existing users."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "An AST retains grouping while removing grammar scaffolding.",
+      "bn": "গ্রামারের বাড়তি নোড বাদ দিলেও AST-তে হিসাবের গঠন থাকে।"
+    },
+    {
+      "en": "A DAG can give several uses the same value node.",
+      "bn": "DAG-তে একই মানের নোড একাধিক জায়গা থেকে ব্যবহার করা যায়।"
+    },
+    {
+      "en": "Value-number keys include the operator and operand values.",
+      "bn": "Value number খুঁজতে অপারেটর আর অপার্যান্ডের মানের পরিচয় মিলাও।"
+    },
+    {
+      "en": "Assignment changes the current value identity of a name.",
+      "bn": "অ্যাসাইনমেন্টের পরে নামটি নতুন মানকে বোঝাতে পারে।"
+    },
+    {
+      "en": "Unknown memory effects can invalidate expression sharing.",
+      "bn": "মেমরিতে কী বদলেছে জানা না থাকলে আগের হিসাব আবার ব্যবহার কোরো না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Draw an AST and DAG for (a+b)*(a+b), and explain the difference in parent relationships.",
+      "marks": 4,
+      "answerHtml": "\n<p>For <code>(a + b) * (a + b)</code>, a concrete parse tree includes E, T, F and punctuation nodes. The AST needs only multiplication, two additions, and their operand leaves. Parentheses disappear because the tree shape preserves their grouping.</p>\n<table class=\"ref\"><caption>Structural comparison</caption><thead><tr><th scope=\"col\">Representation</th><th scope=\"col\">Nodes retained</th><th scope=\"col\">Parent rule</th><th scope=\"col\">Main use</th></tr></thead><tbody><tr><td>Concrete parse tree</td><td>Grammar symbols and punctuation</td><td>One parent per non-root node</td><td>Explain a derivation</td></tr><tr><td>AST</td><td>Operations and meaningful operands</td><td>One parent per non-root node</td><td>Semantic processing and translation</td></tr><tr><td>Expression DAG</td><td>Operations and shared values</td><td>A node may have several parents</td><td>Expose repeated computations</td></tr></tbody></table>\n<pre class=\"diagram\">AST:                    DAG:\n       *                       *\n     /   \\                   /   \\\n    +     +                 v     v\n   / \\   / \\                 (+)\n  a   b a   b                / \\\n                            a   b</pre>\n<p>An AST occurrence represents a particular use of an operator in source. In the DAG, the multiplication node has two edges to the same addition node. The graph has no directed cycle because a value cannot depend on itself through an unfinished arithmetic computation.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Number every occurrence in (a+b)*(a+b) and give the resulting shared TAC.",
+      "marks": 6,
+      "answerHtml": "\n<p>A <dfn>value number</dfn> is an internal identity for a value known to be equivalent to another occurrence. Keep a map from leaf values or operator-and-operand keys to numbers. When a key already exists, reuse its number. Otherwise create a node and assign a new number.</p>\n<table class=\"ref\"><caption>Complete value numbering for (a+b)*(a+b)</caption><thead><tr><th scope=\"col\">Visit</th><th scope=\"col\">Lookup key</th><th scope=\"col\">Number returned</th><th scope=\"col\">New node?</th></tr></thead><tbody><tr><td>First a</td><td>leaf(a0)</td><td>v1</td><td>Yes</td></tr><tr><td>First b</td><td>leaf(b0)</td><td>v2</td><td>Yes</td></tr><tr><td>Left addition</td><td>(+, v1, v2)</td><td>v3</td><td>Yes</td></tr><tr><td>Second a</td><td>leaf(a0)</td><td>v1</td><td>No</td></tr><tr><td>Second b</td><td>leaf(b0)</td><td>v2</td><td>No</td></tr><tr><td>Right addition</td><td>(+, v1, v2)</td><td>v3</td><td>No</td></tr><tr><td>Multiplication</td><td>(*, v3, v3)</td><td>v4</td><td>Yes</td></tr></tbody></table>\n<p>The suffix 0 identifies the incoming version of each name. The resulting TAC needs <code>t1 = a + b</code> and <code>t2 = t1 * t1</code>. Generate nodes in dependency order so an operation appears after its operand nodes. Sharing the graph is not enough if your code emitter still recomputes a node for each incoming edge.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Value-number x=a+b; a=a+1; y=a+b without reusing an invalid sum.",
+      "marks": 5,
+      "answerHtml": "\n<p>Consider <code>x = a + b; a = a + 1; y = a + b</code>. The final addition is not the first addition. The new a value needs a fresh value number, while b can keep its incoming identity. Keep a current-name map and update the destination after computing each right-hand side.</p>\n<table class=\"ref\"><caption>Value numbers across a reassignment</caption><thead><tr><th scope=\"col\">Statement or leaf</th><th scope=\"col\">Key</th><th scope=\"col\">New identity</th><th scope=\"col\">Current name mapping</th></tr></thead><tbody><tr><td>Incoming a, b, 1</td><td>leaf(a0), leaf(b0), constant(1)</td><td>v1, v2, v3</td><td>a:v1, b:v2</td></tr><tr><td>x = a + b</td><td>(+, v1, v2)</td><td>v4</td><td>x:v4</td></tr><tr><td>a = a + 1</td><td>(+, v1, v3)</td><td>v5</td><td>a:v5, x:v4</td></tr><tr><td>y = a + b</td><td>(+, v5, v2)</td><td>v6</td><td>y:v6</td></tr></tbody></table>\n<p>The old value v1 remains a valid graph input for x even after a stops naming it. This is why value numbering separates a variable's current spelling from the value already captured by an earlier computation. An implementation that mutates leaf a in place would incorrectly change x's meaning.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

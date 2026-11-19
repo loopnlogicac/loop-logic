@@ -1,0 +1,303 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-runtime-environment",
+  "module": "runtime-codegen",
+  "order": 1,
+  "kind": "theory",
+  "title": {
+    "en": "Runtime Environments",
+    "bn": "রানটাইমে স্ট্যাক আর হিপ"
+  },
+  "summary": {
+    "en": "Trace activation records, distinguish storage lifetimes, and compare parameter passing methods with concrete state tables.",
+    "bn": "ফাংশন কল হলে স্ট্যাক ফ্রেমে কী থাকে আর প্যারামিটার পাঠালে কী বদলায়, তা তুমি ধাপে ধাপে দেখবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-symbol-table"
+  ],
+  "related": [
+    "cd-basic-blocks"
+  ],
+  "keywords": [
+    "Runtime Environments",
+    "activation record",
+    "parameter passing"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Frames and parameter effects"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Following access links"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Lay out a frame",
+      "statementHtml": "<p>Draw the stated four-byte-slot frame for sum(n), identifying argument, return address, saved FP and locals.</p>",
+      "hints": [
+        "Offsets belong to the stated teaching convention."
+      ],
+      "answerHtml": "\n<p>Use a simplified machine with four-byte slots and a downward-growing stack. The frame pointer, FP, names a stable point inside the current frame. Positive and negative offsets below are our chosen convention. They are not a universal ABI layout or a statement about Python frames.</p>\n<table class=\"ref\"><caption>Frame offsets for sum(n)</caption><thead><tr><th scope=\"col\">Offset from FP</th><th scope=\"col\">Field</th><th scope=\"col\">Example purpose</th></tr></thead><tbody><tr><td>+8</td><td>argument n</td><td>Input 3</td></tr><tr><td>+4</td><td>return address</td><td>Resume caller after call</td></tr><tr><td>0</td><td>saved caller FP</td><td>Restore caller frame position</td></tr><tr><td>-4</td><td>saved register</td><td>Restore a preserved target register</td></tr><tr><td>-8</td><td>local partial</td><td>Hold a recursive result</td></tr><tr><td>-12</td><td>temporary</td><td>Save an intermediate value if needed</td></tr></tbody></table>\n<p>An <dfn>ABI</dfn>, or application binary interface, defines concrete calling conventions such as argument locations and saved registers. A real target may pass the first arguments in registers, omit a frame pointer, or align the stack more strictly. The teaching offsets explain the idea without prescribing those target choices.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace recursive activations",
+      "statementHtml": "<p>Show every activation and return value for sum(3), with sum(0)=0.</p>",
+      "hints": [
+        "Each invocation keeps its own n."
+      ],
+      "answerHtml": "\n<p>Let sum(n) return 0 for n=0 and n+sum(n-1) otherwise. Calling sum(3) creates four active invocations at the deepest point. Each has its own argument. Returns unwind in reverse call order.</p>\n<table class=\"ref\"><caption>Activation and return trace for sum(3)</caption><thead><tr><th scope=\"col\">Event</th><th scope=\"col\">Active n values, oldest first</th><th scope=\"col\">Value returned</th></tr></thead><tbody><tr><td>Call sum(3)</td><td>3</td><td>pending</td></tr><tr><td>Call sum(2)</td><td>3,2</td><td>pending</td></tr><tr><td>Call sum(1)</td><td>3,2,1</td><td>pending</td></tr><tr><td>Call sum(0)</td><td>3,2,1,0</td><td>pending</td></tr><tr><td>Return base case</td><td>3,2,1</td><td>0</td></tr><tr><td>Return from sum(1)</td><td>3,2</td><td>1 + 0 = 1</td></tr><tr><td>Return from sum(2)</td><td>3</td><td>2 + 1 = 3</td></tr><tr><td>Return from sum(3)</td><td>none</td><td>3 + 3 = 6</td></tr></tbody></table>\n<p>The return address identifies code in the caller, while the saved frame pointer helps recover its storage. These are different pieces of information. Returning must both transfer control and restore the caller's view of live data.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Compare passing methods",
+      "statementHtml": "<p>Starting with a=5, trace change(a): x=x+1 under value, reference and value-result.</p>",
+      "hints": [
+        "Separate entry copy, aliasing and exit copy."
+      ],
+      "answerHtml": "\n<p>Let caller variable a initially hold 5. Call change(a), whose body sets its parameter x to x+1. Under call by value, x receives a copy. Under call by reference, x refers to the caller's variable. Under value-result, x receives a copy on entry and is copied back on normal return.</p>\n<table class=\"ref\"><caption>Effect of change(a) with a initially 5</caption><thead><tr><th scope=\"col\">Method</th><th scope=\"col\">At entry</th><th scope=\"col\">After x=x+1 inside callee</th><th scope=\"col\">Caller a after return</th></tr></thead><tbody><tr><td>Value</td><td>x=5, separate storage</td><td>x=6, a=5</td><td>5</td></tr><tr><td>Reference</td><td>x aliases a</td><td>x=6 and a=6</td><td>6</td></tr><tr><td>Value-result</td><td>x=5, separate storage</td><td>x=6, a=5</td><td>6 after copy-out</td></tr><tr><td>Name</td><td>x denotes caller expression evaluated on use</td><td>For a alone, accesses a</td><td>6 in this simple case</td></tr></tbody></table>\n<p>Call by name substitutes a delayed access to the caller's expression, usually implemented with a thunk. It is different from passing the already computed argument value. Expressions containing an index or another changing variable can therefore behave differently on repeated uses. The simple argument a hides that difference, so do not generalise from that row alone.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Analyse aliased arguments",
+      "statementHtml": "<p>Trace set2(a,a), body x=1; y=2, under reference and both value-result copy-out orders.</p>",
+      "hints": [
+        "Two parameters may refer back to the same destination."
+      ],
+      "answerHtml": "\n<p>Consider set2(x,y) with body x=1; y=2, called as set2(a,a). Reference parameters both name the same caller variable. Value-result parameters are separate local copies, so the copy-out order matters when they both return to a. If the language does not specify that order, you cannot claim a single final value.</p>\n<table class=\"ref\"><caption>set2(a,a) under different methods</caption><thead><tr><th scope=\"col\">Method</th><th scope=\"col\">Local effect</th><th scope=\"col\">Final caller a</th></tr></thead><tbody><tr><td>Value</td><td>x=1; y=2 affect copies</td><td>Original value</td></tr><tr><td>Reference</td><td>First writes a=1, then a=2</td><td>2</td></tr><tr><td>Value-result, x copied then y</td><td>Copies hold 1 and 2</td><td>2</td></tr><tr><td>Value-result, y copied then x</td><td>Copies hold 1 and 2</td><td>1</td></tr></tbody></table>\n<p>Python passes object references by assignment, often described as object sharing. Rebinding a parameter does not rebind the caller's variable. Mutating a shared mutable object can still be visible. Avoid calling this ordinary call by reference, because assigning a new object to the local parameter does not assign the caller's name.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does one activation record normally correspond to?",
+      "options": [
+        "One active function invocation",
+        "One function name for all calls",
+        "One entire executable file",
+        "One source token"
+      ],
+      "answer": 0,
+      "explanation": "Recursive invocations need separate state even though they share code."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which field tells a callee where to resume its caller?",
+      "options": [
+        "Local array length",
+        "Return address",
+        "Source line of the declaration",
+        "Hash bucket"
+      ],
+      "answer": 1,
+      "explanation": "Returning transfers control to the saved continuation."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which storage region supports non-LIFO object lifetimes?",
+      "options": [
+        "Only the current frame",
+        "Only a parameter register",
+        "Heap",
+        "Token buffer"
+      ],
+      "answer": 2,
+      "explanation": "Heap objects may remain alive beyond the call that created them."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Under call by value, what happens when a scalar parameter is rebound?",
+      "options": [
+        "The caller is always rebound",
+        "Every alias is deleted",
+        "The argument becomes static storage",
+        "The caller variable is unchanged"
+      ],
+      "answer": 3,
+      "explanation": "The parameter has its own local storage for the copied value."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Under reference passing, set2(a,a) writes x=1 then y=2. What remains in a?",
+      "options": [
+        "2",
+        "1",
+        "The original value always",
+        "A type error necessarily"
+      ],
+      "answer": 0,
+      "explanation": "Both parameters alias a, so the last write sets it to 2."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can value-result with aliased actual arguments depend on copy-out order?",
+      "options": [
+        "The callee has no local copies",
+        "Separate parameter copies write the same destination",
+        "Arguments are never copied back",
+        "Return addresses contain argument values"
+      ],
+      "answer": 1,
+      "explanation": "The final copy can overwrite the earlier returned value."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a static link follow for nested functions?",
+      "options": [
+        "Always the most recent caller",
+        "The next machine instruction",
+        "The lexical enclosing activation",
+        "The heap free list"
+      ],
+      "answer": 2,
+      "explanation": "Lexical access follows source nesting, which can differ from the dynamic call chain."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can an escaping closure need heap-backed storage?",
+      "options": [
+        "Every function call is recursive",
+        "Stack frames never expire",
+        "All captured values are constants",
+        "Captured bindings must outlive the defining call"
+      ],
+      "answer": 3,
+      "explanation": "A popped ordinary frame cannot safely supply later accesses."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a local reference disappearing always destroy its heap object?",
+      "options": [
+        "No, other references may keep it alive",
+        "Yes, under every language",
+        "Yes, even with aliases",
+        "Only if the object is an integer"
+      ],
+      "answer": 0,
+      "explanation": "Reference lifetime and referenced-object lifetime are different questions."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does the prologue do?",
+      "options": [
+        "Parse the function's grammar",
+        "Establish required call-frame state",
+        "Build a DFA",
+        "Perform only source-level type checking"
+      ],
+      "answer": 1,
+      "explanation": "Entry code reserves space and saves state required by the calling convention."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Each active invocation needs its own activation state.",
+      "bn": "একই ফাংশনের প্রতিটি সক্রিয় কলের জন্য আলাদা অবস্থা রাখো।"
+    },
+    {
+      "en": "A calling convention determines the concrete frame organisation.",
+      "bn": "ফ্রেমে কী কোথায় থাকবে, তা calling convention ঠিক করে।"
+    },
+    {
+      "en": "Heap lifetime need not follow stack return order.",
+      "bn": "হিপের অবজেক্ট কতক্ষণ থাকবে, তা স্ট্যাক থেকে ফেরার ক্রমে বাঁধা নয়।"
+    },
+    {
+      "en": "Value, reference and value-result have different alias effects.",
+      "bn": "প্যারামিটার কীভাবে পাঠাও, তার ওপর একই ভেরিয়েবলে পরিবর্তনের ফল বদলায়।"
+    },
+    {
+      "en": "An escaping closure needs captured storage that remains alive.",
+      "bn": "ক্লোজার পরে চললে তার দরকারি ডেটাও ততক্ষণ বাঁচিয়ে রাখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Draw the stated four-byte-slot frame for sum(n), identifying argument, return address, saved FP and locals.",
+      "marks": 4,
+      "answerHtml": "\n<p>Use a simplified machine with four-byte slots and a downward-growing stack. The frame pointer, FP, names a stable point inside the current frame. Positive and negative offsets below are our chosen convention. They are not a universal ABI layout or a statement about Python frames.</p>\n<table class=\"ref\"><caption>Frame offsets for sum(n)</caption><thead><tr><th scope=\"col\">Offset from FP</th><th scope=\"col\">Field</th><th scope=\"col\">Example purpose</th></tr></thead><tbody><tr><td>+8</td><td>argument n</td><td>Input 3</td></tr><tr><td>+4</td><td>return address</td><td>Resume caller after call</td></tr><tr><td>0</td><td>saved caller FP</td><td>Restore caller frame position</td></tr><tr><td>-4</td><td>saved register</td><td>Restore a preserved target register</td></tr><tr><td>-8</td><td>local partial</td><td>Hold a recursive result</td></tr><tr><td>-12</td><td>temporary</td><td>Save an intermediate value if needed</td></tr></tbody></table>\n<p>An <dfn>ABI</dfn>, or application binary interface, defines concrete calling conventions such as argument locations and saved registers. A real target may pass the first arguments in registers, omit a frame pointer, or align the stack more strictly. The teaching offsets explain the idea without prescribing those target choices.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Show every activation and return value for sum(3), with sum(0)=0.",
+      "marks": 6,
+      "answerHtml": "\n<p>Let sum(n) return 0 for n=0 and n+sum(n-1) otherwise. Calling sum(3) creates four active invocations at the deepest point. Each has its own argument. Returns unwind in reverse call order.</p>\n<table class=\"ref\"><caption>Activation and return trace for sum(3)</caption><thead><tr><th scope=\"col\">Event</th><th scope=\"col\">Active n values, oldest first</th><th scope=\"col\">Value returned</th></tr></thead><tbody><tr><td>Call sum(3)</td><td>3</td><td>pending</td></tr><tr><td>Call sum(2)</td><td>3,2</td><td>pending</td></tr><tr><td>Call sum(1)</td><td>3,2,1</td><td>pending</td></tr><tr><td>Call sum(0)</td><td>3,2,1,0</td><td>pending</td></tr><tr><td>Return base case</td><td>3,2,1</td><td>0</td></tr><tr><td>Return from sum(1)</td><td>3,2</td><td>1 + 0 = 1</td></tr><tr><td>Return from sum(2)</td><td>3</td><td>2 + 1 = 3</td></tr><tr><td>Return from sum(3)</td><td>none</td><td>3 + 3 = 6</td></tr></tbody></table>\n<p>The return address identifies code in the caller, while the saved frame pointer helps recover its storage. These are different pieces of information. Returning must both transfer control and restore the caller's view of live data.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Starting with a=5, trace change(a): x=x+1 under value, reference and value-result.",
+      "marks": 5,
+      "answerHtml": "\n<p>Let caller variable a initially hold 5. Call change(a), whose body sets its parameter x to x+1. Under call by value, x receives a copy. Under call by reference, x refers to the caller's variable. Under value-result, x receives a copy on entry and is copied back on normal return.</p>\n<table class=\"ref\"><caption>Effect of change(a) with a initially 5</caption><thead><tr><th scope=\"col\">Method</th><th scope=\"col\">At entry</th><th scope=\"col\">After x=x+1 inside callee</th><th scope=\"col\">Caller a after return</th></tr></thead><tbody><tr><td>Value</td><td>x=5, separate storage</td><td>x=6, a=5</td><td>5</td></tr><tr><td>Reference</td><td>x aliases a</td><td>x=6 and a=6</td><td>6</td></tr><tr><td>Value-result</td><td>x=5, separate storage</td><td>x=6, a=5</td><td>6 after copy-out</td></tr><tr><td>Name</td><td>x denotes caller expression evaluated on use</td><td>For a alone, accesses a</td><td>6 in this simple case</td></tr></tbody></table>\n<p>Call by name substitutes a delayed access to the caller's expression, usually implemented with a thunk. It is different from passing the already computed argument value. Expressions containing an index or another changing variable can therefore behave differently on repeated uses. The simple argument a hides that difference, so do not generalise from that row alone.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

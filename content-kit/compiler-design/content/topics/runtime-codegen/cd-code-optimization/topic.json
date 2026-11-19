@@ -1,0 +1,303 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-code-optimization",
+  "module": "runtime-codegen",
+  "order": 3,
+  "kind": "theory",
+  "title": {
+    "en": "Code Optimisation",
+    "bn": "কোড অপটিমাইজেশন"
+  },
+  "summary": {
+    "en": "Apply folding, propagation, common-expression removal, dead-code elimination and loop improvements only when their safety conditions hold.",
+    "bn": "একই ফল রেখে তুমি অপ্রয়োজনীয় হিসাব সরাবে এবং লুপের কাজ কমাবে; আগে নিরাপদ কি না দেখবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-basic-blocks"
+  ],
+  "related": [
+    "cd-data-flow-analysis"
+  ],
+  "keywords": [
+    "Code Optimisation",
+    "constant folding",
+    "loop optimisation"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked transformations"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Choosing and combining passes"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Propagate constants",
+      "statementHtml": "<p>Rewrite x=3; y=4; t=x*y; z=t+2, showing known values after every instruction.</p>",
+      "hints": [
+        "Propagate operands before folding their operation."
+      ],
+      "answerHtml": "\n<p><dfn>Constant folding</dfn> evaluates an operation whose operands are known constants. <dfn>Constant propagation</dfn> substitutes a known constant for a variable use. They often help one another: propagation exposes another operation that can then be folded.</p>\n<p>Assume mathematical integers and no observable assignment to the temporary names. Begin with x=3, y=4, t=x*y, z=t+2. The final z is observable. Move through the block in execution order, updating what is known after each assignment.</p>\n<table class=\"ref\"><caption>Constant information and rewritten instructions</caption><thead><tr><th scope=\"col\">Original instruction</th><th scope=\"col\">Known values afterwards</th><th scope=\"col\">Rewritten instruction</th></tr></thead><tbody><tr><td>x = 3</td><td>x=3</td><td>x = 3</td></tr><tr><td>y = 4</td><td>x=3,y=4</td><td>y = 4</td></tr><tr><td>t = x * y</td><td>x=3,y=4,t=12</td><td>t = 12</td></tr><tr><td>z = t + 2</td><td>x=3,y=4,t=12,z=14</td><td>z = 14</td></tr></tbody></table>\n<p>At a join, a name is a known constant only when all relevant incoming paths agree. If one predecessor gives x=3 and another gives x=7, replacing x by 3 in the join block is wrong. A reaching-definitions or constant-data-flow analysis supplies the evidence needed beyond a single path.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Remove redundant work",
+      "statementHtml": "<p>Improve t1=a+b; t2=a+b; z=t2*2; unused=9 when only z is live out and arithmetic is pure.</p>",
+      "hints": [
+        "After replacing t2 uses, its copy can become dead."
+      ],
+      "answerHtml": "\n<p>A <dfn>common subexpression</dfn> repeats an operation on unchanged operand values. A <dfn>dead assignment</dfn> computes a destination whose value is never used before replacement or exit. Removing dead work is valid only when evaluating that work has no required effect or exceptional behaviour that must remain.</p>\n<table class=\"ref\"><caption>Local improvement with live output z</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Before</th><th scope=\"col\">After</th><th scope=\"col\">Justification</th></tr></thead><tbody><tr><td>1</td><td>t1=a+b; t2=a+b</td><td>t1=a+b; t2=t1</td><td>a and b unchanged; pure addition</td></tr><tr><td>2</td><td>z=t2*2</td><td>z=t1*2</td><td>Copy propagation substitutes t1</td></tr><tr><td>3</td><td>unused=9</td><td>Remove unused=9</td><td>Destination unused; constant assignment has no effect</td></tr><tr><td>4</td><td>t2=t1 after substitution</td><td>Remove t2=t1</td><td>No remaining use of t2</td></tr></tbody></table>\n<p>If a changes between the two additions, step 1 is invalid. If the unused expression calls a function that prints, removing it changes observable output. A dead destination is therefore not sufficient evidence to remove an arbitrary right-hand side.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Hoist safely",
+      "statementHtml": "<p>Move p*q out of an invariant loop and discuss the zero-iteration case.</p>",
+      "hints": [
+        "Earlier execution must itself be safe."
+      ],
+      "answerHtml": "\n<p><dfn>Loop-invariant code motion</dfn> moves a calculation outside a loop when repeated executions would compute the same value and moving it is safe. Let p and q be unchanged scalar integers. In a loop over i=0 through n-1, computing p*q on every iteration is redundant.</p>\n<table class=\"ref\"><caption>Moving an invariant product</caption><thead><tr><th scope=\"col\">Region</th><th scope=\"col\">Before</th><th scope=\"col\">After</th></tr></thead><tbody><tr><td>Before loop</td><td>i = 0</td><td>t = p * q; i = 0</td></tr><tr><td>Loop body</td><td>t = p * q; total = total + t; i = i + 1</td><td>total = total + t; i = i + 1</td></tr><tr><td>Iterations when n=3</td><td>Three multiplications</td><td>One multiplication</td></tr><tr><td>Iterations when n=0</td><td>No multiplication</td><td>One multiplication</td></tr></tbody></table>\n<p>The n=0 row exposes an extra safety condition. Hoisting executes the product even if the loop body never runs. For pure mathematical integer multiplication that has no observable failure, this may be harmless. Hoisting a division that could trap, an invalid load, or an effectful call can introduce behaviour absent from the original program.</p>\n<p>You must also ensure that all operands remain invariant, that the moved destination does not interfere with live values, and that the result reaches every replaced use. A preheader, a block entered once before a loop, provides a natural home for a safely hoisted instruction.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Reduce an induction multiply",
+      "statementHtml": "<p>Replace 4*i by a maintained offset for i=0..3, showing its invariant and updates.</p>",
+      "hints": [
+        "Use the offset before incrementing it."
+      ],
+      "answerHtml": "\n<p><dfn>Strength reduction</dfn> replaces an expensive recurring operation with a cheaper equivalent update. For i starting at 0 and increasing by 1, the expression 4*i follows 0,4,8,12. Maintain a separate address offset j and increase it by 4 after each use.</p>\n<table class=\"ref\"><caption>Induction-variable strength reduction for four iterations</caption><thead><tr><th scope=\"col\">Iteration</th><th scope=\"col\">Original i</th><th scope=\"col\">Original 4*i</th><th scope=\"col\">Reduced j used</th><th scope=\"col\">j after update</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td>0</td><td>4</td></tr><tr><td>1</td><td>1</td><td>4</td><td>4</td><td>8</td></tr><tr><td>2</td><td>2</td><td>8</td><td>8</td><td>12</td></tr><tr><td>3</td><td>3</td><td>12</td><td>12</td><td>16</td></tr></tbody></table>\n<p>The invariant before each use is j=4*i. It holds initially because both are zero. If the loop increments i by 1 and j by 4, the relation remains true at the next iteration. Initialise j before entering the loop and update it at the corresponding point, not before its first use.</p>\n<p>A real target may implement multiplication by four as a shift or fold the scaled index into an addressing mode. An extra maintained variable can increase register pressure. Strength reduction should therefore be evaluated with target costs; the mathematical recurrence proves equivalence but does not guarantee a speedup on every machine.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which transformation computes 3*4 before execution?",
+      "options": [
+        "Register spilling",
+        "Lexical buffering",
+        "Constant folding",
+        "Backpatching"
+      ],
+      "answer": 2,
+      "explanation": "Both operands are known constants, so the operation can be evaluated early."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which transformation substitutes known x=3 into y=x+1?",
+      "options": [
+        "Scope shadowing",
+        "Triple relocation",
+        "Dynamic dispatch",
+        "Constant propagation"
+      ],
+      "answer": 3,
+      "explanation": "The known value replaces a use of the variable."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When can two a+b operations share one result?",
+      "options": [
+        "When operand values are unchanged and the operation is safely reusable",
+        "Whenever their text matches",
+        "After any unknown store",
+        "Only if a is a keyword"
+      ],
+      "answer": 0,
+      "explanation": "Equivalence depends on values and effects rather than spelling alone."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why may an unused function-call result still need its call?",
+      "options": [
+        "Unused values are always live",
+        "The call can have observable effects",
+        "Every function is a constant",
+        "Calls cannot be in basic blocks"
+      ],
+      "answer": 1,
+      "explanation": "Destination liveness does not remove printing, memory effects or required failures."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What extra issue appears when hoisting from a zero-iteration loop?",
+      "options": [
+        "The loop necessarily runs once",
+        "The condition disappears automatically",
+        "The moved operation now executes",
+        "The result becomes Boolean"
+      ],
+      "answer": 2,
+      "explanation": "Earlier execution can introduce a trap or effect absent from the original run."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What invariant supports replacing 4*i by j?",
+      "options": [
+        "j=i+4 after every return",
+        "j is always zero",
+        "i=4 regardless of iteration",
+        "j=4*i before each use"
+      ],
+      "answer": 3,
+      "explanation": "Initialisation and matched updates preserve the needed value at each use."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "At a join, when is x safely a known constant 3?",
+      "options": [
+        "All relevant incoming paths agree on 3",
+        "One predecessor assigns 3",
+        "x has a short name",
+        "The next operation is addition"
+      ],
+      "answer": 0,
+      "explanation": "A fact used after a join must hold on every possible incoming execution."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can x*0 → 0 be invalid for floating-point x?",
+      "options": [
+        "Multiplication is never defined",
+        "x can be NaN",
+        "Zero is not a real number",
+        "The operation always allocates memory"
+      ],
+      "answer": 1,
+      "explanation": "NaN propagation and other floating-point semantics can invalidate elementary algebraic rewrites."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is a loop preheader useful for?",
+      "options": [
+        "Repeating every body instruction",
+        "Storing lexer patterns",
+        "Holding safely hoisted invariant work",
+        "Resolving an LR conflict"
+      ],
+      "answer": 2,
+      "explanation": "A preheader executes before the loop rather than on every iteration."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does fewer arithmetic operations guarantee faster target code?",
+      "options": [
+        "Yes on every machine",
+        "Yes unless variable names are long",
+        "Only when the source has no comments",
+        "No, register pressure and instruction costs matter"
+      ],
+      "answer": 3,
+      "explanation": "A shared result or maintained induction value can add storage costs."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Optimisation must preserve required observable behaviour.",
+      "bn": "অপটিমাইজ করলেও প্রোগ্রামের দরকারি আচরণ একই রাখো।"
+    },
+    {
+      "en": "Propagation can expose operations that folding then evaluates.",
+      "bn": "কনস্ট্যান্ট বসালে পরের হিসাবও আগে থেকে বের করা যেতে পারে।"
+    },
+    {
+      "en": "Common expressions require unchanged operand values.",
+      "bn": "একই হিসাব আবার ব্যবহার করতে অপার্যান্ডের মান অপরিবর্তিত থাকতে হবে।"
+    },
+    {
+      "en": "Hoisting must be safe even when the loop runs zero times.",
+      "bn": "লুপ একবারও না চললে বাইরে আনা হিসাব নিরাপদ কি না দেখো।"
+    },
+    {
+      "en": "Strength reduction needs a correct initial value and update point.",
+      "bn": "দামি হিসাবের বদলে আপডেট দিলে শুরু আর আপডেটের জায়গা ঠিক রাখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Rewrite x=3; y=4; t=x*y; z=t+2, showing known values after every instruction.",
+      "marks": 4,
+      "answerHtml": "\n<p><dfn>Constant folding</dfn> evaluates an operation whose operands are known constants. <dfn>Constant propagation</dfn> substitutes a known constant for a variable use. They often help one another: propagation exposes another operation that can then be folded.</p>\n<p>Assume mathematical integers and no observable assignment to the temporary names. Begin with x=3, y=4, t=x*y, z=t+2. The final z is observable. Move through the block in execution order, updating what is known after each assignment.</p>\n<table class=\"ref\"><caption>Constant information and rewritten instructions</caption><thead><tr><th scope=\"col\">Original instruction</th><th scope=\"col\">Known values afterwards</th><th scope=\"col\">Rewritten instruction</th></tr></thead><tbody><tr><td>x = 3</td><td>x=3</td><td>x = 3</td></tr><tr><td>y = 4</td><td>x=3,y=4</td><td>y = 4</td></tr><tr><td>t = x * y</td><td>x=3,y=4,t=12</td><td>t = 12</td></tr><tr><td>z = t + 2</td><td>x=3,y=4,t=12,z=14</td><td>z = 14</td></tr></tbody></table>\n<p>At a join, a name is a known constant only when all relevant incoming paths agree. If one predecessor gives x=3 and another gives x=7, replacing x by 3 in the join block is wrong. A reaching-definitions or constant-data-flow analysis supplies the evidence needed beyond a single path.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Improve t1=a+b; t2=a+b; z=t2*2; unused=9 when only z is live out and arithmetic is pure.",
+      "marks": 6,
+      "answerHtml": "\n<p>A <dfn>common subexpression</dfn> repeats an operation on unchanged operand values. A <dfn>dead assignment</dfn> computes a destination whose value is never used before replacement or exit. Removing dead work is valid only when evaluating that work has no required effect or exceptional behaviour that must remain.</p>\n<table class=\"ref\"><caption>Local improvement with live output z</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Before</th><th scope=\"col\">After</th><th scope=\"col\">Justification</th></tr></thead><tbody><tr><td>1</td><td>t1=a+b; t2=a+b</td><td>t1=a+b; t2=t1</td><td>a and b unchanged; pure addition</td></tr><tr><td>2</td><td>z=t2*2</td><td>z=t1*2</td><td>Copy propagation substitutes t1</td></tr><tr><td>3</td><td>unused=9</td><td>Remove unused=9</td><td>Destination unused; constant assignment has no effect</td></tr><tr><td>4</td><td>t2=t1 after substitution</td><td>Remove t2=t1</td><td>No remaining use of t2</td></tr></tbody></table>\n<p>If a changes between the two additions, step 1 is invalid. If the unused expression calls a function that prints, removing it changes observable output. A dead destination is therefore not sufficient evidence to remove an arbitrary right-hand side.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Move p*q out of an invariant loop and discuss the zero-iteration case.",
+      "marks": 5,
+      "answerHtml": "\n<p><dfn>Loop-invariant code motion</dfn> moves a calculation outside a loop when repeated executions would compute the same value and moving it is safe. Let p and q be unchanged scalar integers. In a loop over i=0 through n-1, computing p*q on every iteration is redundant.</p>\n<table class=\"ref\"><caption>Moving an invariant product</caption><thead><tr><th scope=\"col\">Region</th><th scope=\"col\">Before</th><th scope=\"col\">After</th></tr></thead><tbody><tr><td>Before loop</td><td>i = 0</td><td>t = p * q; i = 0</td></tr><tr><td>Loop body</td><td>t = p * q; total = total + t; i = i + 1</td><td>total = total + t; i = i + 1</td></tr><tr><td>Iterations when n=3</td><td>Three multiplications</td><td>One multiplication</td></tr><tr><td>Iterations when n=0</td><td>No multiplication</td><td>One multiplication</td></tr></tbody></table>\n<p>The n=0 row exposes an extra safety condition. Hoisting executes the product even if the loop body never runs. For pure mathematical integer multiplication that has no observable failure, this may be harmless. Hoisting a division that could trap, an invalid load, or an effectful call can introduce behaviour absent from the original program.</p>\n<p>You must also ensure that all operands remain invariant, that the moved destination does not interfere with live values, and that the result reaches every replaced use. A preheader, a block entered once before a loop, provides a natural home for a safely hoisted instruction.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

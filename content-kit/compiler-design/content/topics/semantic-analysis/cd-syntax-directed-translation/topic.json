@@ -1,0 +1,390 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-syntax-directed-translation",
+  "module": "semantic-analysis",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Syntax-Directed Translation",
+    "bn": "সিনট্যাক্স দেখে অর্থ বের করা"
+  },
+  "summary": {
+    "en": "Attach values and environments to grammar symbols, then evaluate an annotated expression tree in Python.",
+    "bn": "গ্রামারের সঙ্গে মান আর স্কোপের তথ্য জুড়ে তুমি এক্সপ্রেশনের ফল বের করতে পারবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-recursive-descent"
+  ],
+  "related": [
+    "cd-type-checking"
+  ],
+  "keywords": [
+    "Syntax-Directed Translation",
+    "attributes",
+    "annotated tree"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Attributes and grammar rules"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Evaluating the dependencies"
+    },
+    {
+      "id": "examples",
+      "title": "Executable evaluators"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Python representation notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Evaluate a synthesised expression value",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The multiplication subtree contributes 20; the root adds 3 to produce 23.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "List postorder value annotations",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The inner addition has value 7, which multiplication combines with 5.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Pass an identifier environment",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The name leaf reads 40 from its environment and the expression becomes 50.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Evaluate an integer expression",
+      "statementHtml": "<p>Read one expression of at most 100 characters, with ASCII integers, +, -, *, unary minus and parentheses. Print <code>Expression:</code>, then its integer value. Print <code>invalid</code> for syntax errors, unknown names or unsupported characters. Limit nesting to 30.</p>",
+      "hints": [
+        "Parse before evaluating; the AST records precedence."
+      ],
+      "language": "python",
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Print postorder attributes",
+      "statementHtml": "<p>Read a numeric expression using the same operators, at most 80 characters and 20 nested operations. Print <code>Expression to annotate:</code>, then one postorder row <code>operation text: value</code>. Leaves use number and their literal text; other nodes use their operator (neg for unary minus) and a dash. On a malformed expression or name, print <code>invalid</code>.</p>",
+      "hints": [
+        "Visit children before recording their parent."
+      ],
+      "language": "python",
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Declaration attributes",
+      "statementHtml": "<p>Give inherited type attributes for real fee, tax using D → Type Names.</p>",
+      "hints": [
+        "Start with the keyword type."
+      ],
+      "answerHtml": "\n<p>Consider D → Type Names and Names → id Rest. The declaration <code>real fee, tax</code> gives both names type real. Type.type is synthesised from the keyword. D passes it down as Names.in, and the names list carries it from left to right.</p>\n<table class=\"ref\"><caption>Inherited type information</caption><thead><tr><th scope=\"col\">Occurrence</th><th scope=\"col\">Attribute equation</th><th scope=\"col\">Value for real fee, tax</th></tr></thead><tbody><tr><td>Type</td><td>Type.type = real</td><td>real</td></tr><tr><td>Names</td><td>Names.in = Type.type</td><td>real</td></tr><tr><td>id fee</td><td>install(fee, Names.in)</td><td>fee: real</td></tr><tr><td>Rest</td><td>Rest.in = Names.in</td><td>real</td></tr><tr><td>id tax</td><td>install(tax, Rest.in)</td><td>tax: real</td></tr></tbody></table>\n<p>An <dfn>L-attributed definition</dfn> allows inherited attributes of a right-side occurrence to depend on the parent's inherited attributes and earlier right-side occurrences. Synthesised values still travel upwards. This supports a left-to-right depth-first evaluation when the full dependency graph is acyclic. Every S-attributed definition is also L-attributed.</p>\n<p>For A → B C, assigning B.in = C.val requires a later sibling. That equation violates the usual L-attributed restriction. You might evaluate C first using a general dependency schedule, but a straightforward left-to-right visit cannot supply B.in in time. Do not call a definition L-attributed merely because it has inherited attributes.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Dependency diagnosis",
+      "statementHtml": "<p>Compare child-to-parent, later-sibling and cyclic attribute dependencies.</p>",
+      "hints": [
+        "Draw an arrow from each prerequisite to its user."
+      ],
+      "answerHtml": "\n<p>Suppose A.x = B.y + 1 and B.y = A.x + 1 for the same parent-child pair. Neither value has a starting point. Drawing arrows gives A.x → B.y → A.x. There is no topological evaluation order for these equations.</p>\n<table class=\"ref\"><caption>Dependency review</caption><thead><tr><th scope=\"col\">Definition</th><th scope=\"col\">Dependency edges</th><th scope=\"col\">Evaluation result</th></tr></thead><tbody><tr><td>E.val = T.val</td><td>T.val → E.val</td><td>Child before parent</td></tr><tr><td>Names.in = Type.type</td><td>Type.type → Names.in</td><td>Type before names</td></tr><tr><td>B.in = C.val in A → B C</td><td>C.val → B.in</td><td>Acyclic but not L-attributed</td></tr><tr><td>A.x = B.y + 1; B.y = A.x + 1</td><td>A.x ↔ B.y</td><td>Circular; reject this evaluator</td></tr></tbody></table>\n<p>A dependency graph has one vertex per attribute occurrence, not merely one vertex per attribute name. Otherwise separate E.val occurrences would collapse and create false cycles. This distinction is especially useful when you explain an annotated tree in an exam.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which direction supplies a synthesised E.val?",
+      "options": [
+        "From the next statement",
+        "From a future sibling only",
+        "From child values",
+        "From the input file name"
+      ],
+      "answer": 2,
+      "explanation": "An E parent combines values already attached to its children."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a name leaf need besides its spelling?",
+      "options": [
+        "A second lexer",
+        "An LR conflict",
+        "A register number",
+        "Its environment"
+      ],
+      "answer": 3,
+      "explanation": "The environment maps the name to the meaning visible in this context."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which definition is necessarily L-attributed?",
+      "options": [
+        "Every S-attributed definition",
+        "Every circular definition",
+        "Every definition with a later-sibling dependency",
+        "Every grammar with ambiguity"
+      ],
+      "answer": 0,
+      "explanation": "S-attributed rules introduce no inherited dependency that violates the left-to-right restriction."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is one vertex in an attribute dependency graph?",
+      "options": [
+        "One nonterminal name for the entire grammar",
+        "One attribute occurrence",
+        "One source file",
+        "One production regardless of attributes"
+      ],
+      "answer": 1,
+      "explanation": "Separate occurrences can hold different values and must remain distinct."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does B.in = C.val violate L-attribution in A → B C?",
+      "options": [
+        "C is a terminal",
+        "B must be nullable",
+        "C is a later sibling",
+        "A cannot have attributes"
+      ],
+      "answer": 2,
+      "explanation": "B needs information that a left-to-right traversal has not computed yet."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why may an AST omit parentheses?",
+      "options": [
+        "Parentheses have no meaning",
+        "Multiplication always comes first even inside parentheses",
+        "The lexer deleted every operator",
+        "Its shape already preserves grouping"
+      ],
+      "answer": 3,
+      "explanation": "Grouping remains in the tree structure, although punctuation leaves disappear."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When can a bottom-up parser evaluate an S-attributed reduction?",
+      "options": [
+        "After the right side is recognised",
+        "Before scanning any tokens",
+        "Only after code generation",
+        "Before any child value exists"
+      ],
+      "answer": 0,
+      "explanation": "The reduction has the right-side semantic values available on the parser stack."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "A child product reaches the root addition. Which value is printed?",
+      "options": [
+        "35",
+        "23",
+        "60",
+        "12"
+      ],
+      "answer": 1,
+      "explanation": "The product is 20, so the parent adds 3.",
+      "code": "print(3 + 4 * 5)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Both inherited names receive real. Which type reaches tax?",
+      "options": [
+        "int",
+        "Names",
+        "real",
+        "unknown"
+      ],
+      "answer": 2,
+      "explanation": "The names list forwards the same declaration type.",
+      "code": "declaration_type = \"real\"\nnames = {name: declaration_type for name in (\"fee\", \"tax\")}\nprint(names[\"tax\"])\n",
+      "language": "python"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "These synthesised child values are combined at the parent. What is its value?",
+      "options": [
+        "23",
+        "7",
+        "20",
+        "35"
+      ],
+      "answer": 3,
+      "explanation": "The addition child is 7 before multiplication combines it with 5.",
+      "code": "child_values = [3 + 4, 5]\nprint(child_values[0] * child_values[1])\n",
+      "language": "python"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Synthesised values flow from children towards their parent.",
+      "bn": "চাইল্ড নোডের মান থেকে প্যারেন্টের মান বের করো।"
+    },
+    {
+      "en": "Inherited attributes carry context into a subtree.",
+      "bn": "সাবট্রিতে স্কোপের মতো দরকারি তথ্য পাঠাতে inherited attribute লাগে।"
+    },
+    {
+      "en": "An S-attributed definition uses only synthesised attributes.",
+      "bn": "সব অ্যাট্রিবিউট নিচ থেকে ওপরে এলে সেটি S-attributed।"
+    },
+    {
+      "en": "L-attributed rules restrict dependencies on later siblings.",
+      "bn": "L-attributed নিয়মে পরের sibling-এর মান আগে চাওয়া যায় না।"
+    },
+    {
+      "en": "A dependency cycle prevents an ordinary evaluation schedule.",
+      "bn": "নির্ভরতার চক্র থাকলে কোন মান আগে বের করবে, তা ঠিক করা যায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Give inherited type attributes for real fee, tax using D → Type Names.",
+      "marks": 4,
+      "answerHtml": "\n<p>Consider D → Type Names and Names → id Rest. The declaration <code>real fee, tax</code> gives both names type real. Type.type is synthesised from the keyword. D passes it down as Names.in, and the names list carries it from left to right.</p>\n<table class=\"ref\"><caption>Inherited type information</caption><thead><tr><th scope=\"col\">Occurrence</th><th scope=\"col\">Attribute equation</th><th scope=\"col\">Value for real fee, tax</th></tr></thead><tbody><tr><td>Type</td><td>Type.type = real</td><td>real</td></tr><tr><td>Names</td><td>Names.in = Type.type</td><td>real</td></tr><tr><td>id fee</td><td>install(fee, Names.in)</td><td>fee: real</td></tr><tr><td>Rest</td><td>Rest.in = Names.in</td><td>real</td></tr><tr><td>id tax</td><td>install(tax, Rest.in)</td><td>tax: real</td></tr></tbody></table>\n<p>An <dfn>L-attributed definition</dfn> allows inherited attributes of a right-side occurrence to depend on the parent's inherited attributes and earlier right-side occurrences. Synthesised values still travel upwards. This supports a left-to-right depth-first evaluation when the full dependency graph is acyclic. Every S-attributed definition is also L-attributed.</p>\n<p>For A → B C, assigning B.in = C.val requires a later sibling. That equation violates the usual L-attributed restriction. You might evaluate C first using a general dependency schedule, but a straightforward left-to-right visit cannot supply B.in in time. Do not call a definition L-attributed merely because it has inherited attributes.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Compare child-to-parent, later-sibling and cyclic attribute dependencies.",
+      "marks": 6,
+      "answerHtml": "\n<p>Suppose A.x = B.y + 1 and B.y = A.x + 1 for the same parent-child pair. Neither value has a starting point. Drawing arrows gives A.x → B.y → A.x. There is no topological evaluation order for these equations.</p>\n<table class=\"ref\"><caption>Dependency review</caption><thead><tr><th scope=\"col\">Definition</th><th scope=\"col\">Dependency edges</th><th scope=\"col\">Evaluation result</th></tr></thead><tbody><tr><td>E.val = T.val</td><td>T.val → E.val</td><td>Child before parent</td></tr><tr><td>Names.in = Type.type</td><td>Type.type → Names.in</td><td>Type before names</td></tr><tr><td>B.in = C.val in A → B C</td><td>C.val → B.in</td><td>Acyclic but not L-attributed</td></tr><tr><td>A.x = B.y + 1; B.y = A.x + 1</td><td>A.x ↔ B.y</td><td>Circular; reject this evaluator</td></tr></tbody></table>\n<p>A dependency graph has one vertex per attribute occurrence, not merely one vertex per attribute name. Otherwise separate E.val occurrences would collapse and create false cycles. This distinction is especially useful when you explain an annotated tree in an exam.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Annotate the parse tree and evaluate 3 + 4 * 5.",
+      "marks": 6,
+      "answerHtml": "\n<p>For <code>3 + 4 * 5</code>, multiplication groups inside T. Give every leaf its numeric value first. Then calculate each parent only after its dependencies are ready. The annotated tree has the same shape as the parse tree; the annotations add information without changing the grammar.</p>\n<pre class=\"diagram\">E.val=23\n├── E.val=3 → T.val=3 → F.val=3 → number.lexval=3\n├── +\n└── T.val=20\n    ├── T.val=4 → F.val=4 → number.lexval=4\n    ├── *\n    └── F.val=5 → number.lexval=5</pre>\n<table class=\"ref\"><caption>One valid evaluation schedule</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Ready occurrence</th><th scope=\"col\">Calculation</th><th scope=\"col\">Result</th></tr></thead><tbody><tr><td>1</td><td>Left F, T, E</td><td>Pass number 3 upwards</td><td>3</td></tr><tr><td>2</td><td>Inner left F and T</td><td>Pass number 4 upwards</td><td>4</td></tr><tr><td>3</td><td>Right F</td><td>Read number 5</td><td>5</td></tr><tr><td>4</td><td>Multiplication T</td><td>4 * 5</td><td>20</td></tr><tr><td>5</td><td>Root E</td><td>3 + 20</td><td>23</td></tr></tbody></table>\n<p>The leftmost leaf need not be evaluated first for this pure expression. Any order that respects dependencies gives 23. However, a language with function calls or other effects may prescribe an evaluation order. An attribute equation does not give permission to reorder those effects.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

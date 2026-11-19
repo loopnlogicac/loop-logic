@@ -300,7 +300,7 @@ def check_recursive_descent():
 def check_standalone_sources():
     topics = ROOT / "topics/syntax-analysis"
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["packageVersion"] == "0.2.0"
+    assert tuple(map(int, manifest["packageVersion"].split("."))) >= (0, 2, 0)
     assert len(next(m["topics"] for m in manifest["modules"] if m["id"] == "syntax-analysis")) == 10
     count = 0
     for path in topics.rglob("*.py"):

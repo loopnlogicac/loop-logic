@@ -1,0 +1,42 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Build a calculator that explains an expression as well as evaluating it. Given 8-3*2, it should recognise the tokens, build the intended grouping, compute 2, and generate multiplication before subtraction. This project connects the earlier compiler phases into one small, inspectable pipeline.</p>
+<p>The source language has ASCII integer literals, ASCII identifiers, parentheses, unary minus, and the binary operators +, - and *. Whitespace separates tokens when needed and does not otherwise change meaning. Division, decimal literals, assignment statements and function calls are not part of this version. Identifier values come from an explicit environment rather than from hidden input evaluation.</p>
+<p>The compiler produces TAC rather than native machine code. Its evaluator is a separate consumer of the same AST. Comparing the evaluator's result with an execution of the generated TAC is a useful way to check whether the translation preserves meaning.</p>
+<h2 id="design">Language and phase contracts</h2>
+<h3>Grammar and association</h3>
+<table class="ref"><caption>Recursive-descent grammar</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">Production shape</th><th scope="col">Implementation job</th></tr></thead><tbody><tr><td>expression</td><td>term followed by zero or more (+ or -) term</td><td>Left-fold addition and subtraction</td></tr><tr><td>term</td><td>unary followed by zero or more * unary</td><td>Left-fold multiplication</td></tr><tr><td>unary</td><td>- unary or ( expression ) or number or name</td><td>Handle prefix negation and leaves</td></tr></tbody></table>
+<p>For 10-3-2, left folding builds (10-3)-2 and gives 5. A right-recursive subtraction implementation would give 9 instead. Unary minus binds more tightly than multiplication, while parentheses override the ordinary grouping.</p>
+<h3>What each phase promises</h3>
+<table class="ref"><caption>Pipeline contracts</caption><thead><tr><th scope="col">Phase</th><th scope="col">Input</th><th scope="col">Output</th><th scope="col">Failure kind</th></tr></thead><tbody><tr><td>Scanner</td><td>Source characters</td><td>Positioned tokens plus end marker</td><td>Unexpected character</td></tr><tr><td>Parser</td><td>Token list</td><td>One complete AST</td><td>Expected operand or punctuation; trailing token</td></tr><tr><td>Evaluator</td><td>AST and environment</td><td>Integer value</td><td>Unknown identifier</td></tr><tr><td>TAC generator</td><td>AST</td><td>Quadruple rows and final operand</td><td>Valid AST required</td></tr></tbody></table>
+<p>Token positions are one-based line and character column. A tab counts as one character, not a visual tab-stop width. The scanner accepts whitespace including newlines. The parser requires the end marker after its expression, so it rejects 2 3 rather than returning the first number and ignoring the rest.</p>
+<h3>AST and temporary decisions</h3>
+<p>Each AST node records an operation, an optional leaf spelling and a tuple of children. Negation has one child; binary arithmetic has two. Parentheses do not need their own node because grouping is already in the shape. Generate code in postorder and reserve all source identifier spellings before naming temporaries.</p>
+<table class="ref"><caption>Full pipeline for 8-3*2</caption><thead><tr><th scope="col">Stage</th><th scope="col">Result</th></tr></thead><tbody><tr><td>Tokens</td><td>number(8), -, number(3), *, number(2), end</td></tr><tr><td>AST root</td><td>subtraction(number 8, multiplication(number 3, number 2))</td></tr><tr><td>Evaluation</td><td>3*2=6, then 8-6=2</td></tr><tr><td>TAC row 0</td><td>t1 = 3 * 2</td></tr><tr><td>TAC row 1</td><td>t2 = 8 - t1</td></tr><tr><td>Returned operand</td><td>t2</td></tr></tbody></table>
+<p>The evaluator does not execute generated Python source. It follows the known AST operation tags. The generator likewise emits only the small TAC instruction set. This keeps the supported language explicit and prevents an arithmetic input from becoming arbitrary host-language code.</p>
+<h2 id="examples">Complete programs</h2>
+<h3>Compile a numeric expression</h3>
+<p>The first standalone program prints tokens, AST, value and TAC for 8-3*2. Read the AST before looking at the value. The product node must be the right child of subtraction, matching the grammar's precedence.</p>
+<div data-example="ex-1"></div>
+<p>The TAC display ends with result = t2. That line names the final operand for a later statement translator or interpreter. It is not a third arithmetic operation.</p>
+<h3>Compile an expression with a known name</h3>
+<p>The second program supplies marks=40 in an environment. Evaluation of marks+2*5 gives 50. TAC preserves the identifier marks as an input operand, because code generation does not replace every name with the evaluator's current value.</p>
+<div data-example="ex-2"></div>
+<p>This distinction matters if you compile the expression once and run it later with different marks. Constant propagation would need a separate proof that the name's value is fixed for all relevant executions.</p>
+<h3>Report errors at the right boundary</h3>
+<p>The third program tries a missing operand, a missing right parenthesis, an unsupported character on a second line, an unknown name and an extra literal. Each is caught and printed as a controlled error. The scanner and parser include source positions; the evaluator identifies the unresolved name.</p>
+<div data-example="ex-3"></div>
+<p>The example stops processing each damaged expression at its first error, then tries the next expression independently. It does not attempt statement-level recovery, because the language currently contains only one expression per compilation request.</p>
+<h2 id="extending">Extending the language carefully</h2>
+<p>Adding division requires decisions beyond putting / in the scanner. Choose integer or real division, define negative-operand behaviour, specify zero-divisor errors, add parser precedence, evaluator semantics and a TAC operation. Update all consumers of the AST rather than letting one phase accept an operation another phase cannot handle.</p>
+<p>Adding assignment requires a statement grammar and a writable environment. Decide when declarations happen and whether reassignment may change a name's type. A symbol table can keep declaration information, while a runtime environment keeps values. They are related maps with different jobs and should not be silently treated as one universal dictionary.</p>
+<p>Adding typed real values would connect this project to the earlier type checker. A typed AST could insert int-to-real conversion nodes before TAC generation. If the generator instead guesses types from printed token strings, it will lose the semantic decisions made earlier.</p>
+<p>Large inputs need explicit resource limits. Recursive descent and recursive AST processing can reach Python's recursion limit. The practice interface limits expression length to 100 characters and nesting to 30. These limits are suitable for classroom arithmetic, not a claim that the compiler handles arbitrarily deep untrusted programs.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Accepting a valid prefix as the whole program</h3>
+<p>Parsing 2 from 2 3 is not success. Require the end token after the root expression. The extra token should produce an expected-end diagnostic at its own position.</p>
+<h3>Generating before checking the entire input</h3>
+<p>A malformed expression should not produce a believable partial program. Build the whole AST first. In the interactive interface, evaluation also succeeds before any value or TAC rows are printed, so an unknown name does not leave partial results.</p>
+<h3>Mixing binary subtraction with unary negation</h3>
+<p>The first minus in -2*3 is unary; the minus in 5-2 is binary. Separate parser positions determine the operation tag. The generator then handles one-child negation without inventing a missing operand.</p>
+<h2 id="summary">Summary</h2>
+<p>The calculator connects clear phase boundaries: characters become tokens, tokens become an AST, and the AST supports evaluation and TAC generation. Extend each phase deliberately when adding a feature. Use the <a href="topic:cd-interview-questions">interview questions</a> to explain the design choices aloud.</p>

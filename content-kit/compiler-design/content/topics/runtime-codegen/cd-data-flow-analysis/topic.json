@@ -1,0 +1,328 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-data-flow-analysis",
+  "module": "runtime-codegen",
+  "order": 4,
+  "kind": "theory",
+  "title": {
+    "en": "Data-Flow Analysis (Introduction)",
+    "bn": "ডেটা-ফ্লো অ্যানালাইসিস"
+  },
+  "summary": {
+    "en": "Solve reaching definitions and live variables with explicit GEN, KILL, USE, DEF sets and synchronous fixed-point rounds.",
+    "bn": "কোন মান কোথা থেকে আসতে পারে আর পরে কোথায় লাগবে, তা তুমি ব্লকের সেট আপডেট করে বের করবে।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-code-optimization"
+  ],
+  "related": [
+    "cd-code-generation"
+  ],
+  "keywords": [
+    "Data-Flow Analysis (Introduction)",
+    "reaching definitions",
+    "live variables"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Complete sets and iteration tables"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Iteration, convergence and meaning"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Build local definition sets",
+      "statementHtml": "<p>For the diamond graph, compute every GEN and KILL set and explain why KILL refers to other definitions of assigned variables.</p>",
+      "hints": [
+        "Definition labels identify assignments, not names."
+      ],
+      "answerHtml": "\n<p>Use the following graph. The test choosing B1 or B2 uses an external flag, which is not among the variables analysed below. Definition labels name individual assignments, not variable names. B3 returns z after computing it.</p>\n<table class=\"ref\"><caption>Blocks and local statements</caption><thead><tr><th scope=\"col\">Block</th><th scope=\"col\">Statements</th><th scope=\"col\">Successors</th></tr></thead><tbody><tr><td>B0</td><td>d1: x=1; d2: y=2</td><td>B1,B2</td></tr><tr><td>B1</td><td>d3: x=y+1</td><td>B3</td></tr><tr><td>B2</td><td>d4: y=x+2</td><td>B3</td></tr><tr><td>B3</td><td>d5: z=x+y; return z</td><td>exit</td></tr></tbody></table>\n<p>For <dfn>reaching definitions</dfn>, a definition reaches a point if some path brings it there without another assignment to the same variable. GEN[B] contains definitions from B that survive to its exit. KILL[B] contains other definitions of variables assigned in B. If a block assigns x twice, only the final assignment to x belongs in GEN.</p>\n<table class=\"ref\"><caption>Complete GEN and KILL sets for the diamond</caption><thead><tr><th scope=\"col\">Block</th><th scope=\"col\">GEN</th><th scope=\"col\">KILL</th><th scope=\"col\">Predecessors</th></tr></thead><tbody><tr><td>B0</td><td>{d1,d2}</td><td>{d3,d4}</td><td>none</td></tr><tr><td>B1</td><td>{d3}</td><td>{d1}</td><td>B0</td></tr><tr><td>B2</td><td>{d4}</td><td>{d2}</td><td>B0</td></tr><tr><td>B3</td><td>{d5}</td><td>{}</td><td>B1,B2</td></tr></tbody></table>\n<p>The forward equations are IN[B] = union of OUT[P] over predecessors P, and OUT[B] = GEN[B] union (IN[B] minus KILL[B]). Set the entry boundary to empty because this example has no incoming definitions for x, y or z. A language with parameters could model their entry definitions explicitly.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Solve reaching definitions",
+      "statementHtml": "<p>Show all synchronous reaching-definition rounds for the four-block diamond from empty sets.</p>",
+      "hints": [
+        "A round reads the preceding round of neighbour facts."
+      ],
+      "answerHtml": "\n<p>Initialise every IN and OUT to empty. The following table uses synchronous rounds: all new IN values read the preceding round's OUT values. OUT is then computed from that round's new IN. A different worklist order may reach the same fixed point in fewer visible steps.</p>\n<table class=\"ref\"><caption>Complete reaching-definition iteration, each cell is IN / OUT</caption><thead><tr><th scope=\"col\">Round</th><th scope=\"col\">B0</th><th scope=\"col\">B1</th><th scope=\"col\">B2</th><th scope=\"col\">B3</th></tr></thead><tbody><tr><td>0</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td></tr><tr><td>1</td><td>{} / {d1,d2}</td><td>{} / {d3}</td><td>{} / {d4}</td><td>{} / {d5}</td></tr><tr><td>2</td><td>{} / {d1,d2}</td><td>{d1,d2} / {d2,d3}</td><td>{d1,d2} / {d1,d4}</td><td>{d3,d4} / {d3,d4,d5}</td></tr><tr><td>3</td><td>{} / {d1,d2}</td><td>{d1,d2} / {d2,d3}</td><td>{d1,d2} / {d1,d4}</td><td>{d1,d2,d3,d4} / {d1,d2,d3,d4,d5}</td></tr><tr><td>4</td><td>{} / {d1,d2}</td><td>{d1,d2} / {d2,d3}</td><td>{d1,d2} / {d1,d4}</td><td>{d1,d2,d3,d4} / {d1,d2,d3,d4,d5}</td></tr></tbody></table>\n<p>At B3 entry, both definitions of x and both definitions of y may reach. This does not mean four assignments execute together on one incoming path. B1 supplies d3 with d2, while B2 supplies d1 with d4. The set abstraction intentionally forgets that correlation, which makes it safe but sometimes imprecise.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Solve liveness",
+      "statementHtml": "<p>Compute USE, DEF and all live-variable rounds for the diamond, explaining why z is absent from B3 USE.</p>",
+      "hints": [
+        "A read after a local definition does not require an incoming value."
+      ],
+      "answerHtml": "\n<p>A variable is <dfn>live</dfn> at a point when some path uses its current value before redefining it. USE[B] lists variables read before any local definition. DEF[B] lists variables assigned in B. The return z in B3 does not put z in USE[B3], because B3 defines z before reading it.</p>\n<table class=\"ref\"><caption>Complete USE and DEF sets</caption><thead><tr><th scope=\"col\">Block</th><th scope=\"col\">USE</th><th scope=\"col\">DEF</th><th scope=\"col\">Explanation</th></tr></thead><tbody><tr><td>B0</td><td>{}</td><td>{x,y}</td><td>Both right sides are constants</td></tr><tr><td>B1</td><td>{y}</td><td>{x}</td><td>Read incoming y before assigning x</td></tr><tr><td>B2</td><td>{x}</td><td>{y}</td><td>Read incoming x before assigning y</td></tr><tr><td>B3</td><td>{x,y}</td><td>{z}</td><td>x,y feed z; return uses locally defined z</td></tr></tbody></table>\n<p>The backward equations are OUT[B] = union of IN[S] over successors S, and IN[B] = USE[B] union (OUT[B] minus DEF[B]). Give the exit an empty live set here, because return has already been represented inside B3. External observable memory would need an appropriate boundary or effect model.</p>\n<table class=\"ref\"><caption>Complete live-variable rounds, each cell is IN / OUT</caption><thead><tr><th scope=\"col\">Round</th><th scope=\"col\">B0</th><th scope=\"col\">B1</th><th scope=\"col\">B2</th><th scope=\"col\">B3</th></tr></thead><tbody><tr><td>0</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td></tr><tr><td>1</td><td>{} / {}</td><td>{y} / {}</td><td>{x} / {}</td><td>{x,y} / {}</td></tr><tr><td>2</td><td>{} / {x,y}</td><td>{y} / {x,y}</td><td>{x} / {x,y}</td><td>{x,y} / {}</td></tr><tr><td>3</td><td>{} / {x,y}</td><td>{y} / {x,y}</td><td>{x} / {x,y}</td><td>{x,y} / {}</td></tr></tbody></table>\n<p>Read B1 carefully. Its outgoing x is live because B3 uses the x assigned by B1. Its incoming x is not live because B1 replaces x before that future use. Incoming y remains live because the assignment x=y+1 reads it immediately.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Propagate through a loop",
+      "statementHtml": "<p>Solve reaching definitions for L0 initialisation, self-looping L1 updates and L2 return.</p>",
+      "hints": [
+        "Initial and previous-iteration definitions can both enter L1."
+      ],
+      "answerHtml": "\n<p>Now use L0: d1 i=0; d2 s=0, followed by L1: d3 s=s+i; d4 i=i+1. L1 can repeat itself or exit to L2: return s. The loop body generates d3,d4 and kills d1,d2. Its self edge lets its own definitions reach its next entry.</p>\n<table class=\"ref\"><caption>Reaching definitions for the loop, each cell is IN / OUT</caption><thead><tr><th scope=\"col\">Round</th><th scope=\"col\">L0</th><th scope=\"col\">L1</th><th scope=\"col\">L2</th></tr></thead><tbody><tr><td>0</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td></tr><tr><td>1</td><td>{} / {d1,d2}</td><td>{} / {d3,d4}</td><td>{} / {}</td></tr><tr><td>2</td><td>{} / {d1,d2}</td><td>{d1,d2,d3,d4} / {d3,d4}</td><td>{d3,d4} / {d3,d4}</td></tr><tr><td>3</td><td>{} / {d1,d2}</td><td>{d1,d2,d3,d4} / {d3,d4}</td><td>{d3,d4} / {d3,d4}</td></tr></tbody></table>\n<p>At L1 entry, the initial definitions can arrive on the first iteration and the body definitions can arrive on a later iteration. A single forward textual pass that ignores the back edge misses the second possibility. Fixed-point iteration combines both without enumerating every iteration count.</p>\n"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Verify stability",
+      "statementHtml": "<p>Substitute the final diamond sets into the equations at B3 for reaching definitions and B1 for liveness.</p>",
+      "hints": [
+        "Recompute rather than assuming the final row is stable."
+      ],
+      "answerHtml": "\n<p>To verify a final table, recompute every IN from its graph neighbours and every OUT from its local transfer, or reverse those roles for liveness. Check the boundary separately. A table is not justified by the words no change unless the displayed sets actually satisfy all equations.</p>\n<p>For B3 in the diamond, union({d2,d3},{d1,d4}) gives {d1,d2,d3,d4}. Adding GEN {d5} with no kills gives its displayed OUT. For liveness at B1, OUT {x,y} minus DEF {x} leaves {y}; union USE {y} still gives {y}. These small substitutions connect the equations to the completed tables.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which neighbours supply IN for reaching definitions?",
+      "options": [
+        "Successors only",
+        "Every function in the repository",
+        "Only the exit block",
+        "Predecessors"
+      ],
+      "answer": 3,
+      "explanation": "Definitions flow forward along incoming graph edges."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which neighbours supply OUT for live variables?",
+      "options": [
+        "Successors",
+        "Predecessors only",
+        "Only unreachable blocks",
+        "Source-file order alone"
+      ],
+      "answer": 0,
+      "explanation": "Future needs travel backward from successor entries."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does KILL contain for a block assigning x?",
+      "options": [
+        "Every use of x",
+        "Other definitions of x overwritten by the block",
+        "Only Boolean variables",
+        "Every successor"
+      ],
+      "answer": 1,
+      "explanation": "Assigning x prevents earlier definitions of x from surviving through the block."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is z absent from USE of z=x+y; return z?",
+      "options": [
+        "A return never reads values",
+        "z is always a constant",
+        "z is defined before its read",
+        "z cannot be live anywhere"
+      ],
+      "answer": 2,
+      "explanation": "USE describes incoming values needed before a local definition."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What merge operation do these two may analyses use?",
+      "options": [
+        "Intersection",
+        "Arithmetic multiplication",
+        "Alphabetical concatenation",
+        "Union"
+      ],
+      "answer": 3,
+      "explanation": "A possibility on any relevant path must be retained."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does the reaching-definition universe need definition labels?",
+      "options": [
+        "Different assignments to one name must stay distinct",
+        "Variable names cannot be strings",
+        "Every instruction is a branch",
+        "Types are unavailable"
+      ],
+      "answer": 0,
+      "explanation": "Origin information distinguishes x's earlier and later assignments."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What makes the bottom-up iteration terminate here?",
+      "options": [
+        "Every source loop terminates",
+        "Finite fact universe and monotone updates",
+        "A mandatory two-round limit",
+        "Empty KILL sets"
+      ],
+      "answer": 1,
+      "explanation": "Facts cannot grow indefinitely in a finite lattice."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When OUT changes in a forward worklist, which blocks need scheduling?",
+      "options": [
+        "Only predecessors",
+        "Only the current block's caller",
+        "Successors",
+        "Every lexer state"
+      ],
+      "answer": 2,
+      "explanation": "Successor IN values depend on that changed OUT."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "At diamond B3 entry, which x definitions may reach?",
+      "options": [
+        "d2 and d4",
+        "Only d5",
+        "No definitions",
+        "d1 and d3"
+      ],
+      "answer": 3,
+      "explanation": "B2 preserves d1, while B1 produces d3."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does a may fact prove a path executes for some actual input?",
+      "options": [
+        "Not necessarily",
+        "Always",
+        "Only if the set is sorted",
+        "Only for real variables"
+      ],
+      "answer": 0,
+      "explanation": "The graph can conservatively include infeasible paths."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the correct fixed-point stopping condition?",
+      "options": [
+        "Every block was visited once",
+        "No relevant boundary set changes",
+        "The source has no comments",
+        "Every set becomes empty"
+      ],
+      "answer": 1,
+      "explanation": "Neighbour propagation must stabilise throughout the graph."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Reaching definitions propagates possible assignment origins forward.",
+      "bn": "কোন অ্যাসাইনমেন্টের মান আসতে পারে, তা সামনের ব্লকে পাঠাও।"
+    },
+    {
+      "en": "Live variables propagates possible future needs backward.",
+      "bn": "পরে কোন ভেরিয়েবলের মান লাগবে, সে খবর পেছনের ব্লকে পাঠাও।"
+    },
+    {
+      "en": "USE contains reads before a local definition.",
+      "bn": "ব্লকের ভেতরে মান দেওয়ার আগেই যা পড়তে হয়, সেটিই USE-এ রাখো।"
+    },
+    {
+      "en": "A fixed point satisfies every transfer and merge equation.",
+      "bn": "সব সেটের আপডেটে আর পরিবর্তন না এলে fixed point পাওয়া যায়।"
+    },
+    {
+      "en": "May analysis can include paths that never execute for real inputs.",
+      "bn": "বাস্তবে না-চলা পথের সম্ভাবনাও may analysis-এর সেটে থাকতে পারে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "For the diamond graph, compute every GEN and KILL set and explain why KILL refers to other definitions of assigned variables.",
+      "marks": 4,
+      "answerHtml": "\n<p>Use the following graph. The test choosing B1 or B2 uses an external flag, which is not among the variables analysed below. Definition labels name individual assignments, not variable names. B3 returns z after computing it.</p>\n<table class=\"ref\"><caption>Blocks and local statements</caption><thead><tr><th scope=\"col\">Block</th><th scope=\"col\">Statements</th><th scope=\"col\">Successors</th></tr></thead><tbody><tr><td>B0</td><td>d1: x=1; d2: y=2</td><td>B1,B2</td></tr><tr><td>B1</td><td>d3: x=y+1</td><td>B3</td></tr><tr><td>B2</td><td>d4: y=x+2</td><td>B3</td></tr><tr><td>B3</td><td>d5: z=x+y; return z</td><td>exit</td></tr></tbody></table>\n<p>For <dfn>reaching definitions</dfn>, a definition reaches a point if some path brings it there without another assignment to the same variable. GEN[B] contains definitions from B that survive to its exit. KILL[B] contains other definitions of variables assigned in B. If a block assigns x twice, only the final assignment to x belongs in GEN.</p>\n<table class=\"ref\"><caption>Complete GEN and KILL sets for the diamond</caption><thead><tr><th scope=\"col\">Block</th><th scope=\"col\">GEN</th><th scope=\"col\">KILL</th><th scope=\"col\">Predecessors</th></tr></thead><tbody><tr><td>B0</td><td>{d1,d2}</td><td>{d3,d4}</td><td>none</td></tr><tr><td>B1</td><td>{d3}</td><td>{d1}</td><td>B0</td></tr><tr><td>B2</td><td>{d4}</td><td>{d2}</td><td>B0</td></tr><tr><td>B3</td><td>{d5}</td><td>{}</td><td>B1,B2</td></tr></tbody></table>\n<p>The forward equations are IN[B] = union of OUT[P] over predecessors P, and OUT[B] = GEN[B] union (IN[B] minus KILL[B]). Set the entry boundary to empty because this example has no incoming definitions for x, y or z. A language with parameters could model their entry definitions explicitly.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Show all synchronous reaching-definition rounds for the four-block diamond from empty sets.",
+      "marks": 6,
+      "answerHtml": "\n<p>Initialise every IN and OUT to empty. The following table uses synchronous rounds: all new IN values read the preceding round's OUT values. OUT is then computed from that round's new IN. A different worklist order may reach the same fixed point in fewer visible steps.</p>\n<table class=\"ref\"><caption>Complete reaching-definition iteration, each cell is IN / OUT</caption><thead><tr><th scope=\"col\">Round</th><th scope=\"col\">B0</th><th scope=\"col\">B1</th><th scope=\"col\">B2</th><th scope=\"col\">B3</th></tr></thead><tbody><tr><td>0</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td></tr><tr><td>1</td><td>{} / {d1,d2}</td><td>{} / {d3}</td><td>{} / {d4}</td><td>{} / {d5}</td></tr><tr><td>2</td><td>{} / {d1,d2}</td><td>{d1,d2} / {d2,d3}</td><td>{d1,d2} / {d1,d4}</td><td>{d3,d4} / {d3,d4,d5}</td></tr><tr><td>3</td><td>{} / {d1,d2}</td><td>{d1,d2} / {d2,d3}</td><td>{d1,d2} / {d1,d4}</td><td>{d1,d2,d3,d4} / {d1,d2,d3,d4,d5}</td></tr><tr><td>4</td><td>{} / {d1,d2}</td><td>{d1,d2} / {d2,d3}</td><td>{d1,d2} / {d1,d4}</td><td>{d1,d2,d3,d4} / {d1,d2,d3,d4,d5}</td></tr></tbody></table>\n<p>At B3 entry, both definitions of x and both definitions of y may reach. This does not mean four assignments execute together on one incoming path. B1 supplies d3 with d2, while B2 supplies d1 with d4. The set abstraction intentionally forgets that correlation, which makes it safe but sometimes imprecise.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Compute USE, DEF and all live-variable rounds for the diamond, explaining why z is absent from B3 USE.",
+      "marks": 5,
+      "answerHtml": "\n<p>A variable is <dfn>live</dfn> at a point when some path uses its current value before redefining it. USE[B] lists variables read before any local definition. DEF[B] lists variables assigned in B. The return z in B3 does not put z in USE[B3], because B3 defines z before reading it.</p>\n<table class=\"ref\"><caption>Complete USE and DEF sets</caption><thead><tr><th scope=\"col\">Block</th><th scope=\"col\">USE</th><th scope=\"col\">DEF</th><th scope=\"col\">Explanation</th></tr></thead><tbody><tr><td>B0</td><td>{}</td><td>{x,y}</td><td>Both right sides are constants</td></tr><tr><td>B1</td><td>{y}</td><td>{x}</td><td>Read incoming y before assigning x</td></tr><tr><td>B2</td><td>{x}</td><td>{y}</td><td>Read incoming x before assigning y</td></tr><tr><td>B3</td><td>{x,y}</td><td>{z}</td><td>x,y feed z; return uses locally defined z</td></tr></tbody></table>\n<p>The backward equations are OUT[B] = union of IN[S] over successors S, and IN[B] = USE[B] union (OUT[B] minus DEF[B]). Give the exit an empty live set here, because return has already been represented inside B3. External observable memory would need an appropriate boundary or effect model.</p>\n<table class=\"ref\"><caption>Complete live-variable rounds, each cell is IN / OUT</caption><thead><tr><th scope=\"col\">Round</th><th scope=\"col\">B0</th><th scope=\"col\">B1</th><th scope=\"col\">B2</th><th scope=\"col\">B3</th></tr></thead><tbody><tr><td>0</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td><td>{} / {}</td></tr><tr><td>1</td><td>{} / {}</td><td>{y} / {}</td><td>{x} / {}</td><td>{x,y} / {}</td></tr><tr><td>2</td><td>{} / {x,y}</td><td>{y} / {x,y}</td><td>{x} / {x,y}</td><td>{x,y} / {}</td></tr><tr><td>3</td><td>{} / {x,y}</td><td>{y} / {x,y}</td><td>{x} / {x,y}</td><td>{x,y} / {}</td></tr></tbody></table>\n<p>Read B1 carefully. Its outgoing x is live because B3 uses the x assigned by B1. Its incoming x is not live because B1 replaces x before that future use. Incoming y remains live because the assignment x=y+1 reads it immediately.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,55 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">A parse tree tells you how an expression is grouped. Imagine writing a small calculation beside every branch of that tree. The answer at the root becomes the answer for the whole expression. <dfn>Syntax-directed translation</dfn> attaches such rules to grammar productions, so meaning follows the structure you already recognised.</p>
+<p>For a marks calculator, recognising <code>40 + 2 * 5</code> is only the first job. You also want the value 50. A compiler might want a type, a memory location, or an instruction sequence instead. These are different results computed from the same grammatical structure.</p>
+<p>An <dfn>attribute</dfn> is information associated with one occurrence of a grammar symbol. Two occurrences of E can have different values. A semantic rule explains how one attribute depends on others. The rule is a description of a calculation, rather than an instruction to guess a traversal order.</p>
+<h2 id="syntax">Attributes and grammar rules</h2>
+<p>Use E → E + T or T, T → T * F or F, and F → number or ( E ). The lexer supplies number.lexval, the integer written in a number token. Every E, T, and F has a val attribute. Subscripts below distinguish occurrences in one production; they do not introduce new nonterminals.</p>
+<h3>Expression rules</h3>
+<table class="ref"><caption>Synthesised evaluator definition</caption><thead><tr><th scope="col">Production</th><th scope="col">Semantic rule</th><th scope="col">Information needed first</th></tr></thead><tbody><tr><td>E → E1 + T</td><td>E.val = E1.val + T.val</td><td>Both child values</td></tr><tr><td>E → T</td><td>E.val = T.val</td><td>T.val</td></tr><tr><td>T → T1 * F</td><td>T.val = T1.val * F.val</td><td>Both child values</td></tr><tr><td>T → F</td><td>T.val = F.val</td><td>F.val</td></tr><tr><td>F → ( E )</td><td>F.val = E.val</td><td>Inner expression value</td></tr><tr><td>F → number</td><td>F.val = number.lexval</td><td>Token value</td></tr></tbody></table>
+<p>A <dfn>synthesised attribute</dfn> obtains its value from children, or from information available locally at the node. Think of small results travelling upwards. An S-attributed definition uses only synthesised attributes. A bottom-up parser can compute these values when it reduces a production, because the children are already on its stack.</p>
+<p>An <dfn>inherited attribute</dfn> receives context from its parent or appropriate neighbouring occurrences. A name needs the surrounding declaration environment before you can find its value. The name itself cannot tell you which scope is active. Inherited does not mean object-oriented inheritance; here the word describes information moving through a syntax tree.</p>
+<h2 id="how-it-works">Evaluating the dependencies</h2>
+<h3>Annotating a complete expression</h3>
+<p>For <code>3 + 4 * 5</code>, multiplication groups inside T. Give every leaf its numeric value first. Then calculate each parent only after its dependencies are ready. The annotated tree has the same shape as the parse tree; the annotations add information without changing the grammar.</p>
+<pre class="diagram">E.val=23
+├── E.val=3 → T.val=3 → F.val=3 → number.lexval=3
+├── +
+└── T.val=20
+    ├── T.val=4 → F.val=4 → number.lexval=4
+    ├── *
+    └── F.val=5 → number.lexval=5</pre>
+<table class="ref"><caption>One valid evaluation schedule</caption><thead><tr><th scope="col">Step</th><th scope="col">Ready occurrence</th><th scope="col">Calculation</th><th scope="col">Result</th></tr></thead><tbody><tr><td>1</td><td>Left F, T, E</td><td>Pass number 3 upwards</td><td>3</td></tr><tr><td>2</td><td>Inner left F and T</td><td>Pass number 4 upwards</td><td>4</td></tr><tr><td>3</td><td>Right F</td><td>Read number 5</td><td>5</td></tr><tr><td>4</td><td>Multiplication T</td><td>4 * 5</td><td>20</td></tr><tr><td>5</td><td>Root E</td><td>3 + 20</td><td>23</td></tr></tbody></table>
+<p>The leftmost leaf need not be evaluated first for this pure expression. Any order that respects dependencies gives 23. However, a language with function calls or other effects may prescribe an evaluation order. An attribute equation does not give permission to reorder those effects.</p>
+<h3>Passing a declaration type</h3>
+<p>Consider D → Type Names and Names → id Rest. The declaration <code>real fee, tax</code> gives both names type real. Type.type is synthesised from the keyword. D passes it down as Names.in, and the names list carries it from left to right.</p>
+<table class="ref"><caption>Inherited type information</caption><thead><tr><th scope="col">Occurrence</th><th scope="col">Attribute equation</th><th scope="col">Value for real fee, tax</th></tr></thead><tbody><tr><td>Type</td><td>Type.type = real</td><td>real</td></tr><tr><td>Names</td><td>Names.in = Type.type</td><td>real</td></tr><tr><td>id fee</td><td>install(fee, Names.in)</td><td>fee: real</td></tr><tr><td>Rest</td><td>Rest.in = Names.in</td><td>real</td></tr><tr><td>id tax</td><td>install(tax, Rest.in)</td><td>tax: real</td></tr></tbody></table>
+<p>An <dfn>L-attributed definition</dfn> allows inherited attributes of a right-side occurrence to depend on the parent's inherited attributes and earlier right-side occurrences. Synthesised values still travel upwards. This supports a left-to-right depth-first evaluation when the full dependency graph is acyclic. Every S-attributed definition is also L-attributed.</p>
+<p>For A → B C, assigning B.in = C.val requires a later sibling. That equation violates the usual L-attributed restriction. You might evaluate C first using a general dependency schedule, but a straightforward left-to-right visit cannot supply B.in in time. Do not call a definition L-attributed merely because it has inherited attributes.</p>
+<h3>Checking a dependency cycle</h3>
+<p>Suppose A.x = B.y + 1 and B.y = A.x + 1 for the same parent-child pair. Neither value has a starting point. Drawing arrows gives A.x → B.y → A.x. There is no topological evaluation order for these equations.</p>
+<table class="ref"><caption>Dependency review</caption><thead><tr><th scope="col">Definition</th><th scope="col">Dependency edges</th><th scope="col">Evaluation result</th></tr></thead><tbody><tr><td>E.val = T.val</td><td>T.val → E.val</td><td>Child before parent</td></tr><tr><td>Names.in = Type.type</td><td>Type.type → Names.in</td><td>Type before names</td></tr><tr><td>B.in = C.val in A → B C</td><td>C.val → B.in</td><td>Acyclic but not L-attributed</td></tr><tr><td>A.x = B.y + 1; B.y = A.x + 1</td><td>A.x ↔ B.y</td><td>Circular; reject this evaluator</td></tr></tbody></table>
+<p>A dependency graph has one vertex per attribute occurrence, not merely one vertex per attribute name. Otherwise separate E.val occurrences would collapse and create false cycles. This distinction is especially useful when you explain an annotated tree in an exam.</p>
+<h2 id="examples">Executable evaluators</h2>
+<h3>Evaluate precedence</h3>
+<p>The first program scans and parses integer arithmetic, then evaluates its AST. The AST omits punctuation nodes but preserves grouping. Unary minus is represented by its own node, so negation is not confused with subtraction.</p>
+<div data-example="ex-1"></div>
+<p>The result 23 comes from multiplying before adding. The parser's term function builds the multiplication child first. Evaluation follows children before their parent, which implements the synthesised value rule.</p>
+<h3>Inspect the annotations</h3>
+<p>The second program lists postorder annotations for a parenthesised expression. Each row names an AST operation and its calculated value. You can use these rows to draw the corresponding annotated tree on paper.</p>
+<div data-example="ex-2"></div>
+<p>Parentheses change which subtree reaches multiplication. They disappear from the AST because the new shape already records their meaning. This is why evaluating an AST still respects parentheses.</p>
+<h3>Supply an environment</h3>
+<p>The third program gives the identifier marks an inherited environment containing marks = 40. A number leaf needs no lookup. A name leaf obtains its value from that environment before the addition can finish.</p>
+<div data-example="ex-3"></div>
+<p>The environment is passed explicitly rather than stored in a hidden global variable. That makes the dependency visible and lets you evaluate the same tree under another set of marks. An unknown identifier raises a language error instead of silently becoming zero.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Confusing a definition with an action position</h3>
+<p>An attribute grammar states dependencies. A translation scheme places actions at particular points in a production. Putting a print action before its operands are available gives a different execution schedule. Decide whether you are describing equations or executable actions before tracing them.</p>
+<h3>Giving every occurrence one shared value</h3>
+<p>Two number leaves can represent 3 and 5 at the same time. Store attributes per node or per parser-stack entry. A single global variable called val loses one operand as soon as another token arrives.</p>
+<h3>Trusting syntax to supply a declaration</h3>
+<p>A grammar can recognise an identifier without knowing whether it was declared. Pass an environment or consult a symbol table for that question. Keep the parse error for missing punctuation separate from the semantic error for an unknown name.</p>
+<h2 id="version-notes">Python representation notes</h2>
+<p>The programs use dataclasses and tuples, available before Python 3.12. Their arithmetic uses Python integers. Long expressions or very deep parentheses can reach the interpreter's recursion limit, so use fewer than 100 nested operators while practising. The language includes ASCII integer literals, identifiers, parentheses, unary minus, addition, subtraction, and multiplication.</p>
+<h2 id="summary">Summary</h2>
+<p>Syntax-directed translation connects grammar structure to computed information. Check each attribute's direction, draw its dependencies, and choose an evaluation schedule that respects them. Next, use these ideas to reject incompatible operands in <a href="topic:cd-type-checking">type checking</a>.</p>
