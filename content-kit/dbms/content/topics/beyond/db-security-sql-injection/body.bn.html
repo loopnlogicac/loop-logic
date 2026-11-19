@@ -1,0 +1,54 @@
+<h2 id="introduction">নাম যেন কমান্ড না হয়</h2>
+<p class="lead">Search-এ শিক্ষার্থী apostrophe-সহ নাম লিখতে পারবে,WHERE rewrite নয়। <dfn>SQL injection</dfn>-এ untrusted ইনপুট SQL টেক্সট-এ মেশে,DB সেটিকে কমান্ড-এর অংশ ভাবে।</p>
+<p>Quoted ইনপুট জুড়ে SELECT student_id FROM students WHERE student_name = বানাও ধরি। ইনপুট quote বন্ধ করে always-true শর্ত দিলে unrelated রো আসে। সমস্যা special character থাকা নয়,কোড-ডেটা boundary।</p>
+<p>Example fictional university-তে read-only unsafe-safe তুলনা। আসল login-এ পাসওয়ার্ড hash,অ্যাকাউন্ট check,rate limit,authentication চাই। নাম search login design নয়। Binding SQL স্ট্রাকচার রক্ষা করে,কে কার ফল পড়বে বাছে না।</p>
+
+<h2 id="syntax">স্ট্রাকচার prepare,value bind</h2>
+<pre><code class="language-sql">SET @student = 101;
+PREPARE lookup FROM
+    'SELECT student_name FROM students WHERE student_id = ? ORDER BY student_id';
+EXECUTE lookup USING @student;
+DEALLOCATE PREPARE lookup;</code></pre>
+<p>? value placeholder। PREPARE স্ট্রাকচার parse,EXECUTE value দেয়। App driver-এর native binding API নাও,নিজে quote বানিও না। SQL-level interface অন্য language ছাড়াই একই boundary দেখায়।</p>
+
+<h2 id="how-it-works">Trust boundary খোঁজো</h2>
+<p>Form,URL,upload,queue,আগে stored value—কোয়েরি-তে আসা সব পথ ধরো। Save হলেই trusted নয়। Stored ইনপুট পরে concat হলে second-অর্ডার injection।</p>
+<p>Binding quote,space,OR-কে এক value-তেই রাখে,parser extra predicate করে না। Business validation-ও চাই,mark numeric রেঞ্জ-এ। দুটো আলাদা সমস্যা,একসঙ্গে কাজ করে।</p>
+<p>Placeholder value,টেবিল-কলাম-keyword নয়। ORDER BY ? bound constant সর্ট করে,user-named কলাম নয়। User সর্ট লেবেল known fixed identifier-এ map,ASC-DESC trusted set থেকে।</p>
+<p>IN (?) এক parameter,list token নয়। “101,102” স্ট্রিং দিলে দুই integer নয়। Driver list expansion বা validated bounded length-এ তত placeholder বানিয়ে প্রত্যেকটি bind। Maximum কোয়েরি cost-ও বাঁধে।</p>
+<p>Procedure নিজে immune নয়;dynamic SQL concat-এ same flaw। Static parameter safer,unavoidable identifier trusted map। Escape charset-mode-নির্ভর,hand escaping supported API-এর fragile বদলি।</p>
+<table class="ref"><thead><tr><th scope="col">Layer</th><th scope="col">কাজ</th><th scope="col">কিসের বদলি নয়</th></tr></thead><tbody><tr><td>কোয়েরি boundary</td><td>Supported API-তে bind</td><td>Business authorization</td></tr><tr><td>ইনপুট rule</td><td>Type,length,রেঞ্জ check</td><td>Binding</td></tr><tr><td>DB authority</td><td>দরকারি operation-কলাম grant</td><td>Safe SQL</td></tr><tr><td>Transport-secret</td><td>Credential রক্ষা,প্রয়োজনে authenticated TLS</td><td>সার্ভার পারমিশন</td></tr><tr><td>Recovery</td><td>Protected backup,restore drill</td><td>Preventive control</td></tr></tbody></table>
+
+<h2 id="examples">এক ইনপুট দুই boundary-তে</h2>
+<h3>Concat search-এর অর্থ বদল</h3>
+<p>Unsafe read আট শিক্ষার্থী দেয়। Quote নাম literal শেষ,OR SQL স্ট্রাকচার হয়। App-এ copy কোরো না।</p>
+<div data-example="ex-1"></div>
+<h3>একই টেক্সট এক value</h3>
+<p>এবার zero match। নাম value-তেই থাকে,OR WHERE বদলাতে পারে না।</p>
+<div data-example="ex-2"></div>
+<h3>Prepared ID-value lookup আবার</h3>
+<p>প্রথম Ayesha,দ্বিতীয় no রো। Reuse missing ID match বা authorization bypass করে না।</p>
+<div data-example="ex-3"></div>
+<p>Fresh teaching schema,বাইরের system নয়। “Cleaned” ভাবার আগে সংখ্যা তুলনা। Safe কোয়েরি apostrophe সরায়নি,টেক্সট বদলায়নি,value channel-এ রেখেছে।</p>
+
+<h2 id="defence-in-depth">Authority কমাও,recovery রেখো</h2>
+<p>ফল viewer selected read চায়,CREATE USER,DROP,broad আপডেট নয়। Dedicated narrow app অ্যাকাউন্ট,migration আলাদা। Additive broad scope-role review,target পরিচয়-তে allowed-denied test।</p>
+<p>Least privilege injected/compromised app-এর ক্ষতি কমায়,read-only-ও private রো ফাঁস করে। App ownership-role আর প্রযোজ্য ভিউ দাও। অন্য শিক্ষার্থী-এর bound ID-তে marks দিলে এখনও authorization flaw।</p>
+<p>পাসওয়ার্ড repo/ক্লায়েন্ট কোড-এ নয়। Protected deployment secret-এ,exposure-এrotate,reader সীমিত। Network-এপ্রয়োজনীয় transport protection। User এরর useful হবে,full SQL,credential,internal schema নয়।</p>
+<p>Backup sensitive,app রো-screen পাশ কাটায়। Reader,transit,at-rest,keys,retention রক্ষা। Isolated restore drill-এtable,routine,trigger,পারমিশন validate। RPO কত loss,RTO কত সময় বলো।</p>
+<p>Snapshot logical dump tool rule-এ InnoDB consistent। Concurrent DDL assumption ভাঙে,nontransactional আলাদা। PITR-এ corresponding binlog-position রাখো। <a href="topic:db-recovery">Recovery</a>-তে log-backup ফারাক।</p>
+<p>Unexpected privilege,repeated failure,unusual export monitor। Raw parameter-এ personal ডেটা থাকতে পারে,log-ও protect। Alert তদন্তের evidence,সফল attack-এর proof নয়। Security explicit,tested boundary,কানেকশন স্ট্রিং-এর শব্দ নয়।</p>
+
+<h2 id="common-mistakes">ভুল repair এড়াও</h2>
+<h3>Space-apostrophe সরানো</h3>
+<p>বৈধ নামে punctuation থাকে,SQL-এর বহু রূপ। Blacklist real user বাদ দিয়েও পথ মিস করে। Bind আর intended type validate।</p>
+<h3>Placeholder নিজে quote</h3>
+<p>Quoted literal-এর ? bind আশা নয়। Driver documented API-কে placement-encoding দাও। দরকারে native-emulated prepare আচরণ দেখো।</p>
+<h3>Binding safe বলে root</h3>
+<p>Software bug,stolen credential থাকে। Narrow অ্যাকাউন্ট অন্য failure-এর ক্ষতি সীমিত করে।</p>
+
+<h2 id="version-notes">উপযুক্ত ক্লায়েন্ট API</h2>
+<p>MySQL8 SQL-level PREPARE,EXECUTE,DEALLOCATE দেয়। Real app connector API-charset guidance মানবে। Shared CHECK8.0.16+,binding app ownership মানায় না।</p>
+
+<h2 id="summary">প্রতিটি boundary স্পষ্ট</h2>
+<p>Value bind,dynamic স্ট্রাকচার known choice-এ,ইনপুট validate,authority কমাও। Protected recovery আর restore test। <a href="topic:db-mini-project-university">University project</a>-এ প্রয়োগ।</p>
