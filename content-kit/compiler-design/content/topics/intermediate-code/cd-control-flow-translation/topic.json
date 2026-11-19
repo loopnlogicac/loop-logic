@@ -1,0 +1,317 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-control-flow-translation",
+  "module": "intermediate-code",
+  "order": 3,
+  "kind": "theory",
+  "title": {
+    "en": "Translating Control Flow and Backpatching",
+    "bn": "কন্ট্রোল ফ্লো আর ব্যাকপ্যাচিং"
+  },
+  "summary": {
+    "en": "Translate short-circuit Boolean expressions, conditionals and loops using true, false and next lists with explicit backpatching.",
+    "bn": "শর্তে কোন পথে যাবে, তা jump দিয়ে লিখবে; পরে জানা লেবেল backpatching দিয়ে বসাবে।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-three-address-code"
+  ],
+  "related": [
+    "cd-basic-blocks"
+  ],
+  "keywords": [
+    "Translating Control Flow and Backpatching",
+    "backpatching",
+    "short circuit"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Complete translations"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Checking generated branches"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Build Boolean lists",
+      "statementHtml": "<p>Translate a&lt;b AND c&lt;d and state its final true and false lists before statement targets are known.</p>",
+      "hints": [
+        "The first true jump enters the second comparison."
+      ],
+      "answerHtml": "\n<p>For B1 AND B2, evaluate B2 only when B1 is true. Patch B1.truelist to the first instruction of B2. The combined true list is B2.truelist. False can arise from either operand, so merge both false lists.</p>\n<p>For B1 OR B2, evaluate B2 only when B1 is false. Patch B1.falselist to the beginning of B2. Merge both true lists, and keep B2.falselist as the combined false list. A logical NOT swaps the true and false lists without emitting an arithmetic negation.</p>\n<table class=\"ref\"><caption>List equations for short-circuit translation</caption><thead><tr><th scope=\"col\">Expression</th><th scope=\"col\">Patch before second operand</th><th scope=\"col\">Result truelist</th><th scope=\"col\">Result falselist</th></tr></thead><tbody><tr><td>B1 AND B2</td><td>B1.true → start(B2)</td><td>B2.true</td><td>merge(B1.false,B2.false)</td></tr><tr><td>B1 OR B2</td><td>B1.false → start(B2)</td><td>merge(B1.true,B2.true)</td><td>B2.false</td></tr><tr><td>NOT B1</td><td>none</td><td>B1.false</td><td>B1.true</td></tr></tbody></table>\n<p>Consider <code>a &lt; b AND c &lt; d</code>. The first true jump must enter the second comparison, while its false jump must skip it. This matters if the second operand has an effect or is unsafe unless the first condition succeeds, such as an array access protected by a bounds condition.</p>\n<table class=\"ref\"><caption>AND expression before statement destinations are known</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Emitted instruction</th><th scope=\"col\">Current status</th></tr></thead><tbody><tr><td>0</td><td>if a &lt; b goto 2</td><td>First true list patched to second relation</td></tr><tr><td>1</td><td>goto _</td><td>Combined false list member</td></tr><tr><td>2</td><td>if c &lt; d goto _</td><td>Combined true list member</td></tr><tr><td>3</td><td>goto _</td><td>Combined false list member</td></tr></tbody></table>\n<p>Now B.true = [2] and B.false = [1,3]. Instruction 0 is absent from the final lists because it already has its destination. Recording that distinction helps prevent a later patch from sending it directly to the statement body and bypassing c&lt;d.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Patch an if-else",
+      "statementHtml": "<p>Translate if (a&lt;b AND c&lt;d) x=1; else x=0; followed by print x, including every patch.</p>",
+      "hints": [
+        "The then branch must jump around else."
+      ],
+      "answerHtml": "\n<p>Translate <code>if (a&lt;b AND c&lt;d) x=1; else x=0;</code>. The true branch starts at 4. Its final jump skips the else branch. The false branch starts at 6, and instruction 7 is the first instruction after the entire conditional.</p>\n<table class=\"ref\"><caption>Completed if-else TAC</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Instruction</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>0</td><td>if a &lt; b goto 2</td><td>Continue AND evaluation</td></tr><tr><td>1</td><td>goto 6</td><td>First comparison false</td></tr><tr><td>2</td><td>if c &lt; d goto 4</td><td>Both comparisons true</td></tr><tr><td>3</td><td>goto 6</td><td>Second comparison false</td></tr><tr><td>4</td><td>x = 1</td><td>Then branch</td></tr><tr><td>5</td><td>goto 7</td><td>Skip else after then</td></tr><tr><td>6</td><td>x = 0</td><td>Else branch</td></tr><tr><td>7</td><td>print x</td><td>Join after the conditional</td></tr></tbody></table>\n<table class=\"ref\"><caption>Backpatch operations for the if-else</caption><thead><tr><th scope=\"col\">Moment</th><th scope=\"col\">List</th><th scope=\"col\">Target</th><th scope=\"col\">Effect</th></tr></thead><tbody><tr><td>Begin second relation</td><td>[0]</td><td>2</td><td>Enable short-circuit AND</td></tr><tr><td>Begin then branch</td><td>[2]</td><td>4</td><td>Select x=1</td></tr><tr><td>Begin else branch</td><td>[1,3]</td><td>6</td><td>Select x=0</td></tr><tr><td>Reach join</td><td>[5]</td><td>7</td><td>Then branch skips else</td></tr></tbody></table>\n<p>The print operation is included to give the join a concrete instruction index. Some intermediate formats allow a label just past the last instruction. Others require an explicit exit block. State your convention instead of treating an out-of-range jump as an ordinary instruction index.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Translate a while loop",
+      "statementHtml": "<p>Generate indexed TAC for while(i&lt;n) i=i+1; print i and explain its zero-iteration path.</p>",
+      "hints": [
+        "Save the beginning of the test."
+      ],
+      "answerHtml": "\n<p>Translate <code>while (i&lt;n) i=i+1; print i;</code>. Save the condition's start before emitting its comparisons. Patch the true list to the body and the false list to the loop exit. After the body, emit a backward jump to the saved condition start.</p>\n<table class=\"ref\"><caption>Complete while translation</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Instruction</th><th scope=\"col\">Control purpose</th></tr></thead><tbody><tr><td>0</td><td>if i &lt; n goto 2</td><td>Enter body when condition holds</td></tr><tr><td>1</td><td>goto 5</td><td>Exit on false</td></tr><tr><td>2</td><td>t1 = i + 1</td><td>Body calculation</td></tr><tr><td>3</td><td>i = t1</td><td>Body update</td></tr><tr><td>4</td><td>goto 0</td><td>Recheck the condition</td></tr><tr><td>5</td><td>print i</td><td>First instruction after loop</td></tr></tbody></table>\n<p>The backward jump targets the condition, not the body. Otherwise a true first test would make the loop repeat without checking i&lt;n again. Zero iterations are possible: if the condition is initially false, control reaches instruction 5 without executing the update.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Compose exits",
+      "statementHtml": "<p>Explain next lists for if, if-else, while and a sequence of two statements.</p>",
+      "hints": [
+        "Unfinished continuation jumps differ from natural fallthrough."
+      ],
+      "answerHtml": "\n<p>A statement's nextlist contains unfinished jumps that should continue after that statement. For S1 followed by S2, patch S1.nextlist to start(S2). S2.nextlist then becomes the sequence's remaining nextlist. A statement that naturally falls through does not need an artificial jump merely to have a nextlist.</p>\n<table class=\"ref\"><caption>Sequence and loop exit lists</caption><thead><tr><th scope=\"col\">Construct</th><th scope=\"col\">Outstanding exits</th><th scope=\"col\">When patched</th></tr></thead><tbody><tr><td>if B then S</td><td>B.false plus S.next</td><td>At the following statement</td></tr><tr><td>if B then S1 else S2</td><td>Skip-else jump plus branch next lists</td><td>At the join</td></tr><tr><td>while B do S</td><td>B.false</td><td>At the first statement after the loop</td></tr><tr><td>S1; S2</td><td>S2.next after patching S1.next</td><td>When sequence continuation is known</td></tr></tbody></table>\n<p>A break statement creates an exit for the nearest enclosing loop, not for every enclosing conditional. A continue statement targets that loop's next test or update according to the source construct. Maintain a loop-context stack if you extend the translator with these statements. Nested loops require separate exit lists.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a truelist contain during backpatching?",
+      "options": [
+        "All true literal values",
+        "Final register contents",
+        "Only the then statement's variables",
+        "Indices of unfinished true jumps"
+      ],
+      "answer": 3,
+      "explanation": "The list records locations whose destinations will be filled later."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which list is patched to B2 for B1 AND B2?",
+      "options": [
+        "B1.truelist",
+        "B1.falselist",
+        "B2.falselist",
+        "The enclosing loop exit list"
+      ],
+      "answer": 0,
+      "explanation": "Only a true B1 result should proceed to evaluate B2."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which list is patched to B2 for B1 OR B2?",
+      "options": [
+        "B1.truelist",
+        "B1.falselist",
+        "Both B2 lists",
+        "Every previously emitted branch"
+      ],
+      "answer": 1,
+      "explanation": "A true B1 result already satisfies OR and must skip B2."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How is NOT represented in the list model?",
+      "options": [
+        "Negate every arithmetic operand",
+        "Delete the false jump",
+        "Swap true and false lists",
+        "Merge both lists into true"
+      ],
+      "answer": 2,
+      "explanation": "Negation exchanges the destinations selected by the original truth result."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why emit a skip-else jump after the then branch?",
+      "options": [
+        "To evaluate the condition twice",
+        "To enter both branches",
+        "To make the condition numeric",
+        "To avoid executing else after then"
+      ],
+      "answer": 3,
+      "explanation": "Ordinary fallthrough would otherwise execute the else code as well."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where must a while back edge lead?",
+      "options": [
+        "Beginning of the condition",
+        "Beginning of the body",
+        "First instruction after the loop",
+        "The parser start state"
+      ],
+      "answer": 0,
+      "explanation": "The condition must be checked before every new iteration."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For the worked AND, which false list remains after patching instruction 0 to 2?",
+      "options": [
+        "[0,2]",
+        "[1,3]",
+        "[2]",
+        "[0,1,2,3]"
+      ],
+      "answer": 1,
+      "explanation": "Either comparison can be false; instruction 0 is already resolved."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is nextinstr before emitting an instruction?",
+      "options": [
+        "The preceding instruction's result",
+        "The count of source variables",
+        "The index of the next instruction",
+        "The final machine address"
+      ],
+      "answer": 2,
+      "explanation": "A marker can save that index as a later branch destination."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is a while body allowed to execute zero times?",
+      "options": [
+        "Only when backpatching fails",
+        "Never for while",
+        "Only when the body is empty",
+        "When its first condition is false"
+      ],
+      "answer": 3,
+      "explanation": "The entry test can branch directly to the exit."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What structural condition should hold after a function is fully patched?",
+      "options": [
+        "No unresolved jump targets remain",
+        "Every branch is unconditional",
+        "Every list contains every instruction",
+        "Every statement needs a new jump"
+      ],
+      "answer": 0,
+      "explanation": "All pending destinations must have been supplied before later control-flow processing."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How is S1.next handled before translating continuation S2?",
+      "options": [
+        "Patch it to start(S1)",
+        "Patch it to start(S2)",
+        "Discard it without changing jumps",
+        "Add S2 operands to it"
+      ],
+      "answer": 1,
+      "explanation": "Sequence continuation gives the missing destinations of S1's exits."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Backpatching fills destinations of previously emitted unfinished jumps.",
+      "bn": "আগে লেখা jump-এর ফাঁকা গন্তব্য পরে backpatching দিয়ে পূরণ করো।"
+    },
+    {
+      "en": "AND reaches its second operand only after a true first operand.",
+      "bn": "AND-এ প্রথম শর্ত সত্য হলেই দ্বিতীয় শর্ত দেখো।"
+    },
+    {
+      "en": "OR reaches its second operand only after a false first operand.",
+      "bn": "OR-এ প্রথম শর্ত মিথ্যা হলেই দ্বিতীয় শর্ত দেখো।"
+    },
+    {
+      "en": "An if-else needs a jump that skips the else branch after then.",
+      "bn": "then অংশ শেষে jump দাও, যেন else অংশে ঢুকে না যায়।"
+    },
+    {
+      "en": "A while back edge returns to the condition test.",
+      "bn": "while-এর শেষে আবার শর্ত চেক করার জায়গায় ফিরে যাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Translate a<b AND c<d and state its final true and false lists before statement targets are known.",
+      "marks": 4,
+      "answerHtml": "\n<p>For B1 AND B2, evaluate B2 only when B1 is true. Patch B1.truelist to the first instruction of B2. The combined true list is B2.truelist. False can arise from either operand, so merge both false lists.</p>\n<p>For B1 OR B2, evaluate B2 only when B1 is false. Patch B1.falselist to the beginning of B2. Merge both true lists, and keep B2.falselist as the combined false list. A logical NOT swaps the true and false lists without emitting an arithmetic negation.</p>\n<table class=\"ref\"><caption>List equations for short-circuit translation</caption><thead><tr><th scope=\"col\">Expression</th><th scope=\"col\">Patch before second operand</th><th scope=\"col\">Result truelist</th><th scope=\"col\">Result falselist</th></tr></thead><tbody><tr><td>B1 AND B2</td><td>B1.true → start(B2)</td><td>B2.true</td><td>merge(B1.false,B2.false)</td></tr><tr><td>B1 OR B2</td><td>B1.false → start(B2)</td><td>merge(B1.true,B2.true)</td><td>B2.false</td></tr><tr><td>NOT B1</td><td>none</td><td>B1.false</td><td>B1.true</td></tr></tbody></table>\n<p>Consider <code>a &lt; b AND c &lt; d</code>. The first true jump must enter the second comparison, while its false jump must skip it. This matters if the second operand has an effect or is unsafe unless the first condition succeeds, such as an array access protected by a bounds condition.</p>\n<table class=\"ref\"><caption>AND expression before statement destinations are known</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Emitted instruction</th><th scope=\"col\">Current status</th></tr></thead><tbody><tr><td>0</td><td>if a &lt; b goto 2</td><td>First true list patched to second relation</td></tr><tr><td>1</td><td>goto _</td><td>Combined false list member</td></tr><tr><td>2</td><td>if c &lt; d goto _</td><td>Combined true list member</td></tr><tr><td>3</td><td>goto _</td><td>Combined false list member</td></tr></tbody></table>\n<p>Now B.true = [2] and B.false = [1,3]. Instruction 0 is absent from the final lists because it already has its destination. Recording that distinction helps prevent a later patch from sending it directly to the statement body and bypassing c&lt;d.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Translate if (a<b AND c<d) x=1; else x=0; followed by print x, including every patch.",
+      "marks": 6,
+      "answerHtml": "\n<p>Translate <code>if (a&lt;b AND c&lt;d) x=1; else x=0;</code>. The true branch starts at 4. Its final jump skips the else branch. The false branch starts at 6, and instruction 7 is the first instruction after the entire conditional.</p>\n<table class=\"ref\"><caption>Completed if-else TAC</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Instruction</th><th scope=\"col\">Reason</th></tr></thead><tbody><tr><td>0</td><td>if a &lt; b goto 2</td><td>Continue AND evaluation</td></tr><tr><td>1</td><td>goto 6</td><td>First comparison false</td></tr><tr><td>2</td><td>if c &lt; d goto 4</td><td>Both comparisons true</td></tr><tr><td>3</td><td>goto 6</td><td>Second comparison false</td></tr><tr><td>4</td><td>x = 1</td><td>Then branch</td></tr><tr><td>5</td><td>goto 7</td><td>Skip else after then</td></tr><tr><td>6</td><td>x = 0</td><td>Else branch</td></tr><tr><td>7</td><td>print x</td><td>Join after the conditional</td></tr></tbody></table>\n<table class=\"ref\"><caption>Backpatch operations for the if-else</caption><thead><tr><th scope=\"col\">Moment</th><th scope=\"col\">List</th><th scope=\"col\">Target</th><th scope=\"col\">Effect</th></tr></thead><tbody><tr><td>Begin second relation</td><td>[0]</td><td>2</td><td>Enable short-circuit AND</td></tr><tr><td>Begin then branch</td><td>[2]</td><td>4</td><td>Select x=1</td></tr><tr><td>Begin else branch</td><td>[1,3]</td><td>6</td><td>Select x=0</td></tr><tr><td>Reach join</td><td>[5]</td><td>7</td><td>Then branch skips else</td></tr></tbody></table>\n<p>The print operation is included to give the join a concrete instruction index. Some intermediate formats allow a label just past the last instruction. Others require an explicit exit block. State your convention instead of treating an out-of-range jump as an ordinary instruction index.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Generate indexed TAC for while(i<n) i=i+1; print i and explain its zero-iteration path.",
+      "marks": 5,
+      "answerHtml": "\n<p>Translate <code>while (i&lt;n) i=i+1; print i;</code>. Save the condition's start before emitting its comparisons. Patch the true list to the body and the false list to the loop exit. After the body, emit a backward jump to the saved condition start.</p>\n<table class=\"ref\"><caption>Complete while translation</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Instruction</th><th scope=\"col\">Control purpose</th></tr></thead><tbody><tr><td>0</td><td>if i &lt; n goto 2</td><td>Enter body when condition holds</td></tr><tr><td>1</td><td>goto 5</td><td>Exit on false</td></tr><tr><td>2</td><td>t1 = i + 1</td><td>Body calculation</td></tr><tr><td>3</td><td>i = t1</td><td>Body update</td></tr><tr><td>4</td><td>goto 0</td><td>Recheck the condition</td></tr><tr><td>5</td><td>print i</td><td>First instruction after loop</td></tr></tbody></table>\n<p>The backward jump targets the condition, not the body. Otherwise a true first test would make the loop repeat without checking i&lt;n again. Zero iterations are possible: if the condition is initially false, control reaches instruction 5 without executing the update.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

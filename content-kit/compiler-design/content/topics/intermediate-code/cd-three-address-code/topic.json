@@ -1,0 +1,390 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-three-address-code",
+  "module": "intermediate-code",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Three-Address Code",
+    "bn": "থ্রি-অ্যাড্রেস কোড তৈরি"
+  },
+  "summary": {
+    "en": "Translate expression trees into three-address instructions and compare quadruples, triples and indirect triples.",
+    "bn": "তুমি এক্সপ্রেশনকে ছোট ইনস্ট্রাকশনে ভাঙবে, তারপর quadruple আর triple-এ একই হিসাব দেখবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-symbol-table"
+  ],
+  "related": [
+    "cd-syntax-trees-dag"
+  ],
+  "keywords": [
+    "Three-Address Code",
+    "TAC",
+    "quadruples"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Instruction forms and representations"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Generate instructions from a tree"
+    },
+    {
+      "id": "examples",
+      "title": "Runnable TAC generation"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Python generator notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Generate precedence-aware TAC",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The product feeds addition, whose result then feeds subtraction.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Emit a unary operation",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Negation consumes the addition temporary before multiplication runs.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Reserve source temporary-like names",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Source t1 and t2 are reserved, so generated values begin with t3.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Compile one expression to TAC",
+      "statementHtml": "<p>Read up to 100 characters of integer-and-identifier arithmetic with +, -, *, unary minus and parentheses, nesting at most 30. Print <code>Expression for TAC:</code>. Emit postorder instructions as TARGET = LEFT OP RIGHT, or TARGET = -LEFT for negation; finish with result = OPERAND. Allocate t1, t2 and so on, skipping source names. Print invalid for malformed input.</p>",
+      "hints": [
+        "Return a leaf spelling without emitting an instruction."
+      ],
+      "language": "python",
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Print quadruple fields",
+      "statementHtml": "<p>Read the same bounded expression language. Print <code>Expression for quadruples:</code>, then each row as OP ARG1 ARG2 RESULT separated by spaces. Use neg and a dash for the unused second argument of unary minus. Finish with result OPERAND; print invalid for syntax errors.</p>",
+      "hints": [
+        "Store operator and result separately from printed assignment syntax."
+      ],
+      "language": "python",
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Compare representations",
+      "statementHtml": "<p>Represent a + b * c - d as quadruples, triples and indirect triples.</p>",
+      "hints": [
+        "Triple result references use stable record indices."
+      ],
+      "answerHtml": "\n<p>A <dfn>quadruple</dfn> stores operator, first operand, second operand and result. A <dfn>triple</dfn> stores operator and operands, referring to earlier results by instruction index. An indirect-triple representation keeps a separate list of pointers to triple records, allowing scheduling changes without moving those records.</p>\n<table class=\"ref\"><caption>Quadruples for a + b * c - d</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">op</th><th scope=\"col\">arg1</th><th scope=\"col\">arg2</th><th scope=\"col\">result</th></tr></thead><tbody><tr><td>0</td><td>*</td><td>b</td><td>c</td><td>t1</td></tr><tr><td>1</td><td>+</td><td>a</td><td>t1</td><td>t2</td></tr><tr><td>2</td><td>-</td><td>t2</td><td>d</td><td>t3</td></tr></tbody></table>\n<table class=\"ref\"><caption>The same expression as triples</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">op</th><th scope=\"col\">arg1</th><th scope=\"col\">arg2</th></tr></thead><tbody><tr><td>0</td><td>*</td><td>b</td><td>c</td></tr><tr><td>1</td><td>+</td><td>a</td><td>(0)</td></tr><tr><td>2</td><td>-</td><td>(1)</td><td>d</td></tr></tbody></table>\n<table class=\"ref\"><caption>Indirect triples with a separate execution list</caption><thead><tr><th scope=\"col\">Execution position</th><th scope=\"col\">Pointer to stable triple</th><th scope=\"col\">Meaning</th></tr></thead><tbody><tr><td>0</td><td>P0 → record 0</td><td>Compute b * c</td></tr><tr><td>1</td><td>P1 → record 1</td><td>Add a to result of record 0</td></tr><tr><td>2</td><td>P2 → record 2</td><td>Subtract d from result of record 1</td></tr></tbody></table>\n<p>Parenthesised numbers in the triple table are result references, not numeric literals. Stable record identity matters. If you physically move triple 0 and change its index, every reference to that result needs updating. Moving pointers in an indirect list avoids that renumbering, but still must respect data dependencies.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Trace generation order",
+      "statementHtml": "<p>Show postorder TAC generation for (a + b) * (c - d).</p>",
+      "hints": [
+        "Each returned operand must already be available."
+      ],
+      "answerHtml": "\n<p>Generate the left child, generate the right child, then emit their parent's operation. A number or identifier leaf returns its own spelling without emitting an arithmetic instruction. An internal node creates a fresh temporary and returns that name to its parent.</p>\n<table class=\"ref\"><caption>Generator trace for (a + b) * (c - d)</caption><thead><tr><th scope=\"col\">Visit</th><th scope=\"col\">Returned operand</th><th scope=\"col\">Instruction appended</th></tr></thead><tbody><tr><td>Leaf a</td><td>a</td><td>none</td></tr><tr><td>Leaf b</td><td>b</td><td>none</td></tr><tr><td>Addition node</td><td>t1</td><td>t1 = a + b</td></tr><tr><td>Leaf c</td><td>c</td><td>none</td></tr><tr><td>Leaf d</td><td>d</td><td>none</td></tr><tr><td>Subtraction node</td><td>t2</td><td>t2 = c - d</td></tr><tr><td>Multiplication root</td><td>t3</td><td>t3 = t1 * t2</td></tr></tbody></table>\n<p>The invariant is useful: when emit returns a name, that name already denotes the value of the subtree. A leaf satisfies the invariant immediately. For an internal node, both child results exist before its new instruction runs. Therefore the parent instruction computes the correct subtree value under the language's evaluation rules.</p>\n<p>For a tree with n nodes, ordinary postorder generation takes O(n) work and emits at most one arithmetic instruction per internal node. The implementation first gathers identifier names so fresh temporaries cannot collide with names such as t1. Its recursion uses space proportional to tree height, in addition to the instruction list.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which operation is emitted first for a + b * c?",
+      "options": [
+        "a + b",
+        "b * c",
+        "a + c",
+        "Copy the final result"
+      ],
+      "answer": 1,
+      "explanation": "Multiplication is the child operation required before the parent addition."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which field distinguishes a quadruple from a triple?",
+      "options": [
+        "Operator spelling",
+        "First operand",
+        "Explicit result name",
+        "Second operand"
+      ],
+      "answer": 2,
+      "explanation": "A triple uses its record identity as its result reference."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does (0) mean in a triple operand column?",
+      "options": [
+        "Integer zero in parentheses",
+        "First source character",
+        "An empty operand",
+        "Result of triple record 0"
+      ],
+      "answer": 3,
+      "explanation": "The representation uses parenthesised indices as value references."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does an indirect triple list help instruction movement?",
+      "options": [
+        "Stable records keep their identities",
+        "Dependencies disappear",
+        "Every operation becomes commutative",
+        "No result is ever used"
+      ],
+      "answer": 0,
+      "explanation": "Scheduling pointers can move while references continue naming stable triple records."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does an identifier leaf return to the TAC generator?",
+      "options": [
+        "A multiplication instruction",
+        "Its own operand name",
+        "An empty result",
+        "The next jump label"
+      ],
+      "answer": 1,
+      "explanation": "Leaves need no arithmetic instruction before they can be used as operands."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why reserve a source name t1 before generating code?",
+      "options": [
+        "To force t1 into a register",
+        "To forbid all identifiers",
+        "To prevent a temporary collision",
+        "To change operator precedence"
+      ],
+      "answer": 2,
+      "explanation": "A generated temporary must not overwrite or be confused with a source value."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many additions does the plain AST generator emit for (a+b)*(a+b)?",
+      "options": [
+        "Zero",
+        "One",
+        "Three",
+        "Two"
+      ],
+      "answer": 3,
+      "explanation": "Each separate addition node emits one operation; sharing is a later optimisation."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Three internal AST nodes each allocate one temporary. Which names are printed?",
+      "options": [
+        "t1 t2 t3",
+        "t0 t1 t2",
+        "t1 t1 t1",
+        "t3 t2 t1"
+      ],
+      "answer": 0,
+      "explanation": "The counter advances once for each emitted arithmetic operation.",
+      "code": "print(\" \".join(f\"t{i}\" for i in range(1, 4)))\n",
+      "language": "python"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "A triple user reads record zero. Which value does this dependency produce?",
+      "options": [
+        "20",
+        "14",
+        "9",
+        "10"
+      ],
+      "answer": 1,
+      "explanation": "Record zero is 12, then the dependent record adds 2.",
+      "code": "values = []\nvalues.append(3 * 4)\nvalues.append(values[0] + 2)\nprint(values[1])\n",
+      "language": "python"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Source names reserve t1 and t2. Which generated temporary is available first?",
+      "options": [
+        "t1",
+        "t2",
+        "t3",
+        "t0"
+      ],
+      "answer": 2,
+      "explanation": "The allocator skips names already belonging to the source expression.",
+      "code": "reserved = {\"t1\", \"t2\"}\nnumber = 1\nwhile f\"t{number}\" in reserved:\n    number += 1\nprint(f\"t{number}\")\n",
+      "language": "python"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "TAC separates complex expressions into small dependent operations.",
+      "bn": "বড় এক্সপ্রেশনকে ছোট ছোট নির্ভরশীল ইনস্ট্রাকশনে ভাঙো।"
+    },
+    {
+      "en": "Postorder generation defines child values before their users.",
+      "bn": "চাইল্ডের কোড আগে লিখলে প্যারেন্ট দরকারি মান পেয়ে যায়।"
+    },
+    {
+      "en": "Quadruples give each result an explicit name.",
+      "bn": "Quadruple-এ রেজাল্টের জন্য আলাদা নাম থাকে।"
+    },
+    {
+      "en": "Triples refer to results through instruction identities.",
+      "bn": "Triple-এ আগের ইনস্ট্রাকশনের নম্বর দিয়ে তার রেজাল্ট বোঝায়।"
+    },
+    {
+      "en": "Fresh temporary names must avoid source identifiers.",
+      "bn": "নতুন টেম্পোরারি নাম যেন সোর্সের ভেরিয়েবলের সঙ্গে না মেলে।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Represent a + b * c - d as quadruples, triples and indirect triples.",
+      "marks": 4,
+      "answerHtml": "\n<p>A <dfn>quadruple</dfn> stores operator, first operand, second operand and result. A <dfn>triple</dfn> stores operator and operands, referring to earlier results by instruction index. An indirect-triple representation keeps a separate list of pointers to triple records, allowing scheduling changes without moving those records.</p>\n<table class=\"ref\"><caption>Quadruples for a + b * c - d</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">op</th><th scope=\"col\">arg1</th><th scope=\"col\">arg2</th><th scope=\"col\">result</th></tr></thead><tbody><tr><td>0</td><td>*</td><td>b</td><td>c</td><td>t1</td></tr><tr><td>1</td><td>+</td><td>a</td><td>t1</td><td>t2</td></tr><tr><td>2</td><td>-</td><td>t2</td><td>d</td><td>t3</td></tr></tbody></table>\n<table class=\"ref\"><caption>The same expression as triples</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">op</th><th scope=\"col\">arg1</th><th scope=\"col\">arg2</th></tr></thead><tbody><tr><td>0</td><td>*</td><td>b</td><td>c</td></tr><tr><td>1</td><td>+</td><td>a</td><td>(0)</td></tr><tr><td>2</td><td>-</td><td>(1)</td><td>d</td></tr></tbody></table>\n<table class=\"ref\"><caption>Indirect triples with a separate execution list</caption><thead><tr><th scope=\"col\">Execution position</th><th scope=\"col\">Pointer to stable triple</th><th scope=\"col\">Meaning</th></tr></thead><tbody><tr><td>0</td><td>P0 → record 0</td><td>Compute b * c</td></tr><tr><td>1</td><td>P1 → record 1</td><td>Add a to result of record 0</td></tr><tr><td>2</td><td>P2 → record 2</td><td>Subtract d from result of record 1</td></tr></tbody></table>\n<p>Parenthesised numbers in the triple table are result references, not numeric literals. Stable record identity matters. If you physically move triple 0 and change its index, every reference to that result needs updating. Moving pointers in an indirect list avoids that renumbering, but still must respect data dependencies.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Show postorder TAC generation for (a + b) * (c - d).",
+      "marks": 6,
+      "answerHtml": "\n<p>Generate the left child, generate the right child, then emit their parent's operation. A number or identifier leaf returns its own spelling without emitting an arithmetic instruction. An internal node creates a fresh temporary and returns that name to its parent.</p>\n<table class=\"ref\"><caption>Generator trace for (a + b) * (c - d)</caption><thead><tr><th scope=\"col\">Visit</th><th scope=\"col\">Returned operand</th><th scope=\"col\">Instruction appended</th></tr></thead><tbody><tr><td>Leaf a</td><td>a</td><td>none</td></tr><tr><td>Leaf b</td><td>b</td><td>none</td></tr><tr><td>Addition node</td><td>t1</td><td>t1 = a + b</td></tr><tr><td>Leaf c</td><td>c</td><td>none</td></tr><tr><td>Leaf d</td><td>d</td><td>none</td></tr><tr><td>Subtraction node</td><td>t2</td><td>t2 = c - d</td></tr><tr><td>Multiplication root</td><td>t3</td><td>t3 = t1 * t2</td></tr></tbody></table>\n<p>The invariant is useful: when emit returns a name, that name already denotes the value of the subtree. A leaf satisfies the invariant immediately. For an internal node, both child results exist before its new instruction runs. Therefore the parent instruction computes the correct subtree value under the language's evaluation rules.</p>\n<p>For a tree with n nodes, ordinary postorder generation takes O(n) work and emits at most one arithmetic instruction per internal node. The implementation first gathers identifier names so fresh temporaries cannot collide with names such as t1. Its recursion uses space proportional to tree height, in addition to the instruction list.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Generate unoptimised TAC for (a+b)*(a+b) and explain why two additions appear.",
+      "marks": 4,
+      "answerHtml": "\n<p>For <code>(a + b) * (a + b)</code>, the plain AST generator emits two additions. Those are two distinct internal nodes. Recognising and sharing the repeated computation is a later optimisation, which needs evidence that the operands have not changed and the operations have no relevant effects.</p>\n<table class=\"ref\"><caption>Unoptimised TAC for repeated addition</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Instruction</th><th scope=\"col\">Why emitted</th></tr></thead><tbody><tr><td>0</td><td>t1 = a + b</td><td>Left addition node</td></tr><tr><td>1</td><td>t2 = a + b</td><td>Right addition node</td></tr><tr><td>2</td><td>t3 = t1 * t2</td><td>Root multiplication</td></tr></tbody></table>\n<p>Do not silently turn this into <code>t2 = t1 * t1</code> when explaining an AST-only traversal. That shorter result comes from a DAG or common-subexpression analysis. It is a useful next step, but a different algorithm from the generator demonstrated here.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

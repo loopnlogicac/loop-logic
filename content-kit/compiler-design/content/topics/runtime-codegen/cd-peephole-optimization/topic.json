@@ -1,0 +1,303 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-peephole-optimization",
+  "module": "runtime-codegen",
+  "order": 6,
+  "kind": "theory",
+  "title": {
+    "en": "Peephole Optimisation",
+    "bn": "ছোট ইনস্ট্রাকশন অংশে অপটিমাইজেশন"
+  },
+  "summary": {
+    "en": "Inspect short target-code windows for redundant transfers, safe algebraic simplifications and jump-chain improvements.",
+    "bn": "কয়েকটি ইনস্ট্রাকশন একসঙ্গে দেখে তুমি বাড়তি load, store আর jump চিনবে এবং শর্ত মেনে সরাবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-code-generation"
+  ],
+  "related": [
+    "cd-exam-questions"
+  ],
+  "keywords": [
+    "Peephole Optimisation",
+    "peephole",
+    "jump optimisation"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Short-window rewrites"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Window context and repeated passes"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Remove a reload",
+      "statementHtml": "<p>Trace LD R0,a; ST b,R0; LD R0,b for a=7,b=0 and identify the removable instruction.</p>",
+      "hints": [
+        "The store updates memory while preserving the register."
+      ],
+      "answerHtml": "\n<p>Consider LD R0,a; ST b,R0; LD R0,b. After the store, b contains the same value already in R0. The final load changes nothing if no intervening operation modifies b and a repeated load has no required side effect.</p>\n<table class=\"ref\"><caption>Register and memory trace before removing the reload</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Instruction</th><th scope=\"col\">R0</th><th scope=\"col\">memory[b]</th></tr></thead><tbody><tr><td>Start</td><td>a=7, b=0</td><td>unspecified</td><td>0</td></tr><tr><td>1</td><td>LD R0,a</td><td>7</td><td>0</td></tr><tr><td>2</td><td>ST b,R0</td><td>7</td><td>7</td></tr><tr><td>3</td><td>LD R0,b</td><td>7</td><td>7</td></tr></tbody></table>\n<p>The shortened sequence retains steps 1 and 2. It still writes b and leaves R0 holding 7. Removing the store as well would require separate proof that b's updated memory value is never needed. Do not confuse a redundant reload with a dead store.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Assess dead stores",
+      "statementHtml": "<p>Decide when the first of two stores can be deleted, including volatile and pointer cases.</p>",
+      "hints": [
+        "A dead write must have no required observer."
+      ],
+      "answerHtml": "\n<p>Now inspect ST a,R0; ST a,R1. If these are ordinary stores to exactly the same location and no intervening observer can see the first value, the first store is dead. The second store supplies the only value that remains afterwards.</p>\n<table class=\"ref\"><caption>Store-elimination conditions</caption><thead><tr><th scope=\"col\">Sequence</th><th scope=\"col\">Possible rewrite</th><th scope=\"col\">Required reason</th></tr></thead><tbody><tr><td>ST a,R0; ST a,R1</td><td>Keep only ST a,R1</td><td>Same ordinary location, no intervening observation</td></tr><tr><td>ST a,R0; LD R1,a</td><td>Cannot remove the store as dead</td><td>Load needs the stored value</td></tr><tr><td>ST device,R0; ST device,R1</td><td>Preserve both if volatile</td><td>Each write can be observable</td></tr><tr><td>ST [p],R0; ST [q],R1</td><td>Do not assume first is dead</td><td>Different pointers may denote different locations</td></tr></tbody></table>\n<p>An unknown alias can prevent a redundant-load rewrite too. For LD R0,[p]; ST [q],R1; LD R0,[p], the store may change the next loaded value if p and q alias. Memory independence must be proven rather than guessed from different pointer spellings.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Check algebra and flags",
+      "statementHtml": "<p>State conditions for removing ADD R0,0 and MUL R0,1, and compare floating x*0.</p>",
+      "hints": [
+        "A numeric identity can still change flags."
+      ],
+      "answerHtml": "\n<p>For mathematical integers, adding zero preserves the numeric value and multiplying by one preserves it as well. Removing the target instruction is safe only if its other effects are irrelevant. Some machine arithmetic instructions set condition flags that a later branch reads.</p>\n<table class=\"ref\"><caption>Algebraic candidates and conditions</caption><thead><tr><th scope=\"col\">Candidate</th><th scope=\"col\">Value-level replacement</th><th scope=\"col\">Additional condition</th></tr></thead><tbody><tr><td>ADD R0,0</td><td>Remove instruction</td><td>Flags produced by ADD are dead or preserved another way</td></tr><tr><td>MUL R0,1</td><td>Remove instruction</td><td>No required flag or exception effect is lost</td></tr><tr><td>MUL R0,0</td><td>Set R0 to zero</td><td>Integer model; chosen replacement preserves needed flags</td></tr><tr><td>SUB R0,R0</td><td>Set R0 to zero</td><td>Integer model and compatible flag effects</td></tr><tr><td>Floating x*0</td><td>Do not replace unconditionally</td><td>NaN and other floating semantics can differ</td></tr></tbody></table>\n<p>Suppose ADD R0,0 is followed by a branch testing its zero flag. Removing ADD would let the branch read an older flag value. R0's numeric value staying unchanged does not preserve the branch's behaviour. Treat flags as live data dependencies, much like registers.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Redirect branches",
+      "statementHtml": "<p>Redirect JMP L1 when L1 contains only JMP L2, explaining why L1 may need to remain.</p>",
+      "hints": [
+        "Other branches can still target the intermediate label."
+      ],
+      "answerHtml": "\n<p>Let instruction 0 jump to L1, and let L1 contain only an unconditional jump to L2. Redirect instruction 0 to L2 when entering L1 performs no required work before that jump. This shortens a path without deleting the L1 label that other instructions may still target.</p>\n<table class=\"ref\"><caption>Jump-chain rewrite</caption><thead><tr><th scope=\"col\">Location</th><th scope=\"col\">Before</th><th scope=\"col\">After redirecting instruction 0</th></tr></thead><tbody><tr><td>0</td><td>JMP L1</td><td>JMP L2</td></tr><tr><td>L1</td><td>JMP L2</td><td>JMP L2, retained until all uses are known</td></tr><tr><td>L2</td><td>x = x + 1</td><td>x = x + 1</td></tr></tbody></table>\n<p>A chain can contain a cycle, such as L1→L2→L1. A chain-following implementation needs a visited set to avoid looping during optimisation. It must not invent an exit destination for a nonterminating cycle. Following labels is a graph operation even when the visible pattern is small.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which instruction is redundant in LD R0,a; ST b,R0; LD R0,b under ordinary memory?",
+      "options": [
+        "The store necessarily",
+        "The final load",
+        "The first load necessarily",
+        "Every instruction"
+      ],
+      "answer": 1,
+      "explanation": "R0 already contains the value just stored in b."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can the store in that sequence still be necessary?",
+      "options": [
+        "Registers cannot hold values",
+        "A load always deletes memory",
+        "Later code may read memory[b]",
+        "b must be a constant"
+      ],
+      "answer": 2,
+      "explanation": "Register redundancy and memory observability are separate questions."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What can make ADD R0,0 unsafe to delete?",
+      "options": [
+        "R0 has an integer value",
+        "The operand is zero",
+        "The instruction is in a function",
+        "A later branch uses its flags"
+      ],
+      "answer": 3,
+      "explanation": "Removing the ADD can leave stale condition flags."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When can the first of ST a,R0; ST a,R1 be dead?",
+      "options": [
+        "Ordinary same-location stores with no intervening observation",
+        "When a is volatile",
+        "Whenever two stores are adjacent",
+        "Only when R0=R1"
+      ],
+      "answer": 0,
+      "explanation": "The second store overwrites the first before any required read or effect observes it."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why may two pointer spellings block a load-reuse rewrite?",
+      "options": [
+        "Different spellings prove independence",
+        "They can alias the same location",
+        "Every pointer is immutable",
+        "A store never changes a load result"
+      ],
+      "answer": 1,
+      "explanation": "A store through one pointer may alter a location read through another."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should a jump-chain follower track to avoid an optimisation-time loop?",
+      "options": [
+        "Only variable types",
+        "The lexer buffer size",
+        "Visited labels",
+        "Number of comments"
+      ],
+      "answer": 2,
+      "explanation": "A cycle in jump destinations must be detected rather than followed forever."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why keep L1 after redirecting one JMP L1 to L2?",
+      "options": [
+        "Labels always execute arithmetic",
+        "L1 must become a variable",
+        "Every label is a function",
+        "Other branches may target L1"
+      ],
+      "answer": 3,
+      "explanation": "Removing one incoming use does not prove there are no others."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is a jump to the immediately following label usually removable?",
+      "options": [
+        "Fallthrough reaches the same place and no extra effect is required",
+        "Only if the label is deleted too",
+        "Whenever its target is elsewhere",
+        "Only for a conditional branch"
+      ],
+      "answer": 0,
+      "explanation": "The control transfer is redundant with the natural next instruction."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is floating x*0 not always zero?",
+      "options": [
+        "Floating multiplication is undefined for every input",
+        "x can be NaN",
+        "Zero cannot be represented",
+        "x must be an integer"
+      ],
+      "answer": 1,
+      "explanation": "Floating semantics differ from unrestricted mathematical algebra."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can a label inside a matched window prevent rewriting it?",
+      "options": [
+        "Labels always set registers",
+        "The pattern becomes a grammar production",
+        "Control may enter without executing the window prefix",
+        "Every label is unreachable"
+      ],
+      "answer": 2,
+      "explanation": "A replacement must preserve assumptions for all legal entries."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Peephole rules inspect a short target-instruction window.",
+      "bn": "কয়েকটি কাছাকাছি টার্গেট ইনস্ট্রাকশন দেখে peephole rule প্রয়োগ করো।"
+    },
+    {
+      "en": "A redundant reload does not prove its preceding store is dead.",
+      "bn": "আবার load করা বাড়তি হলেও আগের store দরকারি হতে পারে।"
+    },
+    {
+      "en": "Condition flags can make an arithmetic identity observable.",
+      "bn": "হিসাবের মান এক থাকলেও condition flag বদলালে আচরণ বদলাতে পারে।"
+    },
+    {
+      "en": "Jump-chain rewrites must preserve all legal label entries.",
+      "bn": "Jump ছোট করতে গিয়ে অন্য পথের লেবেলে ঢোকার সুযোগ নষ্ট কোরো না।"
+    },
+    {
+      "en": "Unknown aliases and volatile effects can block memory rewrites.",
+      "bn": "Alias জানা না থাকলে বা volatile হলে মেমরির অপারেশন সহজে সরিও না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Trace LD R0,a; ST b,R0; LD R0,b for a=7,b=0 and identify the removable instruction.",
+      "marks": 4,
+      "answerHtml": "\n<p>Consider LD R0,a; ST b,R0; LD R0,b. After the store, b contains the same value already in R0. The final load changes nothing if no intervening operation modifies b and a repeated load has no required side effect.</p>\n<table class=\"ref\"><caption>Register and memory trace before removing the reload</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Instruction</th><th scope=\"col\">R0</th><th scope=\"col\">memory[b]</th></tr></thead><tbody><tr><td>Start</td><td>a=7, b=0</td><td>unspecified</td><td>0</td></tr><tr><td>1</td><td>LD R0,a</td><td>7</td><td>0</td></tr><tr><td>2</td><td>ST b,R0</td><td>7</td><td>7</td></tr><tr><td>3</td><td>LD R0,b</td><td>7</td><td>7</td></tr></tbody></table>\n<p>The shortened sequence retains steps 1 and 2. It still writes b and leaves R0 holding 7. Removing the store as well would require separate proof that b's updated memory value is never needed. Do not confuse a redundant reload with a dead store.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Decide when the first of two stores can be deleted, including volatile and pointer cases.",
+      "marks": 6,
+      "answerHtml": "\n<p>Now inspect ST a,R0; ST a,R1. If these are ordinary stores to exactly the same location and no intervening observer can see the first value, the first store is dead. The second store supplies the only value that remains afterwards.</p>\n<table class=\"ref\"><caption>Store-elimination conditions</caption><thead><tr><th scope=\"col\">Sequence</th><th scope=\"col\">Possible rewrite</th><th scope=\"col\">Required reason</th></tr></thead><tbody><tr><td>ST a,R0; ST a,R1</td><td>Keep only ST a,R1</td><td>Same ordinary location, no intervening observation</td></tr><tr><td>ST a,R0; LD R1,a</td><td>Cannot remove the store as dead</td><td>Load needs the stored value</td></tr><tr><td>ST device,R0; ST device,R1</td><td>Preserve both if volatile</td><td>Each write can be observable</td></tr><tr><td>ST [p],R0; ST [q],R1</td><td>Do not assume first is dead</td><td>Different pointers may denote different locations</td></tr></tbody></table>\n<p>An unknown alias can prevent a redundant-load rewrite too. For LD R0,[p]; ST [q],R1; LD R0,[p], the store may change the next loaded value if p and q alias. Memory independence must be proven rather than guessed from different pointer spellings.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "State conditions for removing ADD R0,0 and MUL R0,1, and compare floating x*0.",
+      "marks": 5,
+      "answerHtml": "\n<p>For mathematical integers, adding zero preserves the numeric value and multiplying by one preserves it as well. Removing the target instruction is safe only if its other effects are irrelevant. Some machine arithmetic instructions set condition flags that a later branch reads.</p>\n<table class=\"ref\"><caption>Algebraic candidates and conditions</caption><thead><tr><th scope=\"col\">Candidate</th><th scope=\"col\">Value-level replacement</th><th scope=\"col\">Additional condition</th></tr></thead><tbody><tr><td>ADD R0,0</td><td>Remove instruction</td><td>Flags produced by ADD are dead or preserved another way</td></tr><tr><td>MUL R0,1</td><td>Remove instruction</td><td>No required flag or exception effect is lost</td></tr><tr><td>MUL R0,0</td><td>Set R0 to zero</td><td>Integer model; chosen replacement preserves needed flags</td></tr><tr><td>SUB R0,R0</td><td>Set R0 to zero</td><td>Integer model and compatible flag effects</td></tr><tr><td>Floating x*0</td><td>Do not replace unconditionally</td><td>NaN and other floating semantics can differ</td></tr></tbody></table>\n<p>Suppose ADD R0,0 is followed by a branch testing its zero flag. Removing ADD would let the branch read an older flag value. R0's numeric value staying unchanged does not preserve the branch's behaviour. Treat flags as live data dependencies, much like registers.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

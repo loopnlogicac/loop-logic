@@ -1,0 +1,417 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-exam-questions",
+  "module": "practice-exam",
+  "order": 1,
+  "kind": "question-bank",
+  "title": {
+    "en": "Compiler Design Exam Questions",
+    "bn": "কম্পাইলার ডিজাইনের সমাধানসহ প্রশ্ন"
+  },
+  "summary": {
+    "en": "Practise FIRST/FOLLOW, LL(1), SLR, subset construction and TAC with complete intermediate tables and answer explanations.",
+    "bn": "FIRST/FOLLOW, পার্সিং টেবিল, DFA আর TAC-এর প্রশ্ন তুমি পুরো ধাপ মিলিয়ে অনুশীলন করবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-peephole-optimization"
+  ],
+  "related": [
+    "cd-mini-project-calculator"
+  ],
+  "keywords": [
+    "Compiler Design Exam Questions",
+    "exam numericals",
+    "worked tables"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Ten worked exam problems"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "FIRST and FOLLOW from a nullable prefix",
+      "statementHtml": "<p>For S→A a and A→b|ε, compute nullable, FIRST and FOLLOW with reasons.</p>",
+      "hints": [
+        "Start from the nullable production."
+      ],
+      "answerHtml": "\n<p>Question 1. For S → A a and A → b | ε, compute nullable, FIRST and FOLLOW. Start with FIRST of terminals as themselves. A is nullable through its empty production. S is not nullable because terminal a remains after A.</p>\n<table class=\"ref\"><caption>Fixed-point facts for the nullable-prefix grammar</caption><thead><tr><th scope=\"col\">Symbol</th><th scope=\"col\">Nullable?</th><th scope=\"col\">FIRST</th><th scope=\"col\">FOLLOW</th></tr></thead><tbody><tr><td>S</td><td>No</td><td>{a,b}</td><td>{$}</td></tr><tr><td>A</td><td>Yes</td><td>{b,ε}</td><td>{a}</td></tr></tbody></table>\n<p>FIRST(S) receives b from A and a because A can disappear. FOLLOW(A) receives a from the suffix in S→A a. Only the start symbol receives $ directly. There is no nullable suffix after A, so $ does not propagate to A.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Trace a predictive parse",
+      "statementHtml": "<p>Using that LL(1) table, trace b a with stack top on the right, then explain acceptance of a and rejection of b b.</p>",
+      "hints": [
+        "Apply one table action per row."
+      ],
+      "answerHtml": "\n<p>Question 3. Parse b a with the predictive table, keeping the stack top on the right. The end marker remains at the bottom until the entire input is consumed. Push a production's right side in reverse order so its leftmost symbol becomes the next stack top.</p>\n<table class=\"ref\"><caption>Full LL(1) trace for b a</caption><thead><tr><th scope=\"col\">Stack, top right</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$ S</td><td>b a $</td><td>Apply r1</td></tr><tr><td>$ a A</td><td>b a $</td><td>Apply r2</td></tr><tr><td>$ a b</td><td>b a $</td><td>Match b</td></tr><tr><td>$ a</td><td>a $</td><td>Match a</td></tr><tr><td>$</td><td>$</td><td>Accept</td></tr></tbody></table>\n<p>For input a, the first expansion is still r1, but A selects r3 and pushes nothing. The parser then matches a and accepts. For b b, it matches the first b and then rejects because the stack expects a. Complete consumption is part of acceptance.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Convert an epsilon-NFA into a DFA",
+      "statementHtml": "<p>Convert q0 ε→q1, q1 a→q1, q1 b→q2 to a complete DFA; q0 starts and q2 accepts. Trace aab, aa and bb.</p>",
+      "hints": [
+        "Close every moved subset under epsilon."
+      ],
+      "answerHtml": "\n<p>Question 6. Let q0 be the start and q2 the only accepting state. The NFA has q0 ε→q1, q1 a→q1 and q1 b→q2. All omitted moves are empty. This NFA recognises zero or more a symbols followed by one final b.</p>\n<table class=\"ref\"><caption>Complete NFA transition table</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">ε</th></tr></thead><tbody><tr><td>q0</td><td>{}</td><td>{}</td><td>{q1}</td></tr><tr><td>q1</td><td>{q1}</td><td>{q2}</td><td>{}</td></tr><tr><td>q2</td><td>{}</td><td>{}</td><td>{}</td></tr></tbody></table>\n<table class=\"ref\"><caption>Every discovered DFA subset and transition</caption><thead><tr><th scope=\"col\">DFA state</th><th scope=\"col\">NFA subset</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">Accepting?</th></tr></thead><tbody><tr><td>A</td><td>{q0,q1}</td><td>B</td><td>C</td><td>No</td></tr><tr><td>B</td><td>{q1}</td><td>B</td><td>C</td><td>No</td></tr><tr><td>C</td><td>{q2}</td><td>D</td><td>D</td><td>Yes</td></tr><tr><td>D</td><td>{}</td><td>D</td><td>D</td><td>No</td></tr></tbody></table>\n<p>The start subset is epsilon-closure({q0})={q0,q1}. Each transition takes move on its symbol, then epsilon-closure of the result. Include D so every DFA transition is defined. The accepting test is membership of q2 in the subset, not whether the subset contains the NFA start.</p>\n<p>For aab, the state path is A,B,B,C and the word is accepted. For aa, it ends in B and is rejected. For bb, it reaches C after the first b but then moves to D, so early acceptance cannot replace checking the complete word.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Generate TAC and representation fields",
+      "statementHtml": "<p>Translate (p-q)*(r+s) into TAC, quadruples and triples.</p>",
+      "hints": [
+        "Return child temporaries before emitting the parent."
+      ],
+      "answerHtml": "\n<p>Question 7. Translate <code>(p-q)*(r+s)</code> without algebraic optimisation. Generate each child before its multiplication parent. The result temporary t3 can then be copied to a surrounding assignment's destination if the source statement has one.</p>\n<table class=\"ref\"><caption>TAC, quadruples and triple references</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">TAC</th><th scope=\"col\">Quadruple (op,arg1,arg2,result)</th><th scope=\"col\">Triple (op,arg1,arg2)</th></tr></thead><tbody><tr><td>0</td><td>t1 = p - q</td><td>(-,p,q,t1)</td><td>(-,p,q)</td></tr><tr><td>1</td><td>t2 = r + s</td><td>(+,r,s,t2)</td><td>(+,r,s)</td></tr><tr><td>2</td><td>t3 = t1 * t2</td><td>(*,t1,t2,t3)</td><td>(*,(0),(1))</td></tr></tbody></table>\n<p>This representation preserves subtraction order. Exchanging p and q would change the result. A triple's (0) names the value of record 0, whereas a quadruple uses t1 explicitly.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "For S→A a, A→b|ε, which FIRST set belongs to S?",
+      "options": [
+        "{b,ε}",
+        "{a,ε}",
+        "{a,b}",
+        "{$}"
+      ],
+      "answer": 2,
+      "explanation": "Nullable A exposes the following terminal a while its b alternative supplies b."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is FOLLOW(A) in that grammar?",
+      "options": [
+        "{$}",
+        "{a,b}",
+        "{ε}",
+        "{a}"
+      ],
+      "answer": 3,
+      "explanation": "The nonnullable suffix a follows A in its only occurrence."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which production occupies LL(1) cell M[A,a]?",
+      "options": [
+        "A→ε",
+        "A→b",
+        "S→A a",
+        "Error"
+      ],
+      "answer": 0,
+      "explanation": "The empty production is selected under FOLLOW(A)."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does LL(1) input b b fail for the nullable-prefix grammar?",
+      "options": [
+        "b can never start the grammar",
+        "After b the stack expects a",
+        "The parser accepts at the first b",
+        "FOLLOW(A) contains b"
+      ],
+      "answer": 1,
+      "explanation": "S derives either a or b a, so a second b is unexpected."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which LR state accepts in the SLR construction S→a S|b?",
+      "options": [
+        "I0",
+        "I2 with S→a·S",
+        "I1 with S'→S·",
+        "I3 with S→b·"
+      ],
+      "answer": 2,
+      "explanation": "Only the completed augmented start item accepts under the end marker."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Under which lookahead does S→b reduce in this SLR table?",
+      "options": [
+        "a",
+        "b",
+        "ε as an input token",
+        "$"
+      ],
+      "answer": 3,
+      "explanation": "FOLLOW(S) is the end marker alone."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many states are popped for S→a S in a state-only LR stack?",
+      "options": [
+        "Two",
+        "One",
+        "Zero",
+        "Three"
+      ],
+      "answer": 0,
+      "explanation": "The right side has two grammar symbols, each represented by one pushed state."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the start DFA subset for the stated epsilon-NFA?",
+      "options": [
+        "{q0}",
+        "{q0,q1}",
+        "{q2}",
+        "{}"
+      ],
+      "answer": 1,
+      "explanation": "Epsilon closure follows q0's epsilon edge before reading any input."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which subset accepts in the subset construction?",
+      "options": [
+        "{q0,q1}",
+        "{q1}",
+        "{q2}",
+        "{}"
+      ],
+      "answer": 2,
+      "explanation": "An accepting DFA subset contains the NFA accepting state."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why retain the empty DFA subset?",
+      "options": [
+        "To make every state accepting",
+        "To remove the start state",
+        "To stand for epsilon input only",
+        "To define missing transitions as a sink"
+      ],
+      "answer": 3,
+      "explanation": "A complete DFA needs one target for every state-symbol pair."
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Nullable A exposes terminal a. What sorted FIRST(S) display results?",
+      "options": [
+        "a b",
+        "b",
+        "a epsilon",
+        "$"
+      ],
+      "answer": 0,
+      "explanation": "FIRST(S) combines A's b with the terminal after nullable A.",
+      "code": "first_a = {\"b\"}\nprint(*sorted(first_a | {\"a\"}))\n",
+      "language": "python"
+    },
+    {
+      "id": "q-12",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "An epsilon reduction pops zero symbols. How many states remain here?",
+      "options": [
+        "0",
+        "2",
+        "1",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "The zero-length case must not use a slice that removes the entire stack.",
+      "code": "stack = [0, 2]\nlength = 0\nif length:\n    del stack[-length:]\nprint(len(stack))\n",
+      "language": "python"
+    },
+    {
+      "id": "q-13",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "The DFA reads aab from A. Which final state is printed?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": 2,
+      "explanation": "Two a transitions reach B; b reaches accepting C.",
+      "code": "moves = {\"A\": {\"a\": \"B\", \"b\": \"C\"}, \"B\": {\"a\": \"B\", \"b\": \"C\"}}\nstate = \"A\"\nfor token in \"aab\":\n    state = moves[state][token]\nprint(state)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-14",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "The TAC temporaries preserve subtraction. What product is printed?",
+      "options": [
+        "-20",
+        "14",
+        "25",
+        "20"
+      ],
+      "answer": 3,
+      "explanation": "The child values are 5 and 4 before multiplication.",
+      "code": "t1 = 9 - 4\nt2 = 1 + 3\nt3 = t1 * t2\nprint(t3)\n",
+      "language": "python"
+    },
+    {
+      "id": "q-15",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "A pending false jump is patched to the continuation. What target is printed?",
+      "options": [
+        "3",
+        "0",
+        "1",
+        "2"
+      ],
+      "answer": 0,
+      "explanation": "The false path skips instruction 2 and reaches the shared increment at 3.",
+      "code": "targets = {0: None, 1: None}\nfor index in [1]:\n    targets[index] = 3\nprint(targets[1])\n",
+      "language": "python"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A complete construction shows all relevant error cells and transitions.",
+      "bn": "পুরো টেবিলে error cell আর সব transition-ও দেখাও।"
+    },
+    {
+      "en": "An empty production uses FOLLOW when filling its predictive entries.",
+      "bn": "খালি প্রোডাকশনের ঘর বসাতে FOLLOW ব্যবহার করো।"
+    },
+    {
+      "en": "SLR reductions use FOLLOW of the left-side nonterminal.",
+      "bn": "SLR reduction বসাও বাম পাশের nonterminal-এর FOLLOW কলামে।"
+    },
+    {
+      "en": "DFA acceptance is checked after the whole input is consumed.",
+      "bn": "পুরো ইনপুট পড়ার পরে DFA accepting state-এ আছে কি না দেখো।"
+    },
+    {
+      "en": "A TAC trace must preserve operand order and dependencies.",
+      "bn": "TAC লেখার সময় অপার্যান্ডের ক্রম আর নির্ভরতা ঠিক রাখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "For S→A a and A→b|ε, compute nullable, FIRST and FOLLOW with reasons.",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 1. For S → A a and A → b | ε, compute nullable, FIRST and FOLLOW. Start with FIRST of terminals as themselves. A is nullable through its empty production. S is not nullable because terminal a remains after A.</p>\n<table class=\"ref\"><caption>Fixed-point facts for the nullable-prefix grammar</caption><thead><tr><th scope=\"col\">Symbol</th><th scope=\"col\">Nullable?</th><th scope=\"col\">FIRST</th><th scope=\"col\">FOLLOW</th></tr></thead><tbody><tr><td>S</td><td>No</td><td>{a,b}</td><td>{$}</td></tr><tr><td>A</td><td>Yes</td><td>{b,ε}</td><td>{a}</td></tr></tbody></table>\n<p>FIRST(S) receives b from A and a because A can disappear. FOLLOW(A) receives a from the suffix in S→A a. Only the start symbol receives $ directly. There is no nullable suffix after A, so $ does not propagate to A.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Build every LL(1) cell for S→A a, A→b|ε and decide whether the grammar is LL(1).",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 2. Number productions r1 S→A a, r2 A→b, r3 A→ε. Fill all columns a,b,$. For r1, FIRST(A a) is {a,b}. For the empty production, use FOLLOW(A), which contains a only.</p>\n<table class=\"ref\"><caption>Complete LL(1) table</caption><thead><tr><th scope=\"col\">Nonterminal</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">$</th></tr></thead><tbody><tr><td>S</td><td>r1</td><td>r1</td><td>error</td></tr><tr><td>A</td><td>r3</td><td>r2</td><td>error</td></tr></tbody></table>\n<p>Each populated cell has one production, so this grammar is LL(1). The empty production does not go in every column. Error entries are part of the answer because they show where a predictive parser must reject an unexpected lookahead.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Using that LL(1) table, trace b a with stack top on the right, then explain acceptance of a and rejection of b b.",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 3. Parse b a with the predictive table, keeping the stack top on the right. The end marker remains at the bottom until the entire input is consumed. Push a production's right side in reverse order so its leftmost symbol becomes the next stack top.</p>\n<table class=\"ref\"><caption>Full LL(1) trace for b a</caption><thead><tr><th scope=\"col\">Stack, top right</th><th scope=\"col\">Remaining input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>$ S</td><td>b a $</td><td>Apply r1</td></tr><tr><td>$ a A</td><td>b a $</td><td>Apply r2</td></tr><tr><td>$ a b</td><td>b a $</td><td>Match b</td></tr><tr><td>$ a</td><td>a $</td><td>Match a</td></tr><tr><td>$</td><td>$</td><td>Accept</td></tr></tbody></table>\n<p>For input a, the first expansion is still r1, but A selects r3 and pushes nothing. The parser then matches a and accepts. For b b, it matches the first b and then rejects because the stack expects a. Complete consumption is part of acceptance.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "For S→a S|b, construct all augmented LR(0) items, GOTO transitions and the complete SLR table.",
+      "marks": 10,
+      "answerHtml": "\n<p>Question 4. Use a separate grammar S→a S | b. Augment it with S'→S and number the ordinary productions r1 and r2. FOLLOW(S) is {$}: the occurrence of S at the end of a S inherits FOLLOW(S), adding nothing beyond the start marker.</p>\n<table class=\"ref\"><caption>Every LR(0) item in the SLR construction</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">Item set</th></tr></thead><tbody><tr><td>I0</td><td>S&#x27;→·S; S→·a S; S→·b</td></tr><tr><td>I1</td><td>S&#x27;→S·</td></tr><tr><td>I2</td><td>S→a·S; S→·a S; S→·b</td></tr><tr><td>I3</td><td>S→b·</td></tr><tr><td>I4</td><td>S→a S·</td></tr></tbody></table>\n<table class=\"ref\"><caption>Every nonempty GOTO transition</caption><thead><tr><th scope=\"col\">From</th><th scope=\"col\">Symbol</th><th scope=\"col\">To</th></tr></thead><tbody><tr><td>I0</td><td>S</td><td>I1</td></tr><tr><td>I0</td><td>a</td><td>I2</td></tr><tr><td>I0</td><td>b</td><td>I3</td></tr><tr><td>I2</td><td>S</td><td>I4</td></tr><tr><td>I2</td><td>a</td><td>I2</td></tr><tr><td>I2</td><td>b</td><td>I3</td></tr></tbody></table>\n<table class=\"ref\"><caption>Complete ACTION and GOTO table</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">$</th><th scope=\"col\">S</th></tr></thead><tbody><tr><td>0</td><td>s2</td><td>s3</td><td>error</td><td>1</td></tr><tr><td>1</td><td>error</td><td>error</td><td>accept</td><td>—</td></tr><tr><td>2</td><td>s2</td><td>s3</td><td>error</td><td>4</td></tr><tr><td>3</td><td>error</td><td>error</td><td>r2</td><td>—</td></tr><tr><td>4</td><td>error</td><td>error</td><td>r1</td><td>—</td></tr></tbody></table>\n<p>Reductions occur only under FOLLOW(S), so both completed ordinary items reduce under $. The completed augmented item accepts instead of reducing by an ordinary rule. A repeated a transition from I2 returns to I2 because closure recreates exactly the same item set.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Using the SLR table for S→a S|b, trace a a b with a state stack and show each reduction length.",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 5. Parse a a b with that table. The following display keeps only state numbers on the stack. Reducing by a right side of length k removes k states, then GOTO uses the exposed state and left-side nonterminal.</p>\n<table class=\"ref\"><caption>Full SLR trace for a a b</caption><thead><tr><th scope=\"col\">State stack</th><th scope=\"col\">Input</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>0</td><td>a a b $</td><td>s2</td></tr><tr><td>0 2</td><td>a b $</td><td>s2</td></tr><tr><td>0 2 2</td><td>b $</td><td>s3</td></tr><tr><td>0 2 2 3</td><td>$</td><td>r2: S→b; goto(2,S)=4</td></tr><tr><td>0 2 2 4</td><td>$</td><td>r1: S→a S; goto(2,S)=4</td></tr><tr><td>0 2 4</td><td>$</td><td>r1: S→a S; goto(0,S)=1</td></tr><tr><td>0 1</td><td>$</td><td>Accept</td></tr></tbody></table>\n<p>After r2, one state is popped. Each r1 reduction pops two states, corresponding to a and S. Popping one state for every reduction would fail on this input even though the first reduction happened to work.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Convert q0 ε→q1, q1 a→q1, q1 b→q2 to a complete DFA; q0 starts and q2 accepts. Trace aab, aa and bb.",
+      "marks": 10,
+      "answerHtml": "\n<p>Question 6. Let q0 be the start and q2 the only accepting state. The NFA has q0 ε→q1, q1 a→q1 and q1 b→q2. All omitted moves are empty. This NFA recognises zero or more a symbols followed by one final b.</p>\n<table class=\"ref\"><caption>Complete NFA transition table</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">ε</th></tr></thead><tbody><tr><td>q0</td><td>{}</td><td>{}</td><td>{q1}</td></tr><tr><td>q1</td><td>{q1}</td><td>{q2}</td><td>{}</td></tr><tr><td>q2</td><td>{}</td><td>{}</td><td>{}</td></tr></tbody></table>\n<table class=\"ref\"><caption>Every discovered DFA subset and transition</caption><thead><tr><th scope=\"col\">DFA state</th><th scope=\"col\">NFA subset</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">Accepting?</th></tr></thead><tbody><tr><td>A</td><td>{q0,q1}</td><td>B</td><td>C</td><td>No</td></tr><tr><td>B</td><td>{q1}</td><td>B</td><td>C</td><td>No</td></tr><tr><td>C</td><td>{q2}</td><td>D</td><td>D</td><td>Yes</td></tr><tr><td>D</td><td>{}</td><td>D</td><td>D</td><td>No</td></tr></tbody></table>\n<p>The start subset is epsilon-closure({q0})={q0,q1}. Each transition takes move on its symbol, then epsilon-closure of the result. Include D so every DFA transition is defined. The accepting test is membership of q2 in the subset, not whether the subset contains the NFA start.</p>\n<p>For aab, the state path is A,B,B,C and the word is accepted. For aa, it ends in B and is rejected. For bb, it reaches C after the first b but then moves to D, so early acceptance cannot replace checking the complete word.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Translate (p-q)*(r+s) into TAC, quadruples and triples.",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 7. Translate <code>(p-q)*(r+s)</code> without algebraic optimisation. Generate each child before its multiplication parent. The result temporary t3 can then be copied to a surrounding assignment's destination if the source statement has one.</p>\n<table class=\"ref\"><caption>TAC, quadruples and triple references</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">TAC</th><th scope=\"col\">Quadruple (op,arg1,arg2,result)</th><th scope=\"col\">Triple (op,arg1,arg2)</th></tr></thead><tbody><tr><td>0</td><td>t1 = p - q</td><td>(-,p,q,t1)</td><td>(-,p,q)</td></tr><tr><td>1</td><td>t2 = r + s</td><td>(+,r,s,t2)</td><td>(+,r,s)</td></tr><tr><td>2</td><td>t3 = t1 * t2</td><td>(*,t1,t2,t3)</td><td>(*,(0),(1))</td></tr></tbody></table>\n<p>This representation preserves subtraction order. Exchanging p and q would change the result. A triple's (0) names the value of record 0, whereas a quadruple uses t1 explicitly.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Backpatch if(marks<40) result=0; result=result+1; including the shared continuation.",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 8. Translate <code>if (marks&lt;40) result=0; result=result+1;</code>. This conditional has no else branch. Its false path must join immediately after the then assignment, where both paths execute the increment.</p>\n<table class=\"ref\"><caption>If-without-else backpatch answer</caption><thead><tr><th scope=\"col\">Index</th><th scope=\"col\">Instruction</th><th scope=\"col\">Explanation</th></tr></thead><tbody><tr><td>0</td><td>if marks &lt; 40 goto 2</td><td>True list [0] patched to then</td></tr><tr><td>1</td><td>goto 3</td><td>False list [1] patched to continuation</td></tr><tr><td>2</td><td>result = 0</td><td>Then assignment</td></tr><tr><td>3</td><td>result = result + 1</td><td>Shared continuation</td></tr></tbody></table>\n<p>For marks=30, the assignment sets result to zero before incrementing it to one. For marks=70, the old result is incremented directly. The continuation therefore needs an existing result value on the false path; whether that value was initialised is a separate semantic question.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Derive total=fee+extra for fee:int, extra:real, total:real, then consider an int destination.",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 9. Let fee:int, extra:real and total:real. Derive the type and conversion actions for total=fee+extra. Use the lesson's numeric rules, where bool is not numeric and implicit narrowing is forbidden.</p>\n<table class=\"ref\"><caption>Type and conversion derivation</caption><thead><tr><th scope=\"col\">Expression or operation</th><th scope=\"col\">Types</th><th scope=\"col\">Decision</th></tr></thead><tbody><tr><td>fee</td><td>int</td><td>Look up declaration</td></tr><tr><td>extra</td><td>real</td><td>Look up declaration</td></tr><tr><td>fee + extra</td><td>int + real</td><td>Convert fee to real; result real</td></tr><tr><td>Assign to total</td><td>real → real</td><td>Identity assignment</td></tr><tr><td>Assign same sum to an int</td><td>real → int</td><td>Reject implicit narrowing</td></tr></tbody></table>\n<p>Do not convert extra down to int merely to match fee. The operation's result rule determines widening before the destination assignment is checked.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Find leaders, basic blocks and all CFG edges for 0:x=1; 1:if flag goto 3; 2:x=2; 3:return x.",
+      "marks": 5,
+      "answerHtml": "\n<p>Question 10. Partition the indexed code below and build every successor. After the conditional, either path reaches a return; the assignment on the false path is kept separate because instruction 2 follows a branch.</p>\n<table class=\"ref\"><caption>Basic-block answer with explicit targets</caption><thead><tr><th scope=\"col\">Block</th><th scope=\"col\">Indexed instructions</th><th scope=\"col\">Successors</th></tr></thead><tbody><tr><td>B0</td><td>0:x=1; 1:if flag goto 3</td><td>B1,B2</td></tr><tr><td>B1</td><td>2:x=2</td><td>B2</td></tr><tr><td>B2</td><td>3:return x</td><td>exit</td></tr></tbody></table>\n<p>Leaders are 0,2,3. The taken edge from instruction 1 reaches B2. The fallthrough reaches B1, which then falls through to B2. The return has no edge back to entry and no extra successor beyond this function.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

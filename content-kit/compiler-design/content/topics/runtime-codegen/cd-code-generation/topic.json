@@ -1,0 +1,317 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-code-generation",
+  "module": "runtime-codegen",
+  "order": 5,
+  "kind": "theory",
+  "title": {
+    "en": "Code Generation",
+    "bn": "টার্গেট ইনস্ট্রাকশন আর রেজিস্টার"
+  },
+  "summary": {
+    "en": "Select instructions for an explicit two-register machine, track descriptors, and reason about liveness, interference and spills.",
+    "bn": "ছোট একটি মেশিন মডেলে তুমি TAC থেকে ইনস্ট্রাকশন বাছবে এবং রেজিস্টার কম হলে spill করবে।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-data-flow-analysis"
+  ],
+  "related": [
+    "cd-peephole-optimization"
+  ],
+  "keywords": [
+    "Code Generation",
+    "instruction selection",
+    "register allocation"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Target instructions and allocations"
+    },
+    {
+      "id": "how-it-works",
+      "title": "From local choices to function code"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Select a target sequence",
+      "statementHtml": "<p>Generate and trace result=(a+b)*(c-d) on the stated two-register machine.</p>",
+      "hints": [
+        "Keep both child results until multiplication."
+      ],
+      "answerHtml": "\n<p>Generate <code>result = (a+b)*(c-d)</code>. First compute the left child in R0, then the right child in R1. Multiplication can combine the two register values without a spill because neither intermediate needs to survive separately afterwards.</p>\n<table class=\"ref\"><caption>Complete two-register selection trace</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Instruction</th><th scope=\"col\">R0 afterwards</th><th scope=\"col\">R1 afterwards</th><th scope=\"col\">Relevant memory</th></tr></thead><tbody><tr><td>1</td><td>LD R0, a</td><td>a</td><td>unused</td><td>Original inputs</td></tr><tr><td>2</td><td>ADD R0, b</td><td>a+b</td><td>unused</td><td>Original inputs</td></tr><tr><td>3</td><td>LD R1, c</td><td>a+b</td><td>c</td><td>Original inputs</td></tr><tr><td>4</td><td>SUB R1, d</td><td>a+b</td><td>c-d</td><td>Original inputs</td></tr><tr><td>5</td><td>MUL R0, R1</td><td>(a+b)*(c-d)</td><td>c-d, now dead</td><td>Original inputs</td></tr><tr><td>6</td><td>ST result, R0</td><td>Product</td><td>dead</td><td>result = product</td></tr></tbody></table>\n<p>With a=2, b=3, c=9 and d=5, the registers become 5 and 4 before multiplication. The stored result is 20. This concrete trace checks the chosen order, but the semantic argument is stronger: every instruction implements the corresponding child or parent operation for all allowed integer inputs.</p>\n"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Track valid copies",
+      "statementHtml": "<p>Track register and address descriptors for t=a+b; result=t*c when t is dead afterwards.</p>",
+      "hints": [
+        "Memory is not current until a store occurs."
+      ],
+      "answerHtml": "\n<p>A <dfn>register descriptor</dfn> records which value currently occupies a register. An <dfn>address descriptor</dfn> records the valid locations holding a value, including memory and registers. If a new value is computed in R0, memory for its destination may still contain an older value until a store occurs.</p>\n<table class=\"ref\"><caption>Descriptor changes for t=a+b; result=t*c</caption><thead><tr><th scope=\"col\">After instruction</th><th scope=\"col\">Register descriptor</th><th scope=\"col\">Address descriptor for t</th><th scope=\"col\">Address descriptor for result</th></tr></thead><tbody><tr><td>LD R0,a</td><td>R0 holds a</td><td>not defined</td><td>not defined</td></tr><tr><td>ADD R0,b</td><td>R0 holds t</td><td>{R0}</td><td>not defined</td></tr><tr><td>MUL R0,c</td><td>R0 holds result</td><td>{} if t is dead</td><td>{R0}</td></tr><tr><td>ST result,R0</td><td>R0 holds result</td><td>{}</td><td>{R0,memory[result]}</td></tr></tbody></table>\n<p>Descriptors describe validity, not merely the last spelling printed in code. After ADD, R0 no longer holds the old a value. Memory[a] is still valid because the operation did not assign to a. If t is live after multiplication, overwriting its only copy would be wrong and the generator must preserve it first.</p>\n"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Colour live values",
+      "statementHtml": "<p>Find interference edges for t1,t2,t3 with the displayed live sets and allocate two registers.</p>",
+      "hints": [
+        "Values with disjoint live ranges can share a register."
+      ],
+      "answerHtml": "\n<p>Two values <dfn>interfere</dfn> when they must be available at the same time and cannot share one physical register in the chosen representation. An interference graph uses values as vertices and simultaneous-live requirements as edges. Assigning registers resembles colouring that graph with the available register colours.</p>\n<table class=\"ref\"><caption>Liveness around three arithmetic temporaries</caption><thead><tr><th scope=\"col\">Program point</th><th scope=\"col\">Live temporaries</th><th scope=\"col\">Required simultaneous values</th></tr></thead><tbody><tr><td>After t1=a+b</td><td>{t1}</td><td>t1</td></tr><tr><td>After t2=c+d</td><td>{t1,t2}</td><td>t1 and t2</td></tr><tr><td>After t3=t1*t2</td><td>{t2,t3}</td><td>t2 needed by later output; t3 needed next</td></tr><tr><td>After print t2</td><td>{t3}</td><td>t3</td></tr><tr><td>After print t3</td><td>{}</td><td>none</td></tr></tbody></table>\n<p>The interference edges are t1—t2 and t2—t3. There is no t1—t3 edge in this example because t1 dies when t3 is produced. Two colours suffice: R0 can hold t1 and then t3, while R1 holds t2. A value's textual name is not itself a reason to allocate a new register forever.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Plan a spill",
+      "statementHtml": "<p>Generate the worked two-register spill sequence for t1=a+b; t2=c+d; t3=e+f; u=t1+t2; v=u+t3.</p>",
+      "hints": [
+        "Save a live value before overwriting its only register copy."
+      ],
+      "answerHtml": "\n<p>Now keep three independent values live: t1=a+b; t2=c+d; t3=e+f; u=t1+t2; v=u+t3. After computing t3, all three t values are needed. Two registers cannot simultaneously retain all three without saving one value in memory or changing the calculation schedule.</p>\n<table class=\"ref\"><caption>Spill plan preserving all live values</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Instruction</th><th scope=\"col\">R0 role</th><th scope=\"col\">R1 role</th><th scope=\"col\">Spill slot</th></tr></thead><tbody><tr><td>1</td><td>LD R0,a; ADD R0,b</td><td>t1</td><td>unused</td><td>empty</td></tr><tr><td>2</td><td>LD R1,c; ADD R1,d</td><td>t1</td><td>t2</td><td>empty</td></tr><tr><td>3</td><td>ST spill1,R0</td><td>t1, also saved</td><td>t2</td><td>t1</td></tr><tr><td>4</td><td>LD R0,e; ADD R0,f</td><td>t3</td><td>t2</td><td>t1</td></tr><tr><td>5</td><td>ADD R1,spill1</td><td>t3</td><td>u=t2+t1</td><td>t1, no longer needed</td></tr><tr><td>6</td><td>ADD R1,R0</td><td>t3, now dead</td><td>v=u+t3</td><td>irrelevant</td></tr><tr><td>7</td><td>ST v,R1</td><td>dead</td><td>v</td><td>irrelevant</td></tr></tbody></table>\n<p>A <dfn>spill</dfn> saves a live value to memory so its register can be reused. Reloading is unnecessary in step 5 because this teaching target allows a memory operand. On a load-store machine, an extra load would be required. Instruction-set details therefore change the cost of the same allocation decision.</p>\n<p>The use of t2+t1 instead of t1+t2 in step 5 is valid under our mathematical integer addition model. For subtraction, that operand swap would change the result. For a target or language with additional arithmetic restrictions, the instruction selector must respect those restrictions rather than assuming all familiar rewrites apply.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does ADD R0,b do on the stated target?",
+      "options": [
+        "Replace R0 by old R0 plus memory[b]",
+        "Preserve R0 and create R2",
+        "Change b in memory",
+        "Perform a branch"
+      ],
+      "answer": 0,
+      "explanation": "The first register is both an input and a destructive destination."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can t1 and t3 share a register in the worked interference example?",
+      "options": [
+        "Their names have equal length",
+        "Their live ranges do not overlap",
+        "Both are always zero",
+        "Every temporary can share one register"
+      ],
+      "answer": 1,
+      "explanation": "t1 dies as t3 is produced, while t2 remains separately live."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is a spill required before overwriting a register?",
+      "options": [
+        "The value is dead",
+        "The register has a short name",
+        "Its value is live and has no other valid copy",
+        "The next instruction is a label"
+      ],
+      "answer": 2,
+      "explanation": "Saving preserves the only available copy needed by a future use."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does an address descriptor record?",
+      "options": [
+        "Only the source line number",
+        "Only a variable's declared type",
+        "A DFA transition",
+        "Valid locations containing a value"
+      ],
+      "answer": 3,
+      "explanation": "It distinguishes current copies in registers and memory from stale storage."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does a memory-operand ADD reduce the worked spill cost?",
+      "options": [
+        "It can use the saved value without a separate reload",
+        "It makes memory infinitely fast",
+        "It removes all liveness",
+        "It changes every subtraction into addition"
+      ],
+      "answer": 0,
+      "explanation": "The target instruction form can read the spill slot directly."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What should happen to a caller-saved register's live value across a call?",
+      "options": [
+        "Assume every callee keeps it",
+        "Preserve it according to the calling convention",
+        "Delete all future uses",
+        "Rename the source variable"
+      ],
+      "answer": 1,
+      "explanation": "The callee may overwrite caller-saved registers."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the result for a=2,b=3,c=9,d=5 in the expression trace?",
+      "options": [
+        "14",
+        "35",
+        "20",
+        "45"
+      ],
+      "answer": 2,
+      "explanation": "The child values are 5 and 4, whose product is 20."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why must target side effects be included in instruction selection?",
+      "options": [
+        "TAC has no values",
+        "Source types never matter",
+        "Every instruction has identical effects",
+        "Flags or exceptions may affect later behaviour"
+      ],
+      "answer": 3,
+      "explanation": "A shorter sequence can be wrong if it changes observable target effects."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which pair interferes in the worked graph?",
+      "options": [
+        "t1 and t2",
+        "Only t1 and t3",
+        "Every pair necessarily",
+        "No pair"
+      ],
+      "answer": 0,
+      "explanation": "t1 and t2 are simultaneously live after t2 is computed."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When can a dead register value be overwritten without a store?",
+      "options": [
+        "Only after function exit",
+        "When no required future use needs it",
+        "Never",
+        "Only if it holds zero"
+      ],
+      "answer": 1,
+      "explanation": "Deadness removes the need to preserve that value for later computation."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is one physical register per TAC name impractical?",
+      "options": [
+        "TAC names are machine addresses",
+        "Register allocation changes the grammar",
+        "The register file is finite and live ranges can be reused",
+        "Every temporary must stay in memory forever"
+      ],
+      "answer": 2,
+      "explanation": "Allocation maps many temporary lifetimes onto a limited physical register set."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Instruction selection depends on the stated target machine.",
+      "bn": "কোন ইনস্ট্রাকশন নেওয়া যাবে, তা টার্গেট মেশিন দেখে ঠিক করো।"
+    },
+    {
+      "en": "Descriptors must track valid value copies after each overwrite.",
+      "bn": "রেজিস্টার বদলালে কোন কপি এখনো ঠিক আছে, তা আপডেট করো।"
+    },
+    {
+      "en": "Values with overlapping live ranges may need different registers.",
+      "bn": "একই সময়ে দরকারি মানগুলোকে আলাদা রেজিস্টার লাগতে পারে।"
+    },
+    {
+      "en": "Spilling preserves a live value in memory before register reuse.",
+      "bn": "রেজিস্টার আবার ব্যবহারের আগে দরকারি মান মেমরিতে spill করো।"
+    },
+    {
+      "en": "Calling conventions constrain values that survive a call.",
+      "bn": "ফাংশন কলের পর মান রাখতে calling convention-এর নিয়ম মানো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Generate and trace result=(a+b)*(c-d) on the stated two-register machine.",
+      "marks": 4,
+      "answerHtml": "\n<p>Generate <code>result = (a+b)*(c-d)</code>. First compute the left child in R0, then the right child in R1. Multiplication can combine the two register values without a spill because neither intermediate needs to survive separately afterwards.</p>\n<table class=\"ref\"><caption>Complete two-register selection trace</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Instruction</th><th scope=\"col\">R0 afterwards</th><th scope=\"col\">R1 afterwards</th><th scope=\"col\">Relevant memory</th></tr></thead><tbody><tr><td>1</td><td>LD R0, a</td><td>a</td><td>unused</td><td>Original inputs</td></tr><tr><td>2</td><td>ADD R0, b</td><td>a+b</td><td>unused</td><td>Original inputs</td></tr><tr><td>3</td><td>LD R1, c</td><td>a+b</td><td>c</td><td>Original inputs</td></tr><tr><td>4</td><td>SUB R1, d</td><td>a+b</td><td>c-d</td><td>Original inputs</td></tr><tr><td>5</td><td>MUL R0, R1</td><td>(a+b)*(c-d)</td><td>c-d, now dead</td><td>Original inputs</td></tr><tr><td>6</td><td>ST result, R0</td><td>Product</td><td>dead</td><td>result = product</td></tr></tbody></table>\n<p>With a=2, b=3, c=9 and d=5, the registers become 5 and 4 before multiplication. The stored result is 20. This concrete trace checks the chosen order, but the semantic argument is stronger: every instruction implements the corresponding child or parent operation for all allowed integer inputs.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Track register and address descriptors for t=a+b; result=t*c when t is dead afterwards.",
+      "marks": 6,
+      "answerHtml": "\n<p>A <dfn>register descriptor</dfn> records which value currently occupies a register. An <dfn>address descriptor</dfn> records the valid locations holding a value, including memory and registers. If a new value is computed in R0, memory for its destination may still contain an older value until a store occurs.</p>\n<table class=\"ref\"><caption>Descriptor changes for t=a+b; result=t*c</caption><thead><tr><th scope=\"col\">After instruction</th><th scope=\"col\">Register descriptor</th><th scope=\"col\">Address descriptor for t</th><th scope=\"col\">Address descriptor for result</th></tr></thead><tbody><tr><td>LD R0,a</td><td>R0 holds a</td><td>not defined</td><td>not defined</td></tr><tr><td>ADD R0,b</td><td>R0 holds t</td><td>{R0}</td><td>not defined</td></tr><tr><td>MUL R0,c</td><td>R0 holds result</td><td>{} if t is dead</td><td>{R0}</td></tr><tr><td>ST result,R0</td><td>R0 holds result</td><td>{}</td><td>{R0,memory[result]}</td></tr></tbody></table>\n<p>Descriptors describe validity, not merely the last spelling printed in code. After ADD, R0 no longer holds the old a value. Memory[a] is still valid because the operation did not assign to a. If t is live after multiplication, overwriting its only copy would be wrong and the generator must preserve it first.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Find interference edges for t1,t2,t3 with the displayed live sets and allocate two registers.",
+      "marks": 5,
+      "answerHtml": "\n<p>Two values <dfn>interfere</dfn> when they must be available at the same time and cannot share one physical register in the chosen representation. An interference graph uses values as vertices and simultaneous-live requirements as edges. Assigning registers resembles colouring that graph with the available register colours.</p>\n<table class=\"ref\"><caption>Liveness around three arithmetic temporaries</caption><thead><tr><th scope=\"col\">Program point</th><th scope=\"col\">Live temporaries</th><th scope=\"col\">Required simultaneous values</th></tr></thead><tbody><tr><td>After t1=a+b</td><td>{t1}</td><td>t1</td></tr><tr><td>After t2=c+d</td><td>{t1,t2}</td><td>t1 and t2</td></tr><tr><td>After t3=t1*t2</td><td>{t2,t3}</td><td>t2 needed by later output; t3 needed next</td></tr><tr><td>After print t2</td><td>{t3}</td><td>t3</td></tr><tr><td>After print t3</td><td>{}</td><td>none</td></tr></tbody></table>\n<p>The interference edges are t1—t2 and t2—t3. There is no t1—t3 edge in this example because t1 dies when t3 is produced. Two colours suffice: R0 can hold t1 and then t3, while R1 holds t2. A value's textual name is not itself a reason to allocate a new register forever.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

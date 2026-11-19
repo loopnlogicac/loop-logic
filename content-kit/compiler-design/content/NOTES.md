@@ -1,133 +1,140 @@
-# Compiler Design — Batch 2
+# Compiler Design — Batch 3
 
-Package version: **0.2.0**. Schema version: **1.1**. Cumulative delivery: **21/36 topics**.
+Package **0.3.0**, schema **1.1**, final cumulative delivery **36/36 topics**.
+Review status remains `draft` for all topics.
 
 ## Delivered scope
 
-Batch 1 remains in curriculum order: `introduction` (three topics) and
-`lexical-analysis` (eight topics). Its lesson files and implementations are unchanged.
+The earlier 21 topics remain in curriculum order. This batch completes all remaining
+modules and their 15 topics:
 
-Batch 2 adds the complete `syntax-analysis` module:
+- `semantic-analysis`: `cd-syntax-directed-translation`, `cd-type-checking`, `cd-symbol-table`.
+- `intermediate-code`: `cd-three-address-code`, `cd-syntax-trees-dag`,
+  `cd-control-flow-translation`.
+- `runtime-codegen`: `cd-runtime-environment`, `cd-basic-blocks`, `cd-code-optimization`,
+  `cd-data-flow-analysis`, `cd-code-generation`, `cd-peephole-optimization`.
+- `practice-exam`: `cd-exam-questions`, `cd-mini-project-calculator`,
+  `cd-interview-questions`.
 
-1. `cd-context-free-grammars`
-2. `cd-left-recursion-factoring`
-3. `cd-first-follow`
-4. `cd-ll1-parsing`
-5. `cd-recursive-descent`
-6. `cd-shift-reduce`
-7. `cd-lr0-slr`
-8. `cd-clr-lalr`
-9. `cd-operator-precedence`
-10. `cd-bison`
+All curriculum coverage points are addressed. There are no deferred topics or proposed
+extra topics. Changes are confined to `content-kit/compiler-design/content/`.
 
-All listed curriculum coverage points are addressed. The remaining 15 topics belong to
-Batch 3 and are outside this delivery. No extra curriculum topics are proposed. All
-changes are within `content-kit/compiler-design/content/`.
+The new material contains **17 runnable Python examples**, **60 practice problems**
+(9 code problems with 45 input cases, plus 51 written problems with worked answers),
+**162 quiz questions** (22 executed output questions), and **88 exam questions**.
+The interview question bank contains exactly **40 short questions with answers**, both
+in its body and in its exam-question records. The numerical exam bank includes complete
+FIRST/FOLLOW, LL(1), LR(0)/SLR, epsilon-NFA/DFA, TAC and branch tables and parse traces.
+Every new lesson/theory body meets its level's word target. Counts vary with topic kind.
 
-The ten new topics contain **18 runnable Python examples**, **49 practice problems**
-(eight code problems with 36 input cases, plus 41 written problems with worked answers),
-**107 quiz questions** (12 executed output questions), and **30 exam questions**. The four
-implementation lessons and six theory topics follow their required section structures.
-Every new body meets its intermediate or advanced word target. Titles, summaries, and key
-points include Bangla. Full Bangla bodies are not included. Review status remains `draft`.
-No matching Compiler Design video is present in the catalogue, so video lists remain empty.
+Bangla titles, summaries and key points follow `BANGLA_STYLE.md`. Four earlier topics had
+new style warnings: `cd-introduction` and `cd-tools` used নির্দেশনা for instruction;
+`cd-context-free-grammars` and `cd-ll1-parsing` used প্রতীক for symbol. Those uses now read
+ইনস্ট্রাকশন and সিম্বল. Earlier English bodies and programs are unchanged. Full Bangla
+bodies remain optional and are not added. The video catalogue has no matching Compiler
+Design videos, so video lists are empty.
 
-## Worked content and implementation choices
+## Worked content and boundaries
 
-- CFG: complete leftmost/rightmost derivations, a parse tree, ambiguous groupings,
-  precedence versus associativity, and an epsilon-list derivation.
-- Transformations: immediate recursion, ordered substitution for an indirect cycle,
-  multiple bases/suffixes, repeated factoring, empty remainders, and language-preservation
-  reasoning. Nullable-prefix cycles and recursion without a base are explicitly qualified.
-- FIRST/FOLLOW: complete expression and nullable-prefix tables, fixed-point rounds through
-  a cycle, and occurrence-by-occurrence FOLLOW contributions. Empty tuples represent epsilon.
-- LL(1): the full expression table, selection explanations, complete accepted/rejected
-  traces, and both FIRST/FIRST and FIRST/FOLLOW conflicts. Collisions retain all candidates.
-- Recursive descent: a complete ASCII-integer scanner and expression/term/factor parser,
-  left-fold subtraction, semicolon statements, and panic-mode recovery. Syntax failures
-  discard the damaged statement; lexical failures occur before statement recovery.
-- Shift-reduce: handles, reversed rightmost derivation, symbol and state stack traces,
-  and runnable shift/reduce and reduce/reduce conflict detection.
-- LR(0)/SLR: closure growth, every canonical item, every nonempty transition, complete
-  ACTION/GOTO cells, accepted traces, and an epsilon/zero-pop example. A five-state grammar
-  demonstrates an LR(0) reduce/reduce conflict resolved by SLR; a two-level expression
-  grammar demonstrates an LR(0) shift/reduce conflict resolved by SLR.
-- CLR/LALR: all ten CLR and seven merged LALR states for the two-group grammar, complete
-  tables and traces, an explicit merge map, and a CLR-but-not-LALR counterexample. Its
-  two new reduce/reduce cells are retained and explained.
-- Operator precedence: FIRSTVT/LASTVT, every terminal relation, complete expression and
-  parenthesis traces, and a runnable relation builder/recogniser. Its normalised N marker
-  and omitted unit reductions apply only to the stated expression grammar.
-- Bison: complete calculator `.y` and Flex `.l` listings, semantic-value handoff, declared
-  precedence decisions, a manual value trace, build commands, and semicolon recovery.
-  Listings use GNU Bison extensions and the ordinary non-reentrant C interface.
+- Attribute rules cover synthesised/inherited information, S/L attribution, a complete
+  annotated parse tree, dependency schedules, later-sibling restrictions and cycles.
+- The type checker uses an explicitly defined source language with `int`, `real`, `bool`
+  and structural array types. Boolean literals are kept separate from Python integers.
+  It checks numeric expressions, comparisons, index types and assignment conversions.
+  Function signatures and constant/runtime bounds are taught with worked tables; the
+  small executable model does not implement function calls or runtime bounds checking.
+- Nested dictionaries implement lexical block scopes, shadowing, same-scope duplicate
+  rejection and global-scope protection. Entries use per-scope slots, not machine byte
+  addresses. Runtime closures and separate function-defining environments are explained
+  rather than implemented by the block-scope demonstration.
+- TAC generation walks an AST in postorder and reserves all referenced source names
+  before allocating temporaries. Quadruples, triples, indirect triples, unary operations,
+  repeated expressions and stable references are worked explicitly. The generator does
+  not perform common-subexpression elimination.
+- DAG/value-number tables track operand versions across assignment and discuss aliases,
+  calls, volatile reads, liveness and arithmetic restrictions.
+- Backpatching tables show true/false/next lists, short-circuit AND/OR/NOT, a complete
+  if-else, a while loop and sequential continuation. Instruction indices are zero-based.
+- Basic blocks retain unreachable instructions during initial partitioning. Targets and
+  instructions after `if`, `goto` and `return` become leaders. Conditional successors are
+  deduplicated; unconditional jumps and returns do not gain invented fallthrough edges.
+  Branch targets must name existing instructions; an explicit return can represent exit.
+- Optimisation tables distinguish folding from propagation, sharing from dead results,
+  safe hoisting from speculative traps, and induction strength reduction from guaranteed
+  machine speedups. Peephole rewrites preserve relevant memory, aliases, flags and labels.
+- Data-flow tables contain every GEN/KILL and USE/DEF set, every synchronous round through
+  stability, and forward/backward equations. A diamond and a self-loop show joins and
+  back-edge propagation. Boundary conditions and the imprecision of may analysis are explicit.
+- Code generation uses a stated two-register, mathematical-integer teaching target.
+  Tables cover instruction selection, descriptors, interference and a real spill.
+  Memory-operand arithmetic is a property of this target, not a claim about every ISA.
+- The calculator combines a positioned lexer, recursive-descent parser, AST, evaluator
+  and TAC generator. It requires complete input consumption and demonstrates lexical,
+  syntax and unknown-name errors. Extension guidance covers division, assignments and
+  typed conversions without claiming those features are already implemented.
 
-Python examples and practice solutions are standalone and use only the standard library.
-The shared `parsing-models.py` and `precedence-model.py` expose the algorithms for additional
-review; examples do not depend on importing those files. State discovery uses sorted
-outgoing symbols. Set displays are sorted. The generic implementations assume well-formed
-finite classroom grammars, with dictionary keys defining nonterminals and `$` reserved for
-the parser. They retain table conflicts and refuse conflicted grammars during recognition.
+The arithmetic language supports ASCII integer literals and identifiers, whitespace,
+parentheses, unary minus, addition, subtraction and multiplication. Python integers avoid
+machine overflow in the executable arithmetic examples. Practical inputs are bounded in
+each problem; recursive traversal is not intended for arbitrarily deep inputs. Tabs count
+as one source character for columns. Calculator identifiers need explicit value bindings.
+TAC expression outputs are intermediate code, not native executable machine code.
 
-The expression languages deliberately omit unary signs, division, identifiers with values,
-and assignments. Numeric recursive descent uses Python integers; deeply nested expressions
-can reach Python's recursion limit. Practice limits nesting below 100. Scanner columns count
-characters, including tabs as one character. The smaller LL(1) and precedence recognisers
-consume token kinds such as `id`, rather than the source scanner's numeric tokens.
+The four new `shared/*-model.py` files expose the same standard-library implementations
+embedded in standalone examples and solutions. No lesson depends on importing a shared
+file. The verifier checks that all 26 new standalone programs retain their model prefix,
+so the checked algorithm and displayed program cannot silently diverge.
 
 ## Verification
 
-Tools actually used: **Python 3.12.14**, **Node.js v24.22.1**. Python implementations also
-use syntax available in Python 3.10. New example, practice, and output-quiz output capture
-performed **66 executions**: 18 examples, 36 practice cases, and 12 quiz programs. Every
-`.out` file was captured from a real isolated UTF-8 run with warnings treated as errors.
-The full checker independently reruns all cumulative examples, practice tests, and output
-quizzes. It reports **0 errors and 0 warnings**; there are no warning exceptions.
+Tools actually used: **Python 3.12.14**, **Node.js v24.22.1**. Implementations use syntax
+available in Python 3.10 and later. The **84 new executions** used to capture and verify
+outputs comprise 17 examples, 45 practice inputs and 22 output-quiz programs. All `.out`
+files were captured from real isolated UTF-8 executions with warnings treated as errors.
+The full checker independently reruns every cumulative example, practice test and output
+quiz. Final result: **0 errors, 0 warnings; READY FOR IMPORT**. No warning exceptions.
 
-Run these commands from `content-kit/`:
+Run from `content-kit/`:
 
 ```bash
 node tools/check.mjs compiler-design/content --report compiler-design/content/CHECK_REPORT.txt
+python3 -I -X utf8 -W error compiler-design/content/shared/verify-batch3.py
 python3 -I -X utf8 -W error compiler-design/content/shared/verify-parsing.py
 python3 -I -X utf8 -W error compiler-design/content/shared/verify-models.py
 ```
 
-`shared/verify-parsing.py` reads the published HTML tables. Its actual captured result is
-`shared/verify-parsing.out`. It verifies the expression FIRST/FOLLOW values, nullable
-occurrences, and cyclic propagation against independently stated expected sets. It compares
-all **19,531** expression token streams of length zero through six against an independent
-operand/operator and parenthesis oracle, the Python LL(1) recogniser, the published LL(1)
-table, and the operator-precedence recogniser. It checks every displayed precedence cell.
+`shared/verify-batch3.out` captures the successful new verification. It checks:
 
-For LR parsing, all **1,023** c/d words of length zero through nine are checked against the
-independent two-group language condition in LR(0), SLR, CLR, LALR, and both published
-CLR/LALR tables. The second published SLR expression table agrees with an independent
-syntax oracle on **3,280** token streams. Further checks cover the five-state SLR table,
-CLR/LALR conflict creation, nullable LR(1) lookahead propagation, and epsilon reductions.
-Recursive descent is checked
-against **1,625** independently calculated numeric cases, 14 malformed expressions, and
-statement-recovery boundaries. All 26 new standalone Python source files parse cleanly.
-Finite checks supplement the derivation and invariant explanations; they are not general
-proofs of parser correctness for all grammars.
+- **3,618** expression/environment combinations against an independently parsed Python
+  AST oracle and an independent TAC interpreter; annotation values, temporary freshness,
+  invalid expressions, unknown names and source positions are also checked.
+- Scalar typing/conversion matrices, Boolean separation, array-index types and structural
+  array equality; **2,000** scope operations against a separate reference environment.
+- **10,552** exhaustive instruction lists of length one through four, verifying partition
+  membership, leaders, single-entry/straight-line interiors and exact successors, plus
+  empty input and invalid operations/targets.
+- Every published diamond/loop data-flow iteration cell and local set using a generic
+  synchronous solver, including both entry and exit stability.
+- Published backpatching code on **1,296** if-else cases and **81** while cases; the published
+  target instruction and spill tables on **1,354** arithmetic input combinations.
+- Exam FIRST/FOLLOW sets, complete LR item sets and transitions, and **511** token words
+  against the published LL(1), SLR and DFA tables and independent language predicates.
+- Syntax and model consistency for all **26** new standalone Python programs.
 
-The unchanged Batch 1 `shared/verify-models.py` also passes: 1,023 automata words, quotient
-transitions, simulator predicates, and 200 constructed lexer statements plus boundary cases.
-Its existing captured output remains applicable.
-
-Flex and Bison generation are **not claimed as executed**. As required by the brief, their
-sources are presented as code listings, with manually derived tables and traces. Python
-programs are the verified implementations. The Bison calculator uses double values, so its
-text limits arithmetic to small finite values and notes floating-point rounding.
+Earlier automata/lexer and parsing checks also pass. The parsing verifier's version
+guard now accepts cumulative versions at or above 0.2.0; its algorithm checks are unchanged.
+Their existing capture files remain applicable. Flex/Bison generation from earlier topics is
+not claimed as executed; those sources remain explanatory listings as required by the
+brief. Finite verification supplements the explanations and invariants; it is not a proof
+for every possible program, grammar, target machine or arithmetic semantics.
 
 ## Human review focus
 
-- Bangla terminology and clarity for first-year students.
-- Preservation of subtraction association after grammar rewriting.
-- FOLLOW inheritance through nullable suffixes and repeated nonterminal occurrences.
-- Stack orientation, reverse pushing, reduction lengths, zero-pop epsilon reductions,
-  and complete input consumption.
-- LR(1) closure's FIRST(suffix + parent lookahead), exact core equality, and the two
-  reductions introduced by the CLR-to-LALR counterexample.
-- FIRSTVT versus FIRST, terminal-boundary searches, and the expression-only N shortcut.
-- GNU Bison/Flex interface names, precedence declaration order, semantic-value positions,
-  and the distinction between syntax recovery and a completely error-free parse.
+- Natural Bangla terminology, including the four earlier warning repairs.
+- Inherited-attribute dependencies and the distinction between S-attributed and L-attributed rules.
+- Source type rules versus Python's own Boolean/integer behaviour, and type checks versus bounds checks.
+- Temporary freshness, subtraction association and stable triple references.
+- Pending jump lists, short-circuit paths and zero-iteration loop safety.
+- Data-flow boundaries, local USE/DEF order and simultaneous iteration conventions.
+- Value liveness, descriptor validity, target operand forms and spill preservation.
+- Alias, flag, volatile and floating-point preconditions on optimisation examples.

@@ -1,0 +1,386 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-symbol-table",
+  "module": "semantic-analysis",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Symbol Tables",
+    "bn": "সিম্বল টেবিল আর নেস্টেড স্কোপ"
+  },
+  "summary": {
+    "en": "Store declaration information in nested hash tables and resolve names from the nearest visible scope.",
+    "bn": "একই নাম একাধিক স্কোপে থাকলে তুমি কাছের ঘোষণাটি সিম্বল টেবিল থেকে খুঁজে নেবে।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-type-checking"
+  ],
+  "related": [
+    "cd-runtime-environment"
+  ],
+  "keywords": [
+    "Symbol Tables",
+    "nested scope",
+    "hash table"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Python programs use the standard library and were executed with Python 3.12.14."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Entries and operations"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Walking nested scopes"
+    },
+    {
+      "id": "examples",
+      "title": "Examples with scope dictionaries"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Python dictionary notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Restore an outer declaration after a block",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The visible declaration changes from depth 1 to depth 0 when the child table is removed.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Preserve a declaration after a duplicate error",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>The duplicate is rejected before any entry or slot counter changes.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Catch unknown names and scope underflow",
+      "level": "intermediate",
+      "language": "python",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Both failed operations leave the global scope available for the final declaration.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Interpret scope operations",
+      "statementHtml": "<p>Read up to 50 command lines: enter, leave, declare NAME TYPE, or lookup NAME. Types are int, real and bool; names are ASCII identifiers. Ignore blank lines. Print <code>Scope commands:</code> first. Enter/leave print entered/left; declaration prints declared NAME DEPTH SLOT; lookup prints NAME TYPE DEPTH SLOT. On failure print error: followed by duplicate: NAME, undeclared: NAME, cannot leave global scope, or bad command. Continue after errors.</p>",
+      "hints": [
+        "Validate a duplicate before incrementing the slot counter."
+      ],
+      "language": "python",
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Measure block depth",
+      "statementHtml": "<p>Read a sequence containing only braces and whitespace, at most 100 characters. Print <code>Braces:</code>, then the maximum nested block depth when braces balance. Print invalid for an unmatched brace or another character. Empty input has depth 0.</p>",
+      "hints": [
+        "Never permit the source block stack to pop the permanent global scope."
+      ],
+      "language": "python",
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Resolve nested names",
+      "statementHtml": "<p>Trace declarations and lookups for int marks; { real marks; int bonus; } marks.</p>",
+      "hints": [
+        "Keep both marks declarations in different dictionaries."
+      ],
+      "answerHtml": "\n<p>Start with an empty global dictionary. Process <code>int marks; { real marks; int bonus; } marks</code>. The inner marks deliberately hides the outer marks. Leaving the block restores visibility without changing the outer entry.</p>\n<table class=\"ref\"><caption>Declaration and lookup trace</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Operation</th><th scope=\"col\">Active scope contents</th><th scope=\"col\">Result</th></tr></thead><tbody><tr><td>1</td><td>declare marks:int</td><td>global {marks:int@0}</td><td>Entry depth 0, slot 0</td></tr><tr><td>2</td><td>enter block</td><td>global; inner {}</td><td>Current depth 1</td></tr><tr><td>3</td><td>declare marks:real</td><td>global; inner {marks:real@0}</td><td>Legal shadowing</td></tr><tr><td>4</td><td>declare bonus:int</td><td>global; inner {marks:real@0, bonus:int@1}</td><td>Entry depth 1, slot 1</td></tr><tr><td>5</td><td>lookup marks</td><td>Search inner first</td><td>real, depth 1, slot 0</td></tr><tr><td>6</td><td>lookup bonus</td><td>Search inner first</td><td>int, depth 1, slot 1</td></tr><tr><td>7</td><td>leave block</td><td>global {marks:int@0}</td><td>Inner declarations disappear</td></tr><tr><td>8</td><td>lookup marks</td><td>Search global</td><td>int, depth 0, slot 0</td></tr><tr><td>9</td><td>lookup bonus</td><td>Search global, no match</td><td>Undeclared-name error</td></tr></tbody></table>\n<p>The table describes compile-time visibility. It does not say that a runtime stack object is physically erased when lookup stops seeing it. A language may retain an object through a closure or other reference even after the original block ends. Separate the lifetime of an object from the visibility of its name.</p>\n"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Compare environment chains",
+      "statementHtml": "<p>Distinguish lexical scope, dynamic callers and a runtime static link.</p>",
+      "hints": [
+        "A caller is not necessarily a lexical parent."
+      ],
+      "answerHtml": "\n<p>Imagine global x:int, function outer containing x:real, and a separately declared global function show that reads x. Calling show from outer does not make show see outer's local x under lexical scoping. Show was defined globally, so its enclosing source environment supplies the global declaration.</p>\n<table class=\"ref\"><caption>Which chain answers which question?</caption><thead><tr><th scope=\"col\">Chain</th><th scope=\"col\">Follows</th><th scope=\"col\">Used for</th></tr></thead><tbody><tr><td>Lexical scope chain</td><td>Source-enclosing declarations</td><td>Resolve a name&#x27;s declaration</td></tr><tr><td>Dynamic call chain</td><td>Functions that called one another</td><td>Return and stack unwinding</td></tr><tr><td>Static link in a nested-function runtime</td><td>Lexically enclosing activation</td><td>Access an enclosing local at runtime</td></tr></tbody></table>\n<p>The small scope stack models traversal of nested source blocks. Do not use it as a complete runtime implementation for separately declared functions or closures. A real compiler associates each function with its defining environment and emits the necessary access mechanism later.</p>\n"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which dictionary is consulted first during nested name lookup?",
+      "options": [
+        "Current scope",
+        "Global scope",
+        "Oldest closed scope",
+        "Caller scope regardless of source nesting"
+      ],
+      "answer": 0,
+      "explanation": "The nearest visible lexical declaration wins."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens to outer marks while inner marks shadows it?",
+      "options": [
+        "It is overwritten",
+        "It remains in the outer dictionary",
+        "It is converted to real",
+        "It becomes a keyword"
+      ],
+      "answer": 1,
+      "explanation": "Shadowing changes lookup visibility without replacing the outer entry."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which operation rejects a duplicate in our model?",
+      "options": [
+        "lookup in the current scope",
+        "enter a child scope",
+        "declare in the current scope",
+        "leave a child scope"
+      ],
+      "answer": 2,
+      "explanation": "Declaration checks the current dictionary before inserting."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is full-chain lookup not always expected O(1)?",
+      "options": [
+        "Dictionaries cannot hash strings",
+        "Every entry is sorted again",
+        "Names have no equality operation",
+        "It may inspect d active scopes"
+      ],
+      "answer": 3,
+      "explanation": "Each dictionary lookup is expected constant time, but there can be d dictionaries."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which chain determines lexical visibility?",
+      "options": [
+        "Source-enclosing scopes",
+        "Runtime callers alone",
+        "Register spill order",
+        "Token buffer pages"
+      ],
+      "answer": 0,
+      "explanation": "Source structure determines the declaration chosen under lexical scoping."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must a failed declaration preserve?",
+      "options": [
+        "Only the new type",
+        "Original entry and slot counter",
+        "Only the latest spelling",
+        "A new placeholder variable"
+      ],
+      "answer": 1,
+      "explanation": "Reject before mutating the table, so later analysis can trust it."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is a slot number not yet a byte address?",
+      "options": [
+        "Slots cannot be integers",
+        "All variables occupy one byte",
+        "Frame layout and alignment are not assigned",
+        "Every scope shares the same runtime frame"
+      ],
+      "answer": 2,
+      "explanation": "The teaching counter identifies an entry position rather than a target storage location."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "The inner dictionary hides x. Which type does nearest-scope lookup print?",
+      "options": [
+        "int",
+        "bool",
+        "missing",
+        "real"
+      ],
+      "answer": 3,
+      "explanation": "Reversing the scope sequence checks the inner dictionary first.",
+      "code": "scopes = [{\"x\": \"int\"}, {\"x\": \"real\"}]\nprint(next(scope[\"x\"] for scope in reversed(scopes) if \"x\" in scope))\n",
+      "language": "python"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After closing the child scope, which x type is visible?",
+      "options": [
+        "int",
+        "real",
+        "missing",
+        "bool"
+      ],
+      "answer": 0,
+      "explanation": "Popping removes only the child table.",
+      "code": "scopes = [{\"x\": \"int\"}, {\"x\": \"real\"}]\nscopes.pop()\nprint(scopes[-1][\"x\"])\n",
+      "language": "python"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Three declarations enter one scope. What slot belongs to bonus?",
+      "options": [
+        "0",
+        "2",
+        "1",
+        "3"
+      ],
+      "answer": 1,
+      "explanation": "Slots begin at zero and advance once per successful declaration.",
+      "code": "names = [\"marks\", \"fee\", \"bonus\"]\nslots = {name: slot for slot, name in enumerate(names)}\nprint(slots[\"bonus\"])\n",
+      "language": "python"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A symbol entry records the declaration meant by a name.",
+      "bn": "নামটি কোন ঘোষণাকে বোঝাচ্ছে, সিম্বল এন্ট্রি তা ধরে রাখে।"
+    },
+    {
+      "en": "Lookup searches from the current scope outwards.",
+      "bn": "নাম খুঁজতে বর্তমান স্কোপ থেকে বাইরের দিকে যাও।"
+    },
+    {
+      "en": "A same-scope duplicate is different from an inner shadow.",
+      "bn": "এক স্কোপে একই নাম দুবার দেওয়া আর ভেতরের স্কোপে দেওয়া আলাদা।"
+    },
+    {
+      "en": "Leaving a block reveals the preserved outer declarations.",
+      "bn": "ব্লক ছাড়লে বাইরের আগের ঘোষণাগুলো আবার দেখা যায়।"
+    },
+    {
+      "en": "A scope slot is not automatically a machine address.",
+      "bn": "স্কোপের স্লট নম্বরকে সরাসরি মেমরি অ্যাড্রেস ভেবো না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Trace declarations and lookups for int marks; { real marks; int bonus; } marks.",
+      "marks": 4,
+      "answerHtml": "\n<p>Start with an empty global dictionary. Process <code>int marks; { real marks; int bonus; } marks</code>. The inner marks deliberately hides the outer marks. Leaving the block restores visibility without changing the outer entry.</p>\n<table class=\"ref\"><caption>Declaration and lookup trace</caption><thead><tr><th scope=\"col\">Step</th><th scope=\"col\">Operation</th><th scope=\"col\">Active scope contents</th><th scope=\"col\">Result</th></tr></thead><tbody><tr><td>1</td><td>declare marks:int</td><td>global {marks:int@0}</td><td>Entry depth 0, slot 0</td></tr><tr><td>2</td><td>enter block</td><td>global; inner {}</td><td>Current depth 1</td></tr><tr><td>3</td><td>declare marks:real</td><td>global; inner {marks:real@0}</td><td>Legal shadowing</td></tr><tr><td>4</td><td>declare bonus:int</td><td>global; inner {marks:real@0, bonus:int@1}</td><td>Entry depth 1, slot 1</td></tr><tr><td>5</td><td>lookup marks</td><td>Search inner first</td><td>real, depth 1, slot 0</td></tr><tr><td>6</td><td>lookup bonus</td><td>Search inner first</td><td>int, depth 1, slot 1</td></tr><tr><td>7</td><td>leave block</td><td>global {marks:int@0}</td><td>Inner declarations disappear</td></tr><tr><td>8</td><td>lookup marks</td><td>Search global</td><td>int, depth 0, slot 0</td></tr><tr><td>9</td><td>lookup bonus</td><td>Search global, no match</td><td>Undeclared-name error</td></tr></tbody></table>\n<p>The table describes compile-time visibility. It does not say that a runtime stack object is physically erased when lookup stops seeing it. A language may retain an object through a closure or other reference even after the original block ends. Separate the lifetime of an object from the visibility of its name.</p>\n"
+    },
+    {
+      "type": "numerical",
+      "question": "Distinguish lexical scope, dynamic callers and a runtime static link.",
+      "marks": 6,
+      "answerHtml": "\n<p>Imagine global x:int, function outer containing x:real, and a separately declared global function show that reads x. Calling show from outer does not make show see outer's local x under lexical scoping. Show was defined globally, so its enclosing source environment supplies the global declaration.</p>\n<table class=\"ref\"><caption>Which chain answers which question?</caption><thead><tr><th scope=\"col\">Chain</th><th scope=\"col\">Follows</th><th scope=\"col\">Used for</th></tr></thead><tbody><tr><td>Lexical scope chain</td><td>Source-enclosing declarations</td><td>Resolve a name&#x27;s declaration</td></tr><tr><td>Dynamic call chain</td><td>Functions that called one another</td><td>Return and stack unwinding</td></tr><tr><td>Static link in a nested-function runtime</td><td>Lexically enclosing activation</td><td>Access an enclosing local at runtime</td></tr></tbody></table>\n<p>The small scope stack models traversal of nested source blocks. Do not use it as a complete runtime implementation for separately declared functions or closures. A real compiler associates each function with its defining environment and emits the necessary access mechanism later.</p>\n"
+    },
+    {
+      "type": "long",
+      "question": "Explain duplicate declarations and legal shadowing without corrupting a symbol table.",
+      "marks": 5,
+      "answerHtml": "\n<p>Suppose the current scope already contains fee:int. Declaring fee:real in that same dictionary is an error. Entering a child scope and declaring fee:real is permitted here. Different languages restrict shadowing differently, so these are source rules you must choose deliberately.</p>\n<table class=\"ref\"><caption>Operations that must preserve existing entries</caption><thead><tr><th scope=\"col\">Initial state</th><th scope=\"col\">Attempt</th><th scope=\"col\">Decision</th><th scope=\"col\">State afterwards</th></tr></thead><tbody><tr><td>Global fee:int at slot 0</td><td>declare fee:real</td><td>Duplicate error</td><td>fee:int still at slot 0</td></tr><tr><td>Global fee:int</td><td>enter; declare fee:real</td><td>Legal shadow</td><td>Inner fee:real hides outer fee</td></tr><tr><td>Inner fee:real</td><td>leave</td><td>Pop inner table</td><td>Global fee:int visible again</td></tr><tr><td>Only global table exists</td><td>leave</td><td>Scope-underflow error</td><td>Global table remains</td></tr><tr><td>No cost declaration</td><td>lookup cost</td><td>Undeclared error</td><td>No new entry inserted</td></tr></tbody></table>\n<p>A failed declaration must not overwrite the first declaration. Keep its original type and source location so a diagnostic can mention both lines. Likewise, a failed lookup should not insert a placeholder normal variable. Such a placeholder can hide a genuine error in a later use.</p>\n"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT: Computer Language Engineering",
+      "url": "https://ocw.mit.edu/courses/6-035-computer-language-engineering-spring-2010/"
+    },
+    {
+      "title": "Python 3.12 language reference",
+      "url": "https://docs.python.org/3.12/reference/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
