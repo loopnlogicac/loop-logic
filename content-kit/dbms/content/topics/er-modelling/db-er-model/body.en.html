@@ -1,0 +1,56 @@
+<h2 id="introduction">Draw the rules before building tables</h2>
+<p class="lead">A course list alone cannot tell you whether one teacher may teach several sections. An ER diagram records that rule. You use the drawing to discuss the university’s meaning before choosing SQL column definitions.</p>
+<p>The <dfn>entity-relationship model</dfn> describes things of interest, their properties and the associations between them. An entity might be student 101, while Student is the entity type describing all such students. A department, a book and a loan can also be entities within a suitable scope.</p>
+<p>ER diagrams are conceptual designs. They need not correspond to tables one-for-one. A multivalued property may later need its own table. A relationship may become a foreign key or an association table. First make the meaning clear, then choose its relational representation.</p>
+<h2 id="how-it-works">Read Chen notation carefully</h2>
+<p>Chen notation is common in Bangladeshi university questions. A rectangle names an entity type. An oval names an attribute. A diamond names a relationship. Underlining an attribute marks a key. Always include a legend if your course uses a different notation.</p>
+<pre class="diagram">(student_id: underlined)    (student_name)
+             \               /
+                  [Student]
+                      M
+                      |
+                 &lt;Enrolls&gt; ---- (enrolled_on)
+                      |
+                      N
+                  [Section]</pre>
+<p>The bracketed names represent rectangles and the angle-bracketed name represents a diamond. M and N show that both sides permit many partners. The enrollment date describes a particular connection. It does not describe every student or every section independently.</p>
+<h3>Four useful attribute distinctions</h3>
+<p>A <dfn>simple attribute</dfn> has no useful smaller parts within the chosen design. A student identifier is often simple. A <dfn>composite attribute</dfn> has meaningful parts, such as address divided into street, city and postcode. Draw component ovals branching from the composite oval.</p>
+<p>A <dfn>multivalued attribute</dfn> permits several whole values for one entity. Several student phone numbers are a familiar example. Chen uses a double oval for it. Composite and multivalued describe different properties: an address can have parts without a student having several addresses.</p>
+<p>A <dfn>derived attribute</dfn> can be calculated from other facts. Age follows from birth date and a reference date. Chen uses a dashed oval for a derived value. Storing age without a refresh rule makes it stale, while birth date remains the underlying fact.</p>
+<p>A key must identify an entity under the business rules, not merely within the few rows you currently see. Student names may look unique in a small class but can repeat. A stable student identifier is a stronger choice when the university guarantees its uniqueness.</p>
+<h3>Relationships, degree and limits</h3>
+<p>A <dfn>relationship</dfn> connects participating entities. Student enrolls in Section is binary because two entity types participate. A ternary relationship has three participating types, such as Supplier providing Book to Branch. Degree counts types involved, rather than the number of stored instances.</p>
+<p><dfn>Cardinality</dfn> describes the maximum number of partners. In a 1:N department-student relationship, one department can have many students, while each student belongs to at most one department. In M:N enrollment, each student can take several sections and each section can have several students.</p>
+<p><dfn>Participation</dfn> describes whether involvement is required. Total participation means every entity must take part and is shown with a double line. Partial participation permits some entities to have no partner and uses a single line. Minimum participation and maximum cardinality answer separate questions.</p>
+<table class="ref"><caption>Read each relationship in both directions</caption><thead><tr><th>Rule</th><th>Minimum</th><th>Maximum</th></tr></thead><tbody>
+<tr><td>A section must have a teacher</td><td>One teacher</td><td>One teacher under this assumption</td></tr>
+<tr><td>A teacher may teach no sections</td><td>Zero sections</td><td>Many sections</td></tr>
+<tr><td>A new student may not yet enroll</td><td>Zero sections</td><td>Many sections</td></tr>
+</tbody></table>
+<h2 id="worked-examples">Build and test small diagrams</h2>
+<h3>Department and teacher</h3>
+<p>Assume every teacher belongs to exactly one department, while a new department may have no teachers. First draw Department and Teacher rectangles. Add a BelongsTo diamond. Mark Department as 1 and Teacher as N. Double the Teacher participation line because no teacher may lack a department.</p>
+<p>Leave the Department line single because an empty department is permitted. This drawing does not mean every teacher teaches every departmental course. Teaching is a different relationship. Keeping the rules separate avoids implying connections that the requirements never stated.</p>
+<h3>A room whose number repeats</h3>
+<p>Academic East and Academic West each have room 101. The number alone cannot identify one room. A <dfn>weak entity</dfn> depends on an owner’s identity plus a local, or partial, key. Draw Room with a double rectangle and its identifying relationship with a double diamond.</p>
+<pre class="diagram">[Building] 1 ---- &lt;&lt;Contains&gt;&gt; ==== N [[Room]]
+    |                                      |
+(building_id: key)              (room_number: partial key)
+
+Whole room identity = (building_id, room_number)
+[[...]] double rectangle; &lt;&lt;...&gt;&gt; double diamond
+==== total participation of Room</pre>
+<p>Underline building_id normally. Use a dashed underline for room_number to show its partial-key role. The owner and local number together identify the room. Weak does not mean physically small or unimportant; it describes identification dependence.</p>
+<h3>Where a mark belongs</h3>
+<p>Ayesha earns 85 in one section and 78 in another. Putting marks on Student allows only one value without saying which section it describes. Putting marks on Section loses which student earned the value. The mark belongs to the particular enrollment, or an associated Result entity.</p>
+<p>Now ask whether the same student can repeat the same section. If repeated attempts within one offering are possible, the pair may not identify the event. You need another distinguishing fact, such as an attempt number. A different section in a later semester is already a different offering.</p>
+<h2 id="common-mistakes">Misreading the picture</h2>
+<h3>Confusing many with mandatory</h3>
+<p>Many is an upper limit, not proof that a partner exists. A teacher may teach zero sections while still having a maximum of many. Record the minimum separately through participation or a clearly explained min-max annotation.</p>
+<h3>Making every noun an entity</h3>
+<p>A student’s name is usually an attribute, not an independently managed entity. A report may be calculated from existing facts. Ask whether the proposed thing has its own identity and lifecycle before drawing a rectangle for it.</p>
+<h3>Losing a ternary combination</h3>
+<p>A supplier-book price may differ by branch. Three separate binary links can show that the participants are related without preserving the particular priced combination. Keep the ternary relationship when the full triple determines the fact. Decomposition needs evidence from the business rules.</p>
+<h2 id="summary">Make the drawing say something precise</h2>
+<p>Chen diagrams express entity identity, attribute kinds and relationship limits. Cardinality gives maximums; participation gives minimum requirements. Weak entities need owner identity. Next, put these pieces together in <a href="topic:db-er-diagram-design">Designing an ER Diagram</a>.</p>

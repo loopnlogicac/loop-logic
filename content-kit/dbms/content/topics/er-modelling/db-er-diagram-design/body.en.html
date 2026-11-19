@@ -1,0 +1,66 @@
+<h2 id="introduction">Turn a paragraph into a design</h2>
+<p class="lead">A university asks you to record departments, course offerings, student registrations and results. Drawing rectangles immediately is tempting. First ask what each fact means and which rules the university expects you to preserve.</p>
+<p>ER design turns requirements into a conceptual picture that people can inspect. You identify things, give them stable identities and connect them with explicit rules. You then try realistic situations against the drawing. A neat diagram can still be wrong if it cannot represent a pending result or a course offered twice.</p>
+<p>The case study here assumes one department per student, one department per teacher and one teacher per section. Students may enroll in several sections. These assumptions are teaching choices, not rules that every university follows. A different policy should lead to a deliberate design change.</p>
+<h2 id="how-it-works">Ask questions before assigning shapes</h2>
+<p>Start by underlining candidate things in the requirements: department, teacher, student, course, section, enrollment and result. Then separate identity from description. A course code identifies a catalogue course under our rules. The title describes it. Changing the title should not create a different student registration.</p>
+<p>Next list actions and connections. A department offers a course. A course has sections in particular semesters. A teacher teaches a section. A student enrolls in a section. An enrollment may receive a result. Verbs help locate relationships, but repeated events sometimes deserve their own entity identity.</p>
+<p>For every connection, ask both ends the same questions: how many partners are allowed, and is at least one required? Ask about empty departments, new students and sections awaiting registrations. Boundary situations reveal participation rules that ordinary populated examples can hide.</p>
+<p>Record identifiers before adding decorative details. We use department_id, teacher_id, student_id, course_id and section_id. The section label A is not globally unique. The combination of course, semester and label expresses a separate business uniqueness rule even when section_id is the primary identifier.</p>
+<h2 id="worked-examples">University design, one decision at a time</h2>
+<h3>Step 1: separate a course from its offering</h3>
+<p>CSE 212 describes a catalogue course about database management. Section A in Spring 2026 is one offering of that course. Another section can use the same course description with a different teacher or capacity. A later semester can offer the course again without rewriting earlier registrations.</p>
+<p>Draw Course and Section separately. Course has many sections, and each section belongs to exactly one course. Put credits on Course if the course definition fixes them. Put semester, label and capacity on Section because those facts describe the particular offering. If credits can vary by offering, revise that assumption explicitly.</p>
+<h3>Step 2: connect departments and staff</h3>
+<p>Draw Department connected to Student, Teacher and Course with separate 1:N relationships. Under our assumptions, the student, teacher and course sides participate totally. A department can exist before any students join it. Its participation in the student relationship can therefore be partial.</p>
+<p>Teacher-to-Section is also 1:N in this version. Every section has one assigned teacher, while a teacher may currently teach none. This does not forbid a teacher from teaching a course offered by another department; such a restriction would need an additional stated rule.</p>
+<h3>Step 3: represent enrollment as its own fact</h3>
+<p>Student-to-Section is M:N. Ayesha can take several sections, and section 31 can contain several students. The relationship has an enrolled_on date. Treat Enrollment as an association entity when discussing these facts, so its own identity and connections are easy to see.</p>
+<pre class="diagram">[Department] 1 --- &lt;Offers&gt; --- N [Course]
+                                      1
+                                      |
+                                    &lt;Has&gt;
+                                      |
+                                      N
+[Teacher] 1 --- &lt;Teaches&gt; --- N [Section]
+                                      N
+                                      |
+                                &lt;Enrolls&gt; --- (enrolled_on)
+                                      |
+                                      M
+                                  [Student]</pre>
+<p>The drawing uses Chen rectangles and diamonds, with cardinalities written at the ends. Enrollment can be drawn as a relationship diamond with attributes or an association entity, depending on the course convention. Explain which convention you use. Both must preserve the student-section identity and enrollment facts.</p>
+<h3>Step 4: make results optional without inventing marks</h3>
+<p>An enrollment may exist before marking is complete. Keep Result optional for the enrollment, with at most one result for the pair in this model. The Result identity is student_id together with section_id. Its participation in the identifying enrollment relationship is total: a result cannot exist for an absent enrollment.</p>
+<p>In the university records, Sadia is enrolled in section 35 but has no result yet. This is a valid state. Do not write zero to mean pending because zero is an actual mark on the scale. Derive grade and grade point from a recorded mark rather than storing contradictory versions of the same decision.</p>
+<h3>Step 5: test small stories</h3>
+<table class="ref"><caption>Stories that challenge the proposed rules</caption><thead><tr><th>Situation</th><th>Expected representation</th><th>Design question</th></tr></thead><tbody>
+<tr><td>A new student has no courses yet</td><td>Student exists without Enrollment</td><td>Is student participation optional?</td></tr>
+<tr><td>CSE 212 runs as A and B</td><td>One Course, two Sections</td><td>Is offering identity separate?</td></tr>
+<tr><td>A student takes a later offering again</td><td>A new section enrollment</td><td>Does the design preserve attempts?</td></tr>
+<tr><td>A result is not available</td><td>No Result for an existing Enrollment</td><td>Is missing different from zero?</td></tr>
+<tr><td>Two teachers share one section</td><td>Not supported by this version</td><td>Should teaching become M:N?</td></tr>
+</tbody></table>
+<p>A rejected scenario is not automatically an implementation error. It may expose a requirement that the current model intentionally excludes. Discuss the policy and change the diagram when necessary. For team teaching, replace the single assignment with an association between teachers and sections.</p>
+<h3>Step 6: add extended ER when roles share identity</h3>
+<p><dfn>Specialisation</dfn> starts with a broad entity type and forms meaningful subtypes. Begin with Person containing shared identity and contact details. Student adds admission information; Teacher adds employment information. Subtypes inherit the Person identity rather than creating unrelated identities for the same human.</p>
+<p><dfn>Generalisation</dfn> works in the other direction. Start with separate Student and Teacher types, notice shared facts and introduce Person above them. The resulting structure may look the same. The terms describe the direction of the design reasoning.</p>
+<pre class="diagram">                    [Person]
+                       |
+                      ISA
+                    /     \
+             [Student]   [Teacher]
+
+Overlap allowed: one person can occupy both roles.
+Partial coverage: a Person may have neither role.</pre>
+<p>Disjoint specialisation permits at most one subtype membership. Overlapping specialisation permits several memberships, such as a student assistant who also teaches. Total specialisation requires every supertype entity to belong to a subtype. Partial specialisation allows other people, such as visitors, outside those subtypes.</p>
+<p>Overlap and completeness are independent decisions. If the system stores only students and teachers but allows a person to be both, use total and overlapping constraints. If other people also exist, use partial coverage. Do not infer these rules from the shape of the ISA branches alone.</p>
+<h2 id="common-mistakes">Repair weak modelling decisions</h2>
+<h3>Using a teacher name as a connection</h3>
+<p>Names can repeat and can change. Connect the section through teacher identity and keep the name as descriptive data. Otherwise, correcting spelling may break the apparent connection or combine two different teachers. Identity should follow the real object rather than a convenient display label.</p>
+<h3>Putting the semester on the course catalogue</h3>
+<p>A catalogue course can survive many semesters. A single semester field on Course forces old facts to be overwritten when a new offering starts. Keep semester on Section. Link enrollment and results to the offering that actually occurred.</p>
+<h3>Drawing a report as a stored fact too early</h3>
+<p>A section result sheet can be derived from enrollments and results. It need not be an entity merely because someone requests the report. If the university needs signed historical snapshots, that is a separate requirement with its own creation date, version and approval rules.</p>
+<h2 id="summary">Validate rules before mapping tables</h2>
+<p>A strong ER design separates stable identities, repeated offerings and relationship facts. State assumptions, test missing and repeated events, and justify subtype rules. Next, implement the conceptual choices in <a href="topic:db-er-to-relational">Converting ER Diagrams to Tables</a>.</p>

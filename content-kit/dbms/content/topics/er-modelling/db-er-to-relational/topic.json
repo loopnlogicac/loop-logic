@@ -1,0 +1,412 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-er-to-relational",
+  "module": "er-modelling",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Converting ER Diagrams to Tables",
+    "bn": "ইআর থেকে রিলেশনাল টেবিল"
+  },
+  "summary": {
+    "en": "Map Chen diagrams to tables using keys, foreign keys and separate relationship tables.",
+    "bn": "কি ও ফরেন কি দিয়ে চেন ডায়াগ্রাম থেকে টেবিল বানাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-er-diagram-design"
+  ],
+  "related": [
+    "db-relational-model"
+  ],
+  "keywords": [
+    "converting er diagrams to tables",
+    "er modelling",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "CHECK constraints are enforced from MySQL 8.0.16. The examples also run on MySQL 8.4."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give each diagram rule a table rule"
+    },
+    {
+      "id": "syntax",
+      "title": "The small set of building blocks"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Map identity, relationships and attributes"
+    },
+    {
+      "id": "examples",
+      "title": "Inspect the mapped university structures"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Mapping errors that change the rules"
+    },
+    {
+      "id": "version-notes",
+      "title": "MySQL enforcement details"
+    },
+    {
+      "id": "summary",
+      "title": "Preserve the meaning of each connection"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Read the one-to-many department mapping",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Each student stores one department number. Department 1 appears four times because several students can share it.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Inspect the enrollment bridge",
+      "level": "basic",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The pair identifies one enrollment. Students 101, 102 and 103 share section 33 without sharing a row.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Map a multivalued phone attribute",
+      "level": "basic",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Two phone rows belong to student 101. A label distinguishes phones within that student, like a partial key.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Map a one-to-one optional card",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The card has its own key. UNIQUE on student_id prevents two cards for one student, while no card is required for other students.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Map a weak room entity",
+      "level": "intermediate",
+      "file": "examples/ex-5.sql",
+      "output": "examples/ex-5.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Room number 101 repeats across buildings. Only the owner key together with the room number identifies a room.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Map optional student lockers",
+      "statementHtml": "<p>Create lockers(locker_id primary key, student_id nullable unique foreign key). Insert assigned locker 1 for student 101 and unassigned locker 2. Return locker_id and student_id ordered by locker_id. Then return the count of lockers for student 108 to demonstrate no assignment.</p>",
+      "hints": [
+        "A nullable foreign key permits an unassigned locker."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Map student interests",
+      "statementHtml": "<p>Create student_interests with the composite key (student_id, interest), referencing students. Store Chess and Reading for 101. Return both rows in key order, then count interests for 108.</p>",
+      "hints": [
+        "One row represents one interest; absence needs no dummy interest."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Optional versus total one-to-one",
+      "statementHtml": "<p>A department may have one head teacher. A teacher may head at most one department. Propose keys and identify a limitation.</p>",
+      "hints": [
+        "A foreign key can validate identity without validating membership."
+      ],
+      "answerHtml": "<p>Put a nullable UNIQUE head_teacher_id foreign key in departments, referencing teachers. NULL permits no assigned head, and UNIQUE prevents one teacher heading two departments. This alone does not ensure that the head belongs to that same department; an additional rule is needed.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Map specialisation",
+      "statementHtml": "<p>Person has Student and Teacher subtypes with overlap allowed. Describe a table mapping.</p>",
+      "hints": [
+        "Inherit the supertype key rather than allocating unrelated subtype identities."
+      ],
+      "answerHtml": "<p>Create Person(person_id, shared fields), Student(person_id, student fields) and Teacher(person_id, teacher fields). Each subtype person_id is both its primary key and a foreign key to Person. The same person may occur in both subtype tables. Total coverage of Person requires an extra cross-table rule.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where does the foreign key go in Department 1:N Student?",
+      "options": [
+        "In Student",
+        "Only in Department",
+        "In every course title",
+        "In neither table"
+      ],
+      "answer": 0,
+      "explanation": "The many-side rows each reference their one parent without storing a list in the parent."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which structure maps Student M:N Section?",
+      "options": [
+        "A comma-separated student column in Section",
+        "Enrollment with student_id and section_id",
+        "One student_id in Course only",
+        "A department-name list"
+      ],
+      "answer": 1,
+      "explanation": "A bridge stores one pair per relationship instance and permits many partners at both ends."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What prevents one student from owning two cards in a card table?",
+      "options": [
+        "Only an index on issued_on",
+        "Only NOT NULL on card_id",
+        "UNIQUE on the card table’s student_id",
+        "A long card number"
+      ],
+      "answer": 2,
+      "explanation": "A foreign key checks the parent, while UNIQUE limits that parent to one card row."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How do you map an entity’s composite address?",
+      "options": [
+        "Store every character as an entity",
+        "Always use a comma-separated list",
+        "Delete the address",
+        "Store its useful component columns"
+      ],
+      "answer": 3,
+      "explanation": "Components such as city and postcode become columns when the application needs them separately."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What key identifies Room under Building when room numbers repeat?",
+      "options": [
+        "The pair building_id and room_number",
+        "room_number alone",
+        "seats alone",
+        "building_name’s first letter"
+      ],
+      "answer": 0,
+      "explanation": "The owner’s identity completes the weak entity’s partial key."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why move several phone values into a child table?",
+      "options": [
+        "Phone numbers cannot contain text",
+        "Each phone can occupy one separately constrained row",
+        "Foreign keys require phone numbers",
+        "It avoids all joins forever"
+      ],
+      "answer": 1,
+      "explanation": "A child table supports separate values without parsing lists."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a NOT NULL foreign key enforce for Student’s department?",
+      "options": [
+        "Every department has a student",
+        "Every student has two departments",
+        "Every student names an existing department",
+        "Every course has a teacher"
+      ],
+      "answer": 2,
+      "explanation": "It enforces participation from the child side, not the existence of a child for every parent."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After mapping the enrollment bridge, how many students share section 33?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM enrollments WHERE section_id = 33;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 4 |\n+---+",
+        "+---+\n| n |\n+---+\n| 3 |\n+---+"
+      ],
+      "answer": 3,
+      "explanation": "The bridge has rows for students 101, 102 and 103 in section 33."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many departments are referenced by student 101’s single department key?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM departments WHERE department_id =\n    (SELECT department_id FROM students WHERE student_id = 101);\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 3 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "Student 101 references the single existing department with key 1."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many enrollment rows represent student 108 before any bridge row is added?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM enrollments WHERE student_id = 108;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 8 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Student 108 exists independently but has no enrollment links."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Strong entities normally become tables with primary keys.",
+      "bn": "স্ট্রং এনটিটি থেকে সাধারণত প্রাইমারি কিসহ টেবিল হয়।"
+    },
+    {
+      "en": "Place a one-to-many foreign key on the many side.",
+      "bn": "এক থেকে অনেক সম্পর্কে অনেকের দিকের টেবিলে ফরেন কি রাখো।"
+    },
+    {
+      "en": "A many-to-many relationship needs its own table.",
+      "bn": "অনেক থেকে অনেক সম্পর্কের জন্য আলাদা টেবিল লাগে।"
+    },
+    {
+      "en": "A one-to-one foreign key also needs uniqueness.",
+      "bn": "এক থেকে এক সম্পর্কের ফরেন কিতে ইউনিক নিয়মও লাগে।"
+    },
+    {
+      "en": "Multivalued attributes move into child tables.",
+      "bn": "একাধিক মানের অ্যাট্রিবিউট আলাদা চাইল্ড টেবিলে রাখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Map 1:1, 1:N and M:N relationships and explain the constraints each mapping needs.",
+      "marks": 5,
+      "answerHtml": "<p>For 1:1, use a foreign key with UNIQUE, placing it preferably on a total-participation side and using NOT NULL there. For 1:N, put the foreign key on N. For M:N, create a bridge with foreign keys to both entities and a suitable key for each relationship instance.</p>"
+    },
+    {
+      "type": "short",
+      "question": "A weak LineItem has line_number within an Order. Give its relational key.",
+      "marks": 4,
+      "answerHtml": "<p>Use Order(order_id, ...) and LineItem(order_id, line_number, ...). The line table primary key is the pair (order_id, line_number), with order_id referencing Order. Line number 1 can then exist in many orders without a key collision.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Explain which ER participation rules ordinary foreign keys fail to guarantee.",
+      "marks": 6,
+      "answerHtml": "<p>A NOT NULL child foreign key ensures that each child has a parent. It does not ensure that every parent has a child. Separate subtype tables also do not guarantee that every supertype row belongs to a subtype. These cross-table requirements need additional application or database logic.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL 8.4 Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

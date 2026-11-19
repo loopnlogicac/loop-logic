@@ -1,0 +1,400 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-relational-model",
+  "module": "relational-model",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Relations, Keys and Constraints",
+    "bn": "রিলেশন, কি ও কনস্ট্রেইন্ট"
+  },
+  "summary": {
+    "en": "Use keys and integrity rules to keep related tables consistent.",
+    "bn": "সম্পর্কিত টেবিলের তথ্য ঠিক রাখতে কি ও ইন্টেগ্রিটির নিয়ম ব্যবহার করো।"
+  },
+  "level": "beginner",
+  "estMinutes": 35,
+  "prerequisites": [
+    "db-er-to-relational"
+  ],
+  "related": [
+    "db-relational-algebra"
+  ],
+  "keywords": [
+    "relations, keys and constraints",
+    "relational model",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "CHECK constraints are enforced from MySQL 8.0.16. The examples also run on MySQL 8.4."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Rows need identities and rules"
+    },
+    {
+      "id": "syntax",
+      "title": "Write distinct constraints for distinct jobs"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Choose minimal identifiers"
+    },
+    {
+      "id": "examples",
+      "title": "Watch integrity rules operate"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not infer keys from small samples"
+    },
+    {
+      "id": "version-notes",
+      "title": "Relational ideas and MySQL details"
+    },
+    {
+      "id": "summary",
+      "title": "Let constraints express promises"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Compare primary and alternate identifiers",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The chosen primary key is student_id. Email is another candidate under this design because it is UNIQUE and NOT NULL.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Observe an ON DELETE cascade",
+      "level": "basic",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Deleting student 106 removes their enrollment and result through cascades. ROLLBACK restores the whole InnoDB change.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Follow an ON UPDATE cascade",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Students 105 and 107 follow their parent department from key 3 to key 9. The final rollback returns the original identifiers.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Catch an invalid parent reference",
+      "level": "basic",
+      "file": "examples/ex-4.sql",
+      "output": null,
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Department 99 does not exist. The foreign key rejects the new student; creating a number does not create a department.</p>",
+      "demonstrates": "runtime-error"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "hard",
+      "title": "Verify a nullable foreign-key action",
+      "statementHtml": "<p>Create mentoring(student_id primary key, teacher_id nullable foreign key to teachers ON DELETE SET NULL). Assign teacher 13 to student 104. Delete teacher 13 after removing their section 34 inside a transaction. Return the mentoring row, rollback, then return it again.</p>",
+      "hints": [
+        "Remove the teacher’s restricted section reference before testing the mentoring action."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Verify composite key scope",
+      "statementHtml": "<p>Count enrollments for student 101, then count the exact pair (101,31), then the absent pair (108,31). Return each count as n in separate result sets.</p>",
+      "hints": [
+        "A component can repeat while a complete key cannot."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Find candidate keys",
+      "statementHtml": "<p>Assume student_id and email are each UNIQUE and NOT NULL. Names may repeat. List the candidate and alternate keys after choosing student_id as primary.</p>",
+      "hints": [
+        "Reason from guarantees rather than the sample’s accidental uniqueness."
+      ],
+      "answerHtml": "<p>The candidate keys are {student_id} and {email}. Both are minimal and unique under the declared assumptions. Choosing student_id as primary makes email an alternate key. The pair {student_id, email} is a nonminimal superkey, and name is not guaranteed unique.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Choose deletion semantics",
+      "statementHtml": "<p>Should deleting a customer silently delete payment history? Explain a suitable rule.</p>",
+      "hints": [
+        "Some child facts must outlive a routine profile change."
+      ],
+      "answerHtml": "<p>Usually no: payment history supports receipts and accounting. RESTRICT on references can block customer deletion while orders or payments depend on it. A controlled archive or anonymisation policy may preserve financial facts. Choose from business obligations rather than using CASCADE everywhere.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is a tuple in the student relation?",
+      "options": [
+        "One student row",
+        "One whole database server",
+        "Only the student_id column",
+        "A sorting command"
+      ],
+      "answer": 0,
+      "explanation": "A tuple combines one value per attribute into a row."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which identifier is a superkey but not minimal when student_id is unique?",
+      "options": [
+        "student_name alone in every design",
+        "The pair student_id and student_name",
+        "hometown alone",
+        "department_id alone"
+      ],
+      "answer": 1,
+      "explanation": "Adding a name to an already unique student_id leaves uniqueness but adds an unnecessary attribute."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What makes a candidate key different from any superkey?",
+      "options": [
+        "It must have exactly two columns",
+        "It must always be numeric",
+        "No proper subset is still a superkey",
+        "It may contain repeated complete values"
+      ],
+      "answer": 2,
+      "explanation": "Minimality is about removing attributes, not the number of characters or columns."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is an alternate key?",
+      "options": [
+        "Any column without an index",
+        "A nullable comment field",
+        "A foreign key that points nowhere",
+        "A candidate key not chosen as primary"
+      ],
+      "answer": 3,
+      "explanation": "A design may have several candidates and selects one as primary."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which integrity rule forbids NULL in a primary key?",
+      "options": [
+        "Entity integrity",
+        "Only presentation order",
+        "Only password policy",
+        "The law of averages"
+      ],
+      "answer": 0,
+      "explanation": "A primary key must identify each row, so its attributes cannot be unknown."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does ON DELETE RESTRICT do when child rows still reference a parent?",
+      "options": [
+        "Deletes every database",
+        "Rejects deletion of that parent",
+        "Changes every child key to zero",
+        "Always cascades"
+      ],
+      "answer": 1,
+      "explanation": "RESTRICT preserves the referenced parent until references are removed or changed."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What prerequisite does ON DELETE SET NULL need in the child?",
+      "options": [
+        "An AUTO_INCREMENT department name",
+        "A generated primary-key value only",
+        "Nullable foreign-key columns",
+        "A nonnullable foreign key"
+      ],
+      "answer": 2,
+      "explanation": "The action must be able to write NULL into its target columns."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many rows can share student_id 101 in the composite enrollment key?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM enrollments WHERE student_id = 101;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 8 |\n+---+",
+        "+---+\n| n |\n+---+\n| 3 |\n+---+"
+      ],
+      "answer": 3,
+      "explanation": "Three different section keys combine with 101 without repeating a complete enrollment key."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After cascading deletion of student 106, how many of their results remain?",
+      "language": "sql",
+      "code": "DELETE FROM students WHERE student_id = 106;\nSELECT COUNT(*) AS n FROM results WHERE student_id = 106;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+----+\n| n  |\n+----+\n| 11 |\n+----+"
+      ],
+      "answer": 0,
+      "explanation": "The student-to-enrollment and enrollment-to-result cascades remove the dependent result."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many nullable hometown values are stored without violating the student primary key?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students WHERE hometown IS NULL;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 8 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "Hometown is not part of the primary key and permits NULL for students 106 and 108."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A tuple is one row and an attribute is one named column.",
+      "bn": "একটি সারি টিউপল, আর নাম দেওয়া কলাম অ্যাট্রিবিউট।"
+    },
+    {
+      "en": "Candidate keys identify rows without unnecessary attributes.",
+      "bn": "অপ্রয়োজনীয় অ্যাট্রিবিউট ছাড়া সারি শনাক্ত করে ক্যান্ডিডেট কি।"
+    },
+    {
+      "en": "Primary key columns cannot contain NULL.",
+      "bn": "প্রাইমারি কির কলামে নাল থাকতে পারে না।"
+    },
+    {
+      "en": "Foreign keys protect references to parent rows.",
+      "bn": "ফরেন কি প্যারেন্ট সারির সঙ্গে সম্পর্ক ঠিক রাখে।"
+    },
+    {
+      "en": "Choose delete actions from the meaning of the relationship.",
+      "bn": "সম্পর্কের অর্থ বুঝে মুছে ফেলার নিয়ম ঠিক করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Define superkey, candidate key and primary key with one example.",
+      "marks": 4,
+      "answerHtml": "<p>Any set containing student_id is a superkey when student_id is unique. {student_id} is a candidate because removing its only attribute loses identification. A chosen candidate becomes primary. {student_id, student_name} is a superkey but not a candidate because the name is unnecessary.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain entity and referential integrity for the enrollment relation.",
+      "marks": 5,
+      "answerHtml": "<p>The pair (student_id, section_id) is non-NULL and unique, satisfying entity integrity. Each component references an existing parent, satisfying referential integrity. The design rejects missing students or sections even if the pair has not previously appeared.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Compare RESTRICT, CASCADE and SET NULL for deletion of a parent.",
+      "marks": 6,
+      "answerHtml": "<p>RESTRICT rejects deletion with references. CASCADE deletes dependent child rows and can continue through other relationships. SET NULL keeps the child but clears nullable reference columns. For a result owned by an enrollment, CASCADE can fit; for historical payments, RESTRICT is usually safer.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL 8.4 Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

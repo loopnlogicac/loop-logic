@@ -1,0 +1,51 @@
+<h2 id="introduction">One database, several useful views</h2>
+<p class="lead">You and a teacher use the same university records, but you need different screens. You see your own results. The teacher sees a section’s mark-entry page. Neither needs to know which disk pages hold the records.</p>
+<p><dfn>DBMS architecture</dfn> explains how these responsibilities fit together. One model separates user views, logical structures and physical storage. Another separates client, application and database roles. Both help you reason about change, but they answer different questions.</p>
+<p>Think of a building directory. Visitors need room labels, planners need the complete floor layout, and engineers need construction details. These descriptions refer to the same building at different levels. Database descriptions similarly hide details that a particular user does not need.</p>
+<h2 id="how-it-works">The three-schema architecture</h2>
+<p>An <dfn>external schema</dfn> describes the data visible to a particular user group. A teacher’s view might contain student names and marks for assigned sections. A student’s view might contain only their own completed results. Several external schemas can coexist over one database.</p>
+<p>The <dfn>conceptual schema</dfn> describes the complete logical structure. It defines Students, Courses, Sections and Enrollments, their attributes and their relationships. It also states logical rules, such as requiring an enrollment to reference an existing student. Conceptual does not mean a particular disk layout.</p>
+<p>The <dfn>internal schema</dfn> describes storage choices. It includes record organisation, pages, indexes and access paths. A B-tree index may help find student 101 quickly. The application asks for that student without naming a page number or walking the index itself.</p>
+<pre class="diagram">External: student results    External: teacher mark entry
+              \                  /
+              Conceptual university schema
+                           |
+                Internal files and indexes
+                           |
+                       Disk pages</pre>
+<p>Mappings connect the levels. An external-to-conceptual mapping explains where visible values come from. A conceptual-to-internal mapping explains how logical records are stored. Real products do not necessarily expose three separate configuration files with these exact names. The architecture is a useful way to reason about their interfaces.</p>
+<h3>Two kinds of data independence</h3>
+<p><dfn>Physical data independence</dfn> means storage changes can leave the conceptual schema unchanged. Adding an index, moving data to another disk or changing page organisation should not require rewriting every student query. Answers can remain correct even when execution speed changes.</p>
+<p><dfn>Logical data independence</dfn> means some conceptual changes can leave external schemas unchanged. Suppose student contact details move into a separate table. A compatible view might still expose the old report columns. Preserving this interface is harder because reports may depend on names, relationships and update behaviour.</p>
+<p>Independence is a design goal, not permission to skip testing. A new index may slow writes. A replacement view may accidentally multiply rows. Check both the meaning of results and the practical effects of a change. A stable column name is insufficient if its meaning changes.</p>
+<h3>What the server does</h3>
+<p>A query passes through several cooperating components. The parser checks syntax. Name resolution checks that referenced objects exist. Privilege checks decide whether the account may perform the requested work. The optimiser compares possible access plans using available statistics.</p>
+<p>The execution engine carries out the selected plan. The storage engine retrieves or changes records and maintains indexes. A buffer pool keeps useful pages in memory, reducing repeated disk reads. Transaction and recovery components coordinate related changes and maintain information needed after interruptions.</p>
+<table class="ref"><caption>Responsibilities during a result lookup</caption><thead><tr><th>Component</th><th>Question it answers</th></tr></thead><tbody>
+<tr><td>Parser and resolver</td><td>Is the request well formed, and do its names exist?</td></tr>
+<tr><td>Privilege checks</td><td>May this account request these records?</td></tr>
+<tr><td>Optimiser</td><td>Which suitable access plan appears cheapest?</td></tr>
+<tr><td>Executor and storage engine</td><td>How are the matching rows obtained?</td></tr>
+<tr><td>Transaction and recovery services</td><td>How do changes remain coordinated and recoverable?</td></tr>
+</tbody></table>
+<h2 id="worked-examples">Follow changes through the layers</h2>
+<h3>Adding an index for roll-number searches</h3>
+<p>A result report repeatedly searches by student identifier. First, confirm the logical query and its required answer. Next, inspect the access plan and add a suitable index if needed. Finally, rerun the report and measure both reads and writes. The conceptual student attributes do not change.</p>
+<p>This is physical independence because applications still ask the same question. An index is an additional route to stored data. It is not a new student fact. Removing or rebuilding it should not redefine the student’s identity or marks.</p>
+<h3>Splitting student identity and contact details</h3>
+<p>Suppose the conceptual design separates StudentIdentity from StudentContact. Existing reports expect a combined student record. A view can join the new tables and expose the former columns. Verify that the contact key allows at most one contact row per student.</p>
+<p>If the new design allows several contacts, a join could return several rows for one student. The old report would then count students incorrectly. Logical independence requires preserving the old meaning, perhaps by choosing one defined primary contact. Some old writes may need deliberate application changes.</p>
+<h3>Serving a browser through an application</h3>
+<p>A two-tier setup commonly has a client application speaking directly to the database server. A three-tier portal places an application server between the browser and MySQL. The browser handles interaction; the middle tier handles application rules and sessions; MySQL stores and queries the records.</p>
+<pre class="diagram">Browser -- request --&gt; Application server -- SQL --&gt; MySQL
+Browser &lt;-- page ----- Application server &lt;-- rows -- MySQL</pre>
+<p>The middle tier keeps database credentials away from a public page. It verifies which student owns a request before retrieving results. MySQL still applies account permissions. These layers may run on one development laptop or separate production machines; tiers describe responsibilities rather than a mandatory machine count.</p>
+<h2 id="common-mistakes">Architecture mix-ups</h2>
+<h3>Equating schemas with deployment tiers</h3>
+<p>External, conceptual and internal levels describe data abstraction. Browser, application and database tiers describe deployment roles. Both diagrams have three parts, but counting parts does not make them identical. A three-tier portal still uses all three abstraction levels inside its database design.</p>
+<h3>Assuming the optimiser knows the business goal</h3>
+<p>The optimiser chooses a plan for the query you wrote. It cannot repair a query that requests the wrong student or duplicates a payment total. Establish the correct logical question before measuring plans. Fast retrieval of the wrong result remains a design failure.</p>
+<h3>Treating memory caching as durable storage</h3>
+<p>The buffer pool accelerates access but ordinary memory disappears when power fails. Durable storage and recovery procedures serve a different purpose. Increasing memory may improve speed without providing a backup. Keep performance and recovery questions separate when evaluating a server.</p>
+<h2 id="summary">Keep the interfaces clear</h2>
+<p>User views, a shared logical design and internal storage describe different layers of one database. Mappings can protect applications from some changes. Client-server tiers separate application responsibilities. Next, compare the structures those logical designs can use in <a href="topic:db-data-models">Data Models</a>.</p>
