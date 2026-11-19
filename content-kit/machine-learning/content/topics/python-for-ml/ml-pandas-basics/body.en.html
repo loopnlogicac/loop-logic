@@ -1,0 +1,44 @@
+<h2 id="introduction">The column with a name</h2>
+<div class="callout story"><p>Nana asks Tuktuk for the sweetness column. The robot remembers “column one”, but Mina has inserted fruit names at the front. Now the robot reads sizes as sweetness. Rafi writes names above the columns and labels beside the rows. Mina can move a column without changing what its name means.</p></div>
+<p class="lead">pandas adds labels to tabular data. You can ask for size_cm instead of remembering a column position. You can also select rows, inspect types and create a calculated column while keeping related measurements together.</p>
+<p>This lesson builds a small table directly in Python. The next lesson opens larger course CSVs. Start with five rows so you can verify exactly what every selection keeps and which table an assignment changes.</p>
+<h2 id="intuition">Labels live beside positions</h2>
+<p>A <dfn>DataFrame</dfn> is a table with named columns and row labels. A <dfn>Series</dfn> is one labelled sequence, often a single column. An <dfn>index</dfn> supplies the row labels. Labels need not equal zero-based row positions.</p>
+<table class="ref"><caption>Five fruit rows whose labels differ from positions</caption><thead><tr><th scope="col">Position</th><th scope="col">Row label</th><th scope="col">size_cm</th><th scope="col">sweetness</th></tr></thead><tbody>
+<tr><td>0</td><td>10</td><td>2</td><td>3</td></tr><tr><td>1</td><td>20</td><td>3</td><td>2</td></tr><tr><td>2</td><td>30</td><td>4</td><td>3</td></tr><tr><td>3</td><td>40</td><td>6</td><td>7</td></tr><tr><td>4</td><td>50</td><td>7</td><td>8</td></tr>
+</tbody></table>
+<p>Row label 20 belongs to position 1. Both identify the second row here, but they are different kinds of address. If you reorder the table, the label can travel with its fruit while position changes. An index is not automatically a unique real-world identifier; these labels were chosen only for demonstration.</p>
+<p>Selecting <code>frame["size_cm"]</code> returns a Series. Selecting <code>frame[["size_cm"]]</code> uses a list of column names and returns a DataFrame with one column. The outer brackets select; the inner brackets make the Python list.</p>
+<h2 id="how-it-works">Inspect, select and derive</h2>
+<p>Construct a DataFrame from a dictionary whose keys are column names and whose values have equal lengths. Supply the five row labels with index when creating it. Otherwise pandas normally creates default labels beginning at zero. Default labels can make label and position selections look interchangeable until a filter or reorder changes the table.</p>
+<p>Three inspection methods answer different questions. head shows the first five rows by default; head(2) shows only two. info lists column types and present-value counts. describe summarises numeric columns with count, mean, spread and selected percentiles. None of them proves the measurements are correct. For this size column, count is five, minimum is 2, maximum is 7 and the mean is 22/5 = 4.4.</p>
+<p>Use loc for labels and iloc for positions. Read <code>frame.loc[20, "size_cm"]</code> as the size in the row labelled 20: it is 3. Read <code>frame.iloc[2, 0]</code> as row position 2, column position 0: it is 4. For the ordered unique labels here, loc[20:40] includes both endpoint labels and retains 20, 30 and 40. iloc[1:3] excludes stop position 3, retaining labels 20 and 30.</p>
+<p>A row filter produces a Boolean Series. Size at least 4 gives false, false, true, true, true. Sweetness at least 7 gives false, false, false, true, true. Combine them with &amp; and parentheses around each comparison. The result keeps only labels 40 and 50.</p>
+<pre class="diagram">build a named table
+inspect rows, types and summaries
+mask = (size reaches cutoff) AND (sweetness reaches cutoff)
+chosen = an independent copy of rows where mask is true
+chosen["size_mm"] = chosen["size_cm"] * 10</pre>
+<p>The conversion adds 60 mm for label 40 and 70 mm for label 50. It changes neither the physical fruit nor the original centimetre column. Give derived columns names that state their units. Copying the selection before assignment makes the intended destination clear and avoids depending on version-specific chained-assignment behaviour.</p>
+<p>pandas also aligns labelled Series by their index when combining them. Two Series with the same length but different row labels may not add by position. Preserve the index when deriving columns from the same frame. If you intentionally need positional arithmetic, convert or reset labels deliberately and explain why.</p>
+<h2 id="try-it-yourself">Predict both the values and the labels</h2>
+<p>From the picture, write the labels selected by loc[30:50]. Then write the labels selected by iloc[2:4]. The first returns three rows, while the second returns two. Change the size cutoff to 8 and check that the filtered table has zero rows while still retaining its column names.</p>
+<div class="callout unplugged"><p>Draw the five-row table on card. Put row-label slips down the left side and position slips farther left. Swap two complete rows while carrying their labels. Leave the position slips fixed. Ask a partner to fetch label 20, then position 1, and explain why those requests can now point to different fruits.</p></div>
+<h2 id="examples">Use each selector for its own question</h2>
+<p>The first program constructs a named table and selects a Series. Its head preview shows labels 10 and 20 rather than inventing new labels zero and one.</p>
+<div data-example="ex-1"></div>
+<p>The inspection program writes info to a text file and prints selected numeric summaries. Open info.txt to inspect the dtype and non-null counts; its columns should agree with the original values.</p>
+<div data-example="ex-2"></div>
+<p>The selection example deliberately uses labels unlike positions. Check both slice endpoint rules against the picture before running it.</p>
+<div data-example="ex-3"></div>
+<p>The last program combines conditions, copies the selected rows and adds millimetres. It prints the original column names to show which table received the new column.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Choose the destination deliberately</h2>
+<h3>Using and between Series</h3><p>Python and asks for one truth value from each operand. A Boolean Series contains several values, so this request is ambiguous. Use parenthesised comparisons joined with &amp; for rowwise conjunction.</p>
+<h3>Guessing whether 20 means a label</h3><p>The method answers that question: loc uses labels and iloc uses positions. Do not rely on an index that happens to match positions in the current table.</p>
+<h3>Chaining selection and assignment</h3><p>A filtered expression followed by another bracket assignment can obscure which object you intend to edit. Either make a named copy for separate work or use one loc assignment on the original DataFrame.</p>
+<h2 id="going-deeper">Optional: labelled alignment</h2>
+<div class="callout deeper"><p>For Series a labelled [10,20] with values [2,3], and b labelled [20,10] with values [7,8], a+b pairs by label. Label 10 gets 2+8=10; label 20 gets 3+7=10. Raw positional addition would give [9,11] instead. Index alignment helps prevent accidental row mismatches, but only when labels themselves are meaningful and correctly maintained.</p></div>
+<h2 id="summary">Names carry meaning</h2>
+<ul><li>A DataFrame holds a labelled table.</li><li>A Series represents one labelled sequence.</li><li>head previews; info reports structure; describe summarises numbers.</li><li>loc selects labels and iloc selects positions.</li><li>Combine rowwise conditions with &amp; and parentheses.</li><li>Add derived columns to an explicit destination.</li></ul>
+<p>Continue with <a href="topic:ml-loading-data">loading and exploring shared datasets</a>.</p>

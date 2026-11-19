@@ -1,0 +1,44 @@
+<h2 id="introduction">A tray with numbered spaces</h2>
+<div class="callout story"><p>Tuktuk doubles Mina’s list of fruit sizes. Instead of larger measurements, it prints the same list twice. Nana laughs: the robot has brought two copies of the shopping list. Rafi gives it a numeric tray instead. Now doubling means changing each number, rather than repeating the container.</p></div>
+<p class="lead">NumPy arrays organise numeric values so arithmetic can act on many entries together. The arrangement matters as much as the values. A table of five fruits with two measurements is different from a single row of ten unrelated numbers.</p>
+<p>You will describe an array’s dimensions, choose entries and keep selected labels aligned. You will also reshape a flat collection into a feature table. Later learning methods will expect that table to have examples in rows.</p>
+<h2 id="intuition">Rows hold examples</h2>
+<p>An <dfn>array</dfn> is a collection with a regular arrangement of entries. Its <dfn>shape</dfn> lists the length along each dimension. Its <dfn>dtype</dfn> describes how values are represented, such as whole numbers or floating-point numbers.</p>
+<table class="ref"><caption>A numeric matrix X, with size then sweetness</caption><thead><tr><th scope="col">Row position</th><th scope="col">Column 0: cm</th><th scope="col">Column 1: sweetness</th></tr></thead><tbody>
+<tr><td>0</td><td>2</td><td>3</td></tr><tr><td>1</td><td>3</td><td>2</td></tr><tr><td>2</td><td>4</td><td>3</td></tr><tr><td>3</td><td>6</td><td>7</td></tr><tr><td>4</td><td>7</td><td>8</td></tr>
+</tbody></table>
+<p>The shape is (5,2): five rows followed by two columns. The property ndim is 2 because the matrix has two dimensions. The five-entry size vector alone has shape (5,) and ndim 1. The comma in (5,) is Python’s spelling for a one-entry tuple; it does not add a dimension.</p>
+<p>NumPy’s usual numeric arrays use one dtype for all cells. That enables compact storage and numeric operations. Keep text labels in a separate array rather than mixing fruit names into the numeric matrix. Units still need column documentation; float64 does not tell you whether an entry is centimetres or sweetness.</p>
+<h2 id="how-it-works">Find the intended entries</h2>
+<p>Construct the matrix with <code>np.array</code> from a list of equal-length rows. NumPy is usually imported as np. You may request <code>dtype=np.float64</code> when fractional measurements are expected. An integer array can discard a fractional part if you later assign a decimal into its existing integer storage, so choose the representation deliberately.</p>
+<p>Indexing starts at zero. In the pictured matrix, <code>X[2, 0]</code> is 4: row 2 is the third fruit, and column 0 is its size. <code>X[-1, 1]</code> finds the last row’s sweetness, 8. A negative index counts from the end; it does not describe a negative measurement.</p>
+<p>A slice selects a range. Its stop is excluded, so <code>X[:2]</code> keeps rows 0 and 1. <code>X[:, 0]</code> takes all rows but selects only their size entries, producing a vector of shape (5,). Use <code>X[:, 0:1]</code> when you want a table of shape (5,1). The numeric values agree, but their dimensions differ.</p>
+<p>A Boolean mask is a row-by-row yes/no selection. For sizes at least 4, compare the entire size column with 4. You get [False,False,True,True,True]. Applying that mask to X retains [4,3], [6,7] and [7,8]. Applying it to the original label vector retains apple, mango and mango in the same order.</p>
+<pre class="diagram">read X and matching labels y
+mask = test the size of each row
+selected_X = rows of X whose mask entry is true
+selected_y = entries of y with that same mask
+check that row and label positions still correspond</pre>
+<p>Reshape rearranges the indexing of the same number of entries. The sequence [2,3,3,2,4,3,6,7,7,8] can become five rows of two entries. Read left to right across each row to recover that original sequence. A requested six-by-two shape would require twelve entries and fails. One dimension may be -1, allowing NumPy to infer its length from the others.</p>
+<p>Reshape is not transpose. Turning a five-by-two matrix into a two-by-five arrangement by reshape changes which values share a row. It does not automatically swap the scientific roles of examples and features. Decide what the rows mean before changing the layout.</p>
+<h2 id="try-it-yourself">Move paper before moving data</h2>
+<p>Predict the values and shape of <code>X[1:4, 0:1]</code> from the picture. It contains sizes 3, 4 and 6 as a three-row, one-column table. Try an empty slice such as <code>X[2:2]</code>; its row count is zero even though it still has two feature columns.</p>
+<div class="callout unplugged"><p>Write the ten matrix entries on small cards. Place them in five pairs, keeping each pair’s fruit name nearby. Lay the same cards in two rows of five. Ask whether each new row still describes one fruit. This shows why an allowed numeric reshape can still be a wrong data interpretation.</p></div>
+<h2 id="examples">Build, slice, mask and reshape</h2>
+<p>Compare list multiplication and array multiplication on the same values. Observe both the numeric result and its length.</p>
+<div data-example="ex-1"></div>
+<p>The matrix example names its shape before selecting a row, a scalar and a column. Check each selection against the five-row picture.</p>
+<div data-example="ex-2"></div>
+<p>The mask example applies one selection to both measurements and labels. An apple remains among the selected records because size alone does not equal a label.</p>
+<div data-example="ex-3"></div>
+<p>The reshape example also makes an explicit copy of a small slice. Changing the copy leaves the original size untouched.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Values can be right while shapes are wrong</h2>
+<h3>Dropping the feature dimension</h3><p>A length-five vector and a five-row column table have different shapes. Many estimator APIs require the latter for a single feature. Inspect shape immediately before passing the data onward.</p>
+<h3>Editing a shared slice</h3><p>Basic NumPy slicing commonly returns a view of the same storage. Editing that view can change the original array. Use copy when independent editing is intended. Boolean indexing produces a separate selection, so do not assume all indexing behaves identically.</p>
+<h3>Masking only the measurements</h3><p>If you remove two rows from X but keep every entry in y, labels no longer match examples. Create the mask once and reuse it for both selections.</p>
+<h2 id="going-deeper">Optional: dimensions and storage</h2>
+<div class="callout deeper"><p>For n examples and d features, a dense X has shape (n,d) and n×d entries. With float64, the numeric payload uses eight bytes per entry, excluding array metadata. Thus a five-by-two matrix needs 80 payload bytes. Reshape may share the original storage or require a copy depending on layout. It must preserve the element count regardless of whether storage is shared.</p></div>
+<h2 id="summary">Read shape as a sentence</h2>
+<ul><li>A numeric matrix keeps one example in each row.</li><li>shape gives dimension lengths; ndim counts dimensions.</li><li>dtype describes representation rather than physical units.</li><li>Integer indices can remove dimensions.</li><li>Apply identical masks to features and labels.</li><li>Reshape preserves entry count but not every interpretation.</li></ul>
+<p>Next, use these arrangements for <a href="topic:ml-numpy-math">broadcasting and array arithmetic</a>.</p>
