@@ -328,8 +328,8 @@ export function buildRoutes(d: AppDeps): Route[] {
 
     // instructor dashboard (signed in, instructor or admin)
     route('GET', '/api/instructor/question-bank', ({ staff }) => bank().list(staff!), 'staff'),
-    route('POST', '/api/instructor/question-bank', ({ staff, body }) => bank().save(staff!, body), 'staff'),
-    route('PUT', '/api/instructor/question-bank/:id', ({ staff, params, body }) => bank().save(staff!, body, params.id!), 'staff'),
+    route('POST', '/api/instructor/question-bank', ({ staff, body }) => bank().save(staff!, body), 'staff', 64 * 1024),
+    route('PUT', '/api/instructor/question-bank/:id', ({ staff, params, body }) => bank().save(staff!, body, params.id!), 'staff', 64 * 1024),
     route('DELETE', '/api/instructor/question-bank/:id', ({ staff, params }) => bank().delete(staff!, params.id!), 'staff'),
     route('GET', '/api/custom-quizzes/:id', ({ learnerId, params, query }) => bank().quiz(learnerId, params.id!, lang(query.get('lang'))), 'learner'),
     route('POST', '/api/custom-quizzes/:id/grade', ({ learnerId, params, body }) => bank().grade(learnerId, params.id!, body?.answers, lang(body?.lang)), 'learner'),

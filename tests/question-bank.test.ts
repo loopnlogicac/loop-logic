@@ -47,7 +47,8 @@ test('custom quizzes grade server-side, track own completion and flow into the g
   await assert.rejects(bank.grade('a', quizId, {}, 'en'), /every question/); assert.equal((await store.readingEvents('a')).length, 0);
   await assert.rejects(bank.grade('a', quizId, { [q.id]: 99 }, 'en'));
   const r = await bank.grade('a', quizId, { [q.id]: 0, score: 0, answer: 3 }, 'bn'); assert.equal(r.score, 1); assert.equal(r.results[q.id].explanation, 'উপরেরটি আগে সরে।');
-  const d = await classes.dashboard(teacher, c.id); const student = d.roster.find((s) => s.learnerId === 'a')!;
+  await classes.join('c', 'c@example.com', true, c.code);
+  const d = await classes.dashboard(teacher, c.id); assert.equal(d.kpis.quizAvg, null, 'one contributor must not become a class figure even with three enrollments'); const student = d.roster.find((s) => s.learnerId === 'a')!;
   assert.equal(student.assignments[0]!.quizPercent, 100); assert.equal(student.assignments[0]!.done, 1); assert.equal(student.overallPercent, 100);
   assert.equal(d.roster.find((s) => s.learnerId === 'b')!.assignments[0]!.quizPercent, null);
   assert.ok((await classes.gradebookCsv(teacher, c.id)).includes('"✓","100"'));

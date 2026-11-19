@@ -4,7 +4,7 @@ import type { TutorialService } from './tutorials.ts';
 import type { Staff } from './classes.ts';
 import { AppError } from './service.ts';
 type Lang = 'en' | 'bn';
-const bad = () => new AppError('bad_question', 400, 'Write a question and explanation in English and Bangla, four distinct options in each language, and a valid answer.');
+const bad = (lang: Lang = 'en') => new AppError('bad_question', 400, lang === 'bn' ? 'ইংরেজি ও বাংলায় প্রশ্ন আর ব্যাখ্যা দাও। দুই ভাষায় চারটি আলাদা অপশন আর সঠিক উত্তর বেছে নাও।' : 'Write a question and explanation in English and Bangla, four distinct options in each language, and a valid answer.');
 const text = (v: unknown, max: number) => typeof v === 'string' && v.trim() && v.length <= max ? v.trim() : null;
 export class QuestionBankService {
   private readonly store: Store;
@@ -20,9 +20,9 @@ export class QuestionBankService {
     const prev = id ? await this.owned(staff, id) : undefined;
     this.tutorials.topic(String(body?.track ?? ''), String(body?.topic ?? ''), 'en');
     for (const lang of ['en', 'bn']) {
-      if (!text(body.prompt?.[lang], 2000) || !text(body.explanation?.[lang], 3000) || !Array.isArray(body.options?.[lang]) || body.options[lang].length !== 4 || body.options[lang].some((o: unknown) => !text(o, 500)) || new Set(body.options[lang].map((o: string) => o.trim())).size !== 4) throw bad();
+      if (!text(body.prompt?.[lang], 2000) || !text(body.explanation?.[lang], 3000) || !Array.isArray(body.options?.[lang]) || body.options[lang].length !== 4 || body.options[lang].some((o: unknown) => !text(o, 500)) || new Set(body.options[lang].map((o: string) => o.trim())).size !== 4) throw bad(body.lang === 'bn' ? 'bn' : 'en');
     }
-    if (!/[\u0980-\u09ff]/.test(body.prompt.bn) || !/[\u0980-\u09ff]/.test(body.explanation.bn) || !Number.isInteger(body.answer) || body.answer < 0 || body.answer > 3) throw bad();
+    if (!/[\u0980-\u09ff]/.test(body.prompt.bn) || !/[\u0980-\u09ff]/.test(body.explanation.bn) || !Number.isInteger(body.answer) || body.answer < 0 || body.answer > 3) throw bad(body.lang === 'bn' ? 'bn' : 'en');
     const qid = id ?? randomUUID(), at = new Date().toISOString();
     const data = { ownerId: prev?.data.ownerId ?? staff.learnerId, track: body.track, topic: body.topic, prompt: { en: body.prompt.en.trim(), bn: body.prompt.bn.trim() }, options: { en: body.options.en.map((v: string) => v.trim()), bn: body.options.bn.map((v: string) => v.trim()) }, answer: body.answer, explanation: { en: body.explanation.en.trim(), bn: body.explanation.bn.trim() }, status: body.status === 'approved' ? 'approved' : 'draft', createdAt: prev?.data.createdAt ?? at };
     await this.store.putDoc({ kind: 'bank_question', id: qid, data, updatedAt: at });

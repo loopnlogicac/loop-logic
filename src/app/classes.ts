@@ -319,7 +319,7 @@ export class ClassService {
         students: active.length, pending: mine.length - active.length,
         activeWeek: roster.filter((r) => r.lastActive && Date.parse(r.lastActive) > weekAgo).length,
         avgProgress: delivered && roster.length ? Math.round(roster.reduce((n, r) => n + Math.min(1, r.done / delivered), 0) / roster.length * 100) : null,
-        quizAvg: enough && quizAvgs.length ? Math.round(quizAvgs.reduce((a, b) => a + b, 0) / quizAvgs.length) : null,
+        quizAvg: enough && quizAvgs.length >= this.minGroup ? Math.round(quizAvgs.reduce((a, b) => a + b, 0) / quizAvgs.length) : null,
         needHelp: roster.filter((r) => r.reasons.length).length, delivered,
       },
       pending: mine.filter((e) => e.data.status === 'pending').map((e) => ({ learnerId: e.data.learnerId, email: e.data.email, at: e.data.joinedAt })),
