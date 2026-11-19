@@ -42,7 +42,7 @@ function videoCard(c, v, L) {
       el('p', { class: 'small', style: 'margin:6px 0 0' }, el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: L.ytLink }))))));
 }
 
-function render(c, v) {
+function render(c, v, tut) {
   const L = t();
   applyI18n(L);
   document.title = `${c.title} · Loop & Logic`;
@@ -55,6 +55,15 @@ function render(c, v) {
         el('p', { text: c.blurb })),
       el('span', { class: `tag ${c.adaptive ? 'live' : ''}`, text: c.adaptive ? L.adaptiveTag : L.videoTag })),
   ];
+  const tr = tut?.tracks?.find((x) => x.course === c.id && x.available);
+  if (tr) {
+    const bn = getLang() === 'bn';
+    nodes.push(el('a', { class: 'card tut-banner', href: `/learn.html?track=${tr.id}` },
+      el('div', {}, el('span', { class: 'pill', text: bn ? 'লিখিত টিউটোরিয়াল' : 'Written tutorial' }),
+        el('h2', { text: tr.title }),
+        el('p', { text: bn ? `${num(tr.delivered)}টি টপিক${tr.labs ? `, ${num(tr.labs)}টি ইন্টারঅ্যাকটিভ ল্যাব` : ''}: চালানো যায় এমন কোড, কুইজ আর অনুশীলন।` : `${num(tr.delivered)} topics${tr.labs ? ` and ${num(tr.labs)} interactive labs` : ''}: runnable code, quizzes and practice to go with the videos.` })),
+      el('span', { class: 'btn primary', text: bn ? 'পড়া শুরু করো →' : 'Start reading →' })));
+  }
 
   const left = el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: L.lessons })));
   if (!c.lessonList.length) {
@@ -91,8 +100,8 @@ function render(c, v) {
 
 async function load() {
   try {
-    const [c, v] = await Promise.all([api('GET', `/api/courses/${encodeURIComponent(id)}?lang=${getLang()}`), api('GET', `/api/courses/${encodeURIComponent(id)}/videos?lang=${getLang()}`)]);
-    render(c, v);
+    const [c, v, tut] = await Promise.all([api('GET', `/api/courses/${encodeURIComponent(id)}?lang=${getLang()}`), api('GET', `/api/courses/${encodeURIComponent(id)}/videos?lang=${getLang()}`), api('GET', `/api/learn?lang=${getLang()}`).catch(() => null)]);
+    render(c, v, tut);
   } catch (e) {
     if (e.status === 404) {
       main.replaceChildren(el('div', { class: 'card empty' }, el('h2', { text: t().notFound }), el('a', { class: 'btn secondary', href: '/courses.html', text: t().back })));

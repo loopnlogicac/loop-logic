@@ -12,6 +12,7 @@ import type { WatchService } from '../app/watch.ts';
 import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
+import type { TutorialService } from '../app/tutorials.ts';
 import { StaleStateError } from '../store/store.ts';
 import { AuthError, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
@@ -24,6 +25,8 @@ const MIME: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.ico': 'image/x-icon',
   '.json': 'application/json; charset=utf-8',
 };
@@ -36,7 +39,10 @@ export interface AppDeps {
   labs: LabService;
   watch: WatchService;
   extras: VideoExtrasService;
+  tutorials: TutorialService;
   auth: Authenticator;
+  /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
+  labModelFile: string;
   publicDir: string;
   config: {
     supabaseUrl: string | null;
@@ -98,7 +104,7 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 export function buildRoutes(d: AppDeps): Route[] {
-  const { learning, reading, instructor, learner, labs, watch, extras } = d;
+  const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   return [
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
@@ -130,6 +136,15 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/videos/:vid/extras', ({ params, body }) => extras.save(params.vid!, body), 'editor', 1024 * 1024),
     route('GET', '/api/instructor/video-extras', () => extras.exportAll(), 'editor'),
     route('POST', '/api/courses/:id/videos/watched', ({ params, body, learnerId }) => watch.mark(params.id!, learnerId, { videoId: body.videoId, watched: body.watched })),
+
+    // tutorials (content-kit packages)
+    route('GET', '/api/learn', ({ query }) => tutorials.list(lang(query.get('lang'))), 'none'),
+    route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
+    route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
+    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),
+    route('GET', '/api/learn/:track/:topic/practice/:pid', ({ params, query }) => tutorials.solution(params.track!, params.topic!, params.pid!, lang(query.get('lang'))), 'none'),
+    route('GET', '/api/learn/:track/:topic/labs/:lab', ({ params, query }) => tutorials.lab(params.track!, params.topic!, params.lab!, lang(query.get('lang'))), 'none'),
+    route('POST', '/api/learn/:track/:topic/labs/:lab/run', ({ params, body }) => tutorials.runLab(params.track!, params.topic!, params.lab!, body.input, lang(body.lang)), 'none'),
 
     // labs
     route('GET', '/api/labs', ({ query }) => ({ labs: labs.list(lang(query.get('lang'))) }), 'none'),
@@ -172,7 +187,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     ),
     route('POST', '/api/quiz/check', ({ body, learnerId }) => reading.checkQuiz(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), choice: Number(body.choice), lang: lang(body.lang) })),
     route('POST', '/api/ask', async ({ body, learnerId }) =>
-      reading.chat(learnerId, { question: body.question, selection: body.selection, history: body.history, lang: lang(body.lang), page: await chatPage(body.page, lang(body.lang), extras) })),
+      reading.chat(learnerId, { question: body.question, selection: body.selection, history: body.history, lang: lang(body.lang), page: await chatPage(body.page, lang(body.lang), extras, tutorials, typeof body.question === 'string' ? body.question : '') })),
     route('GET', '/api/ask/limit', ({ learnerId }) => ({ left: reading.aiCallsLeft(learnerId) })),
     route('POST', '/api/selection-help/feedback', ({ body, learnerId }) => reading.feedback(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), value: String(body.value ?? ''), lang: lang(body.lang) })),
 
@@ -193,14 +208,20 @@ export function createApp(d: AppDeps) {
 
   async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
     const rel = pathname === '/' ? '/index.html' : pathname;
-    const file = normalize(join(publicDir, rel));
-    if (!file.startsWith(publicDir)) return send(res, 404, { error: { code: 'not_found', message: 'Not found' } });
+    let file = normalize(join(publicDir, rel));
+    if (pathname === '/lab-model.js') file = d.labModelFile;
+    else if (pathname.startsWith('/learn-assets/')) {
+      const [, , track, topic, name] = pathname.split('/');
+      const p = track && topic && name ? d.tutorials.assetPath(track, topic, name) : null;
+      if (!p) return send(res, 404, { error: { code: 'not_found', message: 'Not found' } });
+      file = p;
+    } else if (!file.startsWith(publicDir)) return send(res, 404, { error: { code: 'not_found', message: 'Not found' } });
     try {
       const info = await stat(file);
       if (!info.isFile()) throw new Error('not a file');
       const data = await readFile(file);
       res.writeHead(200, {
-        'content-type': MIME[extname(file)] ?? 'application/octet-stream',
+        'content-type': (pathname === '/lab-model.js' ? MIME['.js'] : MIME[extname(file)]) ?? 'application/octet-stream',
         'cache-control': 'no-cache',
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'same-origin',

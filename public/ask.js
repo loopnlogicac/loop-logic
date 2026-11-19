@@ -33,6 +33,7 @@ function pageContext() {
   if (path.endsWith('/course.html')) return { kind: 'course', courseId: q.get('id') };
   if (path.endsWith('/lesson.html')) return { kind: 'lesson', lessonId: q.get('id') };
   if (path.endsWith('/lab.html')) return { kind: 'lab', lessonId: q.get('id') };
+  if (path.endsWith('/learn.html') && q.get('topic')) return { kind: 'tutorial', track: q.get('track'), topic: q.get('topic') };
   return { kind: 'page' };
 }
 

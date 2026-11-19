@@ -10,6 +10,7 @@ import { LearnerService } from '../app/learner.ts';
 import { WatchService } from '../app/watch.ts';
 import { VideoExtrasService } from '../app/video-extras.ts';
 import { LabService } from '../app/labs.ts';
+import { TutorialService } from '../app/tutorials.ts';
 import { ReadingService } from '../reading/service.ts';
 import { MemoryStore, type Store } from '../store/store.ts';
 import { SupabaseStore } from '../store/supabase.ts';
@@ -45,6 +46,7 @@ const learner = new LearnerService(store, reading, learning);
 const labs = new LabService(store);
 const extras = new VideoExtrasService(store);
 const watch = new WatchService(store, extras);
+const tutorials = new TutorialService(store, join(here, '../../content-kit'));
 
 const server = createApp({
   learning,
@@ -54,7 +56,9 @@ const server = createApp({
   labs,
   watch,
   extras,
+  tutorials,
   auth,
+  labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),
   publicDir: join(here, '../../public'),
   config: {
     supabaseUrl: env.SUPABASE_URL ?? null,
@@ -76,6 +80,7 @@ server.listen(port, host, () => {
   console.log(`  data:        ${store.kind}${store.kind === 'memory' ? ' (resets on restart)' : ''}`);
   console.log(`  sign-in:     ${auth.mode}`);
   console.log(`  AI:          ${gateway.describe()}`);
+  console.log(`  tutorials:   ${tutorials.list('en').totals.topics} topics, ${tutorials.list('en').totals.labs} labs`);
   console.log(`  live search: ${live.enabled ? 'on (approved sites only)' : 'off'}`);
   console.log(`  instructor:  ${env.INSTRUCTOR_KEY ? 'key required' : 'open (set INSTRUCTOR_KEY before sharing)'}`);
 });

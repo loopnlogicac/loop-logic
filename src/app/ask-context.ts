@@ -9,6 +9,7 @@ import { getCourse, courseForLesson, type Course } from '../content/courses.ts';
 import { getVideo } from '../content/videos.ts';
 import { getLesson } from '../content/lessons.ts';
 import type { VideoExtrasService } from './video-extras.ts';
+import type { TutorialService } from './tutorials.ts';
 
 const ML_COURSES = new Set(['machine-learning', 'artificial-intelligence']);
 
@@ -23,9 +24,14 @@ export function courseSubject(c: Course | undefined): Subject {
 
 const str = (v: unknown, max = 80) => (typeof v === 'string' ? v.slice(0, max) : '');
 
-export async function chatPage(raw: unknown, lang: Lang, extras: VideoExtrasService): Promise<ChatPage> {
+export async function chatPage(raw: unknown, lang: Lang, extras: VideoExtrasService, tutorials?: TutorialService, question = ''): Promise<ChatPage> {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const kind = str(r.kind, 10);
+
+  if (kind === 'tutorial' && tutorials) {
+    const c = tutorials.chatContext(str(r.track, 40), str(r.topic, 80), question);
+    if (c) return { kind: 'tutorial', key: `tutorial:${str(r.track, 40)}:${str(r.topic, 80)}`, label: `Tutorial topic "${c.title}"`, subject: c.track === 'machine-learning' ? 'ml' : 'cs', evidence: c.evidence };
+  }
 
   const lessonId = str(r.lessonId);
   const lesson = lessonId ? getLesson(lessonId) : undefined;

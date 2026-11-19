@@ -1,0 +1,279 @@
+// Tutorials: the content-kit packages written by Codex and accepted by the checker
+// (content-kit/<track>/content, C in content-kit/c-tutorial/c-tutorial), served as
+// readable topic pages with runnable examples, server-graded quizzes, practice and labs.
+
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
+import { randomUUID } from 'node:crypto';
+// @ts-ignore: plain JavaScript module shared with the content checker
+import { loadTrace, playTrace, validInput, LabError } from '../../content-kit/tools/labs.mjs';
+import { AppError } from './service.ts';
+import type { Store } from '../store/store.ts';
+import { LANGUAGES } from './video-extras.ts';
+import { getVideo } from '../content/videos.ts';
+
+type Lang = 'en' | 'bn';
+type Bi = { en: string; bn: string };
+type Json = Record<string, any>;
+
+export const TRACK_INFO: Record<string, { title: Bi; blurb: Bi; course?: string; order: number }> = {
+  c: { order: 1, course: 'c-programming', title: { en: 'C Programming', bn: 'সি প্রোগ্রামিং' }, blurb: { en: 'From your first program to pointers, memory and files, with every example compiled and tested.', bn: 'প্রথম প্রোগ্রাম থেকে পয়েন্টার, মেমরি আর ফাইল পর্যন্ত; প্রতিটি উদাহরণ কম্পাইল করে পরীক্ষিত।' } },
+  'data-structures': { order: 2, course: 'data-structures', title: { en: 'Data Structures', bn: 'ডেটা স্ট্রাকচার' }, blurb: { en: 'Arrays, linked lists, stacks, queues, trees, heaps, hashing and graphs in C, with step-by-step visual labs.', bn: 'সি-তে অ্যারে, লিংকড লিস্ট, স্ট্যাক, কিউ, ট্রি, হিপ, হ্যাশিং আর গ্রাফ; ধাপে ধাপে ভিজ্যুয়াল ল্যাবসহ।' } },
+  algorithms: { order: 3, course: 'algorithms', title: { en: 'Algorithms', bn: 'অ্যালগরিদম' }, blurb: { en: 'Searching, sorting, greedy, divide and conquer, dynamic programming and graph algorithms, each with a simulator.', bn: 'সার্চিং, সর্টিং, গ্রিডি, ডিভাইড অ্যান্ড কনকার, ডায়নামিক প্রোগ্রামিং আর গ্রাফ অ্যালগরিদম; প্রতিটির সিমুলেটরসহ।' } },
+  'oop-java': { order: 4, title: { en: 'Object-Oriented Programming in Java', bn: 'জাভায় অবজেক্ট-ওরিয়েন্টেড প্রোগ্রামিং' }, blurb: { en: 'Classes, objects, inheritance, polymorphism, interfaces and collections in modern Java.', bn: 'আধুনিক জাভায় ক্লাস, অবজেক্ট, ইনহেরিট্যান্স, পলিমরফিজম, ইন্টারফেস আর কালেকশন।' } },
+  python: { order: 5, title: { en: 'Python Programming', bn: 'পাইথন প্রোগ্রামিং' }, blurb: { en: 'Idiomatic Python from zero, with "if you know C" notes along the way.', bn: 'শূন্য থেকে পাইথন, পথে পথে “সি জানলে” নোটসহ।' } },
+  dbms: { order: 6, title: { en: 'Database Management Systems', bn: 'ডেটাবেস ম্যানেজমেন্ট সিস্টেম' }, blurb: { en: 'ER modelling, the relational model, SQL on MySQL, normalisation and transactions.', bn: 'ইআর মডেলিং, রিলেশনাল মডেল, MySQL-এ SQL, নরমালাইজেশন আর ট্রানজ্যাকশন।' } },
+  'compiler-design': { order: 7, title: { en: 'Compiler Design', bn: 'কম্পাইলার ডিজাইন' }, blurb: { en: 'Lexing, parsing, semantic analysis and code generation, with working implementations.', bn: 'লেক্সিং, পার্সিং, সেমান্টিক অ্যানালাইসিস আর কোড জেনারেশন; চলমান ইমপ্লিমেন্টেশনসহ।' } },
+  'machine-learning': { order: 8, course: 'machine-learning', title: { en: 'Machine Learning from Zero', bn: 'শূন্য থেকে মেশিন লার্নিং' }, blurb: { en: 'Starts with stories a child can follow and ends with neural networks, with interactive labs for every method.', bn: 'শিশুও বুঝবে এমন গল্প দিয়ে শুরু, নিউরাল নেটওয়ার্কে শেষ; প্রতিটি পদ্ধতির ইন্টারঅ্যাকটিভ ল্যাবসহ।' } },
+};
+
+interface Topic {
+  id: string; track: string; module: string; dir: string;
+  json: Json; bodyEn: string; bodyBn: string | null;
+  examples: { id: string; title: string; language: string; code: string; output: string | null; explanationHtml: string; tryNow: boolean; outputNote?: string; demonstrates?: string }[];
+  text: string;
+}
+interface Track { id: string; root: string; curriculum: Json; manifest: Json; language: string; topics: Map<string, Topic>; order: string[] }
+
+// ── HTML safety: content already passed the checker's tag whitelist; this is a second fence ──
+const TAGS = new Set(['h2', 'h3', 'h4', 'p', 'br', 'hr', 'ul', 'ol', 'li', 'strong', 'em', 'code', 'pre', 'kbd', 'dfn', 'abbr', 'sup', 'sub', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'blockquote', 'a', 'figure', 'figcaption', 'img', 'div', 'span']);
+const ATTRS = new Set(['id', 'class', 'start', 'title', 'scope', 'colspan', 'rowspan', 'href', 'src', 'alt', 'width', 'height', 'data-example', 'data-lab']);
+export function cleanHtml(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(script|style|iframe|object|embed|svg|math|form|input|button|textarea|select)\b[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, (m, tag: string, attrs: string) => {
+      const t = tag.toLowerCase();
+      if (!TAGS.has(t)) return '';
+      if (m.startsWith('</')) return `</${t}>`;
+      const kept: string[] = [];
+      for (const a of attrs.matchAll(/([a-zA-Z-]+)\s*=\s*("([^"]*)"|'([^']*)')/g)) {
+        const name = a[1]!.toLowerCase();
+        const value = a[3] ?? a[4] ?? '';
+        if (!ATTRS.has(name)) continue;
+        if (name === 'href' && !/^(https:\/\/|topic:|#)/.test(value)) continue;
+        if (name === 'src' && !/^assets\/[a-z0-9-]+\.(svg|png|webp)$/.test(value)) continue;
+        kept.push(`${name}="${value.replace(/"/g, '&quot;')}"`);
+      }
+      return `<${t}${kept.length ? ' ' + kept.join(' ') : ''}${m.endsWith('/>') ? ' /' : ''}>`;
+    });
+}
+const textOf = (html: string) => html.replace(/<pre[\s\S]*?<\/pre>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&[a-zA-Z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
+
+const readText = (f: string) => (existsSync(f) ? readFileSync(f, 'utf8') : null);
+const readJsonFile = (f: string): Json | null => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
+const pick = <T extends Json>(o: T | undefined, lang: Lang): string => (o ? (o[lang] || o.en || '') : '');
+const TRY_NOW: Record<string, string> = { c: LANGUAGES.c.url, python: LANGUAGES.python.url, java: LANGUAGES.java.url };
+
+export class TutorialService {
+  private tracks = new Map<string, Track>();
+  private topicTrack = new Map<string, string>(); // planned topic id → track (also for topics not delivered yet)
+  private traces = new Map<string, (input: unknown) => unknown>();
+
+  private store: Store;
+  private kitDir: string;
+
+  constructor(store: Store, kitDir: string) {
+    this.store = store;
+    this.kitDir = kitDir;
+    this.load();
+  }
+
+  private load() {
+    if (!existsSync(this.kitDir)) return;
+    for (const d of readdirSync(this.kitDir)) {
+      const specFile = join(this.kitDir, d, 'spec', 'curriculum.json');
+      if (!existsSync(specFile)) continue;
+      const curriculum = readJsonFile(specFile);
+      if (!curriculum) continue;
+      const id = d === 'c-tutorial' ? 'c' : String(curriculum.track ?? d);
+      for (const m of curriculum.modules ?? []) for (const t of m.topics ?? []) this.topicTrack.set(t.id, id);
+      const root = join(this.kitDir, d, d === 'c-tutorial' ? 'c-tutorial' : 'content');
+      const manifest = readJsonFile(join(root, 'manifest.json'));
+      if (!manifest || !Array.isArray(manifest.modules)) continue;
+      const track: Track = { id, root, curriculum, manifest, language: curriculum.language ?? 'c', topics: new Map(), order: [] };
+      for (const mm of manifest.modules) {
+        for (const tid of mm.topics ?? []) {
+          try {
+            const topic = this.loadTopic(track, mm.id, tid);
+            if (topic) { track.topics.set(tid, topic); track.order.push(tid); }
+          } catch (e) { console.warn(`tutorials: skipped ${id}/${tid}: ${(e as Error).message}`); }
+        }
+      }
+      if (track.topics.size) this.tracks.set(id, track);
+    }
+  }
+
+  private loadTopic(track: Track, moduleId: string, tid: string): Topic | null {
+    const dir = join(track.root, 'topics', moduleId, tid);
+    const json = readJsonFile(join(dir, 'topic.json'));
+    const bodyEn = readText(join(dir, 'body.en.html'));
+    if (!json || !bodyEn) return null;
+    const bodyBn = readText(join(dir, 'body.bn.html'));
+    const examples = (json.examples ?? []).map((e: Json) => ({
+      id: String(e.id), title: String(e.title ?? ''), language: String(e.language ?? track.language),
+      code: readText(join(dir, String(e.file ?? ''))) ?? '',
+      output: e.output ? readText(join(dir, String(e.output))) : null,
+      explanationHtml: cleanHtml(String(e.explanationHtml ?? '')),
+      tryNow: Boolean(e.tryNow) && Boolean(TRY_NOW[String(e.language ?? track.language)]),
+      outputNote: e.outputNote, demonstrates: e.demonstrates,
+    }));
+    return { id: tid, track: track.id, module: moduleId, dir, json, bodyEn: cleanHtml(bodyEn), bodyBn: bodyBn ? cleanHtml(bodyBn) : null, examples, text: textOf(bodyEn) };
+  }
+
+  // ── catalogue ──
+  list(lang: Lang) {
+    const all = Object.keys(TRACK_INFO).map((id) => {
+      const info = TRACK_INFO[id]!;
+      const t = this.tracks.get(id);
+      const planned = t ? t.curriculum.modules.reduce((n: number, m: Json) => n + m.topics.length, 0) : this.plannedCount(id);
+      const labs = t ? [...t.topics.values()].reduce((n, x) => n + (x.json.labs?.length ?? 0), 0) : 0;
+      return { id, title: info.title[lang], blurb: info.blurb[lang], course: info.course ?? null, language: t?.language ?? null, delivered: t?.topics.size ?? 0, planned, labs, order: info.order, available: Boolean(t) };
+    });
+    return { tracks: all.sort((a, b) => a.order - b.order), totals: { topics: all.reduce((n, x) => n + x.delivered, 0), labs: all.reduce((n, x) => n + x.labs, 0) } };
+  }
+
+  private plannedCount(id: string) { let n = 0; for (const tr of this.topicTrack.values()) if (tr === id) n++; return n; }
+
+  track(id: string, lang: Lang) {
+    const t = this.tracks.get(id);
+    const info = TRACK_INFO[id];
+    if (!t || !info) throw new AppError('not_found', 404, lang === 'bn' ? 'এই টিউটোরিয়াল এখনো আসেনি।' : 'This tutorial is not available yet.');
+    return {
+      id, title: info.title[lang], blurb: info.blurb[lang], course: info.course ?? null, language: t.language,
+      delivered: t.topics.size, version: t.manifest.packageVersion ?? null,
+      modules: t.curriculum.modules.map((m: Json) => ({
+        id: m.id, title: pick(m.title, lang), summary: pick(m.summary, lang),
+        topics: m.topics.map((pt: Json) => {
+          const x = t.topics.get(pt.id);
+          return { id: pt.id, title: x ? pick(x.json.title, lang) : pt.title, level: pt.level, kind: pt.kind ?? 'lesson', available: Boolean(x), labs: x?.json.labs?.length ?? pt.labs?.length ?? 0, minutes: x?.json.estMinutes ?? null };
+        }),
+      })),
+    };
+  }
+
+  private topicOr404(trackId: string, topicId: string, lang: Lang): { t: Track; x: Topic } {
+    const t = this.tracks.get(trackId);
+    const x = t?.topics.get(topicId);
+    if (!t || !x) throw new AppError('not_found', 404, lang === 'bn' ? 'এই টপিক এখনো আসেনি।' : 'This topic is not available yet.');
+    return { t, x };
+  }
+
+  topic(trackId: string, topicId: string, lang: Lang) {
+    const { t, x } = this.topicOr404(trackId, topicId, lang);
+    const j = x.json;
+    const useBn = lang === 'bn' && Boolean(x.bodyBn);
+    const i = t.order.indexOf(topicId);
+    const nav = (id: string | undefined) => (id ? { id, title: pick(t.topics.get(id)!.json.title, lang) } : null);
+    const module = t.curriculum.modules.find((m: Json) => m.id === x.module);
+    const linkIds = new Set<string>([...(x.bodyEn + (x.bodyBn ?? '')).matchAll(/href="topic:([a-z0-9-]+)/g)].map((m) => m[1]!));
+    for (const id of [...(j.prerequisites ?? []), ...(j.related ?? [])]) linkIds.add(id);
+    const links = Object.fromEntries([...linkIds].map((id) => {
+      const tr = this.topicTrack.get(id);
+      const tt = tr ? this.tracks.get(tr)?.topics.get(id) : undefined;
+      return [id, { track: tr ?? null, available: Boolean(tt), title: tt ? pick(tt.json.title, lang) : id }];
+    }));
+    return {
+      track: { id: t.id, title: TRACK_INFO[t.id]?.title[lang] ?? t.curriculum.title, language: t.language },
+      module: { id: x.module, title: pick(module?.title, lang) },
+      topic: {
+        id: x.id, title: pick(j.title, lang), summary: pick(j.summary, lang), level: j.level, kind: j.kind ?? 'lesson', minutes: j.estMinutes,
+        standards: j.standards ?? null, sections: j.sections ?? [], bodyLang: useBn ? 'bn' : 'en', hasBangla: Boolean(x.bodyBn),
+        bodyHtml: useBn ? x.bodyBn : x.bodyEn,
+      },
+      examples: x.examples.map((e) => ({ ...e, tryNowUrl: e.tryNow ? TRY_NOW[e.language] : null })),
+      labs: (j.labs ?? []) as string[],
+      quiz: (j.quiz ?? []).map((q: Json) => ({ id: q.id, type: q.type, difficulty: q.difficulty, prompt: q.prompt, options: q.options, code: q.code ?? null, language: q.language ?? t.language, figure: q.figure ?? null })),
+      practice: (j.practice ?? []).map((p: Json) => ({ id: p.id, title: p.title, difficulty: p.difficulty, type: p.type ?? 'code', statementHtml: cleanHtml(String(p.statementHtml ?? '')), hints: (p.hints ?? []).map((h: unknown) => (typeof h === 'string' ? h : pick(h as Json, lang))), figure: p.figure ?? null })),
+      keyPoints: (j.keyPoints ?? []).map((k: Json) => pick(k, lang)),
+      examQuestions: (j.examQuestions ?? []).map((q: Json) => ({ question: q.question, type: q.type, marks: q.marks ?? null, answerHtml: cleanHtml(String(q.answerHtml ?? '')), figure: q.figure ?? null })),
+      videos: (j.videos ?? []).map((v: Json) => { const vid = getVideo(String(v.videoId)); return vid ? { videoId: vid.id, title: vid.title, note: v.note ?? null } : null; }).filter(Boolean),
+      references: (j.references ?? []).filter((r: Json) => typeof r.url === 'string' && r.url.startsWith('https://')).map((r: Json) => ({ title: r.title ?? r.url, url: r.url })),
+      links,
+      prev: nav(t.order[i - 1]), next: nav(t.order[i + 1]),
+    };
+  }
+
+  async gradeQuiz(trackId: string, topicId: string, learnerId: string, answers: unknown, lang: Lang) {
+    const { x } = this.topicOr404(trackId, topicId, lang);
+    const given = (answers && typeof answers === 'object' ? answers : {}) as Record<string, unknown>;
+    const results: Record<string, { chosen: number | null; correct: boolean; answer: number; explanation: string }> = {};
+    let score = 0, answered = 0;
+    for (const q of x.json.quiz ?? []) {
+      const c = given[q.id];
+      const chosen = Number.isInteger(c) ? Number(c) : null;
+      if (chosen === null) continue;
+      answered++;
+      const correct = chosen === q.answer;
+      if (correct) score++;
+      results[q.id] = { chosen, correct, answer: q.answer, explanation: String(q.explanation ?? '') };
+    }
+    if (answered) await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: `tutorial:${trackId}:${topicId}`, blockId: null, type: 'quiz', payload: { score, answered, total: (x.json.quiz ?? []).length }, at: new Date().toISOString() }]);
+    return { score, answered, total: (x.json.quiz ?? []).length, results };
+  }
+
+  solution(trackId: string, topicId: string, practiceId: string, lang: Lang) {
+    const { t, x } = this.topicOr404(trackId, topicId, lang);
+    const p = (x.json.practice ?? []).find((q: Json) => q.id === practiceId);
+    if (!p) throw new AppError('not_found', 404, 'No such practice problem.');
+    if ((p.type ?? 'code') === 'written') return { type: 'written', answerHtml: cleanHtml(String(p.answerHtml ?? '')) };
+    const language = String(p.language ?? t.language);
+    const tests = (p.tests ?? []).slice(0, 3).map((tc: Json) => ({ stdin: tc.stdin ? readText(join(x.dir, String(tc.stdin))) : '', output: readText(join(x.dir, String(tc.output ?? ''))) ?? '' }));
+    return { type: 'code', language, code: readText(join(x.dir, String(p.solution ?? ''))) ?? '', tests, tryNowUrl: TRY_NOW[language] ?? null };
+  }
+
+  // ── labs ──
+  private labDir(trackId: string, topicId: string, labId: string, lang: Lang) {
+    const { x } = this.topicOr404(trackId, topicId, lang);
+    if (!(x.json.labs ?? []).includes(labId)) throw new AppError('not_found', 404, 'No such lab.');
+    return join(x.dir, 'labs', labId);
+  }
+
+  lab(trackId: string, topicId: string, labId: string, lang: Lang) {
+    const lab = readJsonFile(join(this.labDir(trackId, topicId, labId, lang), 'lab.json'));
+    if (!lab) throw new AppError('not_found', 404, 'No such lab.');
+    return { id: lab.id, kind: lab.kind, title: pick(lab.title, lang), summary: pick(lab.summary, lang), pseudocode: lab.pseudocode ?? [], inputs: lab.inputs ?? [], presets: lab.presets ?? [], complexity: lab.complexity ?? null, codeExample: lab.codeExample ?? null };
+  }
+
+  runLab(trackId: string, topicId: string, labId: string, input: unknown, lang: Lang) {
+    const dir = this.labDir(trackId, topicId, labId, lang);
+    const lab = readJsonFile(join(dir, 'lab.json'));
+    if (!lab) throw new AppError('not_found', 404, 'No such lab.');
+    const bad = validInput(lab.inputs ?? [], input);
+    if (bad) throw new AppError('bad_input', 400, bad);
+    let trace = this.traces.get(dir);
+    if (!trace) { trace = loadTrace(readFileSync(join(dir, 'trace.js'), 'utf8')) as (input: unknown) => unknown; this.traces.set(dir, trace); }
+    try {
+      const result = trace(input) as { init: unknown; steps: unknown[] };
+      playTrace(lab.kind, result, { lines: (lab.pseudocode ?? []).length }); // validates every step
+      return { kind: lab.kind, init: result.init, steps: result.steps };
+    } catch (e) {
+      if (e instanceof LabError) throw new AppError('lab_error', 422, `This input made the lab fail: ${(e as Error).message}`);
+      throw new AppError('lab_error', 422, lang === 'bn' ? 'এই ইনপুটে ল্যাবটি চলেনি। অন্য ইনপুট দাও।' : 'The lab could not run this input. Try a different one.');
+    }
+  }
+
+  /** File path of an image inside a topic's assets/ folder, or null. */
+  assetPath(trackId: string, topicId: string, file: string): string | null {
+    const x = this.tracks.get(trackId)?.topics.get(topicId);
+    if (!x || !/^[a-z0-9-]+\.(svg|png|webp)$/.test(file)) return null;
+    const p = resolve(x.dir, 'assets', file);
+    if (!p.startsWith(resolve(x.dir, 'assets') + sep)) return null;
+    try { return statSync(p).isFile() ? p : null; } catch { return null; }
+  }
+
+  /** Context for the Ask AI chat on a topic page: the sections that best match the question. */
+  chatContext(trackId: string, topicId: string, question: string) {
+    const x = this.tracks.get(trackId)?.topics.get(topicId);
+    if (!x) return null;
+    const sections = x.bodyEn.split(/(?=<h2\b)/).map((h) => ({ id: /<h2[^>]*id="([^"]+)"/.exec(h)?.[1] ?? 'intro', title: textOf(/<h2[^>]*>([\s\S]*?)<\/h2>/.exec(h)?.[1] ?? ''), text: textOf(h) })).filter((s) => s.text.length > 40);
+    const words = new Set(question.toLowerCase().split(/[^a-z0-9ঀ-৿]+/).filter((w) => w.length > 2));
+    const scored = sections.map((s, i) => ({ s, i, score: [...words].filter((w) => s.text.toLowerCase().includes(w)).length + (i === 0 ? 0.5 : 0) }));
+    const best = scored.sort((a, b) => b.score - a.score || a.i - b.i).slice(0, 3).sort((a, b) => a.i - b.i);
+    const title = pick(x.json.title, 'en');
+    return {
+      title, track: x.track,
+      evidence: best.map(({ s }) => ({ id: `tutorial:${x.id}#${s.id}`, title: `${title}: ${s.title}`, location: `${TRACK_INFO[x.track]?.title.en ?? x.track} tutorial`, text: s.text.slice(0, 1500) })),
+    };
+  }
+}

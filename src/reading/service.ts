@@ -36,7 +36,7 @@ export interface HelpInput {
 
 /** What the current page contributes to a chat answer (built in src/app/ask-context.ts). */
 export interface ChatPage {
-  kind: 'video' | 'course' | 'lesson' | 'lab' | 'page';
+  kind: 'video' | 'course' | 'lesson' | 'lab' | 'tutorial' | 'page';
   key: string;
   label: string;
   subject: Subject;

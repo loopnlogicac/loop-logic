@@ -116,6 +116,7 @@ export function mountNav(active, onLang) {
     const links = [
       ['dashboard', '/dashboard.html', bn ? 'ড্যাশবোর্ড' : 'Dashboard'],
       ['courses', '/courses.html', bn ? 'কোর্স' : 'Courses'],
+      ['learn', '/learn.html', bn ? 'টিউটোরিয়াল' : 'Tutorials'],
       ['practice', '/practice.html', bn ? 'অনুশীলন' : 'Practice'],
       ['profile', '/profile.html', bn ? 'প্রোফাইল' : 'Profile'],
       ['instructor', '/instructor.html', bn ? 'শিক্ষক' : 'Instructor'],
