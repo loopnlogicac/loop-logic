@@ -1,0 +1,62 @@
+<h2 id="introduction">Give a growing list more room</h2>
+<p class="lead">Suppose you reserved room for two marks and a third student joins the lab. You need a larger block while keeping the marks already entered. <dfn>reallocation</dfn> changes the size of an allocated block. The realloc function may extend it where it stands, or obtain another block and move the preserved data.</p>
+<p>The useful promise concerns contents, not location. A successful resize preserves bytes through the smaller of the old and new sizes. Growing an integer array preserves its existing elements. Shrinking preserves only the retained prefix. Newly added storage does not come initialized, even when the original allocation came from calloc.</p>
+<p>The danger is that resizing can fail. If you replace your only owner pointer immediately, a NULL result loses the address of the still-live old block. A temporary pointer separates the attempt from the decision to accept it. That small pattern protects both your data and your cleanup responsibility.</p>
+<p>The free function handles the final step. It releases the whole allocation, without needing an element count. free does not erase every pointer copy that selected the block. You must coordinate borrowers so that no stale pointer is used after the owner ends the lifetime.</p>
+
+<h2 id="syntax">Read the C notation</h2>
+<p>Pass the current allocation base and a positive new byte count to realloc. Keep the result in next. If next is NULL, the original pointer still selects its old block. On success, assign next to the owner and stop using every earlier alias, even if the numeric location appears unchanged.</p>
+<p>The size checks from <a href="topic:c-malloc-calloc">malloc and calloc</a> still apply. Check a general new_count against SIZE_MAX divided by the element size before multiplication. For a doubling policy, first check that doubling the capacity itself fits too.</p><pre><code class="language-c">int *next = realloc(items, new_count * sizeof *items);
+if (next == NULL) {
+    /* items still owns the original block */
+    free(items);
+    return 1;
+}
+items = next;
+</code></pre><table class="ref"><thead><tr><th scope="col">Operation</th><th scope="col">Success</th><th scope="col">Failure</th></tr></thead><tbody><tr><td>Grow with positive size</td><td>Old prefix preserved; new tail uninitialized</td><td>Old block remains valid</td></tr><tr><td>Shrink with positive size</td><td>Only retained prefix remains usable</td><td>Old block remains valid</td></tr><tr><td>realloc(NULL, positive size)</td><td>Behaves as malloc</td><td>Returns NULL</td></tr><tr><td>free(NULL)</td><td>Does nothing</td><td>No failure result</td></tr></tbody></table>
+
+<h2 id="how-it-works">Trace the resize as a transaction</h2>
+<p>The growing example begins with two initialized integers, 10 and 20. Its first allocation is owned by items. realloc requests room for four integers and returns a result into next. Until the call succeeds, main still treats items as the owner of the two-element block.</p>
+<p>If realloc succeeds, its result becomes the only current base used by this program. The old allocation lifetime has ended. Rebuild any interior pointer from the new base, using a saved index rather than a saved old address. Then write 30 and 40 into indices two and three before reading them.</p>
+<p>If realloc fails for this positive request, no resize happened. The old two elements remain available. A larger application could report the failure and continue using them. This small example instead releases the original allocation and exits. Both policies preserve ownership; blindly overwriting items does not.</p>
+<p>Capacity and length describe different facts. Capacity is the number of slots reserved by allocation. Length is the number containing meaningful collection values. After growing from two to four slots, the length remains two until you initialize and accept more values. Never sum all capacity slots as though each were a real mark.</p><pre class="diagram">before: items ---&gt; [10][20]          length 2, capacity 2
+success: items --&gt; [10][20][?][?]    length 2, capacity 4
+after writes:     [10][20][30][40]   length 4, capacity 4
+failure: old items still owns [10][20]</pre><p>The transaction idea also helps a reusable vector function. Do not change the stored capacity until resizing succeeds. Otherwise an allocation failure leaves the metadata claiming more slots than the block actually contains. Update the pointer and capacity together, then append the new element and increase length.</p>
+
+<h2 id="examples">Worked programs</h2>
+<p>The resize programs show growth and shrinkage with positive sizes. The release program then demonstrates an explicit empty owner. It calls free a second time only after assigning NULL. That is a harmless free(NULL), not a second release of the old allocation.</p>
+
+<h3>Grow two marks to four</h3>
+<p>The temporary next separates allocation failure from success. On failure, items remains the valid old owner and is released. On success, main adopts the returned base, writes both new elements, and prints 10 40. The program does not inspect an old alias or claim that the block stayed in place. One final free releases the resized allocation.</p>
+<div data-example="ex-1"></div>
+
+<h3>Keep only the first two values</h3>
+<p>Four integers first receive 5, 10, 15, and 20. Shrinking to two integers preserves the first two values. The program prints 5 10 without touching the removed tail. A failed request would still leave four valid elements, but this program chooses to release them and stop. The example never uses a zero-size request.</p>
+<div data-example="ex-2"></div>
+
+<h3>Release and mark the owner empty</h3>
+<p>The value is printed before free ends its lifetime. The following owner=NULL assignment creates a safe empty state without reading the stale pointer. Calling free(owner) now passes NULL, so no second block release occurs. The printed empty flag is one. Any separate alias would still need to be retired; this example creates none.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Shrinkage, aliases, and zero size</h2>
+<p>Shrinking an array invalidates access to removed elements. If you retain two slots from four, index two is outside the new allocation. Do not keep reading the old tail because its values seem to remain in memory. Save any needed values before the shrink while the original elements still exist.</p>
+<p>Avoid realloc(p, 0) as a way to release storage. C17 gives this case implementation-defined behavior, and a NULL result does not provide the same simple failure meaning as a positive request. C23 makes that zero-size use undefined. For a desired zero length, call free(p), assign NULL, and record zero capacity explicitly.</p>
+<p>A borrower into a resized block needs a fresh address after success. Save an offset such as index one, then form items+1 from the new base. Do not subtract or compare an old interior pointer after realloc succeeds. Its target lifetime has ended even when the allocator reused the same machine address.</p>
+<p>A successful resize to the current size still follows realloc's lifetime rules. Treat it as invalidating aliases too. If no capacity change is needed, skip the call. This avoids unnecessary allocation work and preserves borrowers when your interface allows them. A container should document which operations invalidate its borrowed pointers.</p>
+
+<h2 id="common-mistakes">Mistakes and repairs</h2>
+<h3>Replacing the owner too early</h3>
+<p>The line p=realloc(p, bytes) has no saved route to the old block if the result is NULL. Use next first and branch before updating p. If the caller wants to keep working after failure, return an error without altering its pointer or count.</p>
+<h3>Releasing one allocation twice</h3>
+<p>Two free calls using copies of the same live allocation base do not release two different objects. After the first call, the second is invalid. Choose one owner and retire borrowers before release. Clearing only the owner's variable is helpful bookkeeping but cannot clear aliases held elsewhere.</p>
+
+<h2 id="best-practices">Habits to use in your programs</h2>
+<p>Keep resize helpers focused on one ownership decision. Validate the new count, attempt allocation, then commit the new pointer and capacity only on success. Initialize a new tail before increasing the collection's meaningful length. These steps make a failure path as reviewable as the success path.</p>
+<p>When appending repeatedly, grow capacity in larger steps rather than resizing for every item. Doubling gives fewer moves, but requires overflow checks in unrestricted code. The practice sequence is limited to thirty values, so its maximum capacity is thirty-two. State that bound rather than assuming doubling is always safe.</p>
+
+<h2 id="version-notes">C versions and portability</h2>
+<div class="callout version"><p>realloc and free predate C99; the programs use C99 declarations and run as C17. The zero-size realloc case differs across standards and implementations, so use explicit free for an empty result. free(NULL) is guaranteed harmless. Neither function sets your owner variable to NULL; only your assignment changes that variable.</p></div>
+
+<h2 id="summary">What you can now do</h2>
+<p>A temporary result protects the old allocation when a positive-size resize fails. Successful resizing preserves a prefix, invalidates old aliases, and leaves new slots uninitialized. Releasing an owner ends the block's lifetime exactly once. Next, use ownership rules and diagnostics in <a href="topic:c-memory-leaks">Memory Leaks and Tools</a>.</p>
