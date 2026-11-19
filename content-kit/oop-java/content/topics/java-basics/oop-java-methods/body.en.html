@@ -1,0 +1,67 @@
+<h2 id="introduction">Give a repeated calculation a name</h2>
+<p class="lead">Suppose three screens need the same credit calculation. Copying the arithmetic into each screen makes later changes harder. A <dfn>method</dfn> gives a piece of work a name, inputs and a result. You can call it wherever the same responsibility appears.</p>
+<p>Java methods belong to a class. A static method belongs to the class rather than a particular instance. That is why a static helper can be called from static main without first constructing an object. Instance methods arrive later when their work depends on object state.</p>
+<p>If you know C functions, parameters and return will feel familiar. Java's important rule is that every argument is passed by value. This remains true when that value is an object reference. Separating the copied value from the shared object will prevent a common misunderstanding.</p>
+<h2 id="syntax">Read a declaration as a promise</h2>
+<p>A method declaration states what callers may provide and what result they receive. The names inside its parameter list are local names used during that call. A non-void method must return an appropriate value along every normal path that completes.</p>
+<pre><code class="language-java">static int totalCredits(int courses, int credit) {
+    return courses * credit;
+}
+static void showHeading() {
+    System.out.println("Result");
+}</code></pre>
+<table class="ref"><caption>Parts of a static helper</caption><thead><tr><th scope="col">Part</th><th scope="col">Purpose</th></tr></thead><tbody>
+<tr><td>static</td><td>No receiver instance is required</td></tr>
+<tr><td>int or void</td><td>Result type or absence of a result</td></tr>
+<tr><td>Method name</td><td>Names the responsibility</td></tr>
+<tr><td>Parameter list</td><td>Declares copied input values</td></tr>
+<tr><td>Body</td><td>Performs work for one call</td></tr>
+</tbody></table>
+<p>In an expression, a call such as totalCredits(4, 3) is replaced by its returned result. A void call is used for its action rather than a value. return can also leave a void method early without supplying an expression.</p>
+<h2 id="how-it-works">A copy of a reference is still a copy</h2>
+<p>An argument is the expression you supply at the call site. A parameter is the local variable that receives its value. For an int argument, the number is copied. Updating the parameter cannot change the caller's int variable. Return a changed number and assign it if that is your goal.</p>
+<p>An array argument supplies a reference value. The parameter receives a second reference to the same array. Writing an array element through that reference changes the shared array object. Assigning a different array to the parameter changes only the parameter variable.</p>
+<p>Think of copying a room number onto another slip of paper. Both slips can guide you to the same room. Changing the furniture affects everyone visiting that room. Writing another room number on one slip does not rewrite the other slip.</p>
+<p>This is why Java is not pass by reference. The callee cannot directly reassign the caller's variable through an ordinary parameter. Sharing an object permits shared mutation, but sharing an object and sharing a variable are different mechanisms.</p>
+<h2 id="examples">Read each call from inputs to returned control</h2>
+<p>The first helper computes a value. The next two separate primitive copying from reference copying. Then overloads and recursion show two different ways that a method name can lead you through a calculation.</p>
+<h3>A reusable credit calculation</h3>
+<p>The two int arguments are copied into the parameters. return sends 12 back to the caller.</p>
+<div data-example="ex-1"></div>
+
+<h3>Primitive arguments are copied</h3>
+<p>raise changes its local value to 65. The caller still holds 60.</p>
+<div data-example="ex-2"></div>
+
+<h3>Array mutation and reassignment</h3>
+<p>The copied reference first reaches the original array and changes 60 to 70. Reassigning the parameter cannot replace the caller reference.</p>
+<div data-example="ex-3"></div>
+
+<h3>Two overloads</h3>
+<p>The int argument selects the int overload and prints 6. The double argument selects the double overload and prints 7.0.</p>
+<div data-example="ex-4"></div>
+
+<h3>Recursive factorial</h3>
+<p>Each call reduces n until 1. Returning through the calls multiplies 2, 3, 4 and 5 to produce 120.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="overloading-recursion">Overloads and recursive calls</h2>
+<dfn>Overloading</dfn> means declaring the same method name with different parameter lists. The compiler chooses a suitable declaration using the argument types. An int argument can match an int overload, while a double argument can match a double overload. Return type alone cannot distinguish overloads.
+
+Overloading can make related operations easier to use, but unrelated work should have distinct names. A reader should expect all overloads of maximum to find a maximum. Avoid a set of overloads whose only connection is a convenient spelling.
+
+<dfn>Recursion</dfn> means a method calls itself. Each call has its own parameters and local variables. A base case answers a small problem without making another recursive call. The recursive case must reduce the problem towards that base case.
+
+For factorial, factorial(1) returns 1. factorial(2) waits for that result and multiplies it by 2. The waiting calls then multiply by 3, 4 and 5. The method does not reuse one n variable for all calls; each invocation keeps its own n.
+
+The call stack stores the work waiting to resume. Deep recursion can exhaust it and produce StackOverflowError. Java does not promise tail-call optimisation, so an iterative loop may be safer for very large input. Choose recursion when the problem structure makes it clear and the depth is bounded.
+
+Factorial also has a numeric limit. long can hold factorial values through 20, but not all larger factorials. A correct base case does not prevent arithmetic overflow. State the allowed input range and reason about both call depth and numeric growth.
+<h2 id="common-mistakes">Distinguish a result from a side effect</h2>
+<h3>Ignoring a returned primitive</h3><p>A helper that returns an increased mark does not change the original variable by itself. Assign its result if the caller should retain it. A clear return-based design often makes primitive calculations easier to follow.</p>
+<h3>Trying to replace the caller array</h3><p>Reassigning an array parameter cannot redirect the caller reference. Return the new array when replacement is intended. Mutating elements and replacing the caller variable require different interfaces.</p>
+<h3>Missing progress in recursion</h3><p>A base case is useless if calls never approach it. For a digit sum, dividing a nonnegative number by ten removes one digit. Check zero as well as a multi-digit value when tracing termination.</p>
+<h2 id="version-notes">Stable method foundations</h2>
+<p>Static helpers, overloads and recursion are established Java features. Nothing on this page needs a feature newer than Java 17. Later object methods use the same argument-copying rule, even when their receivers have mutable state.</p>
+<h2 id="summary">Name work and follow copied values</h2>
+<p>A useful method has one clear job and an understandable result. Follow its parameter values separately from any object they reference. Next, study the array objects used in these traces in <a href="topic:oop-java-arrays">Arrays in Java</a>.</p>

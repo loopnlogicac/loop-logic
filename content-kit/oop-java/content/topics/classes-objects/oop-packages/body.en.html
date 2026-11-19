@@ -1,0 +1,82 @@
+<h2 id="introduction">Give types an address in a larger project</h2>
+<p class="lead">Two departments may both use a form called Result. The full department name helps you tell them apart. A <dfn>package</dfn> gives Java types a namespace so a short class name can belong to a clear area of a program.</p>
+<p>For example, campus.model.Student can identify a model type while campus.app.App identifies an application entry point. The dots form a qualified name. A type's package also affects access to package-private and protected members, so it is more than a folder decoration.</p>
+<p>This lesson separates three connected ideas: source names, filesystem layout and runtime lookup. Mixing them up produces confusing launch errors. Once you follow each layer separately, package compilation becomes a repeatable process rather than an IDE mystery.</p>
+<h2 id="syntax">Declare the package before imports</h2>
+<p>A package declaration belongs at the beginning of an ordinary compilation unit, before imports and types. All top-level types declared in that unit belong to the named package. The package is part of each type's identity.</p>
+<pre><code class="language-java">package campus.model;
+
+public class Student {
+    private int roll;
+}</code></pre>
+<p>This is a declaration fragment showing package placement. In a project, a public Student type belongs in Student.java. An application in another package can refer to it by its full name or use an import. The type and any used constructor or member must still be accessible.</p>
+<pre><code class="language-java">package campus.app;
+
+import campus.model.Student;
+import java.util.Arrays;
+import static java.lang.Math.max;</code></pre>
+<p>The import declaration makes a name available in that source file. It does not apply automatically to other files in the same package. A package declaration establishes membership, while an import only affects how you spell references to accessible types or members.</p>
+<h2 id="how-it-works">Map a qualified name below a root folder</h2>
+<pre class="diagram">project/
+  src/
+    campus/
+      model/
+        Student.java
+      app/
+        App.java
+  classes/
+    campus/
+      model/
+        Student.class
+      app/
+        App.class</pre>
+<p>The source layout follows package components as folders under src. The -d compiler option chooses an output root. javac then creates package folders under that root for compiled classes. The src and classes roots are project choices, not parts of the package names.</p>
+<p>From the project folder, compile the two sources into classes as shown below. App contains the application's traditional main method. Student supplies an accessible type used by App. Include dependency source files or an appropriate classpath when the compiler needs them.</p>
+<pre><code class="language-bash">javac --release 17 -d classes src/campus/model/Student.java src/campus/app/App.java
+java -cp classes campus.app.App</code></pre>
+<p>The launch name is campus.app.App, not a filename. The classpath root is classes, because the runtime appends campus/app/App.class below it. Starting the search at classes/campus/app would put the root too low for that qualified name.</p>
+<p>A <dfn>classpath</dfn> is a search path for class definitions and resources. In this small layout, one directory is enough. Larger applications can include multiple roots and archive files. Keep the fully qualified binary name separate from the operating system's path separators.</p>
+<p>The runnable demonstrations use the unnamed package so each remains a single self-contained source. Their library imports exercise the same naming rules without creating a multi-file project. The package fragments and folder diagram show how those rules extend to named project types.</p>
+<h2 id="examples">Name library types and selected members</h2>
+<p>The Arrays example uses a normal type import. LocalDate uses a fully qualified name and a fixed date. The Math example imports selected static methods, while StringBuilder shows a type automatically available from java.lang.</p>
+<h3>Import a library type</h3>
+<p>The import makes Arrays a short name for java.util.Arrays. It does not copy library code into the source.</p>
+<div data-example="ex-1"></div>
+
+<h3>Use a fully qualified name</h3>
+<p>The full package name avoids an import. The fixed date prints 2026-11-19, independent of the current clock.</p>
+<div data-example="ex-2"></div>
+
+<h3>Import selected static operations</h3>
+<p>Static imports make max and abs available without writing Math before each call.</p>
+<div data-example="ex-3"></div>
+
+<h3>Two ways to name one type</h3>
+<p>StringBuilder belongs to java.lang. Its short name and fully qualified name identify the same library type.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="imports">Imports resolve names rather than move code</h2>
+<p>A normal import such as import java.util.Arrays makes Arrays available as a simple type name. You could instead write java.util.Arrays at each use. Both names refer to the same type. Importing does not duplicate the library implementation inside your source.</p>
+<p>Types from java.lang, including String, Integer and StringBuilder, are automatically available by simple name. Accessible types in the same package also need no ordinary type import. These conveniences do not mean all standard-library packages are automatically imported.</p>
+<p>A type wildcard import covers accessible types in one package. It does not recursively import subpackages. java.util and java.util.concurrent are different packages despite the dotted naming relationship. Writing import java.util.* does not make every concurrent type available by simple name.</p>
+<p>Prefer selected imports when they make dependencies easier to read. A long list can still be clearer than hiding important names behind several wildcards. In a short example, fully qualifying one rarely used type may communicate enough without another import line.</p>
+<p>If two libraries define Date, importing both single types with that simple name creates a conflict. Import one and fully qualify the other, or fully qualify both. Java has no ordinary import-alias syntax like renaming a type with an as keyword.</p>
+<p>An import does not force immediate class initialization. It is a compile-time naming aid. Runtime loading and initialization occur according to separate use rules. Do not expect a static block to execute merely because its class appears in an import declaration.</p>
+<h2 id="static-imports">Shorten static names carefully</h2>
+<p>A <dfn>static import</dfn> makes accessible static members available by short name. import static java.lang.Math.max allows max(a, b) instead of Math.max(a, b). It can also import a static field such as a mathematical constant.</p>
+<p>Static import is not an object factory and cannot import local variables from another method. It also does not bypass private access. A selected static import can be clear for a small family of familiar operations, but too many unqualified names obscure where behaviour comes from.</p>
+<p>An instance method needs a receiver object, so it is not imported as an independent static operation. A method's ownership and access rules remain unchanged by naming convenience. Return to the declaring type's contract whenever an unqualified imported name is unclear.</p>
+<p>When a source name conflicts with a local declaration or another imported member, qualification can restore clarity. Explicit ClassName.member spelling is often easier to read than clever resolution. The goal is to communicate the dependency, not minimise every character.</p>
+<h2 id="packages-access">Packages are boundaries with practical consequences</h2>
+<p>Package-private access lets related types cooperate without making their declarations public to the whole application. Put types together because they have a coherent relationship, not merely because a difficult access check disappears. A package should express an area of responsibility.</p>
+<p>A package name does not create an inheritance relationship. campus.model and campus.model.internal are distinct packages for access checks. A type in the apparent subpackage does not gain package-private access to types in the parent-named package.</p>
+<p>The unnamed package is convenient for tiny experiments but unsuitable for reusable application types. Code in a named package cannot import an unnamed-package class. Move cooperating production types into deliberate named packages as the project grows.</p>
+<p>Editors can maintain this layout for you. Even then, inspect the configured source root, output root and run class when troubleshooting. Renaming a folder manually without updating a declaration can leave the apparent file location out of agreement with its declared type name.</p>
+<h2 id="common-mistakes">Use the right name at each stage</h2>
+<h3>Launching a source path as a class name</h3><p>For a compiled packaged class, give java the dotted name and set the root with -cp. Do not append .class or put path separators into the qualified class name.</p>
+<h3>Expecting an import to grant access</h3><p>A public type can still have a private constructor or method. A package-private type is not made public by importing it. Resolve naming and visibility as separate checks.</p>
+<h3>Placing package after class</h3><p>The declaration describes the compilation unit and comes before imports and type declarations. It is not a statement that can be placed inside main or repeated before individual fields.</p>
+<h2 id="version-notes">Packages and modules are different layers</h2>
+<p>Named packages and imports work under Java 17 using the layout above. Static imports were introduced in Java 5. Java modules arrived later and add another organisational layer; a package name by itself does not declare a module.</p>
+<h2 id="summary">Keep namespace, path and launch root aligned</h2>
+<p>Use packages to organise type names, imports to shorten accessible names, and a classpath root above package folders to launch compiled code. Next, connect primitive values with object APIs through <a href="topic:oop-wrapper-classes">Wrapper Classes and Autoboxing</a>.</p>

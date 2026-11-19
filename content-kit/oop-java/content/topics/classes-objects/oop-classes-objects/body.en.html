@@ -1,0 +1,67 @@
+<h2 id="introduction">Give one student a home for related data</h2>
+<p class="lead">A student record holds a roll and a mark. You also need a decision about whether that mark passes. A <dfn>class</dfn> lets you describe those related facts and actions together. A particular student object then holds the values for one record.</p>
+<p>Think of a class as a description of a form, and an object as one filled-in form with its own identity. Creating two objects gives you two places to store marks. Creating two references to one object still gives you only one place.</p>
+<p>This lesson uses a small Student class so you can see each step. The fields are directly accessible at first to keep the memory picture visible. Later, <a href="topic:oop-access-modifiers">Access Modifiers</a> and <a href="topic:oop-encapsulation">Encapsulation</a> explain how to protect those fields.</p>
+<h2 id="syntax">Fields describe state, methods describe work</h2>
+<p>A <dfn>field</dfn> is a variable declared as part of a class. An instance field has separate storage in each object. An <dfn>instance method</dfn> runs through a receiver object and can use its fields. A local variable belongs to one method call instead.</p>
+<pre><code class="language-java">class Student {
+    int roll;
+    int mark;
+    boolean passed() {
+        return mark &gt;= 40;
+    }
+}</code></pre>
+<p>The passed method reads the receiver's mark. It does not receive a mark parameter because the relevant state already belongs to that Student. Calling first.passed() uses first's object, while second.passed() can inspect a different one.</p>
+<pre class="diagram">+---------------------+
+| Student             |
++---------------------+
+| roll: int           |
+| mark: int           |
++---------------------+
+| passed(): boolean   |
++---------------------+</pre>
+<p>This is a simple UML-style class box. The top compartment names the class, the middle lists attributes, and the bottom lists operations. A diagram describes a type; it does not show every individual object created from it.</p>
+<h2 id="how-it-works">Separate the reference from the object</h2>
+<pre class="diagram">first  -----&gt; Student object A
+              roll = 17
+              mark = 75
+
+second -----&gt; Student object B
+              roll = 24
+              mark = 35</pre>
+<p>A <dfn>reference variable</dfn> holds a value identifying an object. The new expression creates the object and returns its reference. Assignment stores that reference in a variable. These steps are related, but declaring a variable alone does not create a Student.</p>
+<p>When new Student() runs, Java allocates the object and gives its fields default values before initialization completes. Here the int fields begin at zero. A local Student variable, by contrast, cannot be read before definite assignment. Defaults for fields do not make every local variable usable automatically.</p>
+<p>If you write Student second = first, the reference value is copied. Both arrows then reach object A. A later second.mark assignment changes the mark in that shared object. It does not create another Student or move first's arrow.</p>
+<p>If you know C, references resemble pointers in the sense that they let you reach shared data. Java does not expose pointer arithmetic or manual free for these objects. An unreachable object becomes eligible for garbage collection, without a promise of immediate reclamation.</p>
+<h2 id="examples">Build, compare and share Student instances</h2>
+<p>Start by creating one Student and calling its pass decision. Then keep two students independent, deliberately create an alias, and inspect default fields. Count the new expressions when you predict how many objects exist.</p>
+<h3>One student result</h3>
+<p>The object holds roll 17 and mark 75. passed reads that mark and returns true.</p>
+<div data-example="ex-1"></div>
+
+<h3>Independent students</h3>
+<p>The first and second variables reach separate Student objects. Their marks lead to different pass decisions.</p>
+<div data-example="ex-2"></div>
+
+<h3>Two references to one student</h3>
+<p>Both variables reach one object. Changing its mark through second is visible through first.</p>
+<div data-example="ex-3"></div>
+
+<h3>Default field values</h3>
+<p>The int fields start at zero. A zero mark fails the threshold check.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="design">Choose a responsibility before adding members</h2>
+<p>A useful class has a focused job. Student can hold a roll and result-related state, but it need not print every campus report or read every input file. Input code may create the object, then call its operations. Keeping unrelated work outside helps the class remain understandable.</p>
+<p>Names should distinguish the description from the instance. Student names the class; firstStudent or applicant can name a reference. The variable name does not become part of the object's identity. Two variables with different names can still reach the same instance.</p>
+<p>A method can compute a result instead of storing another field. Storing both mark and a separate passed flag would require keeping them consistent. Computing passed from mark avoids that duplicated state. Whenever two fields repeat the same information, consider whether one should be derived.</p>
+<p>An array of Student references does not automatically contain Student objects. new Student[n] creates an array whose elements initially hold null. Fill each needed position with a constructed Student before calling a method through it. The container and its contained objects are separate allocations.</p>
+<p>This object model becomes more useful when the starting state must follow a rule. Instead of creating a blank object and remembering several assignments, you can initialise it through a constructor. That makes the next lesson a natural extension of the same memory picture.</p>
+<h2 id="common-mistakes">Count objects rather than variable names</h2>
+<h3>Declaring without constructing</h3><p>Student student; inside a method does not make an object. Assign a suitable reference before reading it. Using new is one way to obtain that reference; copying an existing reference is another.</p>
+<h3>Expecting an alias to be a clone</h3><p>Assignment copies a reference value. To obtain independent state, construct a different object and copy the meaningful field values according to your design. A later lesson discusses equality and sharing more fully.</p>
+<h3>Reading a method as a field</h3><p>passed() is a method call because it has parentheses. mark is a field access. The method can calculate a fresh answer from the current state each time it runs.</p>
+<h2 id="version-notes">Ordinary classes are enough</h2>
+<p>The Student model uses ordinary Java 17 class syntax and no preview features. Records and other specialised type forms come later. Learning the basic object and reference picture first makes those alternatives easier to judge.</p>
+<h2 id="summary">Follow each receiver to its own state</h2>
+<p>A class describes fields and operations; new creates an instance. References can reach independent objects or share one object. Continue with <a href="topic:oop-constructors">Constructors</a> to establish meaningful state during creation.</p>

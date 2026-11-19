@@ -1,0 +1,79 @@
+<h2 id="introduction">Separate one class counter from many student records</h2>
+<p class="lead">A department may want a count of all student records created, while each record needs its own identifier. Copying the department count into every student would mix two responsibilities. A <dfn>static member</dfn> belongs to a loaded class rather than each individual instance.</p>
+<p>Think of a shared classroom notice board beside separate student notebooks. Updating the board changes one shared place. Updating a notebook changes only one student's record. Static state resembles the board; instance state resembles the notebooks.</p>
+<p>This distinction explains why main is static. The launcher can call it without selecting a particular Main object. A static method has no current this reference. It can use its arguments and class state, or work through an explicitly supplied object.</p>
+<h2 id="syntax">Mark shared members explicitly</h2>
+<p>Place static on a field or method declaration when its meaning belongs to the class. Call static methods through the class name to make that ownership visible. A method being static does not automatically make it pure, constant or safe for concurrent access.</p>
+<pre><code class="language-java">class Student {
+    private static int created;
+    private final int id;
+    Student() {
+        created++;
+        id = created;
+    }
+    static int count() {
+        return created;
+    }
+}</code></pre>
+<p>created is shared; id is copied into each object during construction. Adding final to id prevents reassignment of that instance field. The two modifiers answer different questions: static concerns ownership, while final concerns assignment.</p>
+<table class="ref"><caption>Instance versus static members</caption><thead><tr><th scope="col">Question</th><th scope="col">Instance</th><th scope="col">Static</th></tr></thead><tbody>
+<tr><td>Field storage belongs to</td><td>Each object</td><td>The loaded class</td></tr>
+<tr><td>Usual qualification</td><td>object.member</td><td>ClassName.member</td></tr>
+<tr><td>Method has this</td><td>Yes</td><td>No</td></tr>
+<tr><td>Typical Student use</td><td>roll, saved id</td><td>creation counter</td></tr>
+<tr><td>Runs automatically for each object</td><td>Instance initialization</td><td>No</td></tr>
+</tbody></table>
+<h2 id="how-it-works">Draw shared and separate storage</h2>
+<pre class="diagram">Student class state
+    created = 2
+        ^
+        | used by each constructor
+        |
+first ----&gt; Student object A: id = 1
+second ---&gt; Student object B: id = 2</pre>
+<p>Before any Student is constructed, created starts at zero. The first constructor increments it to one and saves one in that object's id. The second increments it to two and saves two elsewhere. The first object's id remains one.</p>
+<p>The static count method can read created without an instance. It cannot read an arbitrary unqualified id because no particular Student is selected. A static helper receiving a Student argument can access permitted instance state through that explicit reference. Static does not forbid object use; it removes the implicit receiver.</p>
+<p>Static state belongs to a class as loaded by a class loader. In advanced applications, distinct class loaders can load distinct copies of a class. For these ordinary console programs, one loaded copy is the useful model. Do not turn the phrase shared by the class into a claim about every JVM in the world.</p>
+<p>A static counter is not automatically the number of currently live objects. The example counts constructions and never decrements. Garbage collection does not update that counter for you. Name such fields according to what they actually measure.</p>
+<h2 id="examples">Trace ownership and initialization separately</h2>
+<p>The Student example combines a shared generator with individual saved ids. Settings shows one-time class initialization, while Lab contrasts it with per-object initialization. MarkMath demonstrates a calculation that needs no persistent receiver state.</p>
+<h3>Shared creation count, individual ids</h3>
+<p>The two objects hold ids 1 and 2. The single static counter records two constructions.</p>
+<div data-example="ex-1"></div>
+
+<h3>One class initialization</h3>
+<p>The first active use initializes Settings and prints init once. Both method calls then read 30.</p>
+<div data-example="ex-2"></div>
+
+<h3>A small utility class</h3>
+<p>The stateless operation needs no object. Its private constructor prevents callers from creating a meaningless utility instance.</p>
+<div data-example="ex-3"></div>
+
+<h3>Static and instance initialization</h3>
+<p>The static block runs once. The instance block runs once for each of the two objects.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="static-initialization">When class initialization happens</h2>
+<p>A <dfn>static initializer</dfn> is a static block or static field initializer that prepares class state. Relevant active uses trigger class initialization, including creating an instance, invoking a static method, or using a nonconstant static field. Java performs that initialization once for the loaded class.</p>
+<p>Static field initializers and static blocks run in textual order. A field has its default value before those assignments execute. If one initializer depends on another, read the declaration order carefully. Complicated cross-class initialization dependencies can be difficult to reason about.</p>
+<p>Compile-time constants are an important exception to a casual first-use rule. A static final primitive or String initialized with a constant expression may be inlined into caller code. Reading such a constant does not necessarily initialize its declaring class. Not every static final field is a compile-time constant.</p>
+<p>A static final field computed by a method call is still final, but its value is not a constant expression in that sense. Its initialization follows the class initialization process. This distinction matters when you predict whether a static block prints during an output question.</p>
+<p>Do not put interactive input in a static initializer for a normal teaching model. Initialization timing would become tied to class use rather than an explicit user action. Keep initialization small, predictable and focused on preparing the class.</p>
+<h2 id="utility-classes">Use static methods when no receiver is needed</h2>
+<p>A <dfn>utility class</dfn> groups related stateless operations. Math is a familiar library example. A MarkMath.clamp method can depend only on a proposed mark and need no MarkMath object. Its name tells callers what calculation is performed.</p>
+<p>A private constructor prevents ordinary outside callers from instantiating the utility class. Marking the class final can make its non-inheritance intent explicit as well. The private constructor, rather than static methods alone, is what blocks direct construction.</p>
+<p>Avoid turning every method into a static utility by habit. A wallet withdrawal depends on one wallet's state and belongs naturally to that receiver. A pure conversion from poisha to whole taka can be a static calculation. Ownership follows the meaning of the work.</p>
+<p>A utility should also stay focused. A class collecting every unrelated helper in an application becomes hard to navigate. Group methods that share a coherent responsibility, and choose names that communicate the inputs and result without hidden mutable dependencies.</p>
+<h2 id="shared-state">Understand the cost of sharing</h2>
+<p>Mutable static state means callers can influence one another. If a shared fee rate changes, bills computed for existing Enrollment objects may change too. That can be correct if the model promises the current rate, or wrong if each enrollment should preserve its original rate.</p>
+<p>Decide whether a value is a live shared policy or a historical snapshot. Save an instance value when the event should remember the rate at creation. Use a shared field only when all relevant calculations should observe later changes. This is a design decision, not merely a syntax choice.</p>
+<p>Tests and repeated runs also need to account for static state. Within one JVM, a counter can retain changes between method calls. Starting a fresh JVM starts a fresh class initialization context. A reset method should not be added casually if it would break the class contract.</p>
+<p>Concurrent updates require additional coordination. Incrementing an int is not made atomic or safely shared merely by declaring it static. <a href="topic:oop-multithreading">Multithreading</a> later covers coordination. Here, the examples deliberately use one thread and bounded counts.</p>
+<h2 id="common-mistakes">Do not confuse shared with constant</h2>
+<h3>Calling a static method through an instance</h3><p>Java may permit some instance-style static accesses, but the spelling misleads readers about the receiver. Use the class name. It also avoids compiler lint warnings in code checked strictly.</p>
+<h3>Trying to use this in static code</h3><p>A static call has no implicit object. Pass an object explicitly when its state is needed, or make the operation an instance method when that is its true responsibility.</p>
+<h3>Expecting a static block for each object</h3><p>A static block prepares the loaded class once. An instance initializer or constructor runs for each new object. Keep two separate counts in an initialization trace.</p>
+<h2 id="version-notes">The ownership rules stay the same</h2>
+<p>The static member and initializer rules used here are supported under Java 17 without a new feature. Static imports, taught with packages, only shorten member names. They do not change when the declaring class is initialized or who owns its fields.</p>
+<h2 id="summary">Share only what the model really shares</h2>
+<p>Instance members describe individual objects, while static members describe a loaded class or a calculation without a receiver. Follow initialization timing separately from ownership. Next, examine sharing through ordinary references in <a href="topic:oop-object-references">Object References and Equality</a>.</p>

@@ -1,0 +1,58 @@
+<h2 id="introduction">One ordered container, many values</h2>
+<p class="lead">A marks register needs more than one variable named mark. An <dfn>array</dfn> groups values of the same element type in a fixed sequence. You use an index to select a position, much like using a numbered row in a register.</p>
+<p>In Java, an array is an object. An array variable holds a reference to that object, rather than the elements inside the variable itself. Creating another reference does not copy its elements. Creating another array gives you separate storage.</p>
+<p>If you know C arrays, remember two differences immediately. Java arrays know their length, and every element access is checked. They do not decay into raw pointers for arithmetic. A two-dimensional Java array is also an array of row references, so rows need not have equal lengths.</p>
+<h2 id="syntax">Create an array and name its bounds</h2>
+<p>Use new when the length is known but values will arrive later. Use an initializer when the initial values are already known. The length is fixed for that object, even though a variable may later refer to a different array.</p>
+<pre><code class="language-java">int[] marks = new int[3];
+int[] rolls = {11, 12, 13};
+int[][] groups = {{1, 2}, {3}};
+int count = marks.length;</code></pre>
+<p>Array length is a field, so it has no parentheses. The first index is zero and the last is length minus one. A new int array starts with zero-valued elements. Other primitive arrays have their own zero-like defaults; reference arrays start with null references.</p>
+<table class="ref"><caption>Valid positions in a three-element array</caption><thead><tr><th scope="col">Index</th><th scope="col">Status</th><th scope="col">Reason</th></tr></thead><tbody>
+<tr><td>-1</td><td>Invalid</td><td>Below the first position</td></tr>
+<tr><td>0</td><td>Valid</td><td>First element</td></tr>
+<tr><td>2</td><td>Valid</td><td>Last element</td></tr>
+<tr><td>3</td><td>Invalid</td><td>Equal to length</td></tr>
+</tbody></table>
+<h2 id="how-it-works">Draw the outer array and its rows</h2>
+<pre class="diagram">groups ----&gt; outer array, length 3
+             [0] ----&gt; [11, 12]   length 2
+             [1] ----&gt; [21]       length 1
+             [2] ----&gt; []         length 0</pre>
+<p>A <dfn>jagged array</dfn> has rows of different lengths. The outer length counts rows, not all integers. groups[0].length counts elements in the first row. A safe nested loop uses the current row's length for its inner bound.</p>
+<p>Writing new int[3][] allocates only the outer array. Its three row references begin as null. You must allocate each row before reading its length or elements. Writing new int[3][2] creates the outer array and three allocated rows of length two.</p>
+<p>An empty row and a null row are different. An empty row exists with length zero; a null reference points to no row. A foreach loop over an empty row performs no work. Trying to read length through a null row fails before any element loop begins.</p>
+<p>Array allocation receives an int length. Zero is valid and produces an empty object. A negative length is invalid. Large lengths can exceed available memory, so practical input limits matter even when the index arithmetic looks correct.</p>
+<h2 id="examples">Observe defaults, sorting and safe access</h2>
+<p>The examples show what a new array contains, how a library utility changes order, and why row lengths belong to rows. The final guard handles an invalid index before Java attempts the access.</p>
+<h3>Length and default values</h3>
+<p>The new array contains three int elements. Each starts as zero.</p>
+<div data-example="ex-1"></div>
+
+<h3>Sorting a mark list</h3>
+<p>Sorting changes marks itself. The readable display is [40, 70, 90].</p>
+<div data-example="ex-2"></div>
+
+<h3>Rows with different lengths</h3>
+<p>A two-dimensional array holds row references. These rows contain two, one and zero elements.</p>
+<div data-example="ex-3"></div>
+
+<h3>Check an index before reading</h3>
+<p>An index equal to length lies outside the array. The guard prints Invalid index without attempting that access.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="utilities">Use the Arrays helpers deliberately</h2>
+<p>The java.util.Arrays class contains static array utilities. Import Arrays to shorten that fully qualified name. Arrays.toString produces readable text for a one-dimensional array. Printing the array reference directly does not list its contents in the same useful form.</p>
+<p>Arrays.sort changes the array you pass to it. For an int array, it places values in ascending numeric order. Another reference to the same array sees that new order too. If you need to preserve the original order, make a copy before sorting.</p>
+<p>A primitive array clone gives another array containing copied primitive values. For arrays of object references, copying the outer array still shares the referenced objects. This is a shallow copy. The distinction becomes important when you protect internal data in <a href="topic:oop-encapsulation">Encapsulation</a>.</p>
+<p>For a two-dimensional display, Arrays.deepToString can format nested contents. Understand the row structure before relying on the display. A neat printed rectangle does not prove that all possible arrays of that type must be rectangular.</p>
+<p>When you trace a row sum, start a new accumulator for each row. Reusing the previous total without resetting it computes a running total across rows, which is a different question from independent row sums.</p>
+<h2 id="common-mistakes">Respect both length and reference state</h2>
+<h3>Using the last count as an index</h3><p>An array of length three has positions zero, one and two. Accessing position three throws ArrayIndexOutOfBoundsException. Unlike C, a Java bounds error is checked rather than treated as an unchecked memory access.</p>
+<h3>Assuming every row matches the first</h3><p>An inner loop bounded by values[0].length may fail on a shorter row. Use values[row].length after confirming that row exists. Keep the outer and inner counts separate in your trace.</p>
+<h3>Expecting assignment to duplicate elements</h3><p>After int[] second = first, both variables reach one array. Sorting or writing through second changes what first sees. Request a new array and copy values when independent state is required.</p>
+<h2 id="version-notes">No newer array syntax is needed</h2>
+<p>The array forms here work with Java 17 and much earlier releases. The utilities are standard library methods rather than new language syntax. No manual free operation is needed when an array becomes unreachable.</p>
+<h2 id="summary">Track the object behind each array reference</h2>
+<p>An array has one fixed length and checked zero-based indices. A two-dimensional array adds another layer of references and row lengths. Continue with <a href="topic:oop-java-strings">Strings and StringBuilder</a> to compare array storage with immutable text.</p>

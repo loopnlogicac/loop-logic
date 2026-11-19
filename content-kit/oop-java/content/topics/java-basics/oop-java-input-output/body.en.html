@@ -1,0 +1,55 @@
+<h2 id="introduction">Agree on what enters and what leaves</h2>
+<p class="lead">A program cannot interpret a marks sheet unless you tell it how the values are arranged. <dfn>Input parsing</dfn> turns incoming text into usable values. Output formatting turns values into readable text. Both work best when the input and output rules are stated clearly.</p>
+<p>Scanner is convenient when you want tokens such as integers, decimals or words. BufferedReader is useful when you want direct control over whole lines and faster parsing. Neither tool knows the meaning of a mark or roll; your program supplies those rules.</p>
+<p>If you know C's scanf, notice that Java readers return values rather than requiring an address such as &amp;mark. You still need to think about invalid text, missing values and leftover line endings. A different API does not remove the need for an input policy.</p>
+<h2 id="syntax">Tokens and lines are different units</h2>
+<p>A <dfn>token</dfn> is a piece of input separated according to parsing rules. Scanner uses whitespace as its usual delimiter. next reads a token, nextInt parses an integer token, and nextDouble parses a decimal token. nextLine instead reads the remainder of the current line.</p>
+<pre><code class="language-java">Scanner input = new Scanner(System.in);
+int roll = input.nextInt();
+input.nextLine();
+String name = input.nextLine();</code></pre>
+<p>System.in supplies the input stream. System.out supplies the usual text output stream. Scanner belongs to java.util, so import it explicitly. The examples use try-with-resources, a block that closes its reader when the block finishes. That also closes System.in here, which is fine for a small one-run program.</p>
+<p>Use one coordinated reader for an input stream. Mixing independent readers over System.in can cause buffered data to be held in unexpected places. If a larger application shares its input stream, decide which part owns closing it.</p>
+<h2 id="how-it-works">Follow the unread characters</h2>
+<p>After nextInt reads digits, the following line separator can remain unread. A nextLine call then returns the remaining text before that separator, often an empty String. It has not skipped your name by magic; it has read exactly the rest of the number line.</p>
+<p>If the input format puts a name on the next line, consume the current line remainder first. Then call nextLine again to read the name. If the name is on the same line as the number, use a different parsing plan. The correct repair depends on the stated arrangement.</p>
+<p>For integer input of unknown count, use hasNextInt before nextInt. The check is false at end of input. It is also false when the next token is not a valid int, so it is not a complete invalid-input reporting policy. In these sum exercises, every token is guaranteed to be an integer.</p>
+<p>EOF means end of input. In a terminal, the key sequence for signalling it varies by operating system. A redirected file or pipe reaches EOF when all its bytes are consumed. A count-based input and an EOF-based input are different protocols; follow the one the problem specifies.</p>
+<h2 id="examples">Read and format small records</h2>
+<p>Observe the prompts as well as the values. The number-and-name example separates token reading from line reading. The final two examples both total input, but one parses tokens and the other parses one integer per line.</p>
+<h3>Read two marks</h3>
+<p>The two tokens become int values. The prompt stays beside the total because it uses print.</p>
+<div data-example="ex-1"></div>
+
+<h3>A number followed by a full line</h3>
+<p>The extra nextLine consumes the remaining newline after the roll. The following call reads the whole name.</p>
+<div data-example="ex-2"></div>
+
+<h3>A fixed decimal format</h3>
+<p>%.2f prints two digits after the decimal point. Locale.ROOT fixes the decimal separator.</p>
+<div data-example="ex-3"></div>
+
+<h3>Sum integers until input ends</h3>
+<p>The loop reads all three integer tokens and stops at the end, giving 15.</p>
+<div data-example="ex-4"></div>
+
+<h3>Buffered line input</h3>
+<p>readLine returns text without its line ending. Each nonblank line is parsed as one integer, giving 12.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="formatting">Control presentation without changing the value</h2>
+<p>System.out.printf writes formatted text using a format pattern. %d displays an integer, %s text, and %.2f a floating-point value with two fractional digits. %n writes the platform's line separator. The format specification should match the argument type.</p>
+<p>String.format uses the same style of pattern but returns a String. That is helpful when another method needs the prepared label. Saving a formatted amount does not change the underlying numeric value. Formatting is presentation, not a substitute for an exact money representation.</p>
+<p>The default locale can change decimal and grouping conventions. Use Locale.ROOT when a numeric exercise explicitly requires a dot separator. Set the Scanner locale as well when reading a decimal using that convention. Otherwise a program may read and print according to different assumptions.</p>
+<h2 id="fast-input">BufferedReader for line-based work</h2>
+<p>BufferedReader reads characters in buffered groups. Its readLine method returns a line without its ending, or null when no line remains. An empty line is an existing line with empty content, so it is not the same as EOF.</p>
+<p>Integer.parseInt converts a String to int. The buffered example trims a line and parses it only when it is not blank. It therefore accepts one integer per nonblank line. If several numbers appear on one line, you need to split or tokenize that line according to the input format.</p>
+<p>Reading can fail with an IOException. The example declares throws IOException on main so that a reading failure is reported rather than silently ignored. This is a preview of the <a href="topic:oop-exceptions">exception lesson</a>, which explains handling and recovery. Buffered reading is often faster, but your parsing choices still determine correctness.</p>
+<h2 id="common-mistakes">Do not confuse a line with a value</h2>
+<h3>The full name appears empty</h3><p>Inspect what remains after the preceding token read. Consume the rest of that line before reading the next full line when the format requires it. Do not blindly discard a line that might contain real data.</p>
+<h3>An empty line ends the loop</h3><p>For BufferedReader, test against null to detect EOF. A blank line may be skipped, stored or rejected depending on the problem. Give it an explicit meaning instead of treating it as missing input automatically.</p>
+<h3>The printed decimal separator changes</h3><p>A system locale can use a comma. Pass a fixed locale when the required format uses a dot. The number of digits requested by %.2f concerns the display and does not make double arithmetic exact.</p>
+<h2 id="version-notes">Know the library minimums</h2>
+<p>Scanner and formatted output have existed since Java 5. String.isBlank requires Java 11, so the buffered examples use a feature comfortably inside Java 17. All input here is console text rather than GUI interaction.</p>
+<h2 id="summary">Match the parser to the input agreement</h2>
+<p>Choose tokens for token-shaped data and lines when spaces belong inside a value. Format results with an explicit decimal policy when necessary. Continue by keeping related data and actions together in <a href="topic:oop-classes-objects">Classes and Objects</a>.</p>
