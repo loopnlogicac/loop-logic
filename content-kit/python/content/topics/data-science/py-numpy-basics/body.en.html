@@ -1,0 +1,55 @@
+<h2 id="introduction">Treat a table of marks as one numerical object</h2>
+<p class="lead">Suppose you need to add two marks to every quiz score. A Python list needs a comprehension or loop. A NumPy <dfn>array</dfn> collects numerical values into an object whose arithmetic works across its entries. You can describe the calculation once and let the library apply it.</p>
+<p>A list remains the right tool for many small collections. NumPy becomes useful when you repeatedly calculate with large, regular numerical data. Its compiled operations often avoid the overhead of a Python loop. That advantage depends on the calculation and data size; converting a tiny list may cost more than it saves.</p>
+<p>Install NumPy in your chosen environment with python -m pip install numpy. Import it as np, a widely used short name. Package releases differ in supported Python versions, so choose a release compatible with your interpreter. This lesson uses features shared by modern NumPy releases.</p>
+<h2 id="syntax">Build arrays and inspect their dimensions</h2>
+<p>np.array([10, 20, 30]) builds a one-dimensional array from a list. Nested equal-length lists build a rectangle. A <dfn>dtype</dfn> describes how entries are represented, such as np.int64 or np.float64. A numerical array uses one dtype, unlike a list that can freely mix unrelated objects.</p>
+<pre><code class="language-python">marks = np.array([[40, 50, 60], [70, 80, 90]], dtype=np.float64)
+row_means = marks.mean(axis=1, keepdims=True)
+centered = marks - row_means</code></pre>
+<p>The <dfn>shape</dfn> gives the length of each axis. Here it is (2, 3): two students and three quizzes. ndim is two, because there are two axes. size is six, the total number of entries. Shape (3,) is a single axis of length three; the comma makes it a one-item tuple.</p>
+<p>Choose a floating dtype before calculations that need fractions. Assigning a fraction into an integer array can lose its fractional part. Fixed-width integers can also overflow, unlike Python's growing int values. Do not assume choosing NumPy automatically increases precision or checks every arithmetic overflow.</p>
+<h2 id="how-it-works">Follow axes through indexing and arithmetic</h2>
+<p>Index a matrix with a[row, column]. Both indices start at zero, and negative indices count from the end. A colon selects a slice: a[:, 1] means every row and column one. An integer selection removes an axis, so that result has shape (2,), not (2, 1).</p>
+<p>Use a[:, 1:2] when you need to preserve a length-one column axis. Slices exclude their stop index, as Python list slices do. Reshape changes how the same element count is arranged: six entries can become (2, 3), but five cannot. Do not reshape merely to silence an error without checking what rows now mean.</p>
+<table class="ref"><caption>Reducing a two-by-three marks table</caption><thead><tr><th scope="col">Expression</th><th scope="col">Result shape</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>marks.mean(axis=0)</td><td>(3,)</td><td>One mean for each quiz</td></tr><tr><td>marks.mean(axis=1)</td><td>(2,)</td><td>One mean for each student</td></tr><tr><td>marks.mean(axis=1, keepdims=True)</td><td>(2, 1)</td><td>Student means kept as a column</td></tr></tbody></table>
+<p>A <dfn>vectorized operation</dfn> describes work on a whole array rather than writing a Python loop for each entry. Addition, comparison and many mathematical functions follow this pattern. It does not mean every operation uses a processor's special vector instructions, nor that memory use disappears.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A regular numerical array resembles a typed block of entries, but NumPy also tracks shape and strides. Python manages its lifetime. Views may share the underlying block, so changing one view can affect another array referring to that storage.</p></div>
+<h2 id="examples">See numerical operations and shared storage</h2>
+<h3>Compare repetition with numerical multiplication</h3>
+<p>The list repeats its items. NumPy doubles each number; converting back with tolist gives ordinary Python values.</p>
+<div data-example="ex-1"></div>
+<h3>Follow rows and columns through a reduction</h3>
+<p>Two rows represent two students, and three columns represent three quizzes. axis=1 reduces each row to one mean.</p>
+<div data-example="ex-2"></div>
+<h3>Select passing marks with a mask</h3>
+<p>The comparison produces one boolean per mark. Boolean indexing keeps only the entries whose mask is True.</p>
+<div data-example="ex-3"></div>
+<h3>Broadcast one adjustment per column</h3>
+<p>The length-three bonus aligns with the last dimension. Both student rows receive the same three adjustments.</p>
+<div data-example="ex-4"></div>
+<h3>Distinguish a slice view from a copy</h3>
+<p>Basic slicing shares storage. Changing the slice changes the original, while changing the explicit copy does not.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="broadcasting">Align dimensions before adding</h2>
+<p><dfn>Broadcasting</dfn> lets compatible shapes participate in one calculation. Imagine adding the same three quiz bonuses to every student's row. You need not build a full bonus table. A length-three array can align with the last axis of a two-by-three matrix.</p>
+<p>Compare shapes from right to left. Two aligned dimensions are compatible when they are equal or either length is one. Missing leading dimensions behave as length one. Shape (2, 3) plus (3,) produces (2, 3). Shape (2, 3) plus (2,) fails because the final lengths three and two disagree.</p>
+<p>A bonus per student needs shape (2, 1), so its one column can stretch across three quizzes. A flat length-two array does not express that intent. Broadcasting normally avoids copying repeated inputs, but the computed result may still require substantial memory. Inspect shapes before building very large intermediate results.</p>
+<p>Row centering subtracts each student's mean from that student's marks. Keeping the reduced axis gives means of shape (2, 1). Subtracting then aligns each mean with its row. This is a useful reason for keepdims=True, beyond memorizing an argument name.</p>
+<p>Check a broadcast by calculating one entry by hand. With row [40, 50, 60] and column bonuses [1, 2, 3], the adjusted row is [41, 52, 63]. The second row receives those same bonuses. If your intended calculation adds one bonus to an entire student's row instead, represent those bonuses as a column before adding.</p>
+<h2 id="selection-and-copies">Choose values without losing track of ownership</h2>
+<p>A comparison such as marks &gt;= 40 creates a boolean array. Such a <dfn>mask</dfn> records which entries satisfy the condition. marks[mask] gathers those entries. For a flat array, you can count passing marks with np.count_nonzero(mask), including the case where none pass.</p>
+<p>Combine masks using parenthesized comparisons and &amp; or |. Python's and and or ask for a single truth value. A multi-element array cannot decide whether you mean every entry or any entry. Use mask.all() or mask.any() when one yes-or-no result is actually your goal.</p>
+<p>Basic array slicing usually returns a view. The view shares numerical storage with its source. Call copy() when later edits must be independent. Boolean and other advanced indexing gather a copy instead. These ownership rules differ from a Python list slice, which creates a new outer list.</p>
+<h2 id="common-mistakes">Check meaning before trusting a result</h2>
+<h3>Confusing the axis being reduced</h3>
+<p>axis=0 removes the row direction, leaving a value for each column. Write the intended result shape before calculating an average. That small step catches many swapped student and subject summaries.</p>
+<h3>Hiding an incompatible shape with flattening</h3>
+<p>Flattening removes the row and column meaning. Instead, inspect both shapes and decide whether the adjustment belongs to students or quizzes. Retain the needed axis explicitly.</p>
+<h3>Expecting printed decimals to be exact mathematics</h3>
+<p>Binary floating-point approximates many decimals. Format reported means with two decimal places, and use a suitable tolerance for numerical comparisons. Formatting changes the display, not the underlying calculation.</p>
+<h2 id="version-notes">Separate language syntax from library support</h2>
+<p>The Python syntax here works from 3.10 onward. The tested NumPy release is recorded in the package notes; newer NumPy releases may require newer Python. These examples avoid version-sensitive scalar representations by printing Python lists, integers and explicitly formatted decimal strings.</p>
+<h2 id="summary">Read the shape as part of the calculation</h2>
+<p>NumPy joins typed numerical storage with shape-aware operations. Inspect axes, choose compatible shapes and decide when you need an independent copy. Continue to <a href="topic:py-pandas-basics">pandas</a> when labels and mixed table columns matter as much as the numbers.</p>

@@ -1,0 +1,100 @@
+<h2 id="introduction">Turn a story into a precise calculation</h2>
+<p class="lead">A contest problem often sounds like a story about tickets, marks or bookings. Your first job is to identify the data, the allowed operations and the required answer. These twenty original problems build from direct arithmetic to reusable scanning patterns. They follow the spirit of introductory programming contests without depending on a particular judge.</p>
+<p>Work through the first eight as runnable examples, then try problems nine through sixteen before reading their practice solutions. Problems seventeen through twenty include full programs in the exam answers. Each numbered problem has an explicit input contract. Those contracts assume valid input, so the solutions focus on solving the stated task.</p>
+<h2 id="syntax">Read whitespace tokens or preserve a whole line</h2>
+<p>sys.stdin.buffer.read().split() reads all input bytes and separates whitespace-delimited tokens. int accepts a numeric byte token directly. This is convenient when a statement permits values to span arbitrary lines. It also keeps the input and token objects in memory, so consider their total size.</p>
+<pre><code class="language-python">tokens = iter(map(int, sys.stdin.buffer.read().split()))
+count = next(tokens)
+values = [next(tokens) for _ in range(count)]</code></pre>
+<p>For line-shaped input, sys.stdin.readline() keeps the problem's grouping visible. A blank line differs from end of file, although strip removes either line ending. Do not use split when spaces are meaningful inside one field. Choose text or bytes deliberately rather than mixing comparisons between them.</p>
+<p>Write final answers with print, or join many answer lines and use sys.stdout.write once. The required output format is part of correctness. These contest-style tasks print only their requested answers; an extra interactive prompt would change that contract. The expense project later uses a different, interactive interface.</p>
+<h2 id="how-it-works">Choose a pattern and justify its state</h2>
+<p>Start with a small hand calculation. Ask what information must survive from one step to the next. An accumulator keeps a total, a set remembers earlier values, and a stack remembers unmatched openings. Naming that state often reveals a short Python solution.</p>
+<p>An <dfn>invariant</dfn> is a statement that remains true as a loop progresses. For the repeated-value scan, seen contains precisely the earlier values. For the attendance scan, current is the run ending at the current character. These claims explain why an update is valid instead of merely describing its syntax.</p>
+<p>Use input bounds to check cost. A quadratic search over 100000 entries is usually unsuitable. Sorting takes O(n log n), while a subsequent two-pointer scan takes O(n). Python integers avoid fixed-width overflow, but enormous integers still require time and memory proportional to their representation.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python has arbitrary-size integers and ready-made collections, but algorithmic cost still matters. A comprehension does not make quadratic work linear. Buffered input changes parsing overhead, not the number of pair comparisons your algorithm performs.</p></div>
+<h2 id="examples">Problems 1–8: arithmetic, scans and boundaries</h2>
+<h3>1. Add signed adjustments</h3>
+<p>Read n (0–100000), followed by exactly n integers from -1000000 to 1000000. Print their sum. Whitespace may span lines.</p>
+<p>Start from the additive identity zero. sum naturally handles an empty collection, and negative adjustments need no special branch. Cost: O(n) time and O(n) memory.</p>
+<div data-example="ex-1"></div>
+<h3>2. Share a shuttle fare</h3>
+<p>Read passenger count n (0–1000000000) and positive capacity k (1–1000000000). Print the minimum number of shuttles needed.</p>
+<p>Integer ceiling division adds capacity minus one before dividing. A partial last group still needs a shuttle, while zero people need none. Cost: O(1) arithmetic operations.</p>
+<div data-example="ex-2"></div>
+<h3>3. Split a duration</h3>
+<p>Read nonnegative seconds s, at most 1000000000. Print hours, remaining minutes and remaining seconds as three space-separated integers.</p>
+<p>divmod gives both quotient and remainder. Convert the remainder rather than converting the original seconds again for every unit. Cost: O(1) arithmetic operations.</p>
+<div data-example="ex-3"></div>
+<h3>4. Validate three sticks</h3>
+<p>Read three integers from -1000000 to 1000000. Print VALID if they can be side lengths of a nondegenerate triangle; otherwise print INVALID.</p>
+<p>After sorting positive sides, only the sum of the two smallest needs comparison with the largest. Equality describes a flat shape. Cost: O(1) time and memory.</p>
+<div data-example="ex-4"></div>
+<h3>5. Add digits of a long receipt code</h3>
+<p>Read one nonempty decimal digit string of length at most 100000. Print its digit sum. Leading zeros are allowed.</p>
+<p>Read the identifier as text so its length and leading zeros remain available. Iterate characters rather than converting the entire huge integer. Cost: O(d) time and O(d) memory.</p>
+<div data-example="ex-5"></div>
+<h3>6. Find the largest equal packet size</h3>
+<p>Read nonnegative counts a and b, each at most 1000000000. Print their greatest common divisor; define the answer for 0 and 0 as 0.</p>
+<p>Replacing a and b with b and the remainder preserves their common divisors. The second number decreases until it reaches zero. Cost: O(log(max(a,b)+1)) division steps.</p>
+<div data-example="ex-6"></div>
+<h3>7. Recognize a prime roll candidate</h3>
+<p>Read n from 0–1000000000. Print PRIME if n is prime and NOT PRIME otherwise.</p>
+<p>A composite number has a factor no greater than its square root. The inclusive square bound catches perfect squares such as 49. Cost: O(sqrt(n)) time and O(1) auxiliary memory.</p>
+<div data-example="ex-7"></div>
+<h3>8. Check a mirror token</h3>
+<p>Read one nonempty lowercase ASCII token of length at most 100000. Print YES if it reads the same backward, otherwise NO.</p>
+<p>Reversed slicing gives a clear first solution. A pair of inward-moving indices can avoid allocating the reversed string when memory matters. Cost: O(n) time and O(n) extra memory.</p>
+<div data-example="ex-8"></div>
+
+<h2 id="practice-patterns">Problems 9–16: collections and efficient searches</h2>
+<h3>9. Choose the most frequent score</h3>
+<p>Read n (1–100000) then n integers from 0–100. Print the most frequent score and its frequency. Break ties by choosing the smaller score.</p>
+<p>Counter records each frequency. The tuple key first favors a larger count, then a smaller value; dictionary insertion order cannot decide ties. Cost: O(n) time and O(n) input memory. The full solution is in practice problem p-1.</p>
+<h3>10. List distinct badge numbers</h3>
+<p>Read n (0–100000) then n integers from 0–1000000000. Print the distinct values in increasing order, separated by spaces; print EMPTY when n is zero.</p>
+<p>A set removes duplicate values, then sorting establishes a promised display order. Set iteration alone cannot promise increasing order. Cost: O(n + u log u) time and O(n) memory for u distinct values. The full solution is in practice problem p-2.</p>
+<h3>11. Find the first repeated scanner value</h3>
+<p>Read n (0–100000) then n integers from 0–1000000000. Print the first value whose second appearance is encountered while scanning left to right, or NONE.</p>
+<p>Before each iteration, seen holds precisely the earlier values. Membership therefore answers whether this appearance is a repetition. Cost: Expected O(n) time and O(n) memory. The full solution is in practice problem p-3.</p>
+<h3>12. Measure a streak of attendance</h3>
+<p>Read a binary string of length 0–100000 on one line. Print the longest contiguous run of 1 characters; an empty line has answer 0.</p>
+<p>current measures the run ending here, while best records all completed prefixes. A zero resets current without erasing the best earlier streak. Cost: O(n) time and O(n) input memory. The full solution is in practice problem p-4.</p>
+<h3>13. Answer repeated inclusive range totals</h3>
+<p>Read n and q (1–100000 each), n integers of absolute value at most 1000000, then q pairs l r with 1 ≤ l ≤ r ≤ n. Print one inclusive range sum per line.</p>
+<p>prefix[k] totals the first k entries. Subtract the prefix before l from the prefix through r. Preprocessing saves rescanning for every query. Cost: O(n + q) time and O(n + q) memory. The full solution is in practice problem p-5.</p>
+<h3>14. Find two distinct tickets totaling a target</h3>
+<p>Read n (0–100000) and target (-2000000000–2000000000), then n integers from -1000000000 to 1000000000. Print YES if two distinct positions sum to target, otherwise NO.</p>
+<p>Sort first. If the smallest available plus the largest is too small, the smallest cannot succeed with any remaining partner. Advance it; apply symmetric reasoning when too large. Cost: O(n log n) time and O(n) memory. The full solution is in practice problem p-6.</p>
+<h3>15. Merge touching booking intervals</h3>
+<p>Read n (0–100000), then n closed intervals l r with 0 ≤ l ≤ r ≤ 1000000000. Merge overlapping or touching intervals. Print the merged count, then each merged l r on its own line in increasing order.</p>
+<p>Sorting makes every new start no smaller than earlier starts. Only the last merged interval can overlap the next one. Touching means equal endpoints here, not adjacent integer endpoints. Cost: O(n log n) time and O(n) memory. The full solution is in practice problem p-7.</p>
+<h3>16. Validate nested round and square brackets</h3>
+<p>Read one line containing only ()[] with length 0–100000. Print YES if brackets are properly nested and NO otherwise. The empty line is valid.</p>
+<p>A stack stores unmatched opening brackets. Each closing bracket must match the most recent opening. Checking only the total counts misses crossed nesting. Cost: O(n) time and O(n) memory. The full solution is in practice problem p-8.</p>
+
+<h2 id="exam-challenges">Problems 17–20: count, optimize and locate</h2>
+<h3>17. Count trailing zeros in a factorial</h3>
+<p>Read n from 0–1000000000. Print the number of decimal trailing zeros in n factorial. Zero factorial equals one. See exam question 1 for the complete solution.</p>
+<p>Each zero needs a factor ten. Twos are plentiful, so count factors five, including extra contributions from multiples of 25, 125 and later powers. Input &#x27;25&#x27; gives &#x27;6&#x27;. Input &#x27;0&#x27; gives &#x27;0&#x27;. Input &#x27;5&#x27; gives &#x27;1&#x27;.</p>
+<h3>18. Find the best nonempty earnings segment</h3>
+<p>Read n (1–100000), then n signed integers of absolute value at most 1000000. Print the greatest sum of a nonempty contiguous segment. See exam question 2 for the complete solution.</p>
+<p>ending is the best nonempty segment ending at this entry. Either extend its predecessor or restart here. Initialize from an actual entry to preserve all-negative answers. Input &#x27;5\n-2 4 -1 3 -5&#x27; gives &#x27;6&#x27;. Input &#x27;3\n-8 -2 -5&#x27; gives &#x27;-2&#x27;.</p>
+<h3>19. Locate the first eligible sorted value</h3>
+<p>Read n (0–100000) and target, then n nondecreasing signed integers; all values have absolute value at most 1000000000. Print the zero-based first position whose value is at least target, or n if absent. See exam question 3 for the complete solution.</p>
+<p>bisect_left locates the boundary between smaller and eligible values. It returns an insertion position, which may equal the collection length; check that before indexing. Input &#x27;5 4\n1 4 4 8 9&#x27; gives &#x27;1&#x27;. Input &#x27;0 7&#x27; gives &#x27;0&#x27;. Input &#x27;2 9\n1 2&#x27; gives &#x27;2&#x27;.</p>
+<h3>20. Count routes through a small grid</h3>
+<p>Read rows and columns from 1–30. Start at the top-left cell and move only right or down. Print the number of routes to the bottom-right cell, including one route for a one-cell grid. See exam question 4 for the complete solution.</p>
+<p>Every inner cell receives routes from above and left. Before updating a column, its stored value belongs to the previous row; its left neighbor already belongs to this row. Input &#x27;3 3&#x27; gives &#x27;6&#x27;. Input &#x27;1 1&#x27; gives &#x27;1&#x27;. Input &#x27;1 4&#x27; gives &#x27;1&#x27;.</p>
+
+<h2 id="common-mistakes">Try the case that attacks your assumption</h2>
+<h3>Confusing an empty answer with zero</h3>
+<p>Zero is a valid sum and can also be a valid score. A missing repeated value needs the specified NONE marker. Keep absence distinct from a numerical answer, especially when zero is within the allowed range.</p>
+<h3>Allowing one index to serve twice</h3>
+<p>The two-ticket task requires two positions. A single value three cannot form target six alone. Two separate threes can. Reason about indices as well as values.</p>
+<h3>Removing data order before reading the task</h3>
+<p>A set can count distinct values but destroys the sequence needed for a streak or first repetition. Sorting also changes positions. Apply either operation only when the question permits losing that information.</p>
+<h2 id="version-notes">Use familiar syntax with clear limits</h2>
+<p>All twenty solutions use Python 3.10-compatible syntax and the standard library. They require no numerical packages. Expected hash-table scan costs assume ordinary dictionary and set behavior. Arithmetic-step costs in the small number-theory tasks treat the stated bounded integers as practical machine-sized inputs.</p>
+<h2 id="summary">Keep a reason beside each shortcut</h2>
+<p>The strongest idioms express a calculation you can already explain. Practice the invariant, boundary cases and resource cost alongside the code. Continue with <a href="topic:py-exam-questions">Python exam questions</a> to explain these choices under written-exam conditions.</p>
