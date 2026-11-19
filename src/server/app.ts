@@ -9,6 +9,7 @@ import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts'
 import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
+import type { StudyPlanService } from '../app/study-plan.ts';
 import type { ReadingService } from '../reading/service.ts';
 import type { NoteService } from '../app/notes.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
@@ -59,6 +60,7 @@ export interface AppDeps {
   reports?: ReportService;
   runner?: RunnerService;
   search?: SearchService;
+  studyPlan?: StudyPlanService;
   store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
@@ -190,6 +192,12 @@ export function buildRoutes(d: AppDeps): Route[] {
     // catalog, dashboard, profile
     route('GET', '/api/courses', ({ query }) => learner.catalog(lang(query.get('lang'))), 'none'),
     route('GET', '/api/courses/:id', ({ params, query, learnerId }) => learner.course(params.id!, learnerId, lang(query.get('lang')))),
+    route('GET', '/api/study-plan', ({ learnerId, query }) => {
+      if (!d.studyPlan) throw new AppError('unavailable', 503, 'Study plans are unavailable.');
+      const track = query.get('track'), topic = query.get('topic');
+      if (Boolean(track) !== Boolean(topic)) throw new AppError('bad_input', 400, 'Provide both track and topic.');
+      return d.studyPlan.plan(learnerId, lang(query.get('lang')), track && topic ? { track, topic } : undefined);
+    }, 'learner'),
     route('GET', '/api/dashboard', ({ query, learnerId }) => learner.dashboard(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile', ({ query, learnerId }) => learner.profileView(learnerId, lang(query.get('lang')))),
     route('GET', '/api/profile/export', ({ learnerId }) => learner.exportData(learnerId)),
@@ -228,7 +236,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
-    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),
+    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang), body.review === true)),
     route('GET', '/api/learn/:track/:topic/practice/:pid', ({ params, query }) => tutorials.solution(params.track!, params.topic!, params.pid!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic/labs/:lab', ({ params, query }) => tutorials.lab(params.track!, params.topic!, params.lab!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/labs/:lab/run', ({ params, body }) => tutorials.runLab(params.track!, params.topic!, params.lab!, body.input, lang(body.lang)), 'none'),
