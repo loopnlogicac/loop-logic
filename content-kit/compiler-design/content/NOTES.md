@@ -1,7 +1,40 @@
-# Compiler Design — Batch 3
+# Compiler Design — Bangla edition, part 1
 
-Package **0.3.0**, schema **1.1**, final cumulative delivery **36/36 topics**.
+Package **0.3.1**, schema **1.1**, cumulative delivery **36/36 topics**.
 Review status remains `draft` for all topics.
+
+## Bangla edition, part 1
+
+Full `body.bn.html` lessons now accompany all **11 topics** in `introduction` and
+`lexical-analysis`: `cd-introduction`, `cd-phases`, `cd-tools`, `cd-lexical-analysis`,
+`cd-regular-expressions`, `cd-finite-automata`, `cd-thompson-construction`,
+`cd-subset-construction`, `cd-dfa-minimization`, `cd-lexer-implementation`, and `cd-flex`.
+
+The lessons follow `BANGLA_STYLE.md` and Task 2 section 1.6: everyday Bangla, তুমি
+for the reader, and consistent common terms such as কম্পাইলার, টোকেন, লেক্সার,
+অটোমাটা, and ইনস্ট্রাকশন. Worked tables, traces, explanations, cautions, and links
+are included throughout. Code, regular expressions, grammar symbols, state labels,
+and diagrams retain their English notation. Every HTML tag and attribute matches
+the corresponding English lesson, including the same ordered `<h2>` IDs and example
+placeholders. All inline code and complete `<pre>` blocks match exactly.
+
+English lessons, metadata text, examples, practice, quizzes, and their expected
+outputs are unchanged. The remaining 25 topics keep their earlier partial Bangla
+coverage, so the manifest still lists `bn-partial`.
+
+Validation from `content-kit/`:
+
+```bash
+node tools/check.mjs compiler-design/content --report compiler-design/content/CHECK_REPORT.txt
+```
+
+Result: **0 errors, 0 warnings; READY FOR IMPORT** across all 36 topics, using
+Node.js **v24.22.1** and Python **3.12.14**. An additional comparison of all 11
+language pairs verified identical HTML structure, attributes, section order, code,
+diagrams, and placeholders. Human review should focus on natural Bangla phrasing
+and the meaning of the automata constructions, lexical boundaries, and Flex rules.
+
+## Earlier Batch 3 delivery
 
 ## Delivered scope
 
@@ -31,7 +64,7 @@ Bangla titles, summaries and key points follow `BANGLA_STYLE.md`. Four earlier t
 new style warnings: `cd-introduction` and `cd-tools` used নির্দেশনা for instruction;
 `cd-context-free-grammars` and `cd-ll1-parsing` used প্রতীক for symbol. Those uses now read
 ইনস্ট্রাকশন and সিম্বল. Earlier English bodies and programs are unchanged. Full Bangla
-bodies remain optional and are not added. The video catalogue has no matching Compiler
+bodies were not added in Batch 3. The video catalogue has no matching Compiler
 Design videos, so video lists are empty.
 
 ## Worked content and boundaries
