@@ -1,0 +1,67 @@
+<h2 id="introduction">A ticket uses a policy rather than becoming one</h2>
+<p class="lead">A ticket needs a fare calculation, but a ticket is not itself a fare policy. It can hold a policy object and ask that object to calculate. <dfn>Composition</dfn>, in everyday Java design, means assembling behaviour from collaborating objects rather than inheriting every implementation choice.</p>
+<p>This approach expresses a <dfn>has-a</dfn> relationship. A Ticket has a Rate. Inheritance expresses an is-a relationship, such as a StudentRide satisfying a Ride contract. Both can reuse implementation, but they create different promises and different dependencies.</p>
+<p>Prefer composition when the changing part is a tool or policy the owner uses. Keep inheritance for types that preserve their parent’s full behavioural contract. This is guidance to examine the relationship, rather than a command to remove every superclass from a program.</p>
+<h2 id="syntax">Store a collaborator and forward the request</h2>
+<pre><code class="language-java">class Ticket {
+    private final Rate rate;
+    Ticket(Rate rate) {
+        this.rate = rate;
+    }
+    int fare(int distance) {
+        return rate.fare(distance);
+    }
+}</code></pre>
+<p>Ticket receives its Rate through the constructor. The example assumes a non-null valid policy. Keeping the field private stops callers from replacing it directly. The final modifier keeps this ticket’s chosen reference fixed after construction, while the interface describes the available calculation.</p>
+<p><dfn>Delegation</dfn> means asking a collaborator to perform part of an operation. Ticket.fare delegates to Rate.fare. The wrapper may add validation or other meaningful coordination, but should not quietly change the policy’s contract. Clear names keep the direction of work visible.</p>
+<h2 id="how-it-works">Follow references instead of climbing a class hierarchy</h2>
+<pre class="diagram">Ticket -- rate --&gt; Rate
+                   ^
+                   | implements
+             ReducedRate
+
+request fare(10)
+    Ticket.fare(10)
+          |
+          v
+    ReducedRate.fare(10) --&gt; 20</pre>
+<p>The Ticket object and its Rate collaborator are distinct objects. Ticket does not acquire every operation of ReducedRate as an inherited member. It exposes only the operations its own public boundary chooses. Callers can therefore use a simple ticket abstraction while policies change behind it.</p>
+<p>The Rate reference gives another form of polymorphism. Different implementations provide the same fare operation, and Ticket depends only on that contract. New policies can be selected when creating tickets without adding a separate Ticket subclass for every fare formula.</p>
+<p>Some collaborators remain fixed for an owner’s lifetime. Others can be replaced through a controlled method, as in the Display style example. Replacing a collaborator changes future delegated behaviour without changing the owner’s runtime class or identity. Validate replacements according to the owner’s requirements.</p>
+<div class="callout note"><p>If you know C: a collaborator reference can resemble a struct field pointing to another structure, but Java manages reachability and memory reclamation. You still need an ownership policy. Automatic memory management does not decide who is allowed to mutate or share a component.</p></div>
+<h2 id="examples">Compare delegation, ownership and replacement</h2>
+<h3>Supply a reduced fare policy</h3>
+<p>Ticket receives ReducedRate and forwards distance ten. The result belongs to the chosen policy rather than a ticket subclass.</p>
+<div data-example="ex-1"></div>
+<h3>Own a component privately</h3>
+<p>Each Lamp creates a SwitchState internally and never returns it. Toggling the lamp delegates the state change to that component.</p>
+<div data-example="ex-2"></div>
+<h3>Replace formatting while keeping the display</h3>
+<p>Display first uses PlainStyle and then BracketStyle. The same display object produces different formatting through its collaborator.</p>
+<div data-example="ex-3"></div>
+<h2 id="comparison">Choose by the promise, not by shared lines</h2>
+<table class="ref"><tr><th>Question</th><th>Inheritance</th><th>Composition</th></tr><tr><td>Relationship</td><td>Child is a parent type</td><td>Owner has or uses a collaborator</td></tr><tr><td>Implementation access</td><td>Inherited members under access rules</td><td>Calls through the collaborator’s interface</td></tr><tr><td>Variation</td><td>Choose a subclass</td><td>Choose or replace a component</td></tr><tr><td>Public boundary</td><td>Includes inherited public promises</td><td>Exposes selected forwarding operations</td></tr><tr><td>Typical cost</td><td>Coupling to parent behaviour</td><td>Extra references and forwarding code</td></tr></table>
+<p>Imagine a strict stack inheriting a general list. The inherited list API may allow insertion in the middle, which breaks the intended stack boundary. Keeping a list privately lets Stack expose push, pop and isEmpty only. It reuses storage without promising every list operation.</p>
+<p>Now imagine a family of geometric shapes sharing a stable area contract. A Rectangle can validly satisfy Shape even if its calculation differs. Inheritance or interface realization can express that substitutability. Composition is not a reason to deny a genuine type relationship.</p>
+<p>Independent variation makes composition especially useful. Three fare policies and four display styles could otherwise lead to twelve combined owner subclasses. Two collaborator fields allow those combinations directly. Keep only useful axes of variation; unnecessary policy layers can obscure a small calculation.</p>
+<h2 id="ownership">Distinguish Java composition from the stronger UML relation</h2>
+<p>Java programmers often use composition broadly for has-a design. UML <dfn>composition</dfn> adds a stronger claim: a part belongs to at most one composite owner at a time, with model lifetime responsibility tied to that whole. A filled diamond marks the whole end.</p>
+<p>A private field does not prove this ownership. If two Department objects receive the same Printer argument, both hold aliases to one independent printer. That is naturally an association, perhaps described as shared aggregation if the model needs that interpretation. It is not exclusive composition merely because the fields are private.</p>
+<p>Lamp’s internally created SwitchState is a clearer exclusive component. It is not shared or exposed in the demonstrated API. If the class later returned that mutable component, the ownership story would need review. Encapsulation and ownership depend on the actual reference paths.</p>
+<p>Garbage collection does not enforce a UML lifetime rule. Dropping an owner reference does not immediately destroy a component, especially if another alias remains reachable. Model deletion, invalidation and resource cleanup need their own defined behaviour when the domain requires them.</p>
+<h2 id="design-boundaries">Share deliberately and validate at useful entry points</h2>
+<p>A caller-supplied policy may intentionally be shared by many tickets. That is safe when the policy is immutable or its shared state is part of the contract. A mutable counter policy could make tickets influence one another unexpectedly. Decide whether the collaborator represents a value, a service or owned state.</p>
+<p>Constructor injection makes dependencies visible and lets callers supply a controlled implementation. It does not automatically provide dependency inversion; the parameter might still name a concrete class. Depending on Rate rather than ReducedRate gives the owner a useful abstraction.</p>
+<p>Delegation should also preserve failure rules. If fare accepts only nonnegative distance, document where validation happens. Avoid checking inconsistently in several layers. Keep the owner’s promised result and the collaborator’s input requirements compatible.</p>
+<p>Composition introduces costs: more types, constructor arguments, references and forwarding methods. Those costs are worthwhile when they clarify boundaries or isolate change. For a stable one-line utility calculation, a direct utility call may communicate the design better than an elaborate object graph.</p>
+<h2 id="common-mistakes">Watch the references that cross the boundary</h2>
+<h3>Extending a helper to borrow one method</h3>
+<p>A Parcel should not become a RateCalculator merely to reuse cost arithmetic. Parcel can contain a calculator and delegate. This prevents unrelated calculator operations from becoming parcel promises.</p>
+<h3>Assuming final means exclusive</h3>
+<p>Two final fields may still point to the same mutable target. Final fixes assignment, not sharing. Trace construction and returned references before claiming a component has one owner.</p>
+<h3>Wrapping without adding a meaningful boundary</h3>
+<p>A class that forwards an enormous API unchanged may add little clarity. Identify what the owner controls, hides or coordinates. Prefer a small relevant interface over mechanically exposing every collaborator method.</p>
+<h2 id="version-notes">Ownership is a design decision</h2>
+<p>Java 17 needs no special syntax for delegation. Fields, constructors and interfaces provide the mechanism. A UML diamond remains a model statement, not a Java keyword that changes memory reclamation or reference aliasing.</p>
+<h2 id="summary">Keep identity and collaboration distinct</h2>
+<p>Use inheritance for valid subtype promises and composition for behaviour assembled from collaborators. Delegate through a clear contract and document sharing rather than guessing ownership from modifiers. Next, express those choices precisely with <a href="topic:oop-uml-class-diagrams">UML Class Diagrams</a>.</p>

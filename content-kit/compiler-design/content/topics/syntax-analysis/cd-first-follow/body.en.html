@@ -1,0 +1,60 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine choosing a bus by reading its first destination sign. A parser also needs a small clue before choosing a rule. FIRST tells you which token may start a phrase. FOLLOW tells you what may appear immediately after a completed phrase.</p>
+<p>For a symbol sequence α, <dfn>FIRST(α)</dfn> contains every terminal that can begin a string derived from α. It also contains ε when α can disappear completely. A sequence that can disappear is called nullable. For a terminal a, FIRST(a) is {a}; FIRST of the empty sequence is {ε}.</p>
+<p><dfn>FOLLOW(A)</dfn> contains terminals that may come directly after nonterminal A in a sentential form reachable from the start. Include $ when A can occur at the end. The end marker is a parser convention, not an ordinary grammar terminal. FOLLOW never contains ε because an empty sequence is not a next token.</p>
+<h2 id="syntax">Grammar and representation</h2>
+<pre><code class="language-text">E → T R
+R → + T R | ε
+T → F Q
+Q → * F Q | ε
+F → ( E ) | id</code></pre>
+<p>The expression grammar uses R for an addition tail and Q for a multiplication tail. Both tails can vanish. The start symbol E cannot vanish because F must eventually produce id or parentheses around another expression. Do not confuse a nullable suffix with a nullable whole production.</p>
+<table class="ref"><caption>Complete expression FIRST/FOLLOW sets</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">FIRST</th><th scope="col">FOLLOW</th></tr></thead><tbody><tr><td>E</td><td>{(, id}</td><td>{$, )}</td></tr><tr><td>R</td><td>{+, ε}</td><td>{$, )}</td></tr><tr><td>T</td><td>{(, id}</td><td>{$, ), +}</td></tr><tr><td>Q</td><td>{*, ε}</td><td>{$, ), +}</td></tr><tr><td>F</td><td>{(, id}</td><td>{$, ), *, +}</td></tr></tbody></table>
+<p>The Python representation maps each nonterminal to a list of tuple alternatives. An empty tuple represents ε. Symbols such as id remain complete strings; the algorithm never splits them into characters. The dictionary keys identify nonterminals, while any other symbol in a right side is treated as a terminal.</p>
+<pre><code class="language-python">grammar = {"S": [("A", "B")], "A": [("a",), ()], "B": [("b",)]}</code></pre>
+<table class="ref"><caption>FIRST of a sequence requires its whole nullable prefix</caption><thead><tr><th scope="col">Sequence</th><th scope="col">How to scan</th><th scope="col">FIRST</th></tr></thead><tbody><tr><td>A B c with A → a | ε, B → b | ε</td><td>Take a; pass A; take b; pass B; take c</td><td>{a,b,c}</td></tr><tr><td>A B with those rules</td><td>Both may vanish</td><td>{a,b,ε}</td></tr><tr><td>ε</td><td>No symbols to scan</td><td>{ε}</td></tr><tr><td>id Q in the expression grammar</td><td>id cannot vanish, so stop there</td><td>{id}</td></tr></tbody></table>
+<h2 id="how-it-works">How the parser works</h2>
+<h3>Grow FIRST until no set changes</h3>
+<p>Start every nonterminal FIRST set empty. For each A → α, scan α from left to right. Add FIRST of the next symbol without ε. Continue only if that symbol can vanish. If every symbol vanishes, add ε to FIRST(A). Repeat all productions until a complete pass adds nothing.</p>
+<table class="ref"><caption>FIRST growth using simultaneous rounds for S → A, A → B | x, B → A | ε</caption><thead><tr><th scope="col">Round</th><th scope="col">FIRST(S)</th><th scope="col">FIRST(A)</th><th scope="col">FIRST(B)</th></tr></thead><tbody><tr><td>0</td><td>∅</td><td>∅</td><td>∅</td></tr><tr><td>1</td><td>∅</td><td>{x}</td><td>{ε}</td></tr><tr><td>2</td><td>{x}</td><td>{x, ε}</td><td>{x, ε}</td></tr><tr><td>3</td><td>{x, ε}</td><td>{x, ε}</td><td>{x, ε}</td></tr><tr><td>4</td><td>unchanged</td><td>unchanged</td><td>unchanged</td></tr></tbody></table>
+<p>The round table uses a snapshot of the preceding round to make dependencies visible. The implementation updates sets within a pass, so some information may arrive sooner. Both schedules reach the same least fixed point because sets only grow. A fixed point means another full application of the rules changes no set.</p>
+<p>For E → T R, FIRST(E) begins with FIRST(T), excluding ε. T begins with F, and F begins with either ( or id. Since T is not nullable, R contributes no initial + to E. This is why a legal expression cannot start with + in this grammar.</p>
+<h3>Propagate FOLLOW through suffixes</h3>
+<p>Put $ into FOLLOW of the start symbol. For every occurrence A → α B β, add FIRST(β) without ε to FOLLOW(B). If β is nullable, also add FOLLOW(A) to FOLLOW(B). An empty β is nullable, so a final B always inherits FOLLOW(A). Repeat until stable.</p>
+<table class="ref"><caption>FOLLOW contributions in the expression grammar</caption><thead><tr><th scope="col">Occurrence</th><th scope="col">Direct contribution</th><th scope="col">Inherited contribution</th></tr></thead><tbody><tr><td>F → ( E )</td><td>Add ) to FOLLOW(E)</td><td>None: ) cannot vanish.</td></tr><tr><td>E → T R</td><td>Add + to FOLLOW(T)</td><td>R vanishes, so FOLLOW(E) reaches T.</td></tr><tr><td>E → T R</td><td>No suffix after R</td><td>FOLLOW(E) reaches R.</td></tr><tr><td>T → F Q</td><td>Add * to FOLLOW(F)</td><td>Q vanishes, so FOLLOW(T) reaches F.</td></tr><tr><td>T → F Q</td><td>No suffix after Q</td><td>FOLLOW(T) reaches Q.</td></tr><tr><td>R → + T R</td><td>Add + to FOLLOW(T)</td><td>FOLLOW(R) also reaches T.</td></tr><tr><td>Q → * F Q</td><td>Add * to FOLLOW(F)</td><td>FOLLOW(Q) also reaches F.</td></tr></tbody></table>
+<p>FOLLOW(E) becomes {$,)} from its start position and its occurrence before a closing parenthesis. FOLLOW(R) inherits the same set. T can be followed by + from R, or by whatever follows E when R vanishes. F can be followed by * from Q, or by the complete FOLLOW(T) when Q vanishes.</p>
+<h3>Solve a nullable exam problem</h3>
+<pre><code class="language-text">S → A B A
+A → a | ε
+B → b | ε</code></pre>
+<table class="ref"><caption>Nullable-prefix exam problem</caption><thead><tr><th scope="col">Nonterminal</th><th scope="col">FIRST</th><th scope="col">FOLLOW</th></tr></thead><tbody><tr><td>S</td><td>{a, b, ε}</td><td>{$}</td></tr><tr><td>A</td><td>{a, ε}</td><td>{$, a, b}</td></tr><tr><td>B</td><td>{b, ε}</td><td>{$, a}</td></tr></tbody></table>
+<p>FIRST(S) includes a from the first A. If that A disappears, B contributes b. If B also disappears, the final A contributes a again. Since all three occurrences may disappear, ε also belongs to FIRST(S). Sets remove the duplicate a automatically.</p>
+<p>For the first A, the suffix B A has FIRST {a,b,ε}. Therefore FOLLOW(A) gains a and b, and also $ from FOLLOW(S). The final A inherits $ directly. B sees the final A, so FOLLOW(B) receives a and $ but not b. Every occurrence matters, even when a symbol appears twice in one production.</p>
+<p>The finite-set argument explains termination. There are finitely many nonterminals and terminals. Every successful update inserts a previously absent member, and no rule removes one. Thus only finitely many successful insertions are possible. Recursive grammar dependencies may need many passes, but they cannot keep adding new symbols forever.</p>
+<p>The calculator is intended for small classroom grammars. If a pass scans P symbol positions and copies sets with at most t terminals, one pass costs roughly O(Pt). The number of passes depends on dependency chains and update order. A worklist can avoid rescanning unaffected productions, but the fixed-point version makes the rules easier to inspect.</p>
+<p>FIRST and FOLLOW approximate possible token positions using grammar structure. They do not by themselves prove that an arbitrary input belongs to the language. A parser must still check the full token sequence. The sets guide production selection and later help restrict LR reductions.</p>
+<p>A useful manual check separates direct contributions from inherited ones. First list the terminal that visibly follows each occurrence, or FIRST of its remaining suffix. Then draw an arrow from FOLLOW of the enclosing left side whenever that suffix can vanish. Propagate symbols along those arrows until none changes. This dependency picture is especially helpful for a cycle: the cycle shares information already introduced by a real terminal or the start marker; it does not invent new members.</p>
+<h2 id="examples">Examples</h2>
+<h3>Calculate expression FIRST and FOLLOW sets</h3>
+<p>R and Q can disappear. Their nullable suffixes carry FOLLOW from E to T and F.</p>
+<div data-example="ex-1"></div>
+<h3>Nullable prefixes and repeated occurrences</h3>
+<p>The first A sees B A. Both can vanish, so FOLLOW(A) includes the end marker.</p>
+<div data-example="ex-2"></div>
+<h3>Reach a fixed point through a cycle</h3>
+<p>A cycle adds no endless recursion: sets grow until a complete pass adds nothing.</p>
+<div data-example="ex-3"></div>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Copying ε into FOLLOW</h3>
+<p>A nullable suffix transfers FOLLOW of the enclosing rule. It never transfers ε as a token. Remove ε before every direct FOLLOW insertion.</p>
+<h3>Examining only the first right-side symbol</h3>
+<p>In A B c, both A and B may vanish. Scan through that nullable prefix so c is not lost.</p>
+<h3>Stopping after one pass</h3>
+<p>Indirect rules may reveal terminals several passes later. Stop only after a complete pass leaves every set unchanged.</p>
+<h3>Confusing token spelling with symbols</h3>
+<p>The token id is one symbol. Representing it as two characters i and d changes the grammar and produces incorrect sets.</p>
+<h2 id="version-notes">Python version notes</h2>
+<div class="callout version"><p>The set operations and empty tuples work in Python 3.10 through 3.12. Sorting each displayed set makes its order predictable.</p>
+</div>
+<h2 id="summary">Summary</h2>
+<p>FIRST scans nullable prefixes; FOLLOW scans what remains after each nonterminal occurrence. Repeated set growth handles cycles safely. Use these results in <a href="topic:cd-ll1-parsing">LL(1) parsing</a> to choose a production from one lookahead token.</p>

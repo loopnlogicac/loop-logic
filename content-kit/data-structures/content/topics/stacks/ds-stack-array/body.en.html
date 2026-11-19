@@ -1,0 +1,49 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Imagine a pile of answer scripts. You place a new script on top and take the top script when marking begins. Reaching a buried script would disturb the pile. A <dfn>stack</dfn> gives you the same rule for values: the last value added is the first one removed. This order is called LIFO, or last in, first out.</p>
+<p>An array stack stores its pile in consecutive cells. The picture is vertical, but the actual array has ordinary integer indices. A variable called <code>top</code> tells you which cell holds the latest value. You never need to shift older entries during a normal stack update.</p>
+<p>Stacks are useful when you must undo recent work before earlier work. Reversing roll numbers is one small example. Matching nested brackets and remembering unfinished calls use the same order. Learn the boundary rules here before adding those applications.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>The <code>Stack</code> structure owns four integer cells and a signed top index. Empty means <code>top == -1</code>. With live values present, indices zero through top belong to the stack. The remaining cells are spare storage. Their bytes do not tell you whether a value is live.</p>
+<p>The size is top plus one. Full means top equals capacity minus one. A top of three therefore means four occupied cells in this example. Keeping top signed makes minus one available without unsigned wraparound.</p>
+<p>The helper <code>isEmpty</code> tests the empty rule. The helper <code>isFull</code> tests the capacity rule. Callers do not need to repeat these arithmetic details. Using helpers also makes the condition easier to compare with the memory picture.</p>
+<p>The functions <code>push</code>, <code>pop</code> and <code>peek</code> return one for success and zero for failure. Pop and peek write through an output pointer only after success. This separates the status from the integer payload. A stored minus one remains ordinary data.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>To push twelve into an empty stack, first check isFull. The test is false. Raise top from minus one to zero, then write twelve at that index. A second push writes at index one. The older twelve stays at index zero, untouched.</p>
+<p>Pop follows the opposite path. Check isEmpty before reading. Copy the top value to the caller, then lower top. The removed cell may still contain its old bits, but it no longer belongs to the live stack. Clearing it is optional for integers and does not replace the top update.</p>
+<p>Peek performs the same empty check and read, but leaves top unchanged. You can peek repeatedly and receive the same result until a successful push or pop changes the pile. Peek therefore differs from pop even when both return the same integer.</p>
+<p>The command program uses zero for pop and one hundred for peek. Other integers request push. Those command meanings belong to this small input interface; the Stack helpers themselves can store any int, including zero and one hundred.</p><pre class="diagram">push 24:
+before: [12][  ][  ][  ]  top=0
+after:  [12][24][  ][  ]  top=1
+pop:
+before: [12][24][  ][  ]  top=1
+after:  [12][  ][  ][  ]  top=0, returned=24
+peek:   [12][  ][  ][  ]  top=0, returned=12</pre><p>Trace the first program before running it. Twelve and twenty-four enter. Peek reports twenty-four; pop then removes twenty-four. Thirty-six, forty-eight and sixty fill the remaining cells above twelve. Seventy-two cannot enter because the pile already holds four entries. The refused push preserves both the earlier values and top.</p>
+<p>A failed pop leaves its output argument untouched. The caller must examine the returned status before printing that argument. Otherwise a previous successful result could appear to be a new removal.</p><h3>Operation plan</h3><pre><code class="language-text">top = -1; capacity = 4
+for each command
+    if command is 0: check isEmpty, then pop
+    else if command is 100: check isEmpty, then peek
+    else: check isFull, then push command
+return the live items</code></pre><div data-lab="stack-array"></div>
+
+<h2 id="examples">Examples</h2>
+<h3>Push, pop and peek with checked boundaries</h3><p>Peek sees 24 without removing it. Pop removes 24; the fifth live push is refused.</p><div data-example="ex-1"></div><h3>Empty operations preserve the stack</h3><p>The first pop cannot read an item. After pushing and removing 9, top returns to minus one.</p><div data-example="ex-2"></div><h3>Reverse roll numbers with LIFO</h3><p>The most recent roll comes out first. Each successful pop lowers top before the next iteration.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>Every checked stack operation uses a fixed number of tests, reads and assignments. Its worst-case time is O(1), and its auxiliary space is O(1). The stack owns O(C) storage for capacity C. Printing all live entries takes O(n), which is separate from the update cost.</p>
+<p>Underflow means a removal was requested with no live entries. Overflow means a push was requested with no spare cell. Neither condition should cause an out-of-bounds access. Refusing the operation is a normal result, not permission to keep updating the index.</p>
+<p>A singleton has top zero. Popping it returns index zero and changes top to minus one. An empty peek must not read items[-1]. A full push must not write items[capacity]. These two boundary calculations explain why the tests come before the accesses.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Changing top before checking</h3><p>Raising top first can put it outside the array before you notice fullness. Check isFull while the old state is still valid. Only successful operations change the live boundary.</p><h3>Using a payload as an error marker</h3><p>Returning minus one for an empty pop conflicts with a legitimate minus-one value. Keep the boolean status and output parameter separate. The caller then prints data only when the status says success.</p><h3>Confusing physical bytes with membership</h3><p>A popped value may remain visible in the backing array. Reading beyond top does not inspect the stack; it inspects spare cells. Use the live interval for traversal and debugging.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>When drawing an exam trace, write top beside every array state. Include refused requests as unchanged states. This makes off-by-one mistakes visible before you translate the trace into C.</p>
+<p>Keep a single convention throughout your functions. Some designs store a count instead of the last live index. Both work, but their full and empty tests differ. Translate the whole design if you switch conventions.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>These programs use C17. Designated initialization and declarations inside loop headers are available from C99. The stack order itself is independent of the C version. Array bounds remain the programmer’s responsibility.</p>
+
+<h2 id="summary">Summary</h2>
+<p>An array stack combines a live prefix with a top index. Check its boundaries before reading or writing, and distinguish observation from removal. Continue with <a href="topic:ds-stack-linked-list">a stack whose nodes grow through allocation</a>.</p>

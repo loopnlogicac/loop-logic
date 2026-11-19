@@ -14,7 +14,7 @@ test('tutorials load the accepted content-kit packages', () => {
   assert.ok(l.totals.topics >= 100, `topics: ${l.totals.topics}`);
   const ds = l.tracks.find((t) => t.id === 'data-structures')!;
   assert.ok(ds.available && ds.labs >= 7);
-  assert.equal(l.tracks.find((t) => t.id === 'dbms')?.available, false, 'a track without a package is listed as coming soon');
+  for (const t of l.tracks) assert.equal(t.available, t.delivered > 0, `${t.id}: available only when it has delivered topics`);
 });
 
 test('a topic page hides quiz answers and solutions', () => {

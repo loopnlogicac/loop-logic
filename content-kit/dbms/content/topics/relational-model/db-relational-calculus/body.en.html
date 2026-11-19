@@ -1,0 +1,68 @@
+<h2 id="introduction">Describe the answer with a condition</h2>
+<p class="lead">You can ask for students with a high mark without describing a sequence of operations. Say which student qualifies and what evidence must exist. Relational calculus turns that style of question into a precise logical expression.</p>
+<p><dfn>Relational calculus</dfn> describes answers using predicates, variables and quantifiers. A predicate is a statement that can be true or false for given values. “This student belongs to department 1” is a predicate. A result contains the values whose conditions hold within the chosen range.</p>
+<p>Relational algebra composes operations such as selection and projection. Calculus states the condition defining an answer. Both are logical query languages, rather than instructions for reading individual disk blocks. Safe calculus and relational algebra have equivalent expressive power for their classical relational setting.</p>
+<p>This introduction uses finite university relations and ordinary known values when explaining classical logic. SQL adds NULL and normally permits duplicate results. Those differences matter during translation. A formula is not automatically equivalent to any SQL query that uses similar-looking words.</p>
+<h2 id="how-it-works">Variables, predicates and quantifiers</h2>
+<h3>Tuple variables hold complete rows</h3>
+<p>In <dfn>tuple relational calculus</dfn>, a variable ranges over tuples. Write Students(s) to mean that s is a tuple in Students. Then s.student_id names its identifier attribute and s.department_id names its department attribute. Relation predicates give variables a meaningful database range.</p>
+<pre class="diagram">{ s.student_id | Students(s) ∧ s.department_id = 1 }
+  returned value   range            condition</pre>
+<p>Read the expression as “the student identifiers of tuples s in Students whose department is 1.” The vertical bar means “such that.” The relation predicate binds s to existing student tuples. The department comparison then tests each candidate. The output is a set of identifiers, not complete student records.</p>
+<p>A <dfn>free variable</dfn> contributes to the result or remains determined by its surrounding expression. A <dfn>bound variable</dfn> is introduced by a quantifier within a limited scope. Scope matters: a result witness introduced inside a condition cannot be used outside that condition without another binding.</p>
+<h3>Existence asks for a witness</h3>
+<p>The existential quantifier ∃ means “there exists.” To find students with a mark of at least 80, require a matching result tuple r. The relation predicate Results(r) limits the witness to actual result records. The equality on student identity connects the witness to the candidate student.</p>
+<pre class="diagram">{ s.student_id |
+    Students(s) ∧
+    ∃r (Results(r) ∧ r.student_id = s.student_id ∧ r.marks ≥ 80)
+}</pre>
+<p>A high mark belonging to someone else is not enough. Omitting the identity comparison would let any high result qualify every student. Ayesha, Tanvir and Rafi have witnesses in the current data. Several witnesses for one student still produce one identifier under set semantics.</p>
+<h3>Universal conditions forbid counterexamples</h3>
+<p>The universal quantifier ∀ means “for every.” Suppose you want students whose every enrollment has a result. The statement must quantify only relevant enrollments, rather than every imaginable tuple. Restrict e to Enrollments and to the candidate student.</p>
+<p>One useful logical form is an implication: if e is this student’s enrollment, then a matching result exists. An implication with a false premise does not fail the requirement. That is why unrelated enrollments do not matter. The same idea can be written as absence of a counterexample.</p>
+<pre class="diagram">For a candidate student s:
+NOT ∃e (
+    Enrollments(e) ∧ e.student_id = s.student_id ∧
+    NOT ∃r (Results(r) ∧ r.student_id = e.student_id
+                     ∧ r.section_id = e.section_id)
+)</pre>
+<p>The inner absence identifies an enrollment with no result. The outer absence says that none of those bad enrollments exists. This pattern translates naturally to nested NOT EXISTS in SQL. Matching both key components prevents one section’s result from incorrectly satisfying another enrollment.</p>
+<h3>Domain variables hold individual values</h3>
+<p>In <dfn>domain relational calculus</dfn>, variables range over individual attribute values rather than whole tuples. For a simplified relation S(id,name,dept), write S(i,n,d). The three variables together describe one row with identifier i, name n and department d.</p>
+<pre class="diagram">{ &lt;n&gt; | ∃i ∃d (S(i,n,d) ∧ d = 1) }</pre>
+<p>The angle brackets describe the returned one-column tuple. Name n remains in the answer. Identifier i and department d are existentially bound because they are needed to find qualifying rows but are not returned. All three values must occur together in a row of S.</p>
+<p>Tuple and domain calculus therefore differ in their variables, not in whether the data has rows. Tuple calculus reaches an attribute through a row variable. Domain calculus names each position’s value separately. Choose clear variable names and state the relation’s attribute order before using positional notation.</p>
+<h3>Safety keeps answers tied to finite data</h3>
+<p>An unrestricted condition can describe an infinite answer. Consider “all x that are not student tuples.” Outside a finite Students relation, there are endlessly many possible values or tuples. The formula has not said which finite collection of candidates to consider.</p>
+<p>A <dfn>safe expression</dfn> confines answers to values grounded in the database or suitable stated constants. A common practical method is range restriction: every answer variable gets a finite positive relation range. Then conditions, including negation, filter those finite candidates.</p>
+<p>To ask for applicants who are not students, begin with Applicants(a), then exclude matching student identities. Now the answer is a subset of the finite applicant relation. The absence test does not invent new applicants. Positive range predicates should surround the negative conditions they limit.</p>
+<p><dfn>Domain independence</dfn> means the answer does not change when an unrelated outside universe of possible values grows. A query about existing applicants should not change because someone imagines new numbers that occur nowhere in the database. Safety and range restriction are studied to avoid this kind of dependence.</p>
+<h3>Keep quantifier scope visible</h3>
+<p>Parentheses show which conditions belong to a witness. In the high-mark expression, Results(r), the student connection and the mark threshold all belong inside the same existential scope. Moving the identity comparison outside that scope leaves r without a defined meaning there. When reading a long formula, name each variable’s range and mark the start and end of its scope before evaluating any condition.</p>
+<h2 id="worked-examples">Check formulas against university stories</h2>
+<h3>Find students with a high result</h3>
+<p>First choose Students as the candidate range. Next require one Results witness with matching student_id and marks at least 80. Return only the student identity. SQL EXISTS checks whether such a witness exists without duplicating the outer student for each matching result.</p>
+<div data-example="ex-1"></div>
+<p>The answer contains 101, 102 and 104. Student 101 has an 85-mark result, 102 has an 80-mark result and 104 has a 90-mark result. Other students lack a qualifying witness. The query’s ORDER BY arranges the displayed set without changing its membership.</p>
+<h3>Require a result for every enrollment</h3>
+<p>Now consider a universal requirement. Search each student’s enrollment rows for a counterexample: an enrollment without a matching result pair. Reject the student if such a row exists. Sadia’s section 35 enrollment provides a counterexample, so student 107 is excluded.</p>
+<div data-example="ex-2"></div>
+<p>Fahim, student 108, has no enrollments. There is no counterexample, so he qualifies. This is <dfn>vacuous truth</dfn>: a universal statement over an empty range has no violating member. The logical answer is correct for that formula, even if a scholarship policy intended something stronger.</p>
+<p>If the policy requires at least one completed course, add a positive existence condition as well. Keep the two requirements separate: at least one relevant enrollment exists, and no relevant enrollment lacks a result. Testing an empty candidate history exposes this missing business condition quickly.</p>
+<h3>Translate a domain expression step by step</h3>
+<p>Take the simplified S(i,n,d) relation. To return names from department 1, bind a row through S, require d=1 and return n. Identifier and department are witnesses, so quantify them. Under classical set semantics, two students sharing a name produce one returned name.</p>
+<p>SQL needs DISTINCT when that duplicate collapse matters. Returning student identifiers instead may better preserve the question “which students,” because names are not identities. Translation should preserve the intended object and multiplicity, rather than mechanically substituting syntax.</p>
+<h3>Notice where SQL’s logic differs</h3>
+<p>Classical predicates use true and false for ordinary values. SQL comparisons involving NULL can yield UNKNOWN. A WHERE clause accepts only TRUE. Negating UNKNOWN still yields UNKNOWN, so it does not behave like testing a known value for a normal opposite.</p>
+<p>For example, the English request “not from Dhaka” needs a missing-value decision. Should a student with unknown hometown qualify? Classical known-value reasoning alone cannot settle the application policy. Use explicit IS NULL or IS NOT NULL conditions when translating the chosen meaning into SQL.</p>
+<h2 id="common-mistakes">Logical expressions need careful boundaries</h2>
+<h3>Forgetting the witness connection</h3>
+<p>An EXISTS over all Results can prove that someone has a high mark. It cannot prove that the current student has one. Connect witness keys to the candidate keys. For composite relationships, compare every component that identifies the intended event.</p>
+<h3>Using negation without a candidate range</h3>
+<p>A complement needs a known universe. “Applicants absent from Students” is finite and useful when applicants are explicitly ranged. “Everything absent from Students” is not a bounded database question. Define the positive candidate relation before writing the negative condition.</p>
+<h3>Assuming every implies at least one</h3>
+<p>Every enrollment has a result does not assert that any enrollment exists. Universal coverage and nonempty participation are separate requirements. Test the rule on Fahim before using it for eligibility. Add an existence witness only when the actual policy requires one.</p>
+<h3>Calling logical form a physical plan</h3>
+<p>Nested quantifiers do not require a server to scan the same table repeatedly in that exact textual order. Optimisation may transform a SQL translation into joins or other plans. First prove the logical answer; investigate physical performance as a separate task.</p>
+<h2 id="summary">Say what qualifies and what must exist</h2>
+<p>Tuple calculus binds whole rows, while domain calculus binds individual values. Existential conditions need witnesses; universal conditions can forbid counterexamples. Safe expressions keep answers grounded in finite ranges. Next, use these ideas while learning <a href="topic:db-sql-introduction">SQL and MySQL</a>.</p>

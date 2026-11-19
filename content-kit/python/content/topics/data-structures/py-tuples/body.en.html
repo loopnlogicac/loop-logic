@@ -1,0 +1,62 @@
+<h2 id="introduction">Treat a small group as one value</h2>
+<p class="lead">A seat location needs a row and a column together. A course result needs a code and a mark together. A <dfn>tuple</dfn> groups these values in fixed positions, so you can pass or store the whole group as one object.</p>
+<p>Tuples are ordered sequences, like lists, but you cannot replace, insert or delete their slots. This property is called immutability. Choose a tuple when the positions describe fixed roles. Choose a list when items form a growing collection, such as all marks in a class.</p>
+<p>Both containers can hold duplicates and mixed types. Their difference is not whether the values are numbers or text. Their difference is whether the container's own positions may change after creation.</p>
+
+<h2 id="syntax">The comma makes the tuple</h2>
+<pre><code class="language-python">coordinate = 2, 5
+single = (82,)
+empty = ()
+row, column = coordinate</code></pre>
+            <p>Parentheses often make a tuple easier to recognize, especially inside another expression. For a nonempty tuple, commas are what perform the grouping. Without a comma, (82) is only the integer 82 surrounded by parentheses.</p>
+            <p>Creating a tuple from several expressions is called packing. Assigning its items to several target names is called unpacking. Unpacking evaluates the right side, then assigns its values in order. Each name can have a different meaning, which often makes a record easier to read than repeated numeric indexes.</p>
+            <p>Use indexing and slicing when you need only part of the tuple. A negative index counts from the end. As with lists, a single out-of-range index raises IndexError, while slice boundaries clip to the available sequence.</p>
+
+<h2 id="how-it-works">Fixed slots can hold changeable objects</h2>
+<p>Imagine the tuple as a tray with fixed labels on its compartments. You cannot replace which objects the compartments refer to. However, an object reached through a compartment may itself allow edits. A contained list can grow even though the tray remains unchanged.</p>
+<pre class="diagram">record tuple: [roll reference | marks reference]
+           |                 |
+           v                 v
+          12            [70, 80, 90]</pre>
+<p>Assigning record[0] = 15 would attempt to replace a tuple slot and raise TypeError. Calling record[1].append(90) reaches the list and asks that list to change. These are different operations, even though both start by looking inside record.</p>
+<p>This distinction also explains dictionary keys. A <dfn>hashable</dfn> value supports a stable hash used for lookup and follows the equality rules required by that lookup. Integers and strings qualify. A tuple qualifies only if each of its items qualifies too. A tuple containing a list is therefore unsuitable as a key.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>A tuple can group values of different types, a little like a small C struct. Its fields are selected by position rather than declared names. Python unpacking also supports swapping without a temporary variable. Do not treat a tuple as a writable C array.</p></div>
+
+<h2 id="examples">Unpack records and look up coordinates</h2>
+<p>Read each target name beside the corresponding tuple position. The final example previews a dictionary, which maps a key to a value. See <a href="topic:py-dictionaries">Dictionaries</a> for its full set of operations.</p>
+
+<h3>Pack and unpack a result</h3>
+<p>The comma packs two values into one tuple. Unpacking binds course and mark in order. The trailing comma in (82,) makes a one-item tuple rather than a parenthesized integer.</p>
+<div data-example="ex-1"></div>
+
+<h3>Unpack a flexible middle</h3>
+<p>The fixed ends become 60 and 90. A starred target collects the middle into a list. Swapping evaluates the right-hand values first, so no temporary name is needed.</p>
+<div data-example="ex-2"></div>
+
+<h3>Keep tuple slots fixed but edit a contained list</h3>
+<p>The tuple still refers to roll 12 and the same list. Appending changes that list rather than replacing a tuple slot. Immutability of the tuple does not freeze everything reachable from it.</p>
+<div data-example="ex-3"></div>
+
+<h3>Look up a seat by coordinate</h3>
+<p>The tuple (1, 2) acts as one dictionary key, so the pair identifies a seat. get returns the fallback for an absent coordinate. Dictionaries are key-to-value lookup containers, taught in their own lesson.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="unpacking">Match the shape of the group</h2>
+<p>Ordinary unpacking requires an exact count. Two target names need two values; three values raise ValueError rather than silently discarding the extra value. This catches changes in data shape early. Check the shape before choosing names for an external record.</p>
+<p>A single starred target can collect a flexible middle, beginning or end. Its result is always a list, even when no extra values exist. With first, *middle, last, at least two source values are required. A pair leaves middle empty.</p>
+<p>Swapping two names uses unpacking too. Python first evaluates right, left using the old bindings, then assigns the resulting pair to left, right. The operation swaps bindings; it does not mutate the two objects. The same idea can rotate three names, though clarity matters more than avoiding a temporary variable.</p>
+<p>When a function returns multiple values, it commonly returns one packed tuple. The caller may save the whole tuple or unpack it immediately. The <a href="topic:py-functions">functions lesson</a> develops this pattern using named parameters and return statements.</p>
+
+<h2 id="common-mistakes">Do not confuse fixed with deeply frozen</h2>
+<h3>Forgetting the single-item comma</h3><p>If later code expects a sequence, writing (5) causes surprising behavior because it is an integer. Write (5,) to preserve the one-item shape. This matters when building collections of records that sometimes have only one field.</p>
+<h3>Using a list inside a tuple key</h3><p>A coordinate tuple of integers is hashable, but wrapping a changeable list in parentheses does not make that list hashable. Convert the meaningful components to suitable immutable values before using them in a key.</p>
+<h3>Expecting named fields from numeric positions</h3><p>A long tuple with many unrelated fields becomes hard to remember. Short pairs and triples are often readable. For larger records, consider dictionaries now and named record types in later Python study. Write unpacking names that explain each value.</p>
+
+<h2 id="version-notes">Stable sequence rules</h2>
+
+
+<div class="callout version"><p>Tuple packing, starred assignment and the hashability rules used here are available throughout Python 3.10–3.12. A tuple containing a mutable list remains unhashable in each of these versions.</p></div>
+
+<h2 id="summary">Use tuples to keep a record together</h2>
+<p>A tuple fixes the container's positions, while unpacking gives those positions useful local names. Check hashability before choosing tuple keys. Next, <a href="topic:py-sets">sets</a> answer questions about uniqueness and membership without assigning a position to each value.</p>

@@ -1,0 +1,4 @@
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = DATABASE() AND table_name = 'loans'
+ORDER BY ordinal_position;

@@ -1,0 +1,400 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-create-tables",
+  "module": "sql-basics",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "Creating Tables and Constraints",
+    "bn": "টেবিল ও কনস্ট্রেইন্ট তৈরি"
+  },
+  "summary": {
+    "en": "Create clear table definitions and use constraints to reject invalid rows.",
+    "bn": "পরিষ্কার টেবিলের গঠন লেখো এবং ভুল তথ্য আটকাতে কনস্ট্রেইন্ট দাও।"
+  },
+  "level": "beginner",
+  "estMinutes": 35,
+  "prerequisites": [
+    "db-sql-introduction"
+  ],
+  "related": [
+    "db-insert-update-delete"
+  ],
+  "keywords": [
+    "creating tables and constraints",
+    "sql basics",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "CHECK constraints are enforced from MySQL 8.0.16. The examples also run on MySQL 8.4."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Make invalid records harder to store"
+    },
+    {
+      "id": "syntax",
+      "title": "Read a definition as a set of promises"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Combine rules for meaningful domains"
+    },
+    {
+      "id": "examples",
+      "title": "Create, alter and test definitions"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Constraints that look stronger than they are"
+    },
+    {
+      "id": "version-notes",
+      "title": "CHECK enforcement has a version boundary"
+    },
+    {
+      "id": "summary",
+      "title": "Express the full rule"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Build an attendance table with constraints",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The omitted identifier becomes 1 and the omitted present value becomes 1. The unique pair prevents two attendance rows for the same day.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Change a table and its defaults",
+      "level": "basic",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>ALTER adds the capacity column. Leaving capacity out of INSERT selects the default value 10.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Contrast emptying and dropping a table",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>TRUNCATE keeps the definition and resets the identity counter. DROP removes the definition; metadata then reports zero matching tables.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Reject a mark outside the domain",
+      "level": "basic",
+      "file": "examples/ex-4.sql",
+      "output": null,
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The mark CHECK condition rejects 101. Both the old mark and its generated grade remain unchanged.</p>",
+      "demonstrates": "runtime-error"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Constrain club contributions",
+      "statementHtml": "<p>Using students, create contributions(id AUTO_INCREMENT primary key, student_id foreign key, amount_bdt DECIMAL(8,2) NOT NULL DEFAULT 0 with CHECK >=0). Insert student 101 with omitted amount and student 102 with 50. Return id and amount_bdt, then count negative amounts as n.</p>",
+      "hints": [
+        "Use a separate NOT NULL rule because CHECK alone permits UNKNOWN."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Alter and empty a private scratch table",
+      "statementHtml": "<p>Create scratch_notes(note_id primary key). Add note_text VARCHAR(20) NOT NULL DEFAULT empty string. Insert (1,Ready), show the row, truncate the table and return its count as n. Drop the table last.</p>",
+      "hints": [
+        "Use your own table so shared student records remain meaningful."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Allow optional email carefully",
+      "statementHtml": "<p>A contact table has UNIQUE(email) but email permits NULL. Explain valid repeated NULL values and invalid repeated known addresses.</p>",
+      "hints": [
+        "Unknown values are not ordinary equal strings."
+      ],
+      "answerHtml": "<p>Several contacts may have NULL email because their addresses are unknown. Two equal known email values conflict with UNIQUE. If every contact must have a unique known email, add NOT NULL as well. Empty strings are known values and can also conflict.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Plan a structural migration",
+      "statementHtml": "<p>You want to make an existing nullable column NOT NULL. What must happen before ALTER?</p>",
+      "hints": [
+        "A new rule must hold for old rows too."
+      ],
+      "answerHtml": "<p>Inspect existing NULL rows and decide how to correct or remove them based on real information. Confirm applications always supply valid values. Back up and plan the migration because DDL may commit implicitly and may rebuild or lock data. Do not substitute invented values merely to satisfy the rule.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which constraint rejects an unknown student name?",
+      "options": [
+        "Only DEFAULT",
+        "NOT NULL",
+        "Only ORDER BY",
+        "AUTO_INCREMENT on another field"
+      ],
+      "answer": 1,
+      "explanation": "NOT NULL rejects missing values, though an empty string requires a separate rule."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does UNIQUE on a nullable email column forbid several NULL values in MySQL?",
+      "options": [
+        "Yes, it permits exactly one NULL",
+        "It forbids all text",
+        "No, several NULL values are allowed",
+        "It turns NULL into an empty string"
+      ],
+      "answer": 2,
+      "explanation": "MySQL uniqueness treats NULL differently from equal known values; add NOT NULL for a candidate key."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A CHECK condition evaluates to UNKNOWN because its input is NULL. What happens?",
+      "options": [
+        "The row is always rejected",
+        "The server crashes",
+        "The column becomes a primary key",
+        "The CHECK alone does not reject the row"
+      ],
+      "answer": 3,
+      "explanation": "CHECK rejects FALSE; use NOT NULL as well when a value is required."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does DEFAULT 10 do when a column is omitted from INSERT?",
+      "options": [
+        "Supplies 10 for that column",
+        "Makes 10 the only allowed value",
+        "Changes existing primary keys",
+        "Sorts ten rows"
+      ],
+      "answer": 0,
+      "explanation": "A default fills an omitted value and is not itself a validation range."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why should AUTO_INCREMENT not be used as a gapless receipt count?",
+      "options": [
+        "It always returns text",
+        "Failed or rolled-back work can leave gaps",
+        "It forbids primary keys",
+        "It restarts after every SELECT"
+      ],
+      "answer": 1,
+      "explanation": "Generated identifiers identify rows; they do not promise consecutive business numbering."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which statement removes a table definition?",
+      "options": [
+        "DELETE with WHERE",
+        "SELECT DISTINCT",
+        "DROP TABLE",
+        "UPDATE SET"
+      ],
+      "answer": 2,
+      "explanation": "DROP removes the object, while DELETE removes rows."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which minimum version enforces MySQL CHECK constraints?",
+      "options": [
+        "Every MySQL 5 version",
+        "Only MySQL 9",
+        "No version",
+        "MySQL 8.0.16"
+      ],
+      "answer": 3,
+      "explanation": "Older MySQL versions accepted some CHECK syntax without enforcing it."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What default appears in a new attendance row when present is omitted?",
+      "language": "sql",
+      "code": "CREATE TABLE attendance (id INT PRIMARY KEY, present INT NOT NULL DEFAULT 1);\nINSERT INTO attendance (id) VALUES (1);\nSELECT present AS n FROM attendance ORDER BY id;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+----+\n| n  |\n+----+\n| 10 |\n+----+"
+      ],
+      "answer": 0,
+      "explanation": "The default supplies 1; it does not require every later row to use that value."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "After truncating an unreferenced scratch table, how many rows remain?",
+      "language": "sql",
+      "code": "CREATE TABLE scratch (id INT PRIMARY KEY);\nINSERT INTO scratch VALUES (1), (2);\nTRUNCATE TABLE scratch;\nSELECT COUNT(*) AS n FROM scratch;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 3 |\n+---+"
+      ],
+      "answer": 1,
+      "explanation": "TRUNCATE empties the scratch table while keeping its definition."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many unknown hometowns pass the existing nullable student column rules?",
+      "language": "sql",
+      "code": "SELECT COUNT(*) AS n FROM students WHERE hometown IS NULL;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 0 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 2 |\n+---+",
+        "+---+\n| n |\n+---+\n| 6 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "Two rows legally contain NULL because hometown is optional."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "NOT NULL requires a value rather than an unknown marker.",
+      "bn": "নট নাল দিলে অজানা মানের বদলে একটি মান দিতেই হয়।"
+    },
+    {
+      "en": "UNIQUE prevents repeated known values in a key.",
+      "bn": "ইউনিক কি একই জানা মান বারবার ঢুকতে দেয় না।"
+    },
+    {
+      "en": "CHECK rejects rows whose condition is false.",
+      "bn": "চেকের শর্ত মিথ্যা হলে সারি গ্রহণ করা হয় না।"
+    },
+    {
+      "en": "AUTO_INCREMENT supplies an identifier, not a gapless count.",
+      "bn": "অটো ইনক্রিমেন্ট পরিচয় নম্বর দেয়, ফাঁকহীন গণনা নয়।"
+    },
+    {
+      "en": "ALTER changes structure while DROP removes the table itself.",
+      "bn": "অল্টার গঠন বদলায়, ড্রপ পুরো টেবিল সরায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Explain PRIMARY KEY, UNIQUE, NOT NULL and FOREIGN KEY using a student table.",
+      "marks": 5,
+      "answerHtml": "<p>PRIMARY KEY identifies the row and excludes NULL. UNIQUE prevents repeated known key values. NOT NULL requires a supplied value but does not ensure it is meaningful text. FOREIGN KEY checks a reference to a parent. Combining these rules expresses stronger requirements than any single rule.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare DELETE, TRUNCATE and DROP for an InnoDB scratch table.",
+      "marks": 5,
+      "answerHtml": "<p>DELETE is row DML and can have WHERE; in a transaction it can be rolled back. TRUNCATE removes all rows, resets AUTO_INCREMENT and implicitly commits. DROP removes the definition as well as data and also causes an implicit commit. Referencing foreign keys can block TRUNCATE or DROP.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design a mark constraint that forbids both unknown values and values outside 0 through 100.",
+      "marks": 5,
+      "answerHtml": "<p>Use an integer marks column with NOT NULL and CHECK (marks BETWEEN 0 AND 100). NOT NULL handles unknown input because CHECK allows UNKNOWN. The range condition rejects negative or excessive known values. MySQL 8.0.16 or later must enforce the CHECK.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL 8.4 Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

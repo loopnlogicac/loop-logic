@@ -1,0 +1,55 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">Picture assembling a sentence from word cards on a desk. You place the next card on a pile, then replace a recognised phrase with its name. Shift-reduce parsing works upward in this way, from tokens toward the start symbol.</p>
+<p>A <dfn>shift</dfn> moves the next input token onto the stack. A <dfn>reduction</dfn> replaces a recognised right side β with its production’s left side A. The parser does not expand the start symbol first. It recognises smaller phrases and combines them until the whole input forms a start phrase.</p>
+<p>The key problem is deciding when a phrase is ready. A right side somewhere on the stack is not automatically safe to reduce. The correct reduction must fit a reverse rightmost derivation. LR states, introduced below and developed in the next topic, carry the context needed for that decision.</p>
+<h2 id="syntax">Grammar and representation</h2>
+<pre><code class="language-text">0. S' → S
+1. S → C C
+2. C → c C
+3. C → d</code></pre>
+<p>This small grammar recognises two groups. Each C contains zero or more c tokens followed by one d. Thus d d, c d d, and c c d c d are valid. A single d is incomplete, and d d d has an extra group. The augmented rule S′ → S is used only to identify acceptance.</p>
+<table class="ref"><caption>Handle pruning for c d d; rightmost handle marked by brackets</caption><thead><tr><th scope="col">Stack (top at right)</th><th scope="col">Remaining input</th><th scope="col">Decision</th><th scope="col">Reason</th></tr></thead><tbody><tr><td>$</td><td>c d d $</td><td>shift c</td><td>No complete right side yet.</td></tr><tr><td>$ c</td><td>d d $</td><td>shift d</td><td>d completes the innermost C.</td></tr><tr><td>$ c [d]</td><td>d $</td><td>reduce C → d</td><td>The handle is this d.</td></tr><tr><td>$ [c C]</td><td>d $</td><td>reduce C → c C</td><td>The first group is complete.</td></tr><tr><td>$ C</td><td>d $</td><td>shift d</td><td>The second C is still missing.</td></tr><tr><td>$ C [d]</td><td>$</td><td>reduce C → d</td><td>Complete the second group.</td></tr><tr><td>$ [C C]</td><td>$</td><td>reduce S → C C</td><td>Build the start phrase.</td></tr><tr><td>$ S</td><td>$</td><td>accept</td><td>Whole input forms one S.</td></tr></tbody></table>
+<p>A <dfn>handle</dfn> is a production occurrence whose reduction reverses the next step of a rightmost derivation. Handle pruning repeatedly removes that occurrence. Brackets in the trace mark the correct handle on the stack; they are explanatory marks, not grammar symbols. The parser never changes the already unread suffix during a reduction.</p>
+<table class="ref"><caption>The rightmost derivation is reconstructed backward</caption><thead><tr><th scope="col">Forward derivation</th><th scope="col">Reverse reduction</th></tr></thead><tbody><tr><td>S ⇒ C C</td><td>C C → S</td></tr><tr><td>C C ⇒ C d</td><td>C d → C C</td></tr><tr><td>C d ⇒ c C d</td><td>c C d → C d</td></tr><tr><td>c C d ⇒ c d d</td><td>c d d → c C d</td></tr></tbody></table>
+<p>Read the forward derivation downward and the reduction column upward. The first bottom-up reduction changes the first d to C, because the rightmost derivation produced that d last. The second d was produced earlier and remains unread at that moment. This is why bottom-up parsing reconstructs a rightmost derivation in reverse.</p>
+<h2 id="how-it-works">How the parser works</h2>
+<h3>Store context using a state stack</h3>
+<p>The runnable recogniser uses a list of state numbers rather than keeping symbol and state pairs. The current state summarises the viable prefix already recognised. ACTION[state,lookahead] selects a shift, reduction, acceptance, or error. GOTO[state,nonterminal] supplies the state after a reduction has produced a phrase.</p>
+<p>On a shift to state j, append j and advance one input token. On A → β, remove len(β) states, inspect the newly exposed state, and append its GOTO on A. For an empty right side, remove zero states. Do not use stack[:-0], because that slice is empty rather than unchanged.</p>
+<table class="ref"><caption>State-only execution of the same c d d input</caption><thead><tr><th scope="col">State stack</th><th scope="col">Remaining input</th><th scope="col">Action</th></tr></thead><tbody><tr><td>0</td><td>c d d $</td><td>s3</td></tr><tr><td>0 3</td><td>d d $</td><td>s4</td></tr><tr><td>0 3 4</td><td>d $</td><td>r3</td></tr><tr><td>0 3 6</td><td>d $</td><td>r2</td></tr><tr><td>0 1</td><td>d $</td><td>s4</td></tr><tr><td>0 1 4</td><td>$</td><td>r3</td></tr><tr><td>0 1 5</td><td>$</td><td>r1</td></tr><tr><td>0 2</td><td>$</td><td>accept</td></tr></tbody></table>
+<p>The state-only trace and the symbol trace describe the same decisions. In the state trace, r3 means C → d, r2 means C → c C, and r1 means S → C C. The leading state 0 remains at the bottom. Acceptance uses the augmented start situation and lookahead $, rather than shifting a literal end token.</p>
+<h3>Separate the two conflict types</h3>
+<table class="ref"><caption>Conflicts are competing ACTION entries</caption><thead><tr><th scope="col">Grammar</th><th scope="col">Situation</th><th scope="col">Competing actions</th></tr></thead><tbody><tr><td>E → E + E | id</td><td>After E + E with lookahead +</td><td>Shift +, or reduce E → E + E.</td></tr><tr><td>S → A | B; A → id; B → id</td><td>After id with lookahead $</td><td>Reduce A → id, or reduce B → id.</td></tr></tbody></table>
+<p>A <dfn>shift/reduce conflict</dfn> offers both reading another token and completing a phrase. For E → E + E | id, the choice after E + E on + decides whether an addition chain groups left or right. The grammar does not express that association. A layered grammar or a documented precedence rule can settle it.</p>
+<p>A <dfn>reduce/reduce conflict</dfn> offers two different completed productions. For S → A | B with A → id and B → id, the single id has two parse trees. The parser cannot know which phrase name to create. Reordering production lines hides the choice but does not remove the grammar’s ambiguity.</p>
+<p>A conflict does not always prove that a grammar is ambiguous. A weaker table method can combine contexts too broadly. For example, LR(0) may offer two reductions that SLR separates using FOLLOW sets. Keep grammar ambiguity separate from the power of the chosen table-construction method.</p>
+<h3>Why greedy suffix matching fails</h3>
+<p>Suppose E → E + E | E * E | id. After recognising E + E with lookahead *, an intended multiplication-first language needs to shift * and extend the right operand. Reducing every available E + E immediately would instead force the addition first. A stack suffix match alone has no knowledge of precedence.</p>
+<p>An LR table turns this contextual decision into a lookup. The examples construct tables rather than encoding “reduce whenever possible.” They retain every competing action in a set. The recogniser refuses a conflicting table before reading input, so success does not depend on Python’s set iteration order.</p>
+<h3>Recognise complete words and failed prefixes</h3>
+<table class="ref"><caption>Two-group recognition cases</caption><thead><tr><th scope="col">Input</th><th scope="col">Outcome</th><th scope="col">Explanation</th></tr></thead><tbody><tr><td>d d</td><td>accept</td><td>Both groups have their required d.</td></tr><tr><td>c d d</td><td>accept</td><td>First C contains one c.</td></tr><tr><td>d</td><td>reject</td><td>Second group is missing.</td></tr><tr><td>d d d</td><td>reject</td><td>Extra d remains after two groups.</td></tr><tr><td>ε</td><td>reject</td><td>Neither required d is present.</td></tr></tbody></table>
+<p>A reduction consumes no new input. The next ACTION lookup uses the same lookahead in a different state. A shift always advances the input position. This distinction helps you check a trace: two consecutive reductions are possible, but two different unread suffixes require a shift between them.</p>
+<p>For a fixed deterministic LR grammar, recognition normally takes linear time in the number of tokens. Each token is shifted once, and the number of reductions is linear for the small grammars used here. The stack can grow linearly with a long unfinished phrase. Generating the state collection can cost far more than recognition, so parser generators build tables before ordinary source files are parsed.</p>
+<p>When tracing an exam problem, state the grammar numbers, stack orientation, initial state, input marker, and acceptance rule. Then write one row before each action. For a reduction, show both its production and resulting GOTO state. That evidence lets a reviewer distinguish a correct parse from a lucky final S.</p>
+<h2 id="examples">Examples</h2>
+<h3>Shift and reduce two c-star-d groups</h3>
+<p>The first d reduces to C, then c C reduces to C. A second group is still required.</p>
+<div data-example="ex-1"></div>
+<h3>Detect the plus-expression shift/reduce conflict</h3>
+<p>On + after E + E, the table offers both shifting and reducing.</p>
+<div data-example="ex-2"></div>
+<h3>Detect two reductions for one token</h3>
+<p>Both A → id and B → id can reduce at the end marker, so the grammar has two trees.</p>
+<div data-example="ex-3"></div>
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Reducing any visible right side</h3>
+<p>A handle includes context from a reverse rightmost derivation. Let the parser state and lookahead choose the action rather than scanning for an arbitrary matching suffix.</p>
+<h3>Moving input during reduction</h3>
+<p>A reduction replaces recognised stack content. The next unread token stays unchanged until a shift occurs.</p>
+<h3>Treating accept as an ordinary reduction</h3>
+<p>Acceptance recognises the completed augmented start with $. It does not consume another source token or count as a C or S reduction.</p>
+<h2 id="version-notes">Python version notes</h2>
+<div class="callout version"><p>Frozen sets are hashable in Python 3.12 and represent item sets. State numbering follows sorted outgoing symbols, so runs use a stable numbering scheme.</p>
+</div>
+<h2 id="summary">Summary</h2>
+<p>Shifts read tokens; reductions build phrases by pruning handles. Context decides which reduction is valid. In <a href="topic:cd-lr0-slr">LR(0) items and SLR</a>, you will construct the states and ACTION/GOTO entries that drive these decisions.</p>

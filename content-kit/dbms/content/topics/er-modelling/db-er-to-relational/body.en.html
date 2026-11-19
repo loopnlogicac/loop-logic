@@ -1,0 +1,69 @@
+<h2 id="introduction">Give each diagram rule a table rule</h2>
+<p class="lead">An ER diagram says that students enroll in sections. MySQL needs concrete tables and constraints that preserve that meaning. Mapping connects the conceptual picture to a relational design you can create and query.</p>
+<p>You do not convert every shape into the same kind of table. Strong entities normally become tables. Some relationships become foreign keys. Others need bridge tables. Attribute kinds also matter: a name can be one column, while several phone numbers usually require several child rows.</p>
+<p>Use the university’s assumptions throughout the mapping. Each student belongs to one department. A course can have several semester sections. An enrollment connects one student to one section. A result depends on an existing enrollment. The SQL examples show these choices through shared university records.</p>
+<h2 id="syntax">The small set of building blocks</h2>
+<p>A primary key identifies a row. A foreign key references a parent row. UNIQUE prevents repeated known values, and NOT NULL requires a value. These constraints express different parts of the diagram. A foreign key alone cannot say that one parent has at most one child.</p>
+<pre><code class="language-sql">CREATE TABLE child_entity (
+    child_id INT PRIMARY KEY,
+    parent_id INT NOT NULL,
+    FOREIGN KEY (parent_id) REFERENCES parent_entity(parent_id)
+);</code></pre>
+<p>This definition pattern represents a required parent on the child side. It assumes the parent table already exists. The foreign-key values must use compatible column types. Create parent tables before dependent tables so each reference has a valid target.</p>
+<table class="ref"><caption>Map the construct according to its meaning</caption><thead><tr><th>ER construct</th><th>Relational representation</th></tr></thead><tbody>
+<tr><td>Strong entity</td><td>Table with a chosen primary key</td></tr>
+<tr><td>Composite attribute</td><td>Useful component columns</td></tr>
+<tr><td>Multivalued attribute</td><td>Child table referencing the owner</td></tr>
+<tr><td>1:N relationship</td><td>Foreign key on the N side</td></tr>
+<tr><td>M:N relationship</td><td>Bridge table with both references</td></tr>
+<tr><td>1:1 relationship</td><td>Foreign key plus UNIQUE</td></tr>
+<tr><td>Weak entity</td><td>Owner key plus partial key</td></tr>
+</tbody></table>
+<h2 id="how-it-works">Map identity, relationships and attributes</h2>
+<h3>Begin with independent entities</h3>
+<p>Create Department with department_id as primary key and its code as a separate unique value. Then create Student with student_id as primary key. Keep student_name as a description. A key must remain unique under the declared rules, rather than merely appearing unique in today’s data.</p>
+<p>A composite address can become street, city and postcode columns when those parts are useful separately. Do not preserve a conceptual composite oval by forcing a comma-separated string. Conversely, avoid splitting a name into arbitrary pieces when the application does not need or reliably know those pieces.</p>
+<h3>Put a 1:N reference on the many side</h3>
+<p>Department 1:N Student means each student row stores its department_id. Several students can repeat the same department value. NOT NULL requires every student to name a department. The foreign key ensures that the named department exists.</p>
+<p>This does not require every department to have a student. A parent row can exist without a child. ER total participation on the parent side therefore needs additional enforcement when required. Ordinary child foreign keys express a narrower direction of the rule.</p>
+<h3>Turn M:N into rows of pairs</h3>
+<p>Student and Section each connect to many partners. Create Enrollments with student_id and section_id as references. Their pair is the primary key under the rule of one enrollment per student-section combination. Place enrolled_on there because it describes that connection.</p>
+<p>Neither component is unique alone. Ayesha repeats across three enrollment rows, and section 33 repeats across three students. The complete pair cannot repeat. If repeat events within the same section are allowed, extend the identity with an attempt or event identifier.</p>
+<h3>Make 1:1 unique on the reference</h3>
+<p>A student card has card_id as its own key and student_id as a foreign key. Add UNIQUE to student_id so one student cannot own two cards. NOT NULL on that reference makes every card belong to a student. A student with no card is still allowed.</p>
+<p>Choose the foreign-key side carefully when participation differs. Storing the reference on a total side can avoid unnecessary NULL values. If both entities must always exist together, combining tables may be reasonable. Separate lifecycles or access needs may still justify separate tables.</p>
+<h3>Preserve owner-dependent identity</h3>
+<p>A weak Room uses building_id together with room_number as its primary key. building_id also references Buildings. Room number 101 can appear in two buildings because the complete keys differ. A multivalued phone property similarly moves into child rows rather than a list inside Students.</p>
+<p>The phone design uses a label unique within each student, such as home or mobile. It therefore limits one phone per student-label pair. If several mobile numbers are permitted, choose another distinguishing value. Mapping must preserve the intended multiplicity, not accidentally narrow it.</p>
+<h3>Map relationship attributes at the right level</h3>
+<p>A 1:N relationship attribute can often be stored beside the many-side reference. A M:N relationship attribute belongs on its bridge row. For a ternary relationship, retain references to all three participating entities and derive the key from its cardinality rules. Do not assume that three separate binary tables preserve the original triple or its attributes.</p>
+<h2 id="examples">Inspect the mapped university structures</h2>
+<h3>One department number per student</h3>
+<p>Read the student keys and their department references. The repeated department values show the many side without duplicating department descriptions.</p>
+<div data-example="ex-1"></div>
+<h3>One row per enrollment pair</h3>
+<p>Section 33 has three students. Inspect the bridge rows and notice that enrolled_on belongs to each particular pairing.</p>
+<div data-example="ex-2"></div>
+<h3>Several phone values for one owner</h3>
+<p>Create a child table with a composite identity. Both phone records refer to student 101 while retaining separate labels.</p>
+<div data-example="ex-3"></div>
+<h3>An optional card with a unique owner</h3>
+<p>The card mapping adds a unique reference. Without that uniqueness, a valid foreign key would still permit several cards for one student.</p>
+<div data-example="ex-4"></div>
+<h3>Room numbers scoped by a building</h3>
+<p>The weak-entity mapping permits the same room number under different owners. Building identity is part of every room identity.</p>
+<div data-example="ex-5"></div>
+<h3>Map subtypes without losing shared identity</h3>
+<p>Extended ER can use a Person table and separate Student and Teacher subtype tables. Each subtype’s person_id is both primary key and foreign key to Person. Shared contact fields stay on Person; role-specific fields stay on their subtypes. Overlap is possible because the same person can appear in both subtype tables.</p>
+<p>Separate subtype tables do not automatically enforce disjointness or total coverage. A single-table alternative can use a discriminator for disjoint roles, though many optional fields may result. Choose a mapping that fits the role rules and document any extra constraints needed across tables.</p>
+<h2 id="common-mistakes">Mapping errors that change the rules</h2>
+<h3>Putting lists inside a reference column</h3>
+<p>Writing section IDs as one comma-separated value makes each individual reference hard to constrain and query. Create one enrollment row per section instead. The bridge then supports foreign keys, uniqueness and ordinary joins without parsing strings.</p>
+<h3>Dropping the owner from a weak key</h3>
+<p>Using room_number alone would reject a valid second room 101. Using a separate room identifier can be convenient, but preserve UNIQUE(building_id, room_number) as well. The natural business rule remains important even when the physical key choice changes.</p>
+<h3>Assuming a foreign key enforces every diagram line</h3>
+<p>A foreign key checks references from existing child rows. It does not create a child for each parent or prove that a head teacher belongs to the headed department. Identify those stronger rules and provide additional logic rather than claiming the mapping enforces them already.</p>
+<h2 id="version-notes">MySQL enforcement details</h2>
+<div class="callout version"><p>These definitions use InnoDB foreign keys and work on MySQL 8.0.16 or later. CHECK constraints need that version for enforcement. Generated grade columns in the university schema follow marks automatically; students enter marks rather than maintaining several inconsistent grade fields.</p></div>
+<h2 id="summary">Preserve the meaning of each connection</h2>
+<p>Map entity identity first, then place references according to cardinality and participation. Use bridge tables for M:N, unique references for 1:1 and owner keys for weak identities. Next, study why those keys work in <a href="topic:db-relational-model">Relations, Keys and Constraints</a>.</p>

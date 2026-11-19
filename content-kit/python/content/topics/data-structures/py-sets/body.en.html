@@ -1,0 +1,66 @@
+<h2 id="introduction">Ask who belongs, rather than which position</h2>
+<p class="lead">A workshop attendance sheet may contain the same roll twice. If you only need to know who attended, duplicate entries should not count twice. A <dfn>set</dfn> stores distinct members and lets you ask whether a value belongs to the group.</p>
+<p>Sets are useful for comparing registrations, finding missing submissions and checking previously visited values. They do not attach a position to a member. If the task needs the first arrival or every repeated mark, keep a list as well.</p>
+<p>A set changes the meaning of your data. Converting [80, 80, 90] to a set leaves two values, although the original list described three students. Decide whether repetitions are noise or meaningful observations before removing them.</p>
+
+<h2 id="syntax">Create sets and combine groups</h2>
+<pre><code class="language-python">registered = {12, 18, 25}
+submitted = set([18, 18, 30])
+missing = registered - submitted
+common = registered &amp; submitted</code></pre>
+            <p>Nonempty braces with comma-separated values create a set. Empty braces create a dictionary instead, so use set() for an empty set. Passing an iterable to set collects each distinct item it supplies. A string supplies characters, not whole words.</p>
+            <table class="ref"><caption>Set operations for two groups A and B</caption><thead><tr><th scope="col">Expression</th><th scope="col">Meaning</th></tr></thead><tbody>
+            <tr><td>A | B</td><td>Members in either group</td></tr><tr><td>A &amp; B</td><td>Members shared by both</td></tr><tr><td>A - B</td><td>Members of A absent from B</td></tr><tr><td>A ^ B</td><td>Members in exactly one group</td></tr><tr><td>A &lt;= B</td><td>Every member of A belongs to B</td></tr></tbody></table>
+            <p>These operations produce new sets without editing their operands. Use readable names such as registered and submitted to make the direction of difference clear. Parentheses can make combinations easier to review when several operators appear together.</p>
+
+<h2 id="how-it-works">Equality decides whether a member already exists</h2>
+<p>A set uses hashes to locate likely positions quickly, then equality to distinguish values. A hash is a numeric lookup aid, not a unique identifier. Different values can share a hash, so equality checks still matter. Members must be hashable for this mechanism to remain reliable.</p>
+<p>Integers, strings and suitable tuples are common members. Lists, dictionaries and ordinary sets are mutable and unhashable. You cannot store a normal set inside another set. Use frozenset when the group itself must be a member or dictionary key.</p>
+<p>For ordinary data, membership is constant time on average. The cost can rise in adverse collision cases. The important practical contrast is with a list search, which may inspect each element. A set often helps when a loop repeatedly asks whether a value was seen before.</p>
+<p>Equality can cross numeric types: 1, 1.0 and True compare equal and have compatible hashes. A set does not promise to preserve their separate type identities as separate members. Keep validation separate if your application treats these categories differently.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>C has no built-in set type. You might scan an array for duplicates or build a hash table. Python provides the container and memory management, but you still choose hashable members and decide whether losing order and repetition is appropriate.</p></div>
+
+<h2 id="examples">Compare groups with explicit output order</h2>
+<p>The programs sort numeric members for display. That makes the intended ordering visible while retaining set operations for membership work. No example relies on whichever internal order a set happens to use.</p>
+
+<h3>Keep one copy of each roll</h3>
+<p>Repeated rolls collapse into three distinct members. sorted creates an ordered list for display because set iteration has no guaranteed position order. Membership reports True for 18 and False for 99.</p>
+<div data-example="ex-1"></div>
+
+<h3>Compare two workshop groups</h3>
+<p>Union includes everyone; intersection includes 2 and 4. Difference keeps 1 from robotics alone. Symmetric difference keeps 1 and 3, who joined exactly one workshop. The final subset test is True.</p>
+<div data-example="ex-2"></div>
+
+<h3>Update a membership register</h3>
+<p>Adding 12 twice still stores it once. update visits all values in its input. discard tolerates missing 99, whereas remove requires its argument to exist. The remaining rolls are 12 and 25.</p>
+<div data-example="ex-3"></div>
+
+<h3>Store immutable teams</h3>
+<p>A frozenset cannot be edited and can itself be a set member. Order does not affect equality, so the two equal two-person teams count once. Union produces a new group containing 12, 18 and 25.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="updates-and-frozen-groups">Change a register or freeze a group</h2>
+<p>The add method inserts one hashable member. Adding an existing equal member leaves the size unchanged. The update method reads all items from an iterable and adds them individually. Updating with a word adds its letters; adding the word stores the entire string as one member.</p>
+<p>The remove method expects its member to exist and raises KeyError if it does not. The discard method ignores an absent member. Choose remove when absence signals a broken assumption. Choose discard when an already-absent value is an acceptable state.</p>
+<p>The pop method removes an arbitrary member, not the smallest or earliest member. It raises KeyError on an empty set. If your algorithm needs a specific member, choose it explicitly. A queue or ordered list is better when removal order carries meaning.</p>
+<p>A <dfn>frozenset</dfn> has set membership behavior without editing methods. Operations such as union return another group instead of changing the original. Two frozensets are equal when they contain equal members, regardless of construction order.</p>
+<p>Frozen groups are useful for deduplicating teams. The team {12, 18} is the same membership group as {18, 12}. Converting each team to a frozenset allows an outer set to keep one copy of each team. This approach intentionally ignores repeated names and member order.</p>
+
+<p>The empty set is a subset of every set because it has no member that violates inclusion. Two equal sets are subsets of each other. For a proper subset, use the strict comparison A &lt; B: every A member belongs to B and at least one B member is absent from A.</p>
+<p>Set operators expect set-like operands. The named method forms can accept general iterables in useful places: for example, registered.intersection(submitted_list) reads a list of submissions. Convert inputs explicitly when operator notation makes the intended membership model clearer.</p>
+<p>For two groups that should never overlap, isdisjoint expresses the question directly. It returns true when no shared member exists, including when one group is empty. This can read more clearly than constructing an intersection only to check whether its length is zero.</p>
+
+<h2 id="common-mistakes">Preserve the information your problem needs</h2>
+<h3>Expecting indexes or sorted iteration</h3><p>Writing members[0] raises TypeError because a set is not a sequence. Convert to a sorted list for an ordered report. Converting to a plain list gives positions, but it does not invent a meaningful business order.</p>
+<h3>Reversing a difference</h3><p>registered - submitted finds missing work. submitted - registered finds unknown submissions. These answer different questions. Test a tiny example with one roll unique to each side before trusting a longer expression.</p>
+<h3>Editing during iteration</h3><p>Adding or removing members while iterating over the same set can raise RuntimeError. Calculate a separate set of members to remove, then apply the change after traversal. Reading membership during iteration is safe when the container is otherwise stable.</p>
+<p>Set comparisons express inclusion, not a total ranking. Two groups may be incomparable: each has members missing from the other. If you need a report ordered by group size, sort using their lengths rather than expecting subset comparisons to rank every pair.</p>
+
+<h2 id="version-notes">Membership is stable; display order is not promised</h2>
+
+
+<div class="callout version"><p>Set and frozenset operations in this lesson work on Python 3.10–3.12. Set iteration order is not guaranteed across runs or versions, so numeric reports explicitly sort their results.</p></div>
+
+<h2 id="summary">Use uniqueness intentionally</h2>
+<p>Sets turn repeated data into membership groups and make group relationships clear. frozenset lets a whole group become a stable key or member. Next, <a href="topic:py-dictionaries">dictionaries</a> connect each key to a useful associated value.</p>

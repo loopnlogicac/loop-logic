@@ -1,0 +1,338 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-er-diagram-design",
+  "module": "er-modelling",
+  "order": 2,
+  "kind": "theory",
+  "title": {
+    "en": "Designing an ER Diagram",
+    "bn": "ইআর ডায়াগ্রাম ডিজাইন"
+  },
+  "summary": {
+    "en": "Turn university requirements into a checked ER design, including specialisation choices.",
+    "bn": "বিশ্ববিদ্যালয়ের চাহিদা থেকে ধাপে ধাপে ইআর ডিজাইন ও স্পেশালাইজেশন শেখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-er-model"
+  ],
+  "related": [
+    "db-er-to-relational"
+  ],
+  "keywords": [
+    "designing an er diagram",
+    "er modelling",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "CHECK constraints are enforced from MySQL 8.0.16. The examples also run on MySQL 8.4."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Turn a paragraph into a design"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Ask questions before assigning shapes"
+    },
+    {
+      "id": "worked-examples",
+      "title": "University design, one decision at a time"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Repair weak modelling decisions"
+    },
+    {
+      "id": "summary",
+      "title": "Validate rules before mapping tables"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Extract university facts",
+      "statementHtml": "<p>Model this rule: a department offers courses; each course may have several semester sections; students enroll in sections.</p>",
+      "hints": [
+        "Separate the catalogue item from its offering."
+      ],
+      "answerHtml": "<p>Choose Department, Course, Section and Student as entities. Department offers Course in 1:N. Course has Section in 1:N. Student enrolls in Section in M:N, represented conceptually by an enrollment association. Put semester on Section.</p>"
+    },
+    {
+      "id": "p-2",
+      "type": "written",
+      "difficulty": "easy",
+      "title": "Test an optional result",
+      "statementHtml": "<p>Sadia has enrolled in section 35 but her marks are pending. Explain how the design represents her.</p>",
+      "hints": [
+        "A missing fact differs from a low fact."
+      ],
+      "answerHtml": "<p>Keep Sadia and her enrollment normally. No Result row exists for that enrollment until marks are available. Do not insert zero to mean pending because zero is a possible earned mark.</p>"
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Revise for team teaching",
+      "statementHtml": "<p>The university now permits several teachers in one section. Revise the relationship.</p>",
+      "hints": [
+        "Change only the rule affected by the new requirement."
+      ],
+      "answerHtml": "<p>Replace the single Teacher-to-Section 1:N rule with M:N. Introduce a teaching-assignment association between teacher and section. Store roles or workload shares there if needed. Retain Course-to-Section because team teaching does not change which course is offered.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Design Person subtypes",
+      "statementHtml": "<p>Student assistants may also teach. Model Student and Teacher as Person subtypes and discuss completeness.</p>",
+      "hints": [
+        "Overlap and completeness are independent decisions."
+      ],
+      "answerHtml": "<p>Use overlapping specialisation because one person may have both roles. If the system stores visitors or other staff, make it partial. If every stored person must have at least one of those two roles, make it total. Inherit person identity and shared contact details.</p>"
+    },
+    {
+      "id": "p-5",
+      "type": "written",
+      "difficulty": "medium",
+      "title": "Find a hidden identifier",
+      "statementHtml": "<p>A requirement says each department has a section A. Why is section_label alone insufficient?</p>",
+      "hints": [
+        "Try two different courses both offering A."
+      ],
+      "answerHtml": "<p>A can repeat across courses and semesters. Choose section_id as an identifier and retain a unique combination of course, semester and label. The combination expresses the business rule even when a convenient numeric key is used.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why distinguish Course from Section in a university design?",
+      "options": [
+        "Every course has exactly one lifetime teacher",
+        "A course may be offered repeatedly across semesters",
+        "A section is always a student",
+        "Course codes must be duplicated"
+      ],
+      "answer": 1,
+      "explanation": "A course describes subject content; a section represents one offering of that course."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where should the semester of an offering be stored?",
+      "options": [
+        "Only on Student",
+        "Only on Department",
+        "On Section",
+        "On every teacher’s name"
+      ],
+      "answer": 2,
+      "explanation": "An offering occurs in a semester, independent of when a student joined."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What first step helps find entities from a requirement paragraph?",
+      "options": [
+        "Turn every noun into a table immediately",
+        "Ignore all verbs",
+        "Choose SQL colours",
+        "List candidate things and test their identity"
+      ],
+      "answer": 3,
+      "explanation": "Nouns suggest candidates, but some are attributes or reports rather than entities."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is Enrollment useful as an association entity?",
+      "options": [
+        "It can hold enrollment date and connect one student to one section",
+        "It removes the need for students",
+        "It forces one student per course forever",
+        "It is another name for a teacher"
+      ],
+      "answer": 0,
+      "explanation": "The association has its own facts and identifies a specific student-section pair."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A teacher can be both an adviser and a researcher. Which specialisation constraint fits?",
+      "options": [
+        "Disjoint only",
+        "Overlapping",
+        "Mandatory single subtype",
+        "No superclass allowed"
+      ],
+      "answer": 1,
+      "explanation": "Overlapping subtypes permit one entity to belong to both groups."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Every Person must be either Student or Teacher, possibly both. Which constraints apply?",
+      "options": [
+        "Partial and disjoint",
+        "Total and disjoint",
+        "Total and overlapping",
+        "Partial and overlapping"
+      ],
+      "answer": 2,
+      "explanation": "Total covers every Person; overlapping permits membership in both subtypes."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does generalisation do with Student and Teacher contact facts?",
+      "options": [
+        "Copies phone numbers into every result",
+        "Removes all identities",
+        "Creates more unrelated address fields",
+        "Moves shared properties into a Person supertype"
+      ],
+      "answer": 3,
+      "explanation": "Generalisation discovers shared structure among existing entity types."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why should a diagram state whether team teaching is allowed?",
+      "options": [
+        "The rule changes teacher-section cardinality",
+        "It determines page orientation only",
+        "It changes every mark into text",
+        "It eliminates semester data"
+      ],
+      "answer": 0,
+      "explanation": "One teacher per section gives 1:N; several teachers per section needs M:N."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A student has no result yet. Which design can represent this cleanly?",
+      "options": [
+        "Delete the student until marking ends",
+        "Enrollment exists with an optional Result",
+        "Invent zero marks immediately",
+        "Put a final grade on Department"
+      ],
+      "answer": 1,
+      "explanation": "Absence of a result is distinct from a measured failing mark."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What checks a model better than a tidy drawing alone?",
+      "options": [
+        "Counting rectangles only",
+        "Making every line double",
+        "Trying ordinary and boundary scenarios against its rules",
+        "Using long entity names"
+      ],
+      "answer": 2,
+      "explanation": "Scenarios expose missing identities, incorrect cardinalities and optional facts."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which choice records a course retake in another offering?",
+      "options": [
+        "Overwriting the student’s identity",
+        "Changing the department name",
+        "Deleting all old courses",
+        "A new enrollment tied to a different section"
+      ],
+      "answer": 3,
+      "explanation": "A new offering distinguishes attempts; repeated-course grading policy is a separate rule."
+    },
+    {
+      "id": "q-12",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why avoid making Report an entity merely because staff request a report?",
+      "options": [
+        "A report may be derived from existing facts",
+        "Reports can never be stored",
+        "All nouns are relationships",
+        "A report must be a weak entity"
+      ],
+      "answer": 0,
+      "explanation": "Model underlying facts first; persisted report snapshots need their own explicit requirements."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Requirements must state which business rules are assumed.",
+      "bn": "কোন নিয়ম ধরে ডিজাইন করছ, চাহিদায় তা স্পষ্ট করো।"
+    },
+    {
+      "en": "A course and a semester’s section represent different things.",
+      "bn": "কোর্স আর নির্দিষ্ট সেমিস্টারের সেকশন আলাদা বিষয়।"
+    },
+    {
+      "en": "A result belongs to a particular enrollment.",
+      "bn": "একটি ফলাফল নির্দিষ্ট কোর্স নিবন্ধনের সঙ্গে যুক্ত।"
+    },
+    {
+      "en": "Specialisation divides a broad entity into meaningful subtypes.",
+      "bn": "স্পেশালাইজেশনে বড় এনটিটি থেকে অর্থপূর্ণ সাবটাইপ হয়।"
+    },
+    {
+      "en": "Generalisation finds shared properties among existing entity types.",
+      "bn": "জেনারালাইজেশনে আলাদা এনটিটির সাধারণ বৈশিষ্ট্য এক করা হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "design",
+      "question": "Design the university result relationship and justify where marks belong.",
+      "marks": 8,
+      "answerHtml": "<p>Start with Student and Section joined by Enrollment. Give Enrollment the pair student_id and section_id. Result is optional and uses that same pair, so a mark cannot exist without enrollment. This supports pending results and several section results per student.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Compare specialisation and generalisation with university people.",
+      "marks": 4,
+      "answerHtml": "<p>Specialisation starts with Person and divides it into Student and Teacher using role-specific facts. Generalisation starts with those types and discovers common identity and contact fields. Both can produce the same supertype-subtype structure; their design direction differs.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Give four questions to ask before finalising a university ER diagram.",
+      "marks": 5,
+      "answerHtml": "<p>Can one section have several teachers? Can a student enroll in two sections of the same course in one semester? Can an enrollment lack a result? Which combination identifies an offering? Each answer affects cardinality, uniqueness or participation, so record the assumptions beside the diagram.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL 8.4 Reference Manual",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

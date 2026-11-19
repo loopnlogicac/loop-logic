@@ -1,0 +1,85 @@
+<h2 id="introduction">Name a recurring problem before choosing its solution</h2>
+<p class="lead">Several screens may need to hear when available seats change. A checkout may need interchangeable discount calculations. These problems recur in many applications. A <dfn>design pattern</dfn> names a useful arrangement of responsibilities, together with the problem it solves and the consequences it introduces.</p>
+<p>A pattern is not a keyword or a requirement to create more classes. The same arrangement may use named classes, interfaces or library callbacks. Start with the change pressure and choose the smallest design that addresses it. Knowing the pattern name helps communicate the decision afterward.</p>
+<p>This lesson introduces Singleton, Factory, Strategy and Observer. They solve different problems: controlling instance access, choosing construction, replacing algorithms and broadcasting changes. They can work together, but substituting one name for another hides the responsibility that actually matters.</p>
+<h2 id="syntax">Recognize the contract and the collaborating roles</h2>
+<pre><code class="language-java">interface Rate {
+    int fare(int distance);
+}
+class Ticket {
+    private final Rate rate;
+    Ticket(Rate rate) { this.rate = rate; }
+    int fare(int distance) {
+        return rate.fare(distance);
+    }
+}</code></pre>
+<p>In this Strategy-shaped fragment, Ticket is the context that needs an algorithm. Rate is the algorithm contract, and a concrete rate supplies the calculation. The caller chooses the policy when assembling the objects. Ticket does not need a list of concrete rate class names.</p>
+<p>The same interface mechanism can support a different pattern role. A factory may return Rate objects, while a board may store listener interfaces. Read what the collaborators do rather than classifying every interface as Strategy. The role within the design establishes the pattern.</p>
+<h2 id="how-it-works">Match each pattern to its pressure and cost</h2>
+<table class="ref"><tr><th>Pattern</th><th>Problem</th><th>Solution shape</th><th>Consequence</th></tr><tr><td>Singleton</td><td>A genuinely shared instance lifetime</td><td>Controlled construction and one accessor</td><td>Global access can hide dependencies</td></tr><tr><td>Factory</td><td>Consumers should not select concrete construction details</td><td>A creator returns the common contract</td><td>Selection logic lives in the creator</td></tr><tr><td>Strategy</td><td>An algorithm varies independently of its context</td><td>Delegate to a supplied policy</td><td>More collaboration and explicit policy choices</td></tr><tr><td>Observer</td><td>Several consumers react to state changes</td><td>Notify registered listener contracts</td><td>Ordering, lifetime and failure policies matter</td></tr></table>
+<p>For each pattern, ask who owns the changing decision. Singleton owns access and lifetime. Factory owns construction selection. Strategy owns a varying algorithm. Observer separates event publication from the identities of interested consumers.</p>
+<p>These boundaries do not remove application policy. Someone must choose which discount to install, what event means, and when a shared object should exist. Moving a decision into another class is helpful only when the new location makes that responsibility clearer.</p>
+<h2 id="examples">Run one bounded design for each role</h2>
+<h3>Singleton: share immutable settings through one accessor</h3>
+<p>Settings has a private constructor and an eagerly initialized static instance. Two accessor calls return the same object and expose one fixed seat limit.</p>
+<div data-example="ex-1"></div>
+<p>A private constructor blocks ordinary external new calls. Static initialization safely constructs and publishes the eager instance. The guarantee is scoped to this loaded Settings class, not every process or class loader in the world.</p>
+<h3>Factory: choose a notice implementation</h3>
+<p>NoticeFactory accepts kind zero or one and returns the Notice contract. Callers print the result without constructing ExamNotice or LabNotice themselves.</p>
+<div data-example="ex-2"></div>
+<p>This is a simple factory-style creator. The broader Factory Method pattern often makes creation overridable in a creator hierarchy. Distinguish that specific pattern from the general idea of a method that returns objects. The construction separation is the useful first step here.</p>
+<h3>Strategy: replace the fare algorithm</h3>
+<p>Two Tickets receive different Rate implementations. They answer the same fare request with different valid calculations while Ticket’s implementation stays unchanged.</p>
+<div data-example="ex-3"></div>
+<p>A strategy should preserve the agreed input and result contract. Replacing an algorithm is safe only when consumers can use the replacement under the same assumptions. A factory can choose a strategy, but creating it and executing it remain separate responsibilities.</p>
+<h3>Observer: notify interested displays</h3>
+<p>SeatBoard stores two listener references and publishes each new count. Gate and Desk receive events in registration order, including a final zero-seat update.</p>
+<div data-example="ex-4"></div>
+<p>The callbacks run synchronously inside publish. The publisher does not create a thread or queue automatically. Each listener returns before the next receives the event. A slow callback therefore delays the publisher, and an uncaught callback failure would stop the remaining loop.</p>
+<h2 id="singleton-lifetime">A shared accessor is also a shared dependency</h2>
+<p>Singleton can be appropriate when exactly one instance per loaded class is a real lifetime requirement. Immutable configuration is easier to reason about than a mutable global register. The Settings example does not offer setters, so clients cannot secretly alter the limit for later callers.</p>
+<p>Class initialization safety does not make every future mutation thread-safe. If a singleton later gains a mutable counter, concurrent updates still need an appropriate synchronization policy. Do not use the existence of a static final reference as proof that the target’s operations are safe.</p>
+<p>Global access also makes dependencies less visible. A service that calls Settings.instance internally can be harder to configure independently in a test. Passing a settings object through its constructor often gives clearer lifetime control. Choose Singleton only when its access and sharing consequences fit the requirement.</p>
+<p>The eager design does not claim universal defence against reflection, custom class loaders or serialization mechanisms. Those require additional rules if relevant. Avoid adding complicated machinery to an introductory class unless the application actually needs those stronger guarantees.</p>
+<h2 id="creation-and-algorithms">Keep object selection outside stable consumers</h2>
+<pre class="diagram">Application --&gt; NoticeFactory --creates--&gt; Notice
+                                           ^
+                                           | implements
+                                        LabNotice
+
+Application --supplies--&gt; Ticket --uses--&gt; Rate
+                                          ^
+                                          | implements
+                                      ReducedRate</pre>
+<p>A factory centralizes knowledge of concrete construction. It may validate a menu choice, choose an implementation and supply constructor arguments. Callers receive an interface or base type. When a new notice kind appears, the factory may change while consumers using text() remain stable.</p>
+<p>Not every construction decision needs a factory class. Directly calling a simple value constructor can be clearer. A static creator becomes useful when construction has meaningful choices or named policies. Excessive factory layers can hide straightforward object creation.</p>
+<p>Strategy isolates behaviour selection. A checkout can hold a DiscountPolicy and ask apply(price) for each sale. Named classes are useful when policies need state or explanation. Functional interfaces can also accept lambdas, which the later lambda lesson develops.</p>
+<p>A strategy may be immutable and safely shared, or stateful with a documented lifetime. A running average strategy changes state after each input, while a fixed percentage policy may not. The context must understand the contract rather than assume every interchangeable algorithm is stateless.</p>
+<h2 id="observer-policies">Subscriptions create obligations beyond a callback method</h2>
+<pre class="diagram">SeatBoard -- listeners --&gt; Listener
+                              ^
+                              | implements
+                           Display
+publish(12) --&gt; Gate.changed(12)
+            --&gt; Desk.changed(12)</pre>
+<p>The bounded board intentionally supports two registrations and rejects null or a full array. Larger applications need a removal policy, duplicate-registration policy and a collection suited to their use. Those are design decisions rather than automatic features of Observer.</p>
+<p>A long-lived publisher can keep a closed display reachable through its listener reference. Provide unsubscribe or a registration handle when listeners have shorter lifetimes. Otherwise the application may retain unnecessary objects and continue sending irrelevant updates.</p>
+<p>Define what happens when listeners change registration during a callback. Iterating a snapshot is one possible policy. Deferring modifications until publishing ends is another. Specify whether new listeners receive the current event and whether removed listeners still finish a current notification.</p>
+<p>Also decide how callback failures behave. Stopping immediately can make a failure visible but skip later listeners. Catching failures and continuing can notify more listeners but requires a reporting policy. The best choice depends on the application’s consistency needs.</p>
+<p>Recursive publishing needs care too. A listener that publishes another event before returning can create nested notifications and surprising order. Queueing events or restricting reentrant updates can simplify reasoning. Do not assume Observer means asynchronous or automatically safe event delivery.</p>
+<h2 id="library-connections">Recognize familiar roles in Java APIs</h2>
+<p>Comparator is Strategy-like: a sorting operation accepts a replaceable ordering rule. NumberFormat.getIntegerInstance is a factory-style method that returns a suitable formatter. Swing ActionListener participates in Observer-style event delivery through registered callbacks.</p>
+<p>These analogies help you read library designs without forcing every API into one exact textbook diagram. Swing also imposes event-thread rules beyond the Observer idea. NumberFormat instances may carry mutable configuration, so receiving one from a factory does not imply immutability or global sharing.</p>
+<p>The old java.util.Observable class and Observer interface are deprecated. Prefer focused listener contracts for small designs or a suitable modern event mechanism for larger systems. The examples use their own Listener interface and no deprecated API.</p>
+<div class="callout note"><p>If you know C: callbacks may already look familiar from function-pointer designs. Java interfaces add checked operation signatures and object state for each listener or policy. The architecture still needs explicit lifetime, ordering and error rules.</p></div>
+<h2 id="common-mistakes">Check the motivation before adding a pattern</h2>
+<h3>Using Singleton to avoid passing arguments</h3>
+<p>Convenient access is not proof that state should be global. Separate applications or tests may need different instances. Prefer explicit construction and injection when independent lifetimes matter.</p>
+<h3>Confusing a creator with a strategy</h3>
+<p>The creator decides which object to build. The strategy performs an interchangeable algorithm. A factory can return a strategy, but the two roles solve different problems.</p>
+<h3>Forgetting the end of a subscription</h3>
+<p>Registration can outlive a display or task. Plan removal and retained-reference behaviour along with registration. A callback list is also a set of ownership and lifetime decisions.</p>
+<h2 id="version-notes">Use current contracts without deprecated helpers</h2>
+<p>All four arrangements run on Java 17 without preview features. The Singleton relies on ordinary class initialization. The listener example avoids deprecated Observable and Observer helpers, and the Swing connection is explanatory rather than a graphical program.</p>
+<h2 id="summary">State the problem, roles and consequence</h2>
+<p>Choose Singleton for a justified shared lifetime, Factory for creation choices, Strategy for varying algorithms and Observer for registered reactions. Explain the tradeoff alongside the benefit. Continue with <a href="topic:oop-exceptions">Exception Handling</a> to make failure contracts and cleanup more explicit.</p>

@@ -1,0 +1,67 @@
+<h2 id="introduction">Turn text into values you can compare</h2>
+<p class="lead">A student may type a course list with extra spaces or inconsistent letter case. Your program needs a clear rule for turning that text into useful values. String methods clean boundaries, divide fields, replace text and build readable reports.</p>
+<p>A string remains immutable throughout these operations. Methods return strings or other results rather than editing the original text in place. Save the returned value when the next step should use the cleaned version.</p>
+<p>Text algorithms depend on what you count as meaningful. A palindrome may ignore spaces, but a course code comparison may require every character. Describe that policy before writing the loop. Otherwise a program can run successfully while answering the wrong question.</p>
+
+<h2 id="syntax">Clean boundaries, separate fields and join results</h2>
+<pre><code class="language-python">raw = "  CSE101, MAT101  "
+codes = [part.strip() for part in raw.split(",")]
+report = " | ".join(codes)
+changed = report.replace("MAT101", "MAT102")</code></pre>
+            <p>The strip method removes leading and trailing whitespace by default. It does not remove internal spaces. Passing characters to strip means any of those characters may be removed repeatedly from either end; the argument is not an exact substring.</p>
+            <p>split without an argument treats runs of whitespace as boundaries and removes empty outer fields. With an explicit separator, every separator creates a boundary. Thus two adjacent commas create an empty field, which may represent missing data rather than something to discard.</p>
+            <p>join belongs to the separator string. It places that separator between consecutive input strings, with no extra separator at either end. Joining an empty collection returns an empty string. Convert numeric items to strings before joining them.</p>
+            <p>The replace method returns a changed string. An optional count limits the number of replacements. Use find to locate the first occurrence of a substring; it returns a zero-based position or minus one. Membership is often clearer when only presence matters.</p>
+
+<h2 id="how-it-works">Make a text-processing pipeline</h2>
+<p>A <dfn>pipeline</dfn> is a sequence where each step prepares the next step's input. For a comma-separated course list, remove outer whitespace, split at commas, trim every field and then join the cleaned values for display.</p>
+<p>Keep the intermediate values while learning. Printing the fields reveals accidental empty entries or leftover spaces. Once the behavior is clear, a comprehension can express the per-field cleanup. Compact code should still show which rule is applied at each boundary.</p>
+<p>Splitting and joining usually visit the text or its pieces in linear time. Repeatedly extending a growing string inside a long loop can copy accumulated text many times. Collect pieces and join once when assembling a large report.</p>
+<p>The generator form used inside join supplies transformed items one at a time. It resembles a comprehension but omits square brackets. <a href="topic:py-iterators-generators">Generators</a> later explains lazy iteration in detail; here it avoids an unnecessary temporary list of characters.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>Python strings carry their length and manage storage. You do not reserve a writable char buffer for split or replace. A returned string is a new value; assigning it does not write into the original string. Unicode characters also differ from C byte-oriented char processing.</p></div>
+
+<h2 id="examples">Clean input and inspect the normalized form</h2>
+<p>The comparison examples show the normalized text or the rule that creates it. This helps distinguish a mistake in cleaning from a mistake in the comparison itself. The frequency example uses the dictionary counting pattern from the previous lesson.</p>
+
+<h3>Clean a course list</h3>
+<p>split uses commas as boundaries and strip trims each resulting field. join puts a separator between fields. replace changes only the first requested occurrence here. find returns position 10 for MAT and -1 for missing EEE.</p>
+<div data-example="ex-1"></div>
+
+<h3>Format a small price report</h3>
+<p>The fields align text left and numbers right. The total has two fractional digits, attendance becomes 87.5%, and the integer reference uses leading zeros. Width sets a minimum, so long values are not cut off.</p>
+<div data-example="ex-2"></div>
+
+<h3>Check a normalized palindrome</h3>
+<p>The generator inside join supplies one retained character at a time without building an extra list. casefold ignores letter case, and isalnum removes spaces and punctuation. The normalized word sequence reads the same backwards.</p>
+<div data-example="ex-3"></div>
+
+<h3>Compare anagram letters</h3>
+<p>Sorting retains repeated letters while ignoring their original order. The normalized phrases match. aab and abb do not match because an anagram needs equal multiplicities, not merely equal sets of letters.</p>
+<div data-example="ex-4"></div>
+
+<h3>Count whitespace-separated words</h3>
+<p>Calling split without a separator collapses whitespace runs and drops outer whitespace. The newline is another boundary. Both lab and notes occur twice after case folding, giving four total words.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="formatting-and-algorithms">Choose a display rule and a comparison rule</h2>
+<p>An f-string field may contain a colon followed by a format specification. Alignment symbols place text left, right or centered in a minimum width. A precision such as .2f prints two digits after the decimal point; a percentage format multiplies by one hundred for display and adds a percent sign.</p>
+<p>Width is not a maximum length. A long item name expands the field and may push later columns right. This matters for real reports. Unicode code points also do not always occupy one terminal column, so a width that aligns ASCII labels may not align every script.</p>
+<p>A <dfn>palindrome</dfn> reads the same forwards and backwards under the chosen cleaning rules. Normalize the text, reverse it with a slice and compare. Both cleaning and reversal need linear work, and the new strings require extra space.</p>
+<p>An <dfn>anagram</dfn> uses the same characters with the same counts in another order. Sorting normalized letters gives a convenient comparison, taking roughly n log n work. Counting letters in dictionaries can use average linear time and makes multiplicities explicit.</p>
+<p>A word count needs a definition of word. Whitespace splitting is useful for simple lab input, but notes and notes, remain different tokens unless punctuation is cleaned. A language-aware tokenizer needs rules beyond splitting at spaces.</p>
+<p>casefold is designed for caseless Unicode comparisons and can change a character into several characters. It is more thorough than lower, but does not solve every Unicode matching problem. These examples do not claim to normalize all equivalent Unicode spellings or grapheme clusters.</p>
+
+<h2 id="common-mistakes">Test boundaries instead of guessing</h2>
+<h3>Using find directly as a Boolean</h3><p>A match at position zero is false in a condition, while the absent result minus one is true. Write position != -1, or use substring in text. This avoids reversing success and failure at the most common boundary.</p>
+<h3>Deleting all punctuation without a policy</h3><p>Removing punctuation may join words that were separated by a dash. Replacing punctuation with spaces has a different effect. For a palindrome, deleting separators may be intended; for word counts, preserving a word boundary may be necessary.</p>
+<h3>Comparing only unique letters</h3><p>A set discards multiplicity. It cannot distinguish aab from abb, so it is insufficient for anagram checking. Sort all retained letters or compare full frequency mappings.</p>
+<h3>Expecting formatting to fix money arithmetic</h3><p>Printing two decimal places controls appearance. It does not make binary floating-point decimal-exact. Store whole poisha as integers when exact small currency totals matter, or study decimal arithmetic for broader requirements.</p>
+
+<h2 id="version-notes">Text policies outlive individual methods</h2>
+
+
+<div class="callout version"><p>split, join, strip, replace, find, casefold and the f-string formats shown work on Python 3.10–3.12. Unicode data may evolve, so the practice tasks specify ASCII where exact character categories matter.</p></div>
+
+<h2 id="summary">State what text means before processing it</h2>
+<p>String methods provide the pieces, while normalization rules determine the answer. Keep display formatting separate from numeric storage and character counting. Next, <a href="topic:py-functions">functions</a> let you name these useful steps and reuse them.</p>

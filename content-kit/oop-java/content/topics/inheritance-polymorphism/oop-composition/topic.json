@@ -1,0 +1,364 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-composition",
+  "module": "inheritance-polymorphism",
+  "order": 8,
+  "kind": "lesson",
+  "title": {
+    "en": "Composition vs Inheritance",
+    "bn": "কম্পোজিশন বনাম ইনহেরিট্যান্স"
+  },
+  "summary": {
+    "en": "Prefer clear has-a relationships and delegate changing policies to collaborators.",
+    "bn": "has-a সম্পর্ক স্পষ্ট করুন এবং পরিবর্তনশীল কাজ সহযোগী অবজেক্টকে দিন।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "oop-interfaces",
+    "oop-object-class"
+  ],
+  "related": [],
+  "keywords": [
+    "Composition vs Inheritance",
+    "Java",
+    "composition"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "Java 17 requires no special feature for delegation; ownership is a design promise, not a keyword."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A ticket uses a policy rather than becoming one"
+    },
+    {
+      "id": "syntax",
+      "title": "Store a collaborator and forward the request"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow references instead of climbing a class hierarchy"
+    },
+    {
+      "id": "examples",
+      "title": "Compare delegation, ownership and replacement"
+    },
+    {
+      "id": "comparison",
+      "title": "Choose by the promise, not by shared lines"
+    },
+    {
+      "id": "ownership",
+      "title": "Distinguish Java composition from the stronger UML relation"
+    },
+    {
+      "id": "design-boundaries",
+      "title": "Share deliberately and validate at useful entry points"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Watch the references that cross the boundary"
+    },
+    {
+      "id": "version-notes",
+      "title": "Ownership is a design decision"
+    },
+    {
+      "id": "summary",
+      "title": "Keep identity and collaboration distinct"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Delegate a fare calculation",
+      "level": "basic",
+      "file": "examples/ex-1.java",
+      "output": "examples/ex-1.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Ticket has a Rate. It forwards the calculation rather than inheriting a particular rate implementation.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "A private owned component",
+      "level": "intermediate",
+      "file": "examples/ex-2.java",
+      "output": "examples/ex-2.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Each Lamp creates and keeps its own SwitchState. The component is not exposed to outside aliases.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Replace a collaborator without changing the client type",
+      "level": "intermediate",
+      "file": "examples/ex-3.java",
+      "output": "examples/ex-3.out",
+      "tryNow": true,
+      "explanationHtml": "<p>Display stays the same object while its formatting policy changes. The wrapper controls how callers reach the collaborator.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Composed delivery fee",
+      "statementHtml": "<p>Read weight (0..100) and rate (0..100). RateCalculator stores rate and computes weight times rate. Parcel has a calculator supplied through its constructor and delegates cost(weight). Print the cost.</p>",
+      "hints": [
+        "Parcel has a calculator; it is not a calculator."
+      ],
+      "difficulty": "easy",
+      "id": "p-1",
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Independent counters",
+      "statementHtml": "<p>Read a and b (0..20). Each Desk owns a private Counter created inside Desk. Visit the first desk a times and the second b times. Print their counts separated by one space.</p>",
+      "hints": [
+        "Avoid static component state when each desk needs its own count."
+      ],
+      "difficulty": "medium",
+      "id": "p-2",
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "title": "Replace an invalid subtype",
+      "statementHtml": "<p>A Stack extends a general list and exposes insert-at-index. Why does this harm a strict stack abstraction? Propose a composition design.</p>",
+      "answerHtml": "<p>A strict stack permits access at one end. Inheriting arbitrary insertion exposes operations outside that contract. Stack can instead keep a private list and expose push, pop and isEmpty only. Delegation reuses storage while controlling the public boundary.</p>",
+      "hints": [
+        "List reuse does not require Stack to be a list."
+      ],
+      "difficulty": "medium",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Choose ownership",
+      "statementHtml": "<p>Two Departments share one Printer object supplied by the caller. Is this strong UML composition? Explain the lifetime policy.</p>",
+      "answerHtml": "<p>The departments refer to a shared independent printer. This is an association, possibly shared aggregation if that meaning helps the model. Strong composition would assert exclusive whole-part ownership. Deleting a Department reference should not imply destroying a printer still used elsewhere.</p>",
+      "hints": [
+        "A private reference alone does not establish exclusive ownership."
+      ],
+      "difficulty": "hard",
+      "id": "p-4"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "output",
+      "prompt": "What fare does the composed policy choose?",
+      "code": "interface Rate { int fare(int distance); }\nclass RegularRate implements Rate {\n    @Override\n    public int fare(int distance) { return distance * 4; }\n}\nclass ReducedRate implements Rate {\n    @Override\n    public int fare(int distance) { return distance * 2; }\n}\nclass Ticket {\n    private final Rate rate;\n    Ticket(Rate rate) { this.rate = rate; }\n    int fare(int distance) { return rate.fare(distance); }\n}\n\nclass Main {\n    public static void main(String[] args) {\n        Ticket ticket = new Ticket(new RegularRate());\n        System.out.println(ticket.fare(3));\n    }\n}\n",
+      "explanation": "Ticket delegates to RegularRate, which multiplies distance by four.",
+      "id": "q-1",
+      "difficulty": "medium",
+      "options": [
+        "12",
+        "3",
+        "6",
+        "0"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "output",
+      "prompt": "Do two owners share components created inside their constructors?",
+      "code": "class Part { int count; }\nclass Owner {\n    private final Part part = new Part();\n    void add() { part.count++; }\n    int count() { return part.count; }\n}\n\nclass Main {\n    public static void main(String[] args) {\n        Owner a = new Owner();\n        Owner b = new Owner();\n        a.add();\n        System.out.println(a.count() + \" \" + b.count());\n    }\n}\n",
+      "explanation": "Each Owner creates a different Part, so only a changes.",
+      "id": "q-2",
+      "difficulty": "medium",
+      "options": [
+        "1 1",
+        "1 0",
+        "0 0",
+        "0 1"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "output",
+      "prompt": "What does an intentionally shared collaborator reveal?",
+      "code": "class Part { int count; }\nclass Owner {\n    private final Part part;\n    Owner(Part part) { this.part = part; }\n    void add() { part.count++; }\n    int count() { return part.count; }\n}\n\nclass Main {\n    public static void main(String[] args) {\n        Part part = new Part();\n        Owner a = new Owner(part);\n        Owner b = new Owner(part);\n        a.add();\n        System.out.println(b.count());\n    }\n}\n",
+      "explanation": "Both wrappers hold aliases to the same Part, so b observes the increment.",
+      "id": "q-3",
+      "difficulty": "medium",
+      "options": [
+        "0",
+        "2",
+        "1",
+        "Compile error"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which statement supports composition?",
+      "explanation": "A policy collaborator is owned or referenced by Ticket rather than being its superclass.",
+      "id": "q-4",
+      "difficulty": "easy",
+      "options": [
+        "A ticket has a fare policy",
+        "A square satisfies a shape contract",
+        "A scholar satisfies a student contract"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does delegation mean?",
+      "explanation": "The owner controls the public request and asks another object to perform a task.",
+      "id": "q-5",
+      "difficulty": "easy",
+      "options": [
+        "Copying all collaborator fields",
+        "Forwarding work to a collaborator",
+        "Changing the runtime superclass"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why often favour composition for changing policy?",
+      "explanation": "Separating collaborators avoids multiplying subclasses for unrelated variation axes.",
+      "id": "q-6",
+      "difficulty": "easy",
+      "options": [
+        "It removes every object allocation",
+        "It forbids interfaces",
+        "Policies can vary independently of the owner hierarchy"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Does a private final field guarantee exclusive ownership?",
+      "explanation": "A final field fixes its reference, while ownership depends on how the object is created and shared.",
+      "id": "q-7",
+      "difficulty": "easy",
+      "options": [
+        "No, outside aliases may still exist",
+        "Yes, the target is copied",
+        "Yes, the target becomes immutable"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "When is inheritance still a good fit?",
+      "explanation": "Behavioural substitutability matters more than text reuse.",
+      "id": "q-8",
+      "difficulty": "easy",
+      "options": [
+        "Whenever two classes share a few lines",
+        "When every subtype preserves the parent contract",
+        "Whenever the parent has getters"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What cost can composition introduce?",
+      "explanation": "Delegation has design and implementation costs, so choose useful boundaries rather than wrapping everything.",
+      "id": "q-9",
+      "difficulty": "easy",
+      "options": [
+        "Mandatory manual memory release",
+        "A ban on constructor validation",
+        "Forwarding methods and extra collaboration"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which UML relation indicates exclusive whole-part ownership?",
+      "explanation": "The diamond belongs to the whole, and the model promises exclusive ownership.",
+      "id": "q-10",
+      "difficulty": "easy",
+      "options": [
+        "Composition with a filled diamond at the whole",
+        "Inheritance with a triangle at the child",
+        "Any association with multiplicity one"
+      ],
+      "answer": 0
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Use is-a for substitutable types and has-a for collaborators.",
+      "bn": "বিকল্প হিসেবে ব্যবহারযোগ্য টাইপে is-a, সহযোগী অবজেক্টে has-a ব্যবহার করুন।"
+    },
+    {
+      "en": "Delegation forwards work through a controlled public boundary.",
+      "bn": "ডেলিগেশন নিয়ন্ত্রিত ইন্টারফেস দিয়ে কাজ অন্য অবজেক্টকে দেয়।"
+    },
+    {
+      "en": "Composition lets policies vary without multiplying owner subclasses.",
+      "bn": "কম্পোজিশনে মালিক ক্লাসের অসংখ্য সাবক্লাস ছাড়াই নীতি বদলানো যায়।"
+    },
+    {
+      "en": "Ownership must be designed rather than inferred from final.",
+      "bn": "final দেখে মালিকানা ধরে নেবেন না, মালিকানার নিয়ম ঠিক করুন।"
+    },
+    {
+      "en": "Inheritance remains useful when the full parent contract holds.",
+      "bn": "প্যারেন্টের পুরো চুক্তি বজায় থাকলে ইনহেরিট্যান্স উপযোগী।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "design",
+      "question": "Draw a Ticket that delegates to a Rate interface.",
+      "marks": 5,
+      "answerHtml": "<pre class=\"diagram\">Ticket --&gt; Rate\n            ^\n            | implements\n       ReducedRate</pre><p>Ticket keeps a Rate reference and forwards fare requests. Rate implementations change independently from Ticket. The association does not by itself promise exclusive ownership.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare subclass explosion with two independent policy fields.",
+      "marks": 5,
+      "answerHtml": "<p>Combining three fare policies with four text styles could produce twelve dedicated subclasses. A FarePolicy and Style collaborator permit those combinations without twelve owner classes. This adds constructor choices and delegation, so validate collaborators and keep their contracts narrow.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Explain when a private component still leaks mutable state.",
+      "marks": 3,
+      "answerHtml": "<p>Storing a caller-owned mutable object preserves an alias. Returning the component also exposes an alias. Choose intentional sharing, defensive copying, or a narrow interface according to the required ownership rule.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Java learning: inheritance",
+      "url": "https://dev.java/learn/language/oop/inheritance/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

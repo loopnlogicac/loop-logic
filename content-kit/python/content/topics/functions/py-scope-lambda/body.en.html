@@ -1,0 +1,70 @@
+<h2 id="introduction">The same spelling can name different values</h2>
+<p class="lead">Two classrooms can each have a student called roll 12 without referring to the same person. Names in Python also belong to contexts. A <dfn>scope</dfn> is the region whose name bindings Python considers when resolving a name.</p>
+<p>Functions keep temporary names close to their work. That prevents a helper calculation from accidentally replacing unrelated names elsewhere. Nested functions add another useful layer: an inner function can read settings belonging to its enclosing function call.</p>
+<p>Scope explains why a value inside a function may differ from one printed outside it. It also explains several errors that look like arithmetic problems but are really name-binding problems. Draw the enclosing scopes when a name's source is unclear.</p>
+
+<h2 id="syntax">Redirect rebinding only when necessary</h2>
+<pre><code class="language-python">visits = 0
+
+def record_visit():
+    global visits
+    visits += 1</code></pre>
+            <p>By default, assignment to a name in a function makes that name local throughout the function body. Reading a local name before its binding exists raises UnboundLocalError. Python does not fall back to a global value after deciding that the name is local.</p>
+            <p>The global declaration directs bindings for a named variable to the module level. The nonlocal declaration instead selects an existing binding in an enclosing function scope. Put declarations before using the affected name in that function.</p>
+            <p>Neither declaration passes an argument or returns a value. They change where name binding happens. For many calculations, accepting a parameter and returning a result is clearer than changing state outside the function.</p>
+
+<h2 id="how-it-works">Look outward through LEGB</h2>
+<p><dfn>LEGB</dfn> names the ordinary lookup order: Local, Enclosing, Global, Built-in. First search the current function's local names, including parameters. Then search surrounding function scopes. Next search the defining module, and finally Python's built-in names.</p>
+<p>In the first program, inner has its own amount and local_fee. The name rate is absent locally but present in outer, so that value is used before the module-level rate. The name len is found among built-ins because no nearer scope replaces it.</p>
+<p>A nested function remembers its defining environment, not the local variables of whichever function calls it later. This is lexical scope. The returned counter keeps access to count even after make_counter has returned, which forms a closure.</p>
+<p>A <dfn>closure</dfn> is a function that retains access to enclosing bindings it uses. Each factory call can create separate state. Two counters created by separate make_counter calls therefore need not interfere, even though they use the same source definition.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>C block scope and Python function scope do not match exactly. Python for and if statements do not create ordinary new local scopes. A returned Python closure can retain enclosing bindings; you do not return a pointer to an expired C stack local.</p></div>
+
+<h2 id="examples">Trace the binding each function reads</h2>
+<p>Before tracing a printed value, label each relevant name L, E, G or B. For an assignment, also ask whether global or nonlocal changes its destination. The answer often predicts the result without running every arithmetic step.</p>
+
+<h3>Find local, enclosing, global and built-in names</h3>
+<p>inner finds amount and local_fee locally, rate in outer, and len among built-ins. The inner calculation returns 33. The module-level rate remains 5 because outer has its own binding.</p>
+<div data-example="ex-1"></div>
+
+<h3>Rebind one module-level name</h3>
+<p>global makes assignments to visits target the module-level binding. Both calls increment the same counter, producing 2. Without global, the attempted read before local assignment would raise UnboundLocalError.</p>
+<div data-example="ex-2"></div>
+
+<h3>Preserve one enclosing counter</h3>
+<p>nonlocal points to count in the enclosing function call. The returned inner function retains access to that binding. Each make_counter call creates separate state, so first reaches 12 while second starts at 1.</p>
+<div data-example="ex-3"></div>
+
+<h3>Use a lambda as a short ordering rule</h3>
+<p>The key function returns a pair: negative mark sorts high marks first, then roll breaks ties. The named lambda returns its single expression automatically. For a reusable named calculation, def is usually clearer than assigning lambda.</p>
+<div data-example="ex-4"></div>
+
+<h3>Capture the intended loop value</h3>
+<p>The late functions read the shared loop name when called, after it has reached 2. Default arguments evaluate during each lambda creation, so fixed saves 0, 1 and 2 separately.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="lambda-and-capture">Write short functions without hiding their rules</h2>
+<p>A <dfn>lambda expression</dfn> creates a small function from parameters and one expression. Its syntax is lambda parameters: expression. The expression's value is the result; no return statement is written. A lambda can be useful when passing a short rule to sorted.</p>
+<p>The sorted key argument expects a function that produces a comparison key for each item. A key tuple can express primary and secondary ordering. Returning negative mark and positive roll gives descending marks with ascending rolls for ties.</p>
+<p>Assigning a complex lambda to a permanent name is usually less readable than def. A named definition supports a docstring and several clear statements. Use lambda when the complete rule fits comfortably inside the surrounding call.</p>
+<p>Closures save access to bindings rather than frozen snapshots of every value. Loop-created functions that read number later all observe the final number binding. This behavior also affects inner functions created with def; it is not unique to lambda.</p>
+<p>A default such as number=number captures the current object when the function is created. This can be suitable for immutable loop values. Remember the earlier default-argument rules if the captured object is mutable: saving its reference does not make it an independent copy.</p>
+
+<p>Ordinary if and for statements do not introduce a new function-local scope. A name assigned inside an executed branch can still be read later in that function. If the branch never executes, that binding may never be created. Initialize a result before branching when every later path needs it.</p>
+<p>The word global refers to the defining module, not an application-wide shared namespace. If two modules each define count, their functions normally refer to their own module bindings. Importing a function does not move its defining global namespace into the caller's module.</p>
+<p>Nested functions can read an enclosing name without nonlocal. The declaration becomes necessary when the inner function must rebind that enclosing name. A read-only threshold closure therefore needs no declaration, while an incrementing counter does.</p>
+
+<h2 id="common-mistakes">Distinguish name changes from object changes</h2>
+<h3>Using global as a repair for every error</h3><p>A global counter is useful for demonstrating binding, but widespread shared state makes calls harder to reason about. First consider whether the function should receive the old value and return the new value. That design makes dependencies visible.</p>
+<h3>Expecting nonlocal to find a module variable</h3><p>nonlocal needs a surrounding function binding. If none exists, the definition is invalid. Use global for a module binding only when that mutation is an intentional part of the design.</p>
+<h3>Confusing mutation with reassignment</h3><p>Calling append on a list reads its name and edits the reached object. Assigning a different list to that name rebinds it. Only rebinding needs the declaration that selects an outer scope.</p>
+<h3>Shadowing useful built-ins</h3><p>A local variable named list or sum hides the corresponding built-in through ordinary lookup. Calling sum later may then attempt to call an integer. Choose names such as total or numbers instead of masking the tool you still need.</p>
+
+<h2 id="version-notes">Scope follows definitions</h2>
+
+
+<div class="callout version"><p>LEGB lookup, nonlocal and lambda behavior described here works on Python 3.10–3.12. Ordinary loops keep their target binding in the surrounding scope; comprehensions use a separate target scope.</p></div>
+
+<h2 id="summary">Find the binding before tracing the value</h2>
+<p>LEGB explains name lookup, while global and nonlocal explicitly redirect rebinding. Lambda offers a short function expression under the same scope rules. Next, <a href="topic:py-recursion">recursion</a> creates repeated calls whose local state must be traced separately.</p>

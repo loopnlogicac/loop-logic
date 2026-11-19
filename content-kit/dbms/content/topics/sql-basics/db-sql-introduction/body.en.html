@@ -1,0 +1,57 @@
+<h2 id="introduction">Meet the language and the server</h2>
+<p class="lead">You want the three department codes without opening every student record. SQL lets you describe that request. MySQL receives the request, checks it and finds the matching data.</p>
+<p><dfn>SQL</dfn> is a language for defining, reading and changing relational data. <dfn>MySQL</dfn> is a database management system that implements SQL with its own features. Workbench is a graphical client. The command-line mysql program is another client. Neither client should be confused with the running database server.</p>
+<p>SQL is mostly declarative: you describe the result or change you want. The server chooses how to access stored records. Learning the logical meaning comes before tuning that access. A fast query is useful only when it answers the intended question.</p>
+<h2 id="syntax">Recognise command families and statements</h2>
+<table class="ref"><caption>Common SQL command families</caption><thead><tr><th>Family</th><th>Examples</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>DDL</td><td>CREATE, ALTER, DROP</td><td>Define or change structures</td></tr>
+<tr><td>DML</td><td>SELECT, INSERT, UPDATE, DELETE</td><td>Read or change rows</td></tr>
+<tr><td>DCL</td><td>GRANT, REVOKE</td><td>Control access</td></tr>
+<tr><td>TCL</td><td>START TRANSACTION, COMMIT, ROLLBACK</td><td>Control related changes</td></tr>
+</tbody></table>
+<p>Some courses call SELECT a separate data query language, or DQL. The classification label varies, but SELECT’s role remains reading data. A semicolon ends a statement in the command-line client. Keywords are commonly uppercase for readability; column and table names should follow one consistent convention.</p>
+<pre><code class="language-sql">SELECT column_name
+FROM table_name
+ORDER BY column_name;</code></pre>
+<p>The names above are placeholders for actual objects. SELECT chooses the displayed expressions, FROM names their source and ORDER BY requests a result order. Tables themselves do not have a guaranteed first row.</p>
+<h2 id="how-it-works">Set up a connection and choose types</h2>
+<h3>Install the server and use a client</h3>
+<p>Install MySQL Community Server 8.0.16 or newer for these lessons. Start its service and configure a local account. On a supported Ubuntu setup, the mysql-server package provides the server. Package names and service management vary by operating system, so confirm the actual installed product and version.</p>
+<p>Connect from a terminal with the mysql client using host, account and password. The -p option requests a password interactively; avoid putting a production password directly into a command. Workbench connects to the same host and port through a graphical interface. The usual MySQL TCP port is 3306.</p>
+<p>XAMPP can be convenient for local development, but some versions bundle MariaDB rather than MySQL. Check the server identity instead of assuming the package name guarantees it. MariaDB shares much SQL syntax but differs in features and version numbers. These lessons target Oracle MySQL.</p>
+<p>A database groups related tables. CREATE DATABASE defines a database, USE chooses the connection’s default database, and SHOW DATABASES lists databases visible to the account. SHOW TABLES lists tables in the selected database. Those administrative displays depend on local names and permissions, so your list may differ from someone else’s.</p>
+<p>A connection-refused error usually means the client cannot reach a listening server. An access-denied error means authentication or permission checking failed after reaching the service. A missing-table error concerns the selected schema or table name. Separate these stages when diagnosing a problem.</p>
+<h3>Choose data types from meaning</h3>
+<p>INT suits many numeric identifiers and whole-number counts. VARCHAR holds variable-length text such as names or course codes. DATE holds calendar dates without time-of-day. DECIMAL stores fixed-scale decimal values and is suitable for exact taka amounts. FLOAT and DOUBLE use approximate binary floating-point.</p>
+<table class="ref"><caption>Types in the shared records</caption><thead><tr><th>Fact</th><th>Useful type</th><th>Reason</th></tr></thead><tbody>
+<tr><td>Student identifier</td><td>INT</td><td>This teaching identifier uses whole numbers</td></tr>
+<tr><td>Course code</td><td>VARCHAR</td><td>CSE 212 contains letters and a space</td></tr>
+<tr><td>Unit price in BDT</td><td>DECIMAL(10,2)</td><td>Exact values with two decimal places</td></tr>
+<tr><td>Return date</td><td>Nullable DATE</td><td>A book may not yet be returned</td></tr>
+</tbody></table>
+<p>Do not choose a numeric type merely because a value contains digits. Telephone numbers can include leading zeros and a country prefix, so text is usually appropriate. An identifier whose leading zeros matter also belongs in text. Arithmetic meaning, allowed format and range should guide the choice.</p>
+<p>Use utf8mb4 for text that may include Bangla. Character set describes available characters; collation controls comparison and sorting rules. The database, table and connection settings can all matter. Storing Unicode correctly does not make every text comparison case-sensitive.</p>
+<h2 id="examples">Read data and try a reversible change</h2>
+<h3>Display department identifiers and codes</h3>
+<p>The first query reads named columns from the university catalogue. It asks for three rows in department-number order.</p>
+<div data-example="ex-1"></div>
+<h3>Keep money and dates precise</h3>
+<p>The shop example displays two prices beside a fixed date. A date literal describes the stated reporting day rather than the current clock.</p>
+<div data-example="ex-2"></div>
+<h3>Read a table’s column descriptions</h3>
+<p>MySQL’s information_schema contains metadata: data describing database objects. The query selects the loan columns and their types in definition order.</p>
+<div data-example="ex-3"></div>
+<h3>Cancel an uncommitted stock change</h3>
+<p>A transaction groups row changes. The lamp stock becomes five inside the transaction, then rollback restores zero.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Solve the right setup problem</h2>
+<h3>Installing Workbench without a server</h3>
+<p>A client cannot answer queries on its own. Confirm that MySQL Server is installed and running. Then verify host, port and account details. Opening a graphical editor does not start a missing database service.</p>
+<h3>Using binary floating-point for exact prices</h3>
+<p>Approximate numbers can introduce small representation differences for decimal fractions. DECIMAL is a better match for fixed-scale BDT. It still needs constraints and a clear rounding policy; selecting a type alone does not validate every financial operation.</p>
+<h3>Assuming all SQL systems accept identical syntax</h3>
+<p>The broad language is shared, but products differ in functions, types and supported versions. Check the MySQL manual when a feature is uncertain. Do not treat a query working on another database as proof that this server supports it.</p>
+<h2 id="version-notes">The baseline used here</h2>
+<div class="callout version"><p>The examples use MySQL 8.0.16 or later. That baseline matters because CHECK constraints are enforced from 8.0.16. MySQL 8.4 also supports these queries. Later lessons mark features that need a newer minimum version.</p></div>
+<h2 id="summary">Connect before querying</h2>
+<p>SQL expresses requests, MySQL executes them, and clients provide ways to send them. Choose a database, understand command families and match types to meaning. Next, define reliable structures in <a href="topic:db-create-tables">Creating Tables and Constraints</a>.</p>

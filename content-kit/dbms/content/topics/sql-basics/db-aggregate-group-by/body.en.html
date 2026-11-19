@@ -1,0 +1,77 @@
+<h2 id="introduction">Turn several rows into a useful summary</h2>
+<p class="lead">A department office asks how many students belong to each department. Listing every student answers a different question. Aggregate functions combine rows into counts, totals and other summaries.</p>
+<p>An <dfn>aggregate function</dfn> computes a value from several input rows. COUNT counts, SUM adds, AVG calculates a mean, and MIN and MAX find the smallest and largest known values. GROUP BY divides rows into groups so each group receives its own summary.</p>
+<p>Before writing an aggregate query, say what one output row represents. It might describe the entire university, one department or one section. Also state which records enter the calculation. An average of passing results differs from an average of all completed results.</p>
+<h2 id="syntax">Separate rows, groups and result order</h2>
+<pre><code class="language-sql">SELECT grouping_column, COUNT(*) AS row_count
+FROM source_table
+WHERE row_condition
+GROUP BY grouping_column
+HAVING COUNT(*) &gt;= required_count
+ORDER BY grouping_column;</code></pre>
+<p>WHERE tests individual rows before grouping. GROUP BY forms groups using the named expressions. Aggregate functions summarise each group. HAVING tests the completed groups. ORDER BY arranges the groups that remain. The server can choose its physical execution method while preserving this logical result.</p>
+<table class="ref"><caption>Basic aggregate meanings</caption><thead><tr><th>Expression</th><th>Meaning</th><th>Empty ungrouped input</th></tr></thead><tbody>
+<tr><td>COUNT(*)</td><td>Number of rows</td><td>0</td></tr>
+<tr><td>COUNT(column)</td><td>Number of non-NULL argument values</td><td>0</td></tr>
+<tr><td>SUM(column)</td><td>Total of non-NULL values</td><td>NULL</td></tr>
+<tr><td>AVG(column)</td><td>Mean of non-NULL values</td><td>NULL</td></tr>
+<tr><td>MIN or MAX</td><td>Smallest or largest non-NULL value</td><td>NULL</td></tr>
+</tbody></table>
+<h2 id="how-it-works">Count the right things</h2>
+<h3>Rows are different from known values</h3>
+<p>Students contains eight rows. COUNT(*) therefore returns eight. Two students have unknown hometowns, so COUNT(hometown) returns six. Repeated Dhaka values count separately in that expression. COUNT(DISTINCT hometown) instead counts five different known towns.</p>
+<p>Most aggregate functions ignore NULL arguments. This does not mean an unknown mark should be replaced automatically with zero. Zero is a real value that changes the numerator and denominator. Keep the missing-result policy explicit when presenting an average.</p>
+<p>An ungrouped aggregate over an empty input still returns one summary row. COUNT is zero, but SUM and AVG are NULL. A grouped query over no input rows has no groups and normally returns no rows. These cases explain why an unpaid order may disappear from a payment-only grouped report.</p>
+<h3>Form groups with a defined meaning</h3>
+<p>Grouping Students by department_id creates three groups. Their sizes are four, two and two. Each output row describes a department represented in Students. A newly created department with no students would not appear in this query because there is no student row to form its group.</p>
+<p>To include empty departments, begin with Departments and use an outer join to Students. Then count a non-NULL student identifier rather than COUNT(*), which would count the preserved parent row. You will examine that join pattern in <a href="topic:db-joins">Joins</a>. The difference follows from what each joined row represents.</p>
+<p>Grouping by several columns creates groups for their complete combinations. Department and hometown together describe a different grouping from department alone. Two NULL hometowns belong to the same hometown group under SQL grouping rules, even though ordinary equality with NULL does not yield TRUE.</p>
+<h3>Apply WHERE and HAVING at different stages</h3>
+<p>Suppose you want sections with at least two passing results. First use WHERE to keep marks of at least 40. Then group by section_id. Finally use HAVING to keep groups whose count is at least two. The resulting average describes passes only.</p>
+<p>If instead you group all results and keep sections whose average is at least 40, failures still contribute to that average. Moving a condition between WHERE and HAVING can therefore change the question. Name a column mean_pass when it excludes failures, rather than calling it an unrestricted mean.</p>
+<h3>Respect ONLY_FULL_GROUP_BY</h3>
+<p>MySQL normally enables ONLY_FULL_GROUP_BY. A grouped SELECT cannot request an arbitrary nonaggregate value from each group. For example, a department group contains several student names. There is no single student_name that describes the entire group.</p>
+<p>Return the grouping key and aggregates, or choose a grouping that makes the selected fact meaningful. MySQL also recognises some functional dependencies, such as other columns determined by a grouped primary key. That does not justify choosing an arbitrary name from a department containing several students.</p>
+<p>Disabling the mode can allow a misleading query to run without defining which name belongs in the answer. The repair is to clarify what one row means. Do not use a convenient aggregate such as MIN(name) unless the question actually asks for that defined representative.</p>
+<h3>Use weights when courses have different credits</h3>
+<p>A grade point summarises one course result on the documented 4.00 scale. CGPA combines completed course results with credit weights. Multiply each grade point by its course credits, sum those products and divide by the sum of the same completed credits.</p>
+<pre class="diagram">Student 101
+Section 31: grade point 4.00 × 3 credits = 12.00
+Section 33: grade point 3.75 × 1 credit  =  3.75
+Section 34: grade point 3.50 × 3 credits = 10.50
+                                      --------
+Weighted total                         = 26.25
+Completed credits                      =  7
+CGPA                                   =  3.75</pre>
+<p>The SQL demonstration introduces joins to follow each result through Section to Course. A join combines matching rows from related tables; the next module teaches the details. Section identifies the offering and Course supplies its credits. The grouping then produces one weighted value per student with recorded results.</p>
+<p>The report excludes pending results and assumes no repeated-course replacement rule. Real universities may replace grades or apply special retake policies. State those policies before calling a calculation an official CGPA. Round the final displayed value rather than rounding each intermediate contribution unnecessarily.</p>
+<h2 id="examples">Inspect totals and their denominators</h2>
+<h3>Count students and known hometowns</h3>
+<p>The first example contrasts row count with value count. The difference comes from two missing hometowns, not from repeated Dhaka values.</p>
+<div data-example="ex-1"></div>
+<h3>Summarise completed marks</h3>
+<p>The eleven recorded results total 739 marks. The rounded mean is 67.18, with extremes of 39 and 90.</p>
+<div data-example="ex-2"></div>
+<h3>Count department membership</h3>
+<p>Three grouped rows describe the departments represented by the student records. ORDER BY fixes their displayed order.</p>
+<div data-example="ex-3"></div>
+<h3>Keep groups with at least two passes</h3>
+<p>WHERE removes the 39-mark result before grouping. HAVING then tests each remaining section’s pass count.</p>
+<div data-example="ex-4"></div>
+<h3>Calculate weighted grade averages</h3>
+<p>The result-course joins retrieve the relevant credits. Notice how Tanvir’s three-credit failure lowers his weighted value more than an equal-weight mean would.</p>
+<div data-example="ex-5"></div>
+<h3>Display zero for an absent payment total</h3>
+<p>Order 203 has no payments. The report shows both the raw NULL sum and a deliberate 0.00 display fallback.</p>
+<div data-example="ex-6"></div>
+<h2 id="common-mistakes">A plausible number can answer the wrong question</h2>
+<h3>Averaging already averaged groups</h3>
+<p>Two sections can have different numbers of results. Averaging their means gives each section equal weight, rather than each result equal weight. Recompute from the underlying rows or combine each mean with its contributing count when an overall student-result mean is required.</p>
+<h3>Summing after a one-to-many join without checking multiplicity</h3>
+<p>An order can have several items and several payments. Joining both directly can repeat each payment for every item. A later SUM then overstates receipts. Check what one joined row represents and summarise each relationship at the intended level before combining totals.</p>
+<h3>Assuming GROUP BY also sorts</h3>
+<p>Grouping defines which rows share a summary. It does not promise the order of those summaries. Add ORDER BY when displaying departments or sections. A report should not depend on an accidental grouping implementation.</p>
+<h2 id="version-notes">Keep grouping mode enabled</h2>
+<div class="callout version"><p>These aggregates work on MySQL 8.0.16 and 8.4. ONLY_FULL_GROUP_BY is normally enabled in both. Functional-dependency recognition can permit some nonaggregate expressions, but every selected value still needs a clear meaning for its group.</p></div>
+<h2 id="summary">State the population behind the summary</h2>
+<p>Aggregates summarise input rows, so counts, NULL policies, filters and weights determine their meaning. WHERE selects rows and HAVING selects groups. Keep grouping unambiguous and order reports explicitly. Continue with <a href="topic:db-joins">Joins</a> to build careful summaries across related tables.</p>

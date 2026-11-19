@@ -8,6 +8,7 @@ Everything Codex (or any writer) needs to produce tutorial content that the Loop
 | `CODEX_TASK_2.md` | the brief for all seven subjects (format 1.1) |
 | `CODEX_TASK_ML.md` | the master brief for Machine Learning from Zero (layered lessons for children and undergraduates, `ml` labs, picture questions, practice sheets) |
 | `c-tutorial/CODEX_PROMPT.md` | the original brief (Task 1); still applies |
+| `BANGLA_STYLE.md` | how to write natural Bangla (word list; the checker enforces it) |
 | `LAB_FORMAT.md` | interactive labs (visualisers/simulators) for Data Structures, Algorithms and Machine Learning |
 | `tools/check.mjs` | the checker: format, HTML, writing quality, and it compiles and runs every C, Java, Python and MySQL program |
 | `tools/labs.mjs` | the lab state model shared by the checker and the site's lab player |

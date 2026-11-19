@@ -1,0 +1,51 @@
+<h2 id="introduction">Introduction</h2>
+<p class="lead">At a service desk, people normally leave in the order they arrived. A <dfn>queue</dfn> follows that rule for data. New values join the rear, and the oldest waiting value leaves from the front. This is FIFO: first in, first out.</p>
+<p>A queue differs from a stack because its insertion and removal happen at opposite ends. If roll numbers twelve, twenty-four and thirty-six arrive, twelve is served first. Numerical size does not matter; arrival order decides service.</p>
+<p>An array can hold the waiting values without moving them after every service. Two cursors describe the live interval. This lesson begins with a linear queue so you can see both its simple updates and the storage problem that motivates circular indexing.</p>
+
+<h2 id="syntax">Representation and rules</h2>
+<p>The structure Queue owns four cells, a front cursor and a rear cursor. Front identifies the next live cell to remove. Rear identifies the next unused cell for insertion. Both start at zero, giving an empty interval.</p>
+<p>The live entries occupy indices front through rear minus one. Its size is rear-front. Empty means front equals rear. The enqueue helper refuses a write when rear equals capacity, even if some prefix cells have become unused.</p>
+<p>Rear is therefore a next-write index, not the index of the last live value. When the queue is nonempty, the last live index is rear-1. Keeping this distinction explicit prevents a common one-cell mistake in drawings and full tests.</p>
+<p>The dequeue helper returns status and writes its output value only on success. It does not use a special integer as an empty marker. Every stored int remains distinguishable from an unsuccessful request, because the status is separate.</p>
+
+<h2 id="how-it-works">Follow the operations</h2>
+<p>Enqueue first checks the rear boundary. On success, it writes into items[rear] and advances rear. Existing values stay in their cells. Dequeue checks the empty condition, reads items[front], then advances front. It never shifts the suffix.</p>
+<p>After inserting twelve and twenty-four, front is zero and rear is two. Removing twelve advances front to one. Twenty-four remains physically at index one. Inserting thirty-six writes index two and advances rear to three.</p><pre class="diagram">enqueue 24:
+before: [12][  ][  ][  ] front=0 rear=1
+after:  [12][24][  ][  ] front=0 rear=2
+dequeue:
+before: [12][24][  ][  ] front=0 rear=2
+after:  [--][24][  ][  ] front=1 rear=2, returned=12
+peek front/rear:
+        [--][24][  ][  ] front value=24, rear live value=24</pre><p>The old twelve may remain in memory after removal, but it lies before front and is no longer queued. The program prints only the live interval. A picture can mark unused cells with dashes without requiring the C helper to erase their payloads.</p>
+<p>Fill all four cells, then remove the first two. Front becomes two and rear stays four. A new enqueue is refused because index four is outside the array. This is sometimes called false overflow: the queue has spare physical cells, but the linear cursor scheme cannot reach them for writing.</p>
+<p>A simple repair after complete draining is to reset front and rear to zero. The practice problem explores that policy. It does not solve the partial-drain case, where some values still occupy the suffix. Circular queues solve that case without shifting.</p><h3>Operation plan</h3><pre><code class="language-text">front = 0; rear = 0; capacity = 4
+for each command
+    if zero and front &lt; rear: dequeue; front++
+    else if zero: report empty
+    else if rear &lt; capacity: enqueue; rear++
+    else: report no rear space
+return items and cursors</code></pre><div data-lab="queue-basic"></div>
+
+<h2 id="examples">Examples</h2>
+<h3>Enqueue at rear and dequeue at front</h3><p>Twelve leaves before twenty-four. Front advances independently of rear.</p><div data-example="ex-1"></div><h3>Observe wasted prefix cells</h3><p>Two cells become unused at the front, but rear remains four, so five is refused.</p><div data-example="ex-2"></div><h3>Reach the empty linear state</h3><p>Empty removal changes neither cursor; after removing nine, both cursors equal one.</p><div data-example="ex-3"></div>
+
+<h2 id="edge-cases">Costs and boundary cases</h2>
+<p>One successful linear enqueue or dequeue takes O(1) time and O(1) auxiliary space. A full live traversal takes O(n), where n is the number waiting. The allocated array has O(C) storage for capacity C even when its live size is smaller.</p>
+<p>Compacting the suffix to the beginning reclaims prefix cells, but moving n live values costs O(n). If you compact after every removal, dequeue becomes linear. Delaying compaction changes when that cost is paid but does not make the copies free.</p>
+<p>An empty removal must preserve both cursors and avoid reading a cell. A singleton removal advances front until it equals rear. If rear has already reached capacity, the queue can become empty while both cursors equal four. Equality, rather than zero, defines this empty state.</p>
+<p>You can inspect the front payload only when front is less than rear. You can inspect the last queued payload at rear-1 under the same condition. Merely printing rear’s numeric cursor does not inspect a value. Index four is a legal boundary number but not a legal cell index.</p>
+
+<h2 id="common-mistakes">Common mistakes</h2>
+<h3>Mixing two rear conventions</h3><p>Some queue designs store the last occupied rear index. This lesson stores the next write index. Taking a full or empty formula from the other design without translating it changes which cells are considered live.</p><h3>Resetting while entries remain</h3><p>Setting both cursors to zero after every dequeue discards the remaining live interval. Reset only when the queue is empty, or deliberately move the live values before changing their boundaries.</p><h3>Sorting a FIFO queue</h3><p>Smaller roll numbers do not get served earlier unless they arrived earlier. Sorting changes the service policy into a different structure. Keep arrival order when tracing queue operations.</p>
+
+<h2 id="best-practices">Working habits</h2>
+<p>Draw front and rear even when they coincide. Show rear just beyond the final live cell. For a supplied byte width w and base B, the next removal address is B+front*w while the queue is nonempty.</p>
+<p>Compare logical size with the remaining linear write range. They answer different questions. Size counts waiting values; capacity-rear counts cells this implementation can still fill before a reset or compaction.</p>
+
+<h2 id="version-notes">C17 notes</h2>
+<p>The queue code uses C17 with ordinary fixed arrays. C permits computing a one-past boundary for an array, but you must not dereference it. Here rear can equal capacity as a number; enqueue checks that boundary before accessing items.</p>
+
+<h2 id="summary">Summary</h2>
+<p>A linear queue maintains FIFO using separate front and next-write cursors. It avoids shifting but can strand freed prefix cells. See <a href="topic:ds-circular-queue">circular queues</a> to reuse those cells through wrapping.</p>

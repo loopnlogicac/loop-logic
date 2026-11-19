@@ -1,0 +1,65 @@
+<h2 id="introduction">Ask richer questions without changing stored facts</h2>
+<p class="lead">The library wants books still out after their due dates. The student office wants readable labels for unknown hometowns. Operators and functions help you express both requests while keeping the underlying records unchanged.</p>
+<p>An <dfn>operator</dfn> combines or compares values, such as equality or addition. A <dfn>function</dfn> computes a value from its arguments, such as the number of days between two dates. A SELECT expression can calculate labels and measurements without updating the original columns.</p>
+<p>Separate filtering from presentation. A condition decides whether a row belongs in the result. A display expression decides what appears for a selected row. Replacing NULL with the word Unknown in a report does not make the hometown known.</p>
+<h2 id="syntax">Recognise common expression forms</h2>
+<pre><code class="language-sql">value BETWEEN lower_bound AND upper_bound
+value IN (choice_a, choice_b)
+text_value LIKE 'prefix%'
+COALESCE(first_choice, fallback)
+CASE
+    WHEN condition_a THEN label_a
+    WHEN condition_b THEN label_b
+    ELSE other_label
+END</code></pre>
+<p>Expressions can appear in SELECT and in suitable conditions. CASE returns a value; it is not a separate row-changing command. Put quotes around text literals. Use parentheses to make compound conditions easier to read, especially when AND and OR appear together.</p>
+<h2 id="how-it-works">Ranges, patterns, strings and dates</h2>
+<h3>Test ranges and listed alternatives</h3>
+<p>BETWEEN includes both boundaries. A mark between 75 and 80 may be exactly 75 or exactly 80. Reversing the endpoints does not ask MySQL to swap them automatically. Choose a suitable type so comparisons follow numeric or date meaning rather than an accidental text order.</p>
+<p>IN checks membership in a list. A department value in (1,3) equals either listed value. It does not mean every value between them. Be careful with NULL in lists, especially NOT IN: an unknown comparison can prevent the condition from becoming TRUE. Explicit absence queries often need a clearer NULL policy.</p>
+<h3>Match text patterns</h3>
+<p>LIKE uses percent for zero or more characters and underscore for exactly one character. The pattern A% matches a name beginning with A under the active collation. The pattern _a% requires a second character a. Neither wildcard automatically means a digit or a whole word.</p>
+<p>Matching a literal percent or underscore requires escaping or another deliberately chosen matching method. Backslash behaviour can depend on SQL mode, so do not guess from how a string looks in a different programming language. Collation controls case and accent comparison; LIKE is not inherently case-sensitive.</p>
+<h3>Transform text for a report</h3>
+<p>UPPER and LOWER change displayed letter case. CONCAT combines values into text, such as a roll label. CHAR_LENGTH counts characters, while LENGTH counts bytes. They often agree for plain English but can differ for Bangla stored in utf8mb4.</p>
+<p>A Unicode character count is not always the number of visible grapheme clusters a reader perceives. Combining marks can contribute separate characters. Use CHAR_LENGTH for SQL character counts, and avoid claiming it counts handwritten letters or display width exactly.</p>
+<p>CONCAT returns NULL if an argument is NULL. Apply a deliberate replacement when a readable fallback is needed. TRIM can remove surrounding spaces, and SUBSTRING extracts part of a string. Validate names based on real requirements rather than assuming every person has the same number of words.</p>
+<h3>Calculate with fixed reporting dates</h3>
+<p>DATEDIFF(first_date, second_date) returns their day difference. The argument order matters: reversing them changes the sign. DATE_ADD can add an interval, while YEAR and MONTH extract calendar components. Use DATE values and unambiguous year-month-day literals instead of guessing a local text format.</p>
+<p>An overdue-loan report needs a stated reporting date and an open-loan condition. returned_on IS NULL keeps outstanding loans. due_on earlier than the reporting date keeps overdue ones. A loan due today has zero days late and is not strictly overdue under that definition.</p>
+<h3>Handle missing values and categories</h3>
+<p>IFNULL takes two arguments and uses the second when the first is NULL. COALESCE accepts several alternatives and returns the first non-NULL value. Zero and an empty string are known values, so neither automatically triggers a later fallback.</p>
+<p>A searched CASE checks conditions in order and returns the first true branch. Test marks at least 80 before marks at least 40 when assigning Excellent and Pass. Otherwise every high mark matches Pass first. Add an ELSE to express the remaining case clearly.</p>
+<table class="ref"><caption>Make a reporting choice explicit</caption><thead><tr><th>Need</th><th>Expression idea</th><th>Important caution</th></tr></thead><tbody>
+<tr><td>Unknown hometown label</td><td>COALESCE</td><td>The underlying fact stays unknown</td></tr>
+<tr><td>High-mark category</td><td>CASE</td><td>Check the most specific threshold first</td></tr>
+<tr><td>Late days</td><td>DATEDIFF</td><td>Use the reporting date first</td></tr>
+<tr><td>Name prefix</td><td>LIKE</td><td>Collation affects text matching</td></tr>
+</tbody></table>
+<h2 id="examples">Read the expression’s effect</h2>
+<h3>A prefix or one of two hometowns</h3>
+<p>The first query combines LIKE with IN using OR. A row may qualify through the name or the town condition.</p>
+<div data-example="ex-1"></div>
+<h3>Marks at and inside the boundaries</h3>
+<p>The range includes 75, 78 and 80. Both endpoints matter when converting a grading rule into comparisons.</p>
+<div data-example="ex-2"></div>
+<h3>Names, character counts and roll labels</h3>
+<p>The string functions calculate new displayed columns. The original student names and identifiers remain stored as before.</p>
+<div data-example="ex-3"></div>
+<h3>Open loans overdue on 1 March</h3>
+<p>Loan 402 is ten days overdue on the fixed reporting day. Returned loans are excluded even when their old due date has passed.</p>
+<div data-example="ex-4"></div>
+<h3>Choose fallbacks and grade bands</h3>
+<p>The two result sets demonstrate missing-town labels and ordered CASE conditions. These labels are report choices rather than replacement stored facts.</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">Check boundaries and missing values</h2>
+<h3>Writing an exclusive interpretation of BETWEEN</h3>
+<p>If a task says strictly above 75 and below 80, BETWEEN is too broad because it includes the ends. Use explicit strict comparisons for that meaning. Read the English boundary words before choosing the operator.</p>
+<h3>Counting an unknown value as a real category</h3>
+<p>COALESCE can help a human read a report, but grouping the fallback with a genuinely stored identical label can merge different meanings. Keep missingness visible when the distinction matters. A pleasant display should not conceal data quality.</p>
+<h3>Using the computer clock for a historical question</h3>
+<p>A report about 1 March must use 1 March, even when run months later. A changing current date answers a different question. State the as-of date and keep due-today, overdue and returned statuses separate.</p>
+<h2 id="version-notes">Functions and settings both matter</h2>
+<div class="callout version"><p>These operators and functions work on MySQL 8.0.16 or newer. utf8mb4 supports Bangla text, while the chosen collation governs matching and sorting. SQL mode can affect string escaping, so explicitly check settings before relying on a literal wildcard escape.</p></div>
+<h2 id="summary">Translate meaning into expressions</h2>
+<p>Ranges and patterns filter rows, functions compute values, and CASE creates deliberate categories. Treat NULL, Unicode counts and reporting dates carefully. Next, combine rows into summaries in <a href="topic:db-aggregate-group-by">Aggregate Functions and GROUP BY</a>.</p>

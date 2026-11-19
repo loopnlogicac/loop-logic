@@ -1,0 +1,71 @@
+<h2 id="introduction">Solve a smaller version of the same question</h2>
+<p class="lead">To compute four factorial, you can multiply four by three factorial. The smaller question has the same shape. <dfn>Recursion</dfn> solves a problem by calling a function on a smaller or simpler version, then combining the answer.</p>
+<p>A recursive description needs a stopping point. Factorial reaches zero factorial, defined as one. Without that known small answer, calls would keep asking for more work. A useful recursive design explains both the stopping rule and the progress toward it.</p>
+<p>Recursion can match trees, nested structures and divide-and-conquer searches naturally. For a long straight sequence, a loop may be clearer and use less call memory. Choose the technique that exposes the problem's structure.</p>
+
+<h2 id="syntax">Write the base case before the recursive step</h2>
+<pre><code class="language-python">def factorial(number):
+if number == 0:
+    return 1
+return number * factorial(number - 1)</code></pre>
+        <p>The <dfn>base case</dfn> handles an input without another recursive call. The recursive step reduces the problem and combines the returned value. This function assumes a nonnegative integer; negative input would not approach zero by repeatedly subtracting one.</p>
+        <p>State input bounds as part of the contract. They are not merely a convenience for testing. They explain why the argument reduction is valid and why the required call depth stays manageable. Reject invalid values or document that the caller must provide valid ones.</p>
+        <p>Returning the recursive result is essential. Calling factorial(number - 1) by itself computes a smaller answer but discards it. A later multiplication needs that answer as an expression value, so the return statement must combine it.</p>
+
+<h2 id="how-it-works">Every waiting call has its own local state</h2>
+<p>A <dfn>call stack</dfn> tracks active calls and their paused work. Calling factorial(3) waits for factorial(2), which waits for factorial(1), which waits for factorial(0). Each call has its own number binding.</p>
+<table class="ref"><caption>Unwind factorial(3)</caption><thead><tr><th scope="col">Call</th><th scope="col">Returned calculation</th><th scope="col">Result</th></tr></thead><tbody>
+<tr><td>factorial(0)</td><td>Base value</td><td>1</td></tr><tr><td>factorial(1)</td><td>1 * 1</td><td>1</td></tr><tr><td>factorial(2)</td><td>2 * 1</td><td>2</td></tr><tr><td>factorial(3)</td><td>3 * 2</td><td>6</td></tr></tbody></table>
+<p>The descent builds waiting work. The return journey, called unwinding, resumes that work from the deepest waiting call outward. Printing before a recursive call shows descent order. Printing afterward shows unwind order.</p>
+<p>Depth is not the same as total call count. A branching recurrence may create many calls while only a smaller chain is active at once. Analyze both if you need to explain running time and stack memory.</p>
+
+<div class="callout note"><p class="callout-title">If you know C</p><p>Like C, Python creates separate local state for active recursive calls. Python also enforces an interpreter recursion limit and does not optimize tail recursion away. Big integers avoid fixed-width factorial overflow, but the growing values still consume time and memory.</p></div>
+
+<h2 id="examples">Compare linear descent and repeated subproblems</h2>
+<p>Factorial and GCD have one recursive child per call. Fibonacci has two and revisits the same smaller arguments. The cache example records those repeated requests instead of recomputing their answers.</p>
+
+<h3>Unwind a factorial call</h3>
+<p>Calls shrink from 4 to 0. The base case returns 1, then waiting calls multiply by 1, 2, 3 and 4. Zero factorial needs no recursive call and returns the empty-product value 1.</p>
+<div data-example="ex-1"></div>
+
+<h3>Trace the descent and the return journey</h3>
+<p>Each entering call pauses at its recursive call. After enter 0 and base, execution resumes with leave 1, then leave 2, then leave 3. Work after the call happens during unwinding.</p>
+<div data-example="ex-2"></div>
+
+<h3>Find a GCD with decreasing remainders</h3>
+<p>The pairs become (48,18), (18,12), (12,6), then (6,0). The zero second component ends the recursion. The stated convention gcd(0,0)=0 is handled by the same base case.</p>
+<div data-example="ex-3"></div>
+
+<h3>Cache repeated Fibonacci subproblems</h3>
+<p>The decorator stores answers by argument. For the first call at 10, eleven distinct arguments miss and eight repeated requests hit. Clearing removes the saved results. This is memoisation, introduced here through a standard-library decorator.</p>
+<div data-example="ex-4"></div>
+
+<h3>Replace linear call depth with a loop</h3>
+<p>The loop computes the same recurrence by keeping only the accumulated product and next factor. It avoids one Python call per factor. This is often the better implementation for a long linear sequence.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="limits-and-memoisation">Avoid repeated work without ignoring depth</h2>
+<p>Python enforces a recursion-depth limit. Excessive nesting normally raises RecursionError. The exact available depth depends on the environment and surrounding calls, so do not promise a fixed safe count from a default limit.</p>
+<p>The sys module provides getrecursionlimit and setrecursionlimit, but increasing the limit is not a general repair. A very high setting can exhaust the native stack. Python does not eliminate tail calls, even when a recursive call is the last action.</p>
+<p><dfn>Memoisation</dfn> saves answers to previously solved subproblems. The functools module supplies lru_cache. The line beginning with @ wraps the following function with caching behavior; <a href="topic:py-decorators">decorators</a> later explains that syntax in detail.</p>
+<p>Fibonacci without caching recomputes many values, producing exponentially growing work. With an initially empty unbounded cache, each distinct argument from zero through n is computed once. This gives linear subproblem count, linear cache storage and still linear recursive depth.</p>
+<p>Those costs treat arithmetic operations as units. Fibonacci values grow with n, so large-integer additions are not truly constant time. The purpose of the comparison is to identify repeated subproblem work, not to claim that arbitrarily large numbers cost nothing.</p>
+<p>lru_cache needs hashable arguments. Use it for deterministic calculations whose answer depends on those arguments. Hidden changing state, current time or edits to returned mutable objects can make cached behavior misleading. cache_clear releases stored answers when they are no longer needed.</p>
+
+<p>With a finite maxsize, lru_cache keeps only a limited number of recent argument combinations. Eviction means a later request may need to compute a previously solved result again. This trades memory use against repeated work. An unbounded cache avoids eviction but retains more objects.</p>
+<p>The cache also holds references to arguments and return values. Returning the same cached mutable list to different callers can expose shared edits. Prefer immutable results for cached calculations, or explicitly design how copies will be provided. Caching is easiest to reason about when calls behave like mathematical functions.</p>
+<p>For binary search, the interval length at least halves on each recursive step, giving logarithmic depth. This differs from factorial's linear depth. Saying that both algorithms are recursive does not tell you their resource costs; the shape of the call tree does.</p>
+
+<h2 id="common-mistakes">Check termination, combination and resource use</h2>
+<h3>A base case that the calls never reach</h3><p>A zero-only base case does not stop negative input when every call subtracts one. Show a decreasing nonnegative measure for each valid path. For GCD, the positive remainder shrinks; for binary search, the interval shrinks.</p>
+<h3>Slicing away the advantage</h3><p>Recursive binary search should pass index boundaries rather than copy slices at every level. Slicing adds time and storage beyond the comparisons. A half-open interval also makes an empty interval easy to recognize with low greater than or equal to high.</p>
+<h3>Using recursion for unbounded linear depth</h3><p>A loop can accumulate a factorial without creating one Python frame per factor. Memoisation does not repair an excessively deep linear chain. Consider iterative dynamic programming or an explicit stack when depth may be large.</p>
+<p>Use small traced inputs first. Check zero and one, then a normal value, then the largest stated input. These cases reveal wrong identities, off-by-one reductions and assumptions about available recursion depth.</p>
+
+<h2 id="version-notes">Caching is a tool, not a termination rule</h2>
+
+
+<div class="callout version"><p>functools.lru_cache and its cache_info and cache_clear methods are available on Python 3.10–3.12. Recursion limits are runtime settings, not a portable promise that an exact input depth will succeed.</p></div>
+
+<h2 id="summary">Prove progress before optimizing calls</h2>
+<p>Recursion needs a small direct answer and a valid shrinking step. Caching avoids repeated subproblems, while loops often avoid unnecessary depth. Next, <a href="topic:py-higher-order-functions">higher-order functions</a> treat functions themselves as reusable values.</p>

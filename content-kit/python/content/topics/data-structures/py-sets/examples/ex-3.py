@@ -1,0 +1,7 @@
+present = set()
+present.add(12)
+present.add(12)
+present.update([18, 25])
+present.discard(99)
+present.remove(18)
+print(sorted(present))
