@@ -2,8 +2,12 @@
 // Classes, students, insights, assignments, content studio, exam packs, announcements.
 // Figures come from what students in the class actually did; class-wide numbers are
 // hidden below the privacy minimum, and AI questions are counted, never shown as text.
-import { api, el, toast, currentUser, showSignIn, num, ago, store } from './common.js';
+import { getLang, api, el, toast, currentUser, showSignIn, num, ago, store } from './common.js';
 
+const T = {
+  en: { masteryGain: 'Average gain per topic', masteryTopic: 'Topic', masteryStudents: 'Students with both checks', masteryPoints: 'Gain (percentage points)', masteryHidden: (n) => `Shown when at least ${n} students completed both checks on a topic.` },
+  bn: { masteryGain: 'টপিক অনুযায়ী গড় উন্নতি', masteryTopic: 'টপিক', masteryStudents: 'দুই চেকই শেষ করেছে', masteryPoints: 'উন্নতি (শতাংশ পয়েন্ট)', masteryHidden: (n) => `একটি টপিকের দুই চেকই অন্তত ${n} জন শেষ করলে দেখাবে।` },
+};
 const $ = (id) => document.getElementById(id);
 const content = $('adm-content');
 const NAV = [
@@ -134,7 +138,9 @@ function studentsPage() {
 }
 
 function insightsPage() {
+  const L = T[getLang()];
   return [
+    card(L.masteryGain, dash.masteryGain?.length ? table([L.masteryTopic, L.masteryPoints, L.masteryStudents], dash.masteryGain.map((r) => [r.title, `${r.gain > 0 ? '+' : ''}${r.gain}`, num(r.students)])) : empty(L.masteryHidden(dash.minGroup))),
     card('How far the class has got, module by module', el('p', { class: 'adm-hint', text: 'Share of students who opened every ready topic in the module.' }),
       dash.heat ? el('div', { class: 'ins-heat' }, ...dash.heat.map((m) => el('div', { class: `ins-cell ${m.pct === null ? 'none' : m.pct >= 75 ? 'hi' : m.pct >= 40 ? 'mid' : 'lo'}` }, el('strong', { text: m.pct === null ? '—' : `${m.pct}%` }), el('span', { text: m.title })))) : dash.class.track ? hidden() : empty('Link a tutorial track to the class in Class settings.')),
     row(

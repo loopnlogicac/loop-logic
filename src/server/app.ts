@@ -2,6 +2,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import type { MasteryService } from '../app/mastery.ts';
 import type { RunnerService } from '../app/runner.ts';
 import { SearchService } from '../app/search.ts';
 import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts';
@@ -47,6 +48,7 @@ export interface AppDeps {
   watch: WatchService;
   extras: VideoExtrasService;
   tutorials: TutorialService;
+  mastery?: MasteryService;
   admin?: AdminService;
   classes?: ClassService;
   orders?: OrderService;
@@ -136,7 +138,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
     return d.admin;
   };
+  const mastery = () => {
+    if (!d.mastery) throw new AppError('unavailable', 503, 'Mastery checks are unavailable.');
+    return d.mastery;
+  };
   return [
+    route('GET', '/api/my-mastery', ({ learnerId, query }) => mastery().learner(learnerId, lang(query.get('lang'))), 'learner'),
+    route('GET', '/api/admin/mastery', () => mastery().overall(), 'admin'),
+    route('GET', '/api/learn/:track/:topic/checks', ({ learnerId, params, query }) => mastery().get(learnerId, params.track!, params.topic!, lang(query.get('lang'))), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase', ({ learnerId, params, body }) => mastery().start(learnerId, params.track!, params.topic!, params.phase!, lang(body.lang)), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
       authMode: d.auth.mode,
