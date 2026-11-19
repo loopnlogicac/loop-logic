@@ -1,10 +1,10 @@
 # DBMS – Bangla edition, part 2 (R6-E)
 
-Package version **0.3.1** completes **41/41 Bangla lesson bodies**. This branch starts from main plus open PR #32 (`codex/dbms-bangla-part-1`); land that prerequisite first. Its nine earlier Bangla bodies are retained. This item adds the remaining 32 bodies across SQL basics/advanced, normalization, internals, beyond and practice-exam.
+Package version **0.3.1** completes **41/41 Bangla lesson bodies**. This branch originally started from main plus PR #32 (`codex/dbms-bangla-part-1`). That prerequisite is now merged; current main (2c1616a) is also included. Its nine earlier Bangla bodies are retained. This item adds the remaining 32 bodies across SQL basics/advanced, normalization, internals, beyond and practice-exam.
 
 The complete teaching text is translated, including the fifty SQL tasks, twelve worked exam answers, fifty interview explanations and the university registration project. Code, SQL identifiers, English bodies, examples, shared datasets and captured outputs are unchanged. Heading IDs, topic links, example slots, code blocks and paragraph coverage are checked against each English body. Existing bilingual topic metadata is retained. Review status remains draft for language/subject review.
 
-Validation for this edition: the complete checker runs against a real MySQL Community Server 8.4.7 with `--require-sql`; all 41 topics pass with 0 errors and 0 warnings. The 130 existing platform tests pass with `node --test "tests/*.test.ts"`. No application dependencies, migrations or platform files are changed.
+Validation for this edition: the complete checker runs against a real MySQL Community Server 8.4.7 with `--require-sql`; all 41 topics pass with 0 errors and 0 warnings. All 169 current platform tests pass with `node --test "tests/*.test.ts"`. No application dependencies, migrations or platform files are changed.
 
 ```bash
 # From content-kit/, with mysql on PATH and local MYSQL_HOST/PORT/USER configured:
