@@ -1,0 +1,57 @@
+<h2 id="introduction">Turn an action into a model request</h2>
+<p class="lead">A calculator button does not calculate by itself. It announces an action to registered listeners. A <dfn>listener</dfn> is an object whose callback receives that notification. The callback translates the action into a request and decides how to display the result.</p>
+<p>A button can be activated by more than a mouse click, including keyboard interaction. ActionListener represents the button’s action meaning rather than raw mouse movement. Choose the highest-level event that matches what the user intends.</p>
+<p>A useful calculator separates three roles. The view holds fields, buttons and labels. The model owns arithmetic rules. The controller reads field text, calls the model and chooses a message. Small applications may put controller code in a setup helper, but the responsibilities can still stay distinct.</p>
+<p>Keeping numeric rules outside the view makes them usable in a console program and easier to inspect. It also keeps Swing event-thread requirements away from arithmetic code that needs no graphical display.</p>
+<h2 id="syntax">Register a named listener or a lambda</h2>
+<pre><code class="language-java">button.addActionListener(listener);
+button.addActionListener(event -&gt; performRequest());</code></pre>
+<p>The first form supplies an object implementing ActionListener. Its required operation is public void actionPerformed(ActionEvent event). The second form supplies the same functional contract with a lambda. Registration stores the listener for later notification; it does not invoke the application action immediately.</p>
+<p>ActionEvent describes the event and its source. A controller can inspect it when several sources share one listener. For a small calculator, separate callbacks or a captured operation name can be clearer than a long chain of source comparisons.</p>
+<p>Named listener classes are useful for reusable behavior, explicit state and several helper methods. Lambdas work well for short actions close to their setup. Both approaches run under the event source’s invocation rules; a lambda does not automatically start a background thread.</p>
+<h2 id="how-it-works">Follow a request across three boundaries</h2>
+<pre class="diagram">JTextField text --&gt; controller parse --&gt; int values
+int values --&gt; Calculator operation --&gt; result or failure
+result or failure --&gt; controller message --&gt; JLabel</pre>
+<p>The controller first reads both fields and trims surrounding spaces according to this calculator’s input rule. Integer.parseInt converts each String to int. A conversion failure means the model never receives a valid numeric request.</p>
+<p>The model then applies the operation. add uses Math.addExact so overflow becomes a visible failure rather than silent wraparound. divide rejects zero and the MIN_VALUE divided by minus one overflow case. Ordinary integer division truncates toward zero.</p>
+<p>Finally, the controller maps an accepted result or expected failure into status text. NumberFormatException is distinct from ArithmeticException, so bad input and an impossible calculation can have different messages. Neither failure should fall through into a success message.</p>
+<p>All short field reads and label changes happen in the event callback on the EDT. The model contains no Swing imports and has no need to know which thread owns the interface. If arithmetic becomes a long-running task, move its execution to a worker and return the result to the EDT.</p>
+<h2 id="examples">Compare stateful listeners and model delegation</h2>
+<h3>A named counting listener</h3>
+<p>CountListener stores its own count and receives a JLabel through its constructor. Each action increments the count and writes the new text. The listener is registered once during setup. Two separately constructed listeners would have independent counts unless you deliberately share a model.</p>
+<div data-example="ex-1"></div>
+<h3>A small integer calculator</h3>
+<p>The calculator presents Add and Divide, two fields and a status label. The enhanced for loop creates one callback per operation. Each iteration’s operation binding can be captured because it is not reassigned. The callback chooses a model operation after parsing both inputs.</p>
+<p>Try 7 and 2: Add displays 9 and Divide displays 3. Try text that is not an integer to see the format message. Try dividing by zero to see the calculation message. An addition beyond the int range follows the same arithmetic-failure path.</p>
+<div data-example="ex-2"></div>
+<h3>Call the model without a window</h3>
+<p>The console program uses the exact same Calculator methods. It prints 9 and 3 without creating a JFrame or reading JTextField. That is the practical value of separation: the arithmetic contract exists independently of how requests arrive.</p>
+<div data-example="ex-3"></div>
+<h2 id="model-view-separation">Give every rule one home</h2>
+<p>The model should not decide button positions, label colors or dialog wording. Those are presentation choices. The controller should not duplicate arithmetic checks already owned by the model; otherwise a console client could accidentally follow different rules.</p>
+<p>The model can throw a meaningful domain failure or return a structured result. The controller translates that outcome into a user message. For this small application, existing numeric exception types are enough. A larger application may prefer named result types for expected validation failures.</p>
+<p>A view can expose getters for user input and methods for displaying a result, keeping Swing fields private. A separate controller can then depend on those operations rather than knowing every layout detail. Avoid exposing every component publicly just to connect classes.</p>
+<p>Not every three-role design requires three large classes. A small view-building helper and a numeric model can be clear. Split further when the responsibilities become hard to navigate or need reuse. The goal is to make dependencies explainable, not to maximize file count.</p>
+<h2 id="event-lifecycle">Register once and define an end</h2>
+<p>Listener registration and listener invocation are different moments. Adding another listener inside every click usually accumulates callbacks. One later action can then update the count several times. Register stable callbacks during setup and change explicit controller state when behavior changes.</p>
+<p>When replacing a listener, retain the old listener reference so removeActionListener can remove the intended object. Two newly created lambdas are not a reliable way to identify the same registration. Store a handle when the lifecycle requires later unregistration.</p>
+<p>A long-lived publisher may retain its listeners and any objects they capture. Closing a view does not automatically unregister it from every external publisher. The owner of the subscription should release it when the view no longer needs events.</p>
+<p>When an action starts background work, decide what repeated activation means. You may disable the button, cancel an earlier task or allow multiple independent requests. Also decide what happens if the window closes before the result arrives. Lifecycle rules prevent stale updates and hidden retained objects.</p>
+<h2 id="responsiveness">Keep callbacks short without losing correctness</h2>
+<p>The event thread processes events sequentially. A slow listener delays repainting and later input. Thread.sleep inside a listener does not create a pause that leaves the rest of the interface active. It blocks that same event thread.</p>
+<p>SwingWorker offers a background doInBackground operation and an event-thread done completion callback. A completion handler can retrieve a result, handle failure and update the view. Ordinary worker threads can instead queue a small UI change through SwingUtilities.invokeLater.</p>
+<p>Moving work to a background thread introduces shared-state concerns. Copy the request values before starting the worker rather than repeatedly reading fields from it. Return an immutable result where possible. The user may edit the fields while work is running, so the request needs a defined snapshot.</p>
+<h2 id="common-mistakes">Keep rejected requests visibly rejected</h2>
+<h3>Catching every exception as bad input</h3>
+<p>A broad catch can disguise a programming error as a user typo. Catch expected conversion and arithmetic failures narrowly. Preserve unexpected causes for diagnosis rather than treating every failure as ordinary validation.</p>
+<h3>Allowing silent numeric wraparound</h3>
+<p>Plain int addition can overflow. Math.addExact reports that situation so the controller can display a useful message. An int calculator must also state that it performs integer division, not decimal division.</p>
+<h3>Putting components inside the model</h3>
+<p>A Calculator method that reads JTextField cannot be used independently of Swing. Accept numeric arguments and return numeric results. Let the controller own text conversion and the view own display.</p>
+<h2 id="best-practices">Test the request path and inspect the view</h2>
+<ul><li>Exercise valid, blank, malformed, zero-divisor and overflow inputs.</li><li>Register each intended callback once.</li><li>Keep arithmetic rules free of view dependencies.</li><li>Use background work for slow operations and return UI updates to the EDT.</li><li>Define subscription and window-close lifetimes explicitly.</li></ul>
+<h2 id="version-notes">Callbacks and Java 17</h2>
+<div class="callout version"><p>ActionListener predates lambdas, so a named implementation works across older Java versions. Lambdas need Java 8 or later. Math.addExact is also available from Java 8. The examples use Java 17 and require no preview features or deprecated event APIs.</p></div>
+<h2 id="summary">Make the action boundary clear</h2>
+<p>Listeners receive actions, controllers translate requests, and models enforce numeric rules. Keep callbacks short and make failures visible. Apply these ideas in the <a href="topic:oop-mini-project-library">library project</a> and review method behavior in the <a href="topic:oop-exam-questions">exam questions</a>.</p>

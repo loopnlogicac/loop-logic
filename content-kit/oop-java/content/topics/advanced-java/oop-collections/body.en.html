@@ -1,0 +1,57 @@
+<h2 id="introduction">Choose the shape of your data</h2>
+<p class="lead">A marks sheet needs positions, a room register needs unique names, and a result lookup needs roll-to-mark pairs. These are different jobs. The <dfn>collections framework</dfn> supplies reusable interfaces and implementations for storing groups of objects. Your choice should follow the questions the application asks most often.</p>
+<p>List, Set and Map describe different promises. A List models a sequence. A Set models membership without duplicates. A Map connects keys to values. Map belongs to its own interface hierarchy; it is not a subtype of Collection, although its keys, values and entries have collection views.</p>
+<p>You already know arrays. Collections add operations such as growing, removing and looking up values without requiring you to resize storage manually. They also introduce contracts about ordering, equality and mutation. A useful declaration makes those contracts visible to the reader.</p>
+<h2 id="syntax">Program to the needed interface</h2>
+<pre><code class="language-java">List&lt;Integer&gt; marks = new ArrayList&lt;&gt;();
+Set&lt;String&gt; rooms = new HashSet&lt;&gt;();
+Map&lt;Integer, String&gt; names = new HashMap&lt;&gt;();</code></pre>
+<p>The left side names the operations callers need. The right side chooses a representation. Use explicit imports for the types you use. A List variable can accept either ArrayList or LinkedList, but their performance characteristics differ.</p>
+<p>Generic element types keep mixed values from entering by mistake. Integer is used rather than primitive int because collection type arguments must be reference types. Iterating with int unboxes each Integer, so null entries would cause trouble. Decide whether null belongs in your domain before choosing an implementation.</p>
+<h2 id="how-it-works">Compare operation costs and ordering rules</h2>
+<table class="ref"><thead><tr><th scope="col">Implementation</th><th scope="col">Useful property</th><th scope="col">Cost or limitation</th></tr></thead><tbody>
+<tr><td>ArrayList</td><td>O(1) indexed access; amortized O(1) append</td><td>Middle insertions and removals shift elements, O(n)</td></tr>
+<tr><td>LinkedList</td><td>O(1) operations at either end</td><td>Indexed access traverses links, O(n)</td></tr>
+<tr><td>HashSet / HashMap</td><td>Expected O(1) basic lookup with suitable hashes</td><td>No sorted or insertion iteration order guarantee</td></tr>
+<tr><td>TreeSet / TreeMap</td><td>Sorted iteration and navigational operations</td><td>O(log n) basic lookup, insertion and removal</td></tr>
+</tbody></table>
+<p>ArrayList stores references in a resizable backing array. Some appends must grow that array, so a single append can cost O(n). Amortized constant time describes a sequence of appends, distributing growth costs across them. It is not a promise that every append takes identical time.</p>
+<p>LinkedList links nodes. Removing through an already positioned iterator can avoid a search, but locating an arbitrary index still takes traversal. Repeated get(i) calls in a loop can therefore turn a simple-looking linked-list traversal into quadratic work. Use an iterator or enhanced for loop instead.</p>
+<p>Hash collections use hashCode to find candidate locations and equals to distinguish keys. Equal values must have equal hashes. Sorted collections use comparison, and comparison returning zero defines a duplicate key or element there. Keep ordering consistent with equals when you can.</p>
+<h2 id="examples">Separate storage from presentation order</h2>
+<h3>Keep duplicate marks and remove deliberately</h3>
+<p>The list begins as 60, 70, 60. Removing index one deletes 70. Appending 80 gives [60, 60, 80]. A later boxed removal deletes the first equal 60. This difference is an overload decision, so the argument type matters.</p>
+<div data-example="ex-1"></div>
+<h3>Report unique rooms in sorted order</h3>
+<p>Adding Lab a second time returns false. HashSet itself does not promise whether Hall or Lab appears first. Constructing a TreeSet for the display makes the output order explicit. The original membership set remains separate from this reporting choice.</p>
+<div data-example="ex-2"></div>
+<h3>Count each course code</h3>
+<p>A map stores one count per course. merge inserts one for an absent code or combines one with its current count. Integer::sum names the addition method. The example copies entries into a TreeMap before printing, so CSE reliably comes before MAT.</p>
+<div data-example="ex-3"></div>
+<h3>Treat LinkedList as a deque</h3>
+<p>A deque supports adding or removing at either end. The urgent entry goes to the front, ahead of A and B. Removing from the front until empty prints their processing order. No index search is needed for these end operations.</p>
+<div data-example="ex-4"></div>
+<h2 id="iteration">Traverse through the right view</h2>
+<p>Enhanced for is clear when you need every element without changing the structure. For a map report, entrySet exposes each key and value together. Iterating keys and looking up every value is legal, but the entry view states your intent more directly.</p>
+<p>An Iterator supports a controlled traversal and, when implemented, removal of the last returned element. Call next before remove and follow its state rules. Calling list.remove directly during an ordinary for-each loop can invalidate traversal and raise ConcurrentModificationException.</p>
+<p>For a filtering operation on a mutable collection, removeIf often expresses the goal better. Its predicate says which values to discard. Not every collection supports removal; an unmodifiable list rejects structural changes. Understand the collection’s mutation contract before applying a convenient method.</p>
+<p>Fail-fast iterators are debugging aids with best-effort detection. They are not locks and do not make shared mutation safe. Multithreaded code needs an explicit concurrency policy. The later <a href="topic:oop-multithreading">thread lesson</a> explains why ordinary unsynchronized collections cannot be treated as shared counters or queues without care.</p>
+<h2 id="edge-cases">Plan for empty data and changing keys</h2>
+<p>An empty list has size zero, so get(0) fails. An empty report may print no rows, while an application menu may choose an explicit EMPTY message. Define this behavior in the surrounding operation instead of assuming that every collection contains at least one value.</p>
+<p>Map.get returning null can mean an absent key or a present null value when the implementation permits nulls. containsKey distinguishes them. getOrDefault supplies a fallback but does not insert it. A map key is unique: put with an existing equal key replaces the associated value.</p>
+<p>A mutable key can become impossible to find through ordinary lookup if its hash or equality fields change after insertion. The entry still exists in storage, but lookup may search somewhere else. Prefer immutable IDs, remove before changing identity fields, or redesign the key.</p>
+<h2 id="selection-walkthrough">Revisit one reporting requirement</h2>
+<p>Suppose rolls arrive as 7, 2, 7, 1 and 2. A list preserves all five entries. A set stores three distinct values. A TreeSet additionally reports them as 1, 2 and 7. The requested output therefore determines both duplicate handling and ordering, before performance becomes the deciding factor.</p>
+<h2 id="common-mistakes">Avoid convenient but misleading assumptions</h2>
+<h3>Depending on hash order</h3>
+<p>One observed run of a HashMap is not an ordering contract. Another data set or JVM may reveal a different order. Use TreeMap for sorted keys or LinkedHashMap when insertion order is the requirement.</p>
+<h3>Assuming every List is mutable</h3>
+<p>List.of creates an unmodifiable list and rejects null elements. Arrays.asList has a fixed-size array-backed structure. new ArrayList makes a separately resizable list. These factories share an interface but deliberately offer different mutation policies.</p>
+<h3>Choosing a tree without an ordering contract</h3>
+<p>TreeSet and TreeMap need comparable keys or a supplied comparator. A comparison that uses only marks can collapse different students with tied marks. Include a suitable tie-breaker when their identities must remain distinct.</p>
+<h2 id="best-practices">State the reason for your collection</h2>
+<ul><li>Choose list positions, set membership or map association before selecting a class.</li><li>Use a stable ID for map keys.</li><li>Sort reports deliberately instead of depending on incidental iteration.</li><li>Document duplicate and empty-input behavior at the application boundary.</li></ul>
+<h2 id="version-notes">Collection factories and Java 17</h2>
+<div class="callout version"><p>List.of, Set.of and Map.of arrived in Java 9. These examples run on Java 17. They use ordinary generics and avoid later sequenced-collection APIs. The following ordering lesson briefly uses records, a feature finalized in Java 16, as small data holders.</p></div>
+<h2 id="summary">Match representation to the operation</h2>
+<p>Use lists for sequences, sets for uniqueness and maps for lookup by key. Check ordering, equality and mutation before relying on behavior. Next, define precise object orderings with <a href="topic:oop-comparable-comparator">Comparable and Comparator</a>.</p>

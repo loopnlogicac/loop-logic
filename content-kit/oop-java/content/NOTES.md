@@ -1,3 +1,66 @@
+# OOP (Java) — Batch 3
+
+Package version: 0.3.0. Format: 1.1. Track: oop-java.
+
+The final cumulative package delivers all 41 curriculum topics. This addition completes the nine advanced-java topics, two gui topics and three practice-exam topics. The manifest follows curriculum module order, including advanced-java before design. No curriculum covers point is omitted.
+
+## New coverage and review focus
+
+| Topic | Coverage and reviewer focus |
+| --- | --- |
+| oop-exceptions | try/catch/finally, checked/unchecked families, throw versus throws, custom checked exceptions, reverse resource closure, primary/suppressed failures, recovery and invariant preservation. |
+| oop-generics | Generic classes and methods, Number and Comparable bounds, invariance, producer extends/consumer super, safe copy, erasure and its restrictions, factory-based construction. |
+| oop-collections | ArrayList/LinkedList, HashSet/TreeSet, HashMap/TreeMap, traversal and entry views, iterator removal, collection selection, costs, mutable keys and explicit report ordering. |
+| oop-comparable-comparator | Natural and alternate orders, lambda comparators, multikey ranking, reversed placement, ties and stable sorting, comparison contracts, overflow-safe comparison and sorted-set uniqueness. |
+| oop-inner-classes | Static nested, member inner, local and anonymous forms; construction, enclosing references, capture, this, choice of scope and retained-object lifetimes; Java 16 static-member rule change. |
+| oop-lambdas-streams | Functional interfaces, four method-reference forms, map/filter/reduce/collect, lazy traversal, empty reductions, associative identities, result mutability, ordering and side-effect risks. |
+| oop-enums-records | Enums with fields/methods, typed switches, record components and generated operations, compact validation, shallow immutability, defensive copies and stable storage codes. |
+| oop-file-io | UTF-8 paths, Files and buffered readers/writers, EOF versus blank lines, overwrite/append, IOException, resource ownership, staged imports and file format rules. |
+| oop-multithreading | Thread/Runnable, start versus run, join/sleep/interruption, lost-update interleavings, synchronized monitors, visibility, futures, ExecutorService and Java 17 shutdown. |
+| oop-swing-basics | JFrame/JPanel/JLabel/JButton/JTextField, component trees, FlowLayout/BorderLayout/GridLayout, nested layouts, pack, close policies, event-thread setup and worker boundaries. |
+| oop-event-handling | Named ActionListener and lambda callbacks, integer calculator, format/overflow/zero-divisor handling, model/view/controller responsibilities and listener registration lifetime. |
+| oop-exam-questions | Midterm/final definitions and design questions, five executable inheritance/reference traces, code-writing answers, 12 worked exam questions and a tracing rubric. |
+| oop-mini-project-library | Menu-driven app using LibraryItem/Book inheritance and Loanable, unique-ID TreeMap catalog, loan transitions, UTF-8 save/load, staging and whole-file validation. |
+| oop-interview-questions | Exactly 50 short questions with answers about pillars, Java semantics and design; readable lesson plus question-bank entries, and five executable output traces. |
+
+## Bangla revision
+
+- Re-read BANGLA_STYLE.md and revised earlier bilingual fields to use its conversational তুমি style and consistent technical vocabulary.
+- Removed the earlier final-keyword terminology warning. Class, object and inheritance use ক্লাস, অবজেক্ট and ইনহেরিট্যান্স throughout the package's Bangla.
+- Checked the meaning of the bilingual titles, summaries and key points, including the distinction between a final binding and an overridable method.
+- New lesson bodies are English, with Bangla titles, summaries and key points. Full Bangla bodies and video links are not included.
+
+## Verification for version 0.3.0
+
+- Actual tools: Eclipse Temurin OpenJDK 21.0.13.1+2, javac 21.0.13.1 and Node.js v24.22.1. The temporary JDK and validation scripts are outside the repository.
+- Independently compiled all 368 cumulative program entries as isolated Main.java files with `javac --release 17 -encoding UTF-8 -Xlint:all -Werror`, without lint exclusions or warning suppressions. Supporting classes share the file and are not public; no program has a package declaration.
+- The 106 new entries comprise 40 examples, 23 code-practice solutions and 43 embedded output-quiz programs. New practice has 53 problems in total, including 30 written exercises with worked answers. New quizzes contain 156 questions.
+- Five Swing window examples and one sleep/interruption example use `runMode: compile-only` with explicit `outputNote` descriptions. All six compiled under the same strict flags. GUI interaction was not executed; the independent model and validation exercises run without a display.
+- Executed 506 cumulative program/input combinations. The 137 new executions comprise 34 runnable examples, all 60 code-practice inputs and all 43 output traces. Example/practice outputs were generated from real runs and quiz answers checked against actual output.
+- Independently calculated all 60 new practice results from the problem statements, including empty input, duplicates, tied rankings, thresholds, integer bounds, blank fields, zero divisors, counter totals and the square-sum formula. Every result matched.
+- An additional compiled harness exercised the actual library classes with duplicate IDs, malformed boolean fields, nonpositive IDs, empty titles and extra fields after a valid record. Failed imports preserved the original catalog. Save/load restored both titles and borrowed state, removed unsaved entries, accepted an empty catalog and rejected a save to a missing parent directory.
+- Checked exact curriculum membership, referenced Java sources, one-file Main entry points, explicit imports, absence of warning suppressions, and LF line endings. All new lessons meet their depth targets. The writing pass reports no HTML, section, repeated-sentence, repeated-prompt, Bangla or source-style issues.
+- All 26 distinct new reference URLs returned HTTP 200. References are approved Oracle Java 17 API/JLS pages or dev.java learning pages.
+- Ran from content-kit with the temporary JDK on PATH: `node tools/check.mjs oop-java/content --report oop-java/content/CHECK_REPORT.txt`. The report records the full 41-topic compile/run result: 0 errors, 0 warnings, READY FOR IMPORT.
+
+## Deliberate limits and reviewer checks
+
+- Remaining warnings: none. Omitted curriculum points: none. Suggested additional topic IDs: none. Review status remains draft.
+- Swing windows require a desktop session. Human review should inspect resizing, focus, long labels, calculator messages and window-close behavior. Their compile-only status is intentional; no visual behavior is inferred from console runs.
+- Thread console outputs use joins, synchronized updates or Future.get for determinism. The interruption demonstration deliberately promises no fixed schedule. No deprecated thread control, virtual threads or post-Java-17 executor cleanup APIs are used.
+- Records are introduced briefly as data holders in the ordering lesson, with a forward link to their full lesson. Record components are not claimed to be deeply immutable. List.copyOf is explicitly shallow.
+- The library models one Book per positive ID and a borrowed boolean. Borrowers, due dates, fines, concurrent writers, authentication and crash recovery are out of scope. Its sibling staging-file move is not requested as atomic and makes no crash-consistency guarantee.
+- The library example uses temporary storage by default and removes it on exit. Passing an intentional file argument enables persistence. The parent directory must exist. The source validates the storage delimiter and newlines instead of implementing general escaping.
+- The catalog importer stages all rows before replacing state. The menu adapter reports fixed messages rather than platform-dependent path diagnostics; a larger application should also retain diagnostic causes in its logging. Save/load command trailing-text behavior is described in the lesson.
+- The grid-capacity exercise describes a planned fully populated rectangle; the lesson separately explains GridLayout's actual dimension adjustment. GUI exercises verify display-independent rules and do not claim to inspect layout visually.
+- Three GUI practice input files deliberately contain trailing spaces or a spaces-only line to verify field trimming. Preserve that input whitespace; it is data rather than source formatting.
+- Most input tasks assume the documented grammar and bounds. Exception/controller topics explicitly cover invalid conversions; the project handles invalid menu input. These are teaching applications rather than general untrusted-file parsers.
+- Human reviewers should double-check natural Bangla, wildcard direction, comparator contracts, record aliasing, primary/suppressed exceptions, Java 17 threading rules, callback lifetimes and the library's commit boundaries.
+
+---
+
+The records below preserve prior deliveries. Their version-specific counts and references to future topics describe those historical versions.
+
 # OOP (Java) — Batch 2
 
 Package version: 0.2.0. Format: 1.1. Track: oop-java.

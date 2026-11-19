@@ -1,0 +1,64 @@
+<h2 id="introduction">Place a helper where its dependency is visible</h2>
+<p class="lead">A shelf label belongs near the shelf code, while a counter view needs one particular counter’s value. Both helpers can be nested inside another class, but they need different relationships. A <dfn>nested class</dfn> is declared within another class or interface. Its form determines whether it needs an enclosing object.</p>
+<p>A static nested class groups a helper under another type’s name. A non-static member inner class carries an enclosing instance relationship. A local class has a name inside a block. An anonymous class creates an implementation at one expression without declaring a class name.</p>
+<p>Choose the smallest scope that makes the helper understandable. Nesting should explain ownership or implementation detail, not merely shorten a file list. A helper reused across unrelated modules may deserve a top-level type. A small callback used once may fit directly where the action is registered.</p>
+<p>The word static here concerns the enclosing-instance relationship. A static nested class can still have ordinary instance fields and constructors. It does not turn every member of that helper into a static member.</p>
+<h2 id="syntax">Recognize the enclosing-object requirement</h2>
+<pre><code class="language-java">Outer.Helper helper = new Outer.Helper();
+Outer outer = new Outer();
+Outer.Inner inner = outer.new Inner();</code></pre>
+<p>The first line constructs a static nested Helper without an Outer instance. The last line explicitly chooses which Outer instance encloses the new Inner. That distinction matters when two outer objects contain different state. A type name alone cannot provide a particular outer object.</p>
+<table class="ref"><thead><tr><th scope="col">Form</th><th scope="col">Name and scope</th><th scope="col">Typical dependency</th></tr></thead><tbody>
+<tr><td>Static nested</td><td>EnclosingType.Helper</td><td>Only explicitly supplied objects</td></tr>
+<tr><td>Member inner</td><td>EnclosingType.Inner</td><td>A particular enclosing instance</td></tr>
+<tr><td>Local</td><td>Named within its block</td><td>Needed final or effectively final locals</td></tr>
+<tr><td>Anonymous</td><td>No declared class name</td><td>Enclosing context and captured locals</td></tr>
+</tbody></table>
+<p>A member nested type can have access modifiers, including private. A local class follows block scope and cannot be declared public or private as a local declaration. The compiler may generate class files with implementation-specific names; do not build application logic around those names.</p>
+<h2 id="how-it-works">Draw the references before choosing a form</h2>
+<pre class="diagram">first Counter(count=3) &lt;-- enclosing link -- View A
+second Counter(count=8) &lt;-- enclosing link -- View B
+
+Shelf.Label(number=4) -- no implicit Shelf instance</pre>
+<p>A member inner method can read private members of its enclosing class. When a member name is ambiguous, Outer.this names the enclosing instance explicitly. Plain this refers to the current inner object. This lets you distinguish a helper’s state from its owner’s state.</p>
+<p>A static nested helper has no implicit outer receiver. It may access outer static members directly, subject to normal naming rules. To read an outer instance field, supply an outer reference or the needed value explicitly. This often reduces accidental coupling and makes the helper easier to exercise alone.</p>
+<p>A local or anonymous class may capture a local variable only when its binding is final or effectively final. The captured value belongs to that operation’s context. Reassigning the local after capture would create conflicting expectations, so the compiler forbids it.</p>
+<p>Effective finality does not freeze a captured object. If a captured reference points to a mutable list, code can still change that list. That creates an ownership or threading question rather than a capture-legality question. Keep those concerns separate when reviewing a callback.</p>
+<h2 id="examples">See four forms in three small programs</h2>
+<h3>A static nested label</h3>
+<p>Shelf.Label stores its own number and builds its own text. No Shelf object is created. The surrounding name groups the helper by purpose, while the constructor states all state it actually needs. This is a good default when a helper needs no enclosing instance.</p>
+<div data-example="ex-1"></div>
+<h3>A view of one counter</h3>
+<p>The two counters hold 3 and 8. first.new View reads the first counter; second.new View reads the second. A view is therefore not a global view of every Counter. Its enclosing relationship identifies exactly which state its read method observes.</p>
+<div data-example="ex-2"></div>
+<h3>A named local rule and an anonymous rule</h3>
+<p>LocalRule captures bonus, producing 15 from 10. The anonymous implementation doubles, producing 20. Both implement Rule, so callers use the same apply operation. The named local form can be instantiated again inside its scope; the anonymous expression supplies one implementation at that location.</p>
+<div data-example="ex-3"></div>
+<h2 id="local-and-anonymous">Use a class body when you need class structure</h2>
+<p>A local class can have fields, constructors and helper methods. Its name stays within the block’s scope. This is useful when one operation needs a small coordinated implementation with more structure than a single expression. Keep it short enough that the surrounding method remains readable.</p>
+<p>An anonymous class expression chooses one superclass or one interface to implement. Constructor arguments after a superclass name are passed to that superclass constructor. An interface-based expression uses empty parentheses. The anonymous class has no declared name, so it cannot declare a constructor under its own name.</p>
+<p>Instance initializers and field initializers can prepare anonymous-class state when needed. Avoid using them to hide a long workflow. A named helper constructor is easier to inspect when initialization has several validation steps or meaningful parameters.</p>
+<p>A lambda is another option for one functional-interface operation. It does not introduce a new this. Inside an anonymous-class method, this is the anonymous object; inside a lambda, this is inherited from the enclosing context. Replacing one form with the other can therefore change member access even when the callback signature is identical.</p>
+<p>An anonymous implementation may define helper methods, but a variable typed as its interface exposes only the interface operations. Keep the public contract focused. If callers need several new methods, a named type probably expresses that relationship better.</p>
+<h2 id="lifetime">An enclosing link also affects reachability</h2>
+<p>Suppose a long-lived event publisher retains an inner listener. The listener’s enclosing-instance relationship can keep the entire controller reachable. Closing the window does not automatically remove that publisher reference. Garbage collection follows reachability rather than what the screen currently shows.</p>
+<p>Draw the chain: publisher to listener to controller to large data. If the listener no longer needs events, unregister it. If it needs only a small immutable value, a static nested implementation with an explicit constructor parameter may avoid retaining the controller.</p>
+<p>Do not label every inner class a memory leak. Retention is a problem only when the resulting lifetime is unwanted. A view intentionally sharing its controller’s lifetime can be correct. The design question is which object owns registration and when that ownership ends.</p>
+<p>A local class that captures one large collection can similarly keep that collection reachable as long as its instance is retained. Moving the declaration into a method does not guarantee a short runtime lifetime. Lexical scope controls where the name is visible; references control how long objects remain alive.</p>
+<h2 id="choice-walkthrough">Use one small decision tree</h2>
+<p>Ask first whether the helper needs a particular enclosing instance. If the answer is no and its role belongs to one enclosing type, a static nested class is a strong starting point. Supply its data through a constructor rather than retaining a large owner only to read one value.</p>
+<p>If the helper needs direct access to one owner’s changing state, a member inner class may express that relationship. Next ask how far its name needs to travel. A reusable implementation deserves a member or top-level name. A helper meaningful only inside one operation can remain local.</p>
+<p>Finally consider the amount of behavior. A short single abstract operation often fits a lambda. A body with several coordinated methods can justify a local or anonymous class. An anonymous body that keeps growing is a reason to introduce a name, not a reason to compress its formatting. Recheck capture and object lifetimes whenever the implementation is stored beyond the current call.</p>
+<h2 id="common-mistakes">Avoid confusing names, instances and capture</h2>
+<h3>Constructing an inner class as though it were static</h3>
+<p>new Outer.Inner() is not the ordinary construction form for a non-static member class. Provide an Outer object and use outer.new Inner(). If the helper needs no outer state, reconsider whether it should be static nested.</p>
+<h3>Reassigning a captured local</h3>
+<p>Reading bonus in a local class and later incrementing bonus breaks effective finality. Choose a fresh local for each request, or model shared changing state explicitly. A one-element array used only to bypass the restriction usually hides a design decision.</p>
+<h3>Using a large anonymous class for reusable behavior</h3>
+<p>A long unnamed implementation makes navigation and reuse difficult. Give it a useful type name and constructor when several responsibilities emerge. Concision helps only while the behavior remains easy to explain.</p>
+<h2 id="best-practices">Make state dependencies intentional</h2>
+<ul><li>Start with a static nested helper when no enclosing instance is required.</li><li>Use an inner helper when its relationship to one owner is meaningful.</li><li>Prefer a local name for a structured implementation used in one operation.</li><li>Review captured values and registration lifetimes together.</li><li>Keep business logic callable without a GUI listener.</li></ul>
+<h2 id="version-notes">Inner-class rules changed before Java 17</h2>
+<div class="callout version"><p>Older teaching material may say inner classes cannot declare static members except constants. Java 16 relaxed that restriction. Java 17 allows static declarations in inner classes, but that does not remove their enclosing-instance relationship. The examples focus on the simpler forms and do not depend on generated class-file names.</p></div>
+<h2 id="summary">Nesting describes scope and relationships</h2>
+<p>Static nested helpers need no implicit owner. Inner objects use a particular enclosing instance. Local and anonymous classes keep implementations near their use while obeying capture rules. Continue with <a href="topic:oop-lambdas-streams">lambdas and streams</a> for concise functional operations.</p>

@@ -1,0 +1,69 @@
+<h2 id="introduction">Build one complete borrowing workflow</h2>
+<p class="lead">A library catalog is more than a list of titles. Each physical book needs an ID, a borrowing state and rules for changing that state. This project combines classes, an interface, inheritance, collections and text storage in a menu-driven console application.</p>
+<p>Work through the program in small steps. First understand the domain operations, then the command parser, then persistence. The same Book object can be viewed as a LibraryItem for catalog information and as Loanable for borrowing behavior. These are different roles of one object.</p>
+<p>The application deliberately models one book per positive ID. It does not model borrowers, due dates, fines, authentication or simultaneous users. Those features require new rules, not only more menu choices. Keep the current rules precise before expanding the model.</p>
+<h2 id="requirements">State the accepted transitions</h2>
+<table class="ref"><thead><tr><th scope="col">Request</th><th scope="col">Condition</th><th scope="col">Result</th></tr></thead><tbody>
+<tr><td>Add</td><td>Valid ID and title, unused ID</td><td>ADDED; new book is IN</td></tr>
+<tr><td>Borrow</td><td>Known book currently IN</td><td>BORROWED; book becomes OUT</td></tr>
+<tr><td>Borrow again</td><td>Book already OUT</td><td>UNAVAILABLE; state stays OUT</td></tr>
+<tr><td>Return</td><td>Known book currently OUT</td><td>RETURNED; book becomes IN</td></tr>
+<tr><td>Return again</td><td>Book already IN</td><td>NOT_BORROWED; state stays IN</td></tr>
+<tr><td>Unknown ID</td><td>No matching catalog entry</td><td>MISSING; catalog unchanged</td></tr>
+</tbody></table>
+<p>A duplicate add returns DUPLICATE without replacing the existing title or loan status. That invariant is enforced with putIfAbsent. A TreeMap supplies ascending ID order for reports. Titles are descriptive text, not identity keys, so two different IDs may legitimately share a title.</p>
+<h2 id="design">Give each class a responsibility</h2>
+<pre class="diagram">LibraryItem
+  - id: int
+  - title: String
+  + kind(): String
+      ^ hollow triangle: class inheritance
+      |
+     Book ........&gt; Loanable
+      dotted realization: borrow(), returnItem()
+
+Library 1 ---- 0..* Book
+Main --&gt; Library
+Library --&gt; UTF-8 file operations</pre>
+<p>LibraryItem stores common identity and title validation. Book specializes the catalog kind and implements Loanable. The interface describes a capability; it does not store the current loan status. Book keeps that state private and exposes controlled transitions.</p>
+<p>Library owns the catalog map and coordinates lookup. Main translates console lines into requests and prints status messages. Main does not directly change a Book field. This division keeps the domain rules usable when the interface changes.</p>
+<p>Only Book is implemented as a concrete item here. A reference-only item could extend LibraryItem without implementing Loanable. Supporting that extension would require broadening the current Map&lt;Integer,Book&gt; design and defining capability-based lookup. Do not assume the existing catalog already supports arbitrary item types.</p>
+<h2 id="console-commands">Use the numeric menu</h2>
+<p>The menu is printed once. Each command occupies one line. Add uses 1, a positive integer ID and the remaining title text. Borrow uses 2 and an ID. Return uses 3 and an ID. List, save, load and exit use 4, 5, 6 and 0 respectively.</p>
+<pre class="output">1 7 Data Structures
+2 7
+4
+5
+3 7
+6
+4
+0</pre>
+<p>The command parser trims surrounding line spaces and splits into at most three parts so titles can contain spaces. Titles must be nonblank and cannot contain the storage delimiter or newline characters. Malformed add or loan commands report BAD_INPUT; an unknown command reports BAD_COMMAND.</p>
+<p>For save and load, the demonstrated grammar uses the command alone. The current parser ignores extra text after 5 or 6. A stricter interface could reject those trailing fields consistently. EOF also ends input, allowing the program to run from a prepared command stream.</p>
+<h2 id="examples">Follow a save and restore</h2>
+<p>The complete program begins with an empty listing, adds two books and borrows ID 7. It saves that state, returns the book in memory, then reloads the saved state. The final report must restore ID 7 as OUT. ID 2 appears first because reports follow ID order.</p>
+<div data-example="ex-1"></div>
+<p>With no command-line argument, the program creates a private temporary storage file and removes it on exit. This makes the demonstration self-contained. To keep data between runs, compile as Main.java and deliberately pass a chosen file path to Main.</p>
+<pre><code class="language-bash">javac --release 17 -Xlint:all -Werror Main.java
+java Main library.txt</code></pre>
+<p>The supplied path’s parent directory must exist and be writable for saving. A missing path is a normal load failure until you save it. The default temporary file initially exists and is empty, so loading it before saving produces an empty catalog.</p>
+<h2 id="storage">Keep a defined UTF-8 record format</h2>
+<p>Each saved line contains id|title|borrowed. The last field is exactly true or false. A nonempty catalog writes one line per book in ID order. An empty file represents an empty catalog.</p>
+<p>Saving creates a sibling staging file, writes all records, closes the writer and moves the staging file over the target with REPLACE_EXISTING. This avoids directly truncating the target before record writing completes. The move is not requested as atomic, so the program makes no crash-safe storage guarantee.</p>
+<p>Loading builds a separate TreeMap. It checks field count, positive ID, nonblank delimiter-free title, exact boolean text and unique IDs. Only after EOF and successful close does it assign that map to the live catalog. A malformed later row cannot expose a half-loaded catalog.</p>
+<p>Storage errors become FILE_ERROR at the console boundary. The message is deliberately short. A larger application should log the path and preserved cause for diagnosis without falsely claiming the save succeeded. This project does not coordinate concurrent writers to the same path.</p>
+<h2 id="validation-plan">Check rules through complete interactions</h2>
+<ol><li>List an empty catalog and confirm EMPTY.</li><li>Add one ID twice and verify the first title remains.</li><li>Borrow twice, return twice and inspect every rejection.</li><li>Request an unknown ID and verify no entry is created.</li><li>Save two books with different states, change memory, then load and compare.</li><li>Place a duplicate or damaged row after a valid row and verify load preserves the previous catalog.</li><li>Save an empty catalog and confirm it reloads as empty.</li></ol>
+<p>The code exercise uses textual commands without a menu so the same domain transitions can be inspected directly. Its solution retains the project classes, while the console adapter has a different grammar. A new view should change the adapter rather than duplicate borrowing rules.</p>
+<h2 id="common-mistakes">Keep identity and commit boundaries intact</h2>
+<h3>Replacing a book during a duplicate add</h3>
+<p>A plain put could discard the original loan state. Reject duplicate IDs before replacing the entry. Choosing a title as the key would create a different identity rule and prevent duplicate titles.</p>
+<h3>Clearing the catalog before import</h3>
+<p>If parsing fails later, the previous valid catalog would already be gone. Stage the new data and commit only after complete success. Closing the reader cannot undo mutations made earlier.</p>
+<h3>Adding unsupported promises</h3>
+<p>A borrowed boolean does not identify a borrower or due date. Add Loan and Member concepts before claiming those features. Similarly, a text file and a staging move do not supply database transactions or crash recovery.</p>
+<h2 id="extension-plan">Extend one rule at a time</h2>
+<p>A next version could give each loan a member ID and a due date. Define how many loans a member may hold and how returns identify the matching loan. Add an explicit storage version before changing record layout so old files can be rejected or migrated safely.</p>
+<p>A GUI could call the same domain methods from an event controller. File operations should move off the event thread, and completion should return to the view thread. Model/view separation therefore remains useful even though this project starts as a console application.</p>
+<h2 id="summary">Integrate contracts rather than only features</h2>
+<p>The project joins item identity, capability interfaces, controlled state transitions, collection lookup and validated storage. Each layer has a clear boundary. Review the <a href="topic:oop-exam-questions">exam bank</a> for tracing and design practice, then use the <a href="topic:oop-interview-questions">interview questions</a> to explain your choices aloud.</p>

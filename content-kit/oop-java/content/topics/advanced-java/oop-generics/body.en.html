@@ -1,0 +1,70 @@
+<h2 id="introduction">Reuse a shape while preserving its type</h2>
+<p class="lead">A box can hold a room name or a seat count. You want one box implementation, yet a room name should still behave as a String. <dfn>Generics</dfn> let a class or method use a type parameter that its caller supplies. The compiler then follows that type through the operations.</p>
+<p>Without generics, a box might return Object. Every caller would need a cast before using String methods. A mistaken cast might compile and fail only during execution. Box&lt;String&gt; moves the element promise into the declaration so incompatible uses are rejected earlier.</p>
+<p>A type parameter is a relationship, not a request to accept anything everywhere. If one method accepts T and returns T, its result follows the type selected for that call. A different invocation may select a different reference type without rewriting the method.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A void pointer can carry different address values, but it does not preserve the original type relationship for callers. Java generics add source-level checking around such relationships. They do not require manual memory allocation or a separate generated class for every element type.</p></div>
+<h2 id="syntax">Declare a class parameter or a method parameter</h2>
+<pre><code class="language-java">class Box&lt;T&gt; {
+    private final T value;
+    Box(T value) { this.value = value; }
+    T get() { return value; }
+}
+static &lt;T&gt; T first(List&lt;T&gt; values) {
+    return values.get(0);
+}</code></pre>
+<p>The class parameter T is available in its instance fields, constructor and instance methods. The method parameter belongs to that method invocation. Place a method’s type parameter before its return type, even when the method is static. A static member cannot use the enclosing class’s T as though every instance shared one element type.</p>
+<p>The diamond in new Box&lt;&gt;(...) asks the compiler to infer suitable arguments from the surrounding context. Inference still performs checks; it is not a switch to dynamic typing. Use clear declarations when a more elaborate inferred type would make the code hard to understand.</p>
+<p>Type arguments are reference types. Box&lt;int&gt; is illegal, while Box&lt;Integer&gt; can hold boxed integer values. Null remains possible unless the class validates against it. Generics by themselves do not promise non-null values.</p>
+<h2 id="how-it-works">Follow one parameter through its uses</h2>
+<p>For Box&lt;String&gt;, the constructor accepts a String and get returns a String to source callers. For Box&lt;Integer&gt;, those positions use Integer. Mixing these boxes cannot silently turn a String into an Integer. The compiler checks each declared relationship.</p>
+<pre class="diagram">Box&lt;String&gt;  -- get() --&gt; String operations
+Box&lt;Integer&gt; -- get() --&gt; Integer operations
+          same generic source implementation</pre>
+<p>A <dfn>bound</dfn> states the minimum capability a parameter must have. T extends Number makes Number methods available inside the generic code. The word extends is also used when the bound is an interface. A bound can combine a class and interfaces with an ampersand, with the class bound first.</p>
+<p>Bounded code can use only the promised operations. Number exposes doubleValue but not a general plus operator for arbitrary T values. Convert to a chosen arithmetic representation and explain its limits. A double total can round large integers or decimal values; it is not an exact financial sum.</p>
+<p>The larger method uses T extends Comparable&lt;? super T&gt;. A T can then be compared through an ordering that accepts T or one of its supertypes. This handles more useful types than requiring only Comparable&lt;T&gt;, while still keeping the comparison safe.</p>
+<h2 id="examples">Read types through complete calls</h2>
+<h3>Typed boxes remove caller casts</h3>
+<p>The name box yields a String with length three. The seats box yields an Integer, which is unboxed before adding two. The resulting lines are 3 and 32. No cast is needed to recover either source-level type.</p>
+<div data-example="ex-1"></div>
+<h3>A Number bound supports numeric reads</h3>
+<p>The total method accepts lists whose element types extend Number. Integer and Double calls choose different type arguments, but both use doubleValue internally. The totals are 5.0 and 4.0. The bound grants an operation rather than a particular stored numeric representation.</p>
+<div data-example="ex-2"></div>
+<h3>Copy from a narrow source to a wider destination</h3>
+<p>Integers can be stored in a Number list. The copy method expresses that direction using two wildcards tied to T. It reads each element safely and appends it without changing its object type or order.</p>
+<div data-example="ex-3"></div>
+<h3>Return one of two comparable arguments</h3>
+<p>The bounded larger method works with both String and Integer. It returns an existing argument, retaining T instead of returning Object. A comparison result of zero selects the left argument by the method’s documented choice.</p>
+<div data-example="ex-4"></div>
+<h2 id="wildcard-direction">Unknown types need different read and write rules</h2>
+<p>List&lt;Integer&gt; is not a subtype of List&lt;Number&gt;. If that assignment were permitted, a caller could add a Double through the Number reference. The original Integer list would then contain a value that violates its declaration. Generic types are ordinarily invariant in their arguments.</p>
+<p>List&lt;? extends Number&gt; means a list of some unknown type at or below Number. Reading an element as Number is safe. Adding an arbitrary Integer is unsafe because the real list might be List&lt;Double&gt;. The only generally safe new reference value to add through that view is null, when the collection allows it.</p>
+<p>List&lt;? super Integer&gt; means the element type is Integer or a supertype. Adding an Integer is safe. Reading an element gives only Object without further information, because the actual list might also hold unrelated Object values. This is why the useful reminder is producer extends, consumer super.</p>
+<table class="ref"><thead><tr><th scope="col">Parameter</th><th scope="col">Safe general read</th><th scope="col">Useful write</th></tr></thead><tbody>
+<tr><td>List&lt;? extends Number&gt;</td><td>Number</td><td>No arbitrary non-null number</td></tr>
+<tr><td>List&lt;? super Integer&gt;</td><td>Object</td><td>Integer</td></tr>
+<tr><td>List&lt;?&gt;</td><td>Object</td><td>No arbitrary non-null value</td></tr>
+</tbody></table>
+<p>These restrictions describe operations through the declared view. They do not make the underlying list immutable. Another reference may still permit mutation. If a method needs to read and replace T values, a named type parameter may express its relationship better than unrelated wildcards.</p>
+<h2 id="erasure">Understand what remains at runtime</h2>
+<p><dfn>Type erasure</dfn> translates type parameters into their bounds, often Object, while the compiler inserts necessary casts and bridge methods. Box&lt;String&gt; and Box&lt;Integer&gt; do not become two separately specialized JVM classes. The source checks are still valuable even though type arguments are not generally available as runtime tags.</p>
+<p>Erasure explains several restrictions. You cannot overload only on List&lt;String&gt; versus List&lt;Integer&gt;, because the signatures erase to the same List parameter. You cannot write new T() without a supplied construction strategy. You also cannot test instanceof List&lt;String&gt;; List&lt;?&gt; is suitable when you need to test only the runtime list shape.</p>
+<p>Arrays remember their component class at runtime, unlike most parameterized types. Generic array creation such as new T[10] is therefore unavailable. Prefer a typed collection rather than forcing an unchecked array cast. Mixing raw collections with parameterized code can undermine the compiler’s guarantees and create heap pollution.</p>
+<h2 id="api-design">Choose between a named parameter and a wildcard</h2>
+<p>Suppose a helper only prints the size of a list. List&lt;?&gt; is enough because it never needs an element-specific operation. A method that returns the last element should use &lt;T&gt; T last(List&lt;T&gt; values), preserving the input-to-result relationship. Returning Object would throw away useful information that the caller already has.</p>
+<p>Now consider exchanging two positions inside one list. A helper with a named T can read a T and write it back safely. Two unrelated wildcard lists do not prove that their unknown element types match. This distinction is about relationships, rather than a rule that wildcards are always more flexible or always less useful.</p>
+<p>Check the empty case before implementing last. The exercise requires at least one element, so size minus one is valid. A general-purpose API should either reject empty input with a documented exception or return a representation of absence. Generics do not decide that behavior. They describe the result type only when a result exists.</p>
+<p>A useful declaration should help a caller predict operations without reading the method body. Prefer that clarity over the shortest possible arrangement of angle brackets.</p>
+<h2 id="common-mistakes">Keep the type promise intact</h2>
+<h3>Using raw types to silence a difficult declaration</h3>
+<p>A raw Box discards useful checks. It can lead to unchecked warnings and later ClassCastException. Fix the parameter relationship rather than suppressing the warning. A short explicit type argument is easier to maintain than an unexplained cast.</p>
+<h3>Expecting bounds to construct values</h3>
+<p>T extends SomeClass does not promise a no-argument constructor. If code must make T objects, pass a factory such as Supplier&lt;T&gt;. Keep that creation dependency explicit.</p>
+<h3>Confusing wildcard views with ownership</h3>
+<p>An extends wildcard limits writes through one reference. It does not copy the collection, transfer ownership or freeze its contents. Return a defensive copy or a documented unmodifiable view when representation protection is the actual goal.</p>
+<h2 id="best-practices">Describe relationships with the smallest useful promise</h2>
+<ul><li>Use familiar T, E and K/V names for short generic roles.</li><li>Choose bounds that expose only operations the method actually needs.</li><li>Prefer wildcards at flexible input boundaries and concrete return types for callers.</li><li>State whether empty inputs and null values are accepted.</li></ul>
+<h2 id="version-notes">Generics on Java 17</h2>
+<div class="callout version"><p>Generics arrived in Java 5 and diamond inference in Java 7. Java 17 retains erasure and invariant generic arguments. These examples need no unchecked conversions. The Java language does not provide primitive type arguments or automatic specialization for Box&lt;Integer&gt;.</p></div>
+<h2 id="summary">Make reusable code say which types belong together</h2>
+<p>Generic declarations preserve type relationships, bounds expose capabilities and wildcards describe safe data flow. Use <a href="topic:oop-collections">collections</a> next to apply these rules to sequences, unique values and key-based lookup.</p>
