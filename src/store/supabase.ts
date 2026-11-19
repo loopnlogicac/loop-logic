@@ -101,8 +101,13 @@ export class SupabaseStore implements Store {
   }
   async readingEvents(learnerId?: string) {
     const filter = learnerId ? `learner_id=eq.${this.q(learnerId)}&` : '';
-    const rows = await this.rest<any[]>('GET', `ll_reading_events?${filter}select=*&order=at.asc&limit=10000`);
-    return rows.map((r) => ({ id: r.id, learnerId: r.learner_id, lessonId: r.lesson_id, blockId: r.block_id, type: r.type, payload: r.payload, at: r.at }));
+    const out: ReadingEventRow[] = [];
+    for (;;) {
+      const offset = out.length ? `&offset=${out.length}` : '';
+      const rows = await this.rest<any[]>('GET', `ll_reading_events?${filter}select=*&order=at.asc,id.asc&limit=1000${offset}`);
+      out.push(...rows.map((r) => ({ id: r.id, learnerId: r.learner_id, lessonId: r.lesson_id, blockId: r.block_id, type: r.type, payload: r.payload, at: r.at })));
+      if (rows.length < 1000) return out;
+    }
   }
   async logLlmCall(row: LlmCallRow) {
     await this.rest(
