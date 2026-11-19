@@ -1,6 +1,6 @@
-import { savedStrings, savedList } from './saved.js';
 // Learner dashboard: continue reading, progress, practice, focus areas, receipts.
 import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn, currentUser, showSignIn, toast } from './common.js';
+import { savedStrings, savedList } from './saved.js';
 
 const T = {
   en: {

@@ -10,6 +10,7 @@ import { LearnerService } from '../app/learner.ts';
 import { WatchService } from '../app/watch.ts';
 import { VideoExtrasService } from '../app/video-extras.ts';
 import { LabService } from '../app/labs.ts';
+import { NoteService } from '../app/notes.ts';
 import { TutorialService } from '../app/tutorials.ts';
 import { ReadingService } from '../reading/service.ts';
 import { MemoryStore, type Store } from '../store/store.ts';
@@ -20,7 +21,6 @@ import { LiveSearch } from '../library/live.ts';
 import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
 import { createApp } from './app.ts';
 import { AdminService } from '../app/admin.ts';
-import { NoteService } from '../app/notes.ts';
 import { ClassService } from '../app/classes.ts';
 import { OrderService } from '../app/orders.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
@@ -80,11 +80,11 @@ const server = createApp({
   reading,
   instructor,
   learner,
+  notes: new NoteService(store, tutorials),
   labs,
   watch,
   extras,
   tutorials,
-  notes: new NoteService(store, tutorials),
   admin,
   classes,
   orders,

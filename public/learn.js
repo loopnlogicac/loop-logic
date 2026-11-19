@@ -1,7 +1,7 @@
-import { savedStrings, savedEditor } from './saved.js';
 // Tutorials: track list → topic list → topic page (lesson, runnable examples, labs,
 // quiz graded on the server, practice with solutions, exam questions).
 import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toast } from './common.js';
+import { savedStrings, savedEditor } from './saved.js';
 import { mountLab, renderFigure } from './lab-player.js';
 import { codeRunner, runnerStatus } from './runner.js';
 
@@ -178,8 +178,8 @@ async function renderTopic() {
           el('div', { class: 'tut-title-top' }, meta, el('div', { class: 'tut-mini-pager' },
             d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
             d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
-          el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
-        savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L), langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, quiz, practice, exam, videos, refs, pager)));
+          el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary }), savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L)),
+        langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, quiz, practice, exam, videos, refs, pager)));
   fillAdSlots();
   api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();

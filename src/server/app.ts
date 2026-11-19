@@ -2,7 +2,6 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import type { NoteService } from '../app/notes.ts';
 import type { RunnerService } from '../app/runner.ts';
 import { SearchService } from '../app/search.ts';
 import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts';
@@ -10,6 +9,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { AppError, type LearningService } from '../app/service.ts';
 import type { ReadingService } from '../reading/service.ts';
+import type { NoteService } from '../app/notes.ts';
 import { type InstructorService, seedDemoData } from '../app/instructor.ts';
 import type { LearnerService } from '../app/learner.ts';
 import type { WatchService } from '../app/watch.ts';
@@ -46,9 +46,9 @@ export interface AppDeps {
   learner: LearnerService;
   labs: LabService;
   watch: WatchService;
+  notes?: NoteService;
   extras: VideoExtrasService;
   tutorials: TutorialService;
-  notes?: NoteService;
   admin?: AdminService;
   classes?: ClassService;
   orders?: OrderService;
