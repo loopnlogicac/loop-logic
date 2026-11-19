@@ -37,7 +37,7 @@ export class AdaptiveQuizService {
     const key = this.key(learner, track, topic);
     return this.locked(key, async () => {
       const quiz = this.quiz(track, topic, lang);
-      if (!quiz.length) throw new AppError('not_found', 404, 'No quiz available.');
+      if (!quiz.length) throw new AppError('not_found', 404, lang === 'bn' ? 'এই টপিকে এখনো কুইজ নেই।' : 'No quiz available.');
       let run = (await this.store.getDoc('adaptive_quiz', key))?.data as Run | undefined;
       if (run) await this.flush(key, run);
       if (!run || !run.current) { const first = this.pick(quiz, [], 1)!; run = { id: randomUUID(), current: first.id, answers: [], path: [] }; await this.save(key, run); }
@@ -49,13 +49,13 @@ export class AdaptiveQuizService {
     return this.locked(key, async () => {
       const quiz = this.quiz(track, topic, lang);
       const run = (await this.store.getDoc('adaptive_quiz', key))?.data as Run | undefined;
-      if (!run || run.id !== body?.runId) throw new AppError('not_found', 404, lang === 'bn' ? 'আবার Adaptive mode শুরু করো।' : 'Start adaptive mode again.');
+      if (!run || run.id !== body?.runId) throw new AppError('not_found', 404, lang === 'bn' ? 'মানিয়ে নেওয়া কুইজটা আবার শুরু করো।' : 'Start adaptive mode again.');
       await this.flush(key, run);
       const prior = run.answers.find((a) => a.id === body.questionId);
       if (prior) return this.view(run, quiz, prior);
       if (body.questionId !== run.current || !run.current) throw new AppError('stale_question', 409, lang === 'bn' ? 'বর্তমান প্রশ্নের উত্তর দাও।' : 'Answer the current question.');
       const q = quiz.find((q: any) => q.id === run.current);
-      if (!q) throw new AppError('not_found', 404, 'This question is no longer available.');
+      if (!q) throw new AppError('not_found', 404, lang === 'bn' ? 'এই প্রশ্নটা আর নেই।' : 'This question is no longer available.');
       const graded = this.tutorials.gradeAnswer(track, topic, q.id, body.choice, lang);
       const a = { id: q.id, choice: body.choice, difficulty: this.level(q), ...graded };
       run.answers.push(a); run.path.push(a.difficulty);
