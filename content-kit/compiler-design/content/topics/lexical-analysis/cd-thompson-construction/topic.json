@@ -1,0 +1,344 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-thompson-construction",
+  "module": "lexical-analysis",
+  "order": 4,
+  "kind": "theory",
+  "title": {
+    "en": "Regular Expression to NFA (Thompson)",
+    "bn": "রেগুলার এক্সপ্রেশন থেকে NFA"
+  },
+  "summary": {
+    "en": "Build Thompson fragments for union, concatenation, and star, then trace a complete epsilon-NFA.",
+    "bn": "ইউনিয়ন, কনক্যাটেনেশন ও স্টারের ছোট অংশ জুড়ে Thompson NFA তৈরি করে পুরো পথ অনুসরণ করো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "cd-finite-automata"
+  ],
+  "related": [
+    "cd-subset-construction"
+  ],
+  "keywords": [
+    "Thompson construction",
+    "epsilon NFA",
+    "union",
+    "concatenation",
+    "Kleene star"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "The mathematical construction is independent of Python versions."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Why the construction preserves the expression"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "type": "written",
+      "title": "Literal concatenation",
+      "statementHtml": "<p>Construct a Thompson NFA for ab using separate literal fragments. List every edge.</p>",
+      "hints": [
+        "Keep literal state pairs distinct."
+      ],
+      "answerHtml": "<p>Start 0, final 3. Edges: 0 --a→ 1, 1 --ε→ 2, 2 --b→ 3. There is no bypass. The only accepted string is ab.</p>",
+      "difficulty": "easy",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "title": "Union with an empty option",
+      "statementHtml": "<p>Construct a|ε and trace the empty string.</p>",
+      "hints": [
+        "The empty branch needs its own epsilon fragment."
+      ],
+      "answerHtml": "<p>Use start 0, final 5. Edges: 0 --ε→ 1 and 3; 1 --a→ 2; 3 --ε→ 4; 2 --ε→ 5; 4 --ε→ 5. Closure({0}) is {0,1,3,4,5}, so ε is accepted. The a branch also accepts a.</p>",
+      "difficulty": "medium",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "title": "Separate two star scopes",
+      "statementHtml": "<p>Explain a distinguishing string for ab* and (ab)*.</p>",
+      "hints": [
+        "Try the empty string before a long trace."
+      ],
+      "answerHtml": "<p>ε distinguishes them. In ab*, every path must consume the leading a, so ε is rejected. In (ab)*, the outer star bypass accepts ε. Also, a belongs to ab* but not to (ab)*.</p>",
+      "difficulty": "easy",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Trace a repeated choice",
+      "statementHtml": "<p>For the table of (a|b)*a, compute the active sets for a and aa.</p>",
+      "hints": [
+        "After each a, close all consuming destinations."
+      ],
+      "answerHtml": "<p>Initially {0,1,2,4,7,8}. After a, destinations {3,9} close to {1,2,3,4,6,7,8,9}. A second a again reaches {3,9} and closes to the same set. Both a and aa are accepted because 9 is active.</p>",
+      "difficulty": "hard",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "title": "Check a missing edge",
+      "statementHtml": "<p>A proposed R* fragment has entry→R, exit(R)→entry(R), and exit(R)→new exit, but no bypass. What language operation does it implement?</p>",
+      "hints": [
+        "Ask for the smallest possible repetition count."
+      ],
+      "answerHtml": "<p>The path must traverse R before leaving, then may repeat. It implements one-or-more repetitions of R. If R itself accepts ε, ε may still be accepted, but the general construction no longer guarantees zero repetitions independently of R.</p>",
+      "difficulty": "hard",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "How many input characters does an ε edge consume?",
+      "explanation": "An epsilon transition changes state without advancing the input.",
+      "difficulty": "easy",
+      "id": "q-1",
+      "options": [
+        "One",
+        "Two",
+        "The entire string",
+        "Zero"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which Thompson rule needs an entry-to-exit bypass?",
+      "explanation": "The bypass represents zero repetitions.",
+      "difficulty": "easy",
+      "id": "q-2",
+      "options": [
+        "Star",
+        "Literal a",
+        "Concatenation only",
+        "A plain b edge"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What is the whole accepting state in the numbered (a|b)*a NFA?",
+      "explanation": "State 7 ends the starred prefix; the trailing a must reach 9.",
+      "difficulty": "easy",
+      "id": "q-3",
+      "options": [
+        "7",
+        "9",
+        "0",
+        "6"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which expression accepts ε without needing any literal?",
+      "explanation": "The outer star can bypass the full pair.",
+      "difficulty": "easy",
+      "id": "q-4",
+      "options": [
+        "ab*",
+        "a|b",
+        "(ab)*",
+        "ab"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does concatenation RS connect by ε?",
+      "explanation": "The order forces an R string before an S string.",
+      "difficulty": "easy",
+      "id": "q-5",
+      "options": [
+        "Entry of R to exit of S only",
+        "Exit of S to entry of R only",
+        "Every state to every other state",
+        "Exit of R to entry of S"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why allocate fresh states to separate fragments?",
+      "explanation": "Accidental sharing can change which paths exist.",
+      "difficulty": "easy",
+      "id": "q-6",
+      "options": [
+        "To avoid unintended shared paths",
+        "To make every NFA minimal",
+        "To eliminate all epsilon edges",
+        "To make states equal to input characters"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which string is rejected by (a|b)*a?",
+      "explanation": "The expression requires the last character to be a.",
+      "difficulty": "easy",
+      "id": "q-7",
+      "options": [
+        "a",
+        "ab",
+        "ba",
+        "bba"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What is ε-closure({q}) guaranteed to contain?",
+      "explanation": "Taking zero epsilon steps is allowed.",
+      "difficulty": "easy",
+      "id": "q-8",
+      "options": [
+        "Only accepting states",
+        "Only states one consuming edge away",
+        "q itself",
+        "No states if q has no outgoing edges"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which statement distinguishes ∅ from ε?",
+      "explanation": "A language with no strings differs from a zero-length string.",
+      "difficulty": "easy",
+      "id": "q-9",
+      "options": [
+        "Both mean one empty character",
+        "∅ must be accepting",
+        "ε is a member of the input alphabet here",
+        "∅ contains no strings; ε is one empty string"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Does Thompson construction promise the smallest possible automaton?",
+      "explanation": "The construction favours local rules and linear size, not minimum state count.",
+      "difficulty": "easy",
+      "id": "q-10",
+      "options": [
+        "No",
+        "Yes, always the minimal DFA",
+        "Yes, always one state",
+        "Only when the alphabet has two symbols"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why can bab be rejected after ba was accepted?",
+      "explanation": "Acceptance is tested after the whole input, not at an earlier prefix.",
+      "difficulty": "easy",
+      "id": "q-11",
+      "options": [
+        "Acceptance is permanent after any prefix",
+        "The accepting ba path cannot consume the final b",
+        "Epsilon consumes the b",
+        "State numbers changed during the run"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "In this separate-state convention, how many states does ab* have?",
+      "explanation": "Two literals use four states and the star adds two; concatenation adds only an edge.",
+      "difficulty": "medium",
+      "id": "q-12",
+      "options": [
+        "2",
+        "4",
+        "6",
+        "8"
+      ],
+      "answer": 2
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Every Thompson fragment has an entry and an exit.",
+      "bn": "প্রতিটি Thompson অংশে একটি প্রবেশ আর একটি বের হওয়ার স্টেট থাকে।"
+    },
+    {
+      "en": "An epsilon edge consumes no input character.",
+      "bn": "এপসিলন এজ ইনপুটের কোনো অক্ষর খরচ করে না।"
+    },
+    {
+      "en": "Concatenation joins the first exit to the second entry.",
+      "bn": "কনক্যাটেনেশনে প্রথম অংশের শেষকে দ্বিতীয় অংশের শুরুতে জোড়া দিই।"
+    },
+    {
+      "en": "Union branches into either operand.",
+      "bn": "ইউনিয়নে যেকোনো একটি অংশের পথ নেওয়া যায়।"
+    },
+    {
+      "en": "The star bypass permits zero repetitions.",
+      "bn": "স্টারের পাশ কাটানোর পথ শূন্যবার পুনরাবৃত্তি মেনে নেয়।"
+    },
+    {
+      "en": "Only the complete fragment exit is marked accepting.",
+      "bn": "পুরো অংশের শেষ স্টেটকেই গ্রহণকারী চিহ্ন দিই।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Construct the complete Thompson NFA for (a|b)*a and trace ba.",
+      "marks": 10,
+      "answerHtml": "<table class=\"ref\"><caption>Thompson NFA for (a|b)*a: start 0, sole final 9</caption><thead><tr><th scope=\"col\">State</th><th scope=\"col\">a</th><th scope=\"col\">b</th><th scope=\"col\">ε successors</th></tr></thead><tbody><tr><td>0</td><td>∅</td><td>∅</td><td>1, 7</td></tr><tr><td>1</td><td>∅</td><td>∅</td><td>2, 4</td></tr><tr><td>2</td><td>3</td><td>∅</td><td>∅</td></tr><tr><td>3</td><td>∅</td><td>∅</td><td>6</td></tr><tr><td>4</td><td>∅</td><td>5</td><td>∅</td></tr><tr><td>5</td><td>∅</td><td>∅</td><td>6</td></tr><tr><td>6</td><td>∅</td><td>∅</td><td>1, 7</td></tr><tr><td>7</td><td>∅</td><td>∅</td><td>8</td></tr><tr><td>8</td><td>9</td><td>∅</td><td>∅</td></tr><tr><td>9</td><td>∅</td><td>∅</td><td>∅</td></tr></tbody></table><table class=\"ref\"><caption>The complete active set for each prefix of bab</caption><thead><tr><th scope=\"col\">Consumed prefix</th><th scope=\"col\">Active states after ε-closure</th><th scope=\"col\">Accepting?</th></tr></thead><tbody><tr><td>ε</td><td>{0,1,2,4,7,8}</td><td>No: state 9 is absent.</td></tr><tr><td>b</td><td>{1,2,4,5,6,7,8}</td><td>No: b has only completed a repetition.</td></tr><tr><td>ba</td><td>{1,2,3,4,6,7,8,9}</td><td>Yes: the last a can take 8 → 9.</td></tr><tr><td>bab</td><td>{1,2,4,5,6,7,8}</td><td>No: the old final path cannot consume b.</td></tr></tbody></table>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why the concatenation, union, and star rules preserve their language operations.",
+      "marks": 6,
+      "answerHtml": "<p>Concatenation forces a complete first path followed by a complete second path. Union selects either complete branch. Star permits zero traversals via its bypass, or any finite sequence of complete operand traversals via its loop. Epsilon connections add no input characters.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Using distinct literal states, give edges, start, and final state for a*b.",
+      "marks": 6,
+      "answerHtml": "<p>Literal a: 1 --a→ 2. Star entry 0 and exit 3: 0 --ε→ 1,3 and 2 --ε→ 1,3. Append 3 --ε→ 4 and 4 --b→ 5. Start 0, final 5. This accepts b, ab, aab, and rejects ε and a.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MIT automata and computability materials",
+      "url": "https://ocw.mit.edu/courses/6-045j-automata-computability-and-complexity-spring-2011/"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

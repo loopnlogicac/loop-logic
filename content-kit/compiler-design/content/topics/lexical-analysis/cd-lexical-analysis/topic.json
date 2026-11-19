@@ -1,0 +1,376 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-lexical-analysis",
+  "module": "lexical-analysis",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Role of the Lexical Analyser",
+    "bn": "লেক্সিক্যাল অ্যানালাইজারের কাজ"
+  },
+  "summary": {
+    "en": "Distinguish tokens, lexemes, and patterns, preserve tokens across buffers, and locate lexical errors.",
+    "bn": "টোকেন, লেক্সিম ও প্যাটার্ন আলাদা করো, বাফার বদলালেও শব্দ ঠিক রাখো এবং ভুলের অবস্থান বের করো।"
+  },
+  "level": "beginner",
+  "estMinutes": 25,
+  "prerequisites": [
+    "cd-tools"
+  ],
+  "related": [
+    "cd-regular-expressions"
+  ],
+  "keywords": [
+    "token",
+    "lexeme",
+    "pattern",
+    "input buffering",
+    "lexical error"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "Implementations were run with Python 3.12.14 and use only the standard library."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "syntax",
+      "title": "Token rules and attributes"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Characters, boundaries, and buffering"
+    },
+    {
+      "id": "examples",
+      "title": "Examples"
+    },
+    {
+      "id": "edge-cases",
+      "title": "Lexical errors and progress"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "version-notes",
+      "title": "Version notes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Whole-word token categories",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "output": "examples/ex-1.out",
+      "language": "python",
+      "tryNow": true,
+      "explanationHtml": "<p>let is a keyword, but printable is an identifier. The whole word 2roll matches neither the identifier nor integer rule.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "An identifier crossing chunks",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "output": "examples/ex-2.out",
+      "language": "python",
+      "tryNow": true,
+      "explanationHtml": "<p>mar remains pending when the first chunk ends. The next chunk completes marks before =. The final roll is emitted when all chunks are exhausted.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "A line-numbered character error",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "output": "examples/ex-3.out",
+      "language": "python",
+      "tryNow": true,
+      "explanationHtml": "<p>The first newline resets the column. In roll=@7;, @ is the sixth character on line 2, so the diagnostic identifies 2:6.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "type": "code",
+      "title": "Classify complete words",
+      "statementHtml": "<p>Read one word per line, including possibly empty lines. Print KEYWORD, IDENTIFIER, INTEGER, or ERROR for each. Use the rules above; this is whole-word classification.</p>",
+      "hints": [
+        "Check reserved words before identifier syntax."
+      ],
+      "difficulty": "easy",
+      "id": "p-1",
+      "solution": "practice/p-1.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "title": "Locate every at-sign",
+      "statementHtml": "<p>Read arbitrary text until end of input. Print line:column for each @ using one-based character columns; newline resets the column. Print nothing when none occurs.</p>",
+      "hints": [
+        "Update position for every character, including spaces."
+      ],
+      "difficulty": "medium",
+      "id": "p-2",
+      "solution": "practice/p-2.py",
+      "language": "python",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "title": "A block boundary",
+      "statementHtml": "<p>A buffer ends with stu and the next starts dent;. Show the two emitted tokens.</p>",
+      "hints": [
+        "Join pending letters before processing punctuation."
+      ],
+      "answerHtml": "<p>The joined spelling is student, so emit ID(student). The semicolon ends that name and becomes SEMI. The refill between stu and dent is not part of the language syntax.</p>",
+      "difficulty": "easy",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Recovery choice",
+      "statementHtml": "<p>A scanner encounters @ at position 3:8 and is asked to continue. Describe a safe next action.</p>",
+      "hints": [
+        "A continuing scanner must not remain on the same character."
+      ],
+      "answerHtml": "<p>Report an unsupported @ at 3:8, consume that character, and advance the column to 9. Resume recognition at the next position. Keep already recognised tokens, but do not pretend @ was a valid operator.</p>",
+      "difficulty": "hard",
+      "id": "p-4"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "In ID(marks), which part is the lexeme?",
+      "explanation": "The lexeme is the concrete spelling; ID names its category.",
+      "difficulty": "easy",
+      "id": "q-1",
+      "options": [
+        "marks",
+        "ID",
+        "The whole source file",
+        "The parser rule"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does an identifier pattern describe?",
+      "explanation": "A spelling rule can be checked without knowing runtime values.",
+      "difficulty": "easy",
+      "id": "q-2",
+      "options": [
+        "The final value of every variable",
+        "The allowed spellings of identifiers",
+        "The target register number",
+        "The meaning of addition"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why should printable not begin with a PRINT token?",
+      "explanation": "The scanner reads the full identifier before keyword lookup.",
+      "difficulty": "easy",
+      "id": "q-3",
+      "options": [
+        "Keywords are never recognised",
+        "The letters print are illegal",
+        "Its full spelling is a longer identifier",
+        "Every token has five characters"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "What should happen when a buffer ends halfway through marks?",
+      "explanation": "A block boundary is a storage event, not a token delimiter.",
+      "difficulty": "easy",
+      "id": "q-4",
+      "options": [
+        "Emit mar immediately",
+        "Insert a space",
+        "Report end of file immediately",
+        "Preserve the unfinished token"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which token attribute is most useful for an unknown-name diagnostic?",
+      "explanation": "Later analysis needs to know which name was used and where.",
+      "difficulty": "easy",
+      "id": "q-5",
+      "options": [
+        "Spelling and source position",
+        "Only output file size",
+        "Only alphabet length",
+        "Only the target CPU"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What guarantees progress after reporting an illegal character?",
+      "explanation": "Recovery needs a forward step; stopping is another defined policy.",
+      "difficulty": "easy",
+      "id": "q-6",
+      "options": [
+        "Report it again without advancing",
+        "Consume it or stop scanning",
+        "Reset to the same position",
+        "Erase earlier line numbers"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "Does recognising all tokens prove valid statement structure?",
+      "explanation": "The parser still needs to check how tokens are arranged.",
+      "difficulty": "easy",
+      "id": "q-7",
+      "options": [
+        "Yes, always",
+        "Only if spaces are removed",
+        "No",
+        "Only if there are no numbers"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "output",
+      "prompt": "After this newline, which line and column are printed?",
+      "code": "line, column = 1, 4\nline, column = line + 1, 1\nprint(f\"{line}:{column}\")\n",
+      "explanation": "A newline increments the line and resets the one-based column.",
+      "difficulty": "medium",
+      "id": "q-8",
+      "language": "python",
+      "options": [
+        "1:5",
+        "2:4",
+        "2:0",
+        "2:1"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "output",
+      "prompt": "How many token categories are represented in this list?",
+      "code": "tokens = [(\"ID\", \"x\"), (\"PLUS\", \"+\"), (\"ID\", \"y\")]\nprint(len({kind for kind, text in tokens}))\n",
+      "explanation": "Two spellings share ID, while PLUS is a different category.",
+      "difficulty": "medium",
+      "id": "q-9",
+      "language": "python",
+      "options": [
+        "2",
+        "1",
+        "3",
+        "4"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "output",
+      "prompt": "Which identifier survives joining these two buffer fragments?",
+      "code": "pending = \"mar\"\nchunk = \"ks=\"\nprint(pending + chunk[:-1])\n",
+      "explanation": "The trailing = is punctuation and does not belong to the identifier.",
+      "difficulty": "medium",
+      "id": "q-10",
+      "language": "python",
+      "options": [
+        "mar",
+        "marks",
+        "ks",
+        "marks="
+      ],
+      "answer": 1
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A lexeme is the spelling found in source text.",
+      "bn": "সোর্সে পাওয়া আসল বানানটাই লেক্সিম।"
+    },
+    {
+      "en": "A token carries a category and useful attributes.",
+      "bn": "টোকেনে ধরন আর দরকারি তথ্য থাকে।"
+    },
+    {
+      "en": "Patterns describe the allowed token spellings.",
+      "bn": "প্যাটার্ন বলে কোন বানান টোকেন হিসেবে চলবে।"
+    },
+    {
+      "en": "An input-block boundary does not end a token.",
+      "bn": "ইনপুটের ব্লক শেষ হলেই টোকেন শেষ হয় না।"
+    },
+    {
+      "en": "Skipping whitespace must still update source positions.",
+      "bn": "ফাঁকা জায়গা বাদ দিলেও লাইন ও কলামের হিসাব বদলাতে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "short",
+      "question": "Define token, lexeme, and pattern using let marks=85;.",
+      "marks": 4,
+      "answerHtml": "<table class=\"ref\"><caption>Tokens for let marks=85; with one-based positions</caption><thead><tr><th scope=\"col\">Lexeme</th><th scope=\"col\">Token category</th><th scope=\"col\">Attribute</th><th scope=\"col\">Position</th></tr></thead><tbody><tr><td>let</td><td>LET</td><td>Reserved word</td><td>1:1</td></tr><tr><td>marks</td><td>ID</td><td>Name marks</td><td>1:5</td></tr><tr><td>=</td><td>ASSIGN</td><td>Assignment operator</td><td>1:10</td></tr><tr><td>85</td><td>INT</td><td>Integer value 85</td><td>1:11</td></tr><tr><td>;</td><td>SEMI</td><td>Statement terminator</td><td>1:13</td></tr></tbody></table><p>A pattern is the spelling rule, such as one or more ASCII digits for INT.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Explain a two-buffer scanner and how it handles a token crossing the boundary.",
+      "marks": 6,
+      "answerHtml": "<p>Alternate two input regions while tracking token-start and forward positions. Refilling must preserve any characters needed by an unfinished token. Distinguish a region sentinel from true end of file, and allow a spill or growth strategy for tokens longer than the available regions.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain lexical error reporting and recovery for an unsupported character.",
+      "marks": 5,
+      "answerHtml": "<p>Record the bad character and its line and column. A continuing policy can emit a diagnostic, consume one character, update its position, and resume. It must not stall. A stop-on-first-error policy is also valid when stated explicitly.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Python lexical analysis reference",
+      "url": "https://docs.python.org/3/reference/lexical_analysis.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

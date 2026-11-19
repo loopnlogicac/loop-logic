@@ -1,0 +1,333 @@
+{
+  "schemaVersion": "1.1",
+  "id": "cd-flex",
+  "module": "lexical-analysis",
+  "order": 8,
+  "kind": "theory",
+  "title": {
+    "en": "Lexer Generators: Flex (Introduction)",
+    "bn": "Flex দিয়ে লেক্সার তৈরি"
+  },
+  "summary": {
+    "en": "Read a Flex rule file, trace longest-match actions, and explain how regular patterns become scanner machinery.",
+    "bn": "Flex ফাইলের নিয়ম পড়ো, দীর্ঘতম মিল ও অ্যাকশন অনুসরণ করো এবং প্যাটার্ন থেকে স্ক্যানার তৈরির ধারণা বোঝো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 40,
+  "prerequisites": [
+    "cd-lexer-implementation"
+  ],
+  "related": [],
+  "keywords": [
+    "Flex",
+    "lexer generator",
+    "yytext",
+    "yyleng",
+    "lex file",
+    "rule priority"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": [
+      "The mathematical construction is independent of Python versions."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "worked-examples",
+      "title": "Worked examples"
+    },
+    {
+      "id": "how-it-works",
+      "title": "From patterns to a scanner automaton"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Common mistakes"
+    },
+    {
+      "id": "summary",
+      "title": "Summary"
+    }
+  ],
+  "examples": [],
+  "practice": [
+    {
+      "type": "written",
+      "title": "Find the sections",
+      "statementHtml": "<p>A .l file contains options, then %%, then patterns and actions, then %%, then main. Name the three sections.</p>",
+      "hints": [
+        "Separators mark transitions between responsibilities."
+      ],
+      "answerHtml": "<p>The first section is definitions, the middle is rules, and the last is user code. Options belong before the first separator, and main belongs after the second.</p>",
+      "difficulty": "easy",
+      "id": "p-1"
+    },
+    {
+      "type": "written",
+      "title": "Resolve keyword overlap",
+      "statementHtml": "<p>With the displayed rules, classify let, letter, and let2, showing match lengths.</p>",
+      "hints": [
+        "Rule order matters only after comparing lengths."
+      ],
+      "answerHtml": "<p>let: keyword and ID both match 3, so the earlier keyword wins. letter: ID matches 6 versus keyword 3, so ID wins. let2: ID matches 4 versus keyword 3, so ID wins.</p>",
+      "difficulty": "easy",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "title": "Move an operator rule",
+      "statementHtml": "<p>If the = rule moves before ==, does == split into two assignments in Flex? Explain.</p>",
+      "hints": [
+        "Compare lengths before positions in the file."
+      ],
+      "answerHtml": "<p>No. == still matches two characters, while = matches one. Flex chooses the longer match regardless of which rule is earlier. File order resolves equal-length ties only.</p>",
+      "difficulty": "medium",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Text versus value",
+      "statementHtml": "<p>An integer rule matches 0025. State yytext, yyleng, and the mathematical decimal value.</p>",
+      "hints": [
+        "Leading zeros change text length without changing the value."
+      ],
+      "answerHtml": "<p>yytext is the four-character spelling 0025. yyleng is 4. Its interpreted decimal value is 25 when the language uses decimal notation. The scanner action must choose and perform that conversion explicitly.</p>",
+      "difficulty": "medium",
+      "id": "p-4"
+    },
+    {
+      "type": "written",
+      "title": "Keep a token name safely",
+      "statementHtml": "<p>A parser wants to store an identifier spelling after future yylex calls. Why is keeping yytext without an ownership plan unsafe?</p>",
+      "hints": [
+        "Later matches can reuse scanner storage."
+      ],
+      "answerHtml": "<p>The scanner may overwrite or reuse the text storage during later scanning. Copy the spelling or intern it in owned storage before retaining it. The parser and scanner must also agree who releases that storage.</p>",
+      "difficulty": "hard",
+      "id": "p-5"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mcq",
+      "prompt": "What does Flex read while building a scanner?",
+      "explanation": "The generated scanner later reads programs; Flex reads the .l rules.",
+      "difficulty": "easy",
+      "id": "q-1",
+      "options": [
+        "The student program at runtime only",
+        "A target executable only",
+        "A parser stack dump",
+        "A lexical rule description"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "What separates the three .l sections?",
+      "explanation": "The separators divide definitions, rules, and user code.",
+      "difficulty": "easy",
+      "id": "q-2",
+      "options": [
+        "%% lines",
+        "Python indentation",
+        "A single semicolon",
+        "HTML headings"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What normally belongs between the two separators?",
+      "explanation": "Rules define what to recognise and what to do with each match.",
+      "difficulty": "easy",
+      "id": "q-3",
+      "options": [
+        "Only main",
+        "Patterns paired with actions",
+        "Only compiler flags",
+        "Only grammar productions"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "When two rules match the same maximum length, which wins?",
+      "explanation": "File order is the equal-length tie-breaker.",
+      "difficulty": "easy",
+      "id": "q-4",
+      "options": [
+        "The later rule",
+        "The alphabetically first token name",
+        "The earlier rule",
+        "The action with fewer statements"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why does letter remain an identifier when let is a keyword rule?",
+      "explanation": "Six characters beat the three-character keyword prefix.",
+      "difficulty": "easy",
+      "id": "q-5",
+      "options": [
+        "Keywords are never matched",
+        "The word contains no letters",
+        "Rule order overrides every match length",
+        "Its identifier match is longer"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does yytext provide in an action?",
+      "explanation": "Actions inspect the characters selected by the winning rule.",
+      "difficulty": "easy",
+      "id": "q-6",
+      "options": [
+        "The matched spelling",
+        "The grammar start symbol",
+        "The target machine code",
+        "The next file name"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What is yyleng for the spelling 0025?",
+      "explanation": "Length counts source characters, not the converted number.",
+      "difficulty": "medium",
+      "id": "q-7",
+      "options": [
+        "25",
+        "4",
+        "2",
+        "0"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does the whitespace rule with an empty action do?",
+      "explanation": "No token is returned by that empty action.",
+      "difficulty": "easy",
+      "id": "q-8",
+      "options": [
+        "Always returns an ID",
+        "Terminates the program",
+        "Skips its match and continues",
+        "Adds a parser production"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why remember the last accepting point during scanning?",
+      "explanation": "The scanner commits after finding how far the longest valid token extends.",
+      "difficulty": "easy",
+      "id": "q-9",
+      "options": [
+        "Every prefix must be emitted at once",
+        "The alphabet can change halfway through",
+        "Final states never carry actions",
+        "A longer candidate may still extend the current prefix"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which information must a token-scanner minimisation preserve beyond yes/no acceptance?",
+      "explanation": "Different categories need different actions even when both states accept.",
+      "difficulty": "easy",
+      "id": "q-10",
+      "options": [
+        "The winning rule or action",
+        "Only state numbering",
+        "Only diagram layout",
+        "Only source file length"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does noyywrap avoid requiring?",
+      "explanation": "The option supplies the common end-of-input behaviour without a user yywrap routine.",
+      "difficulty": "easy",
+      "id": "q-11",
+      "options": [
+        "All lexical patterns",
+        "A yywrap callback for ordinary end-of-input handling",
+        "The rules section",
+        "Any C declarations"
+      ],
+      "answer": 1
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A .l file separates definitions, rules, and user code.",
+      "bn": "লেক্সার ফাইলে সংজ্ঞা, নিয়ম আর নিজস্ব কোডের আলাদা অংশ থাকে।"
+    },
+    {
+      "en": "Flex chooses match length before rule order.",
+      "bn": "Flex আগে মিলের দৈর্ঘ্য দেখে, সমান হলে নিয়মের ক্রম দেখে।"
+    },
+    {
+      "en": "yytext refers to the selected matched spelling.",
+      "bn": "yytext থেকে নির্বাচিত মিলের লেখাটি পাওয়া যায়।"
+    },
+    {
+      "en": "yyleng records the matched spelling length.",
+      "bn": "yyleng মিলে যাওয়া লেখার দৈর্ঘ্য জানায়।"
+    },
+    {
+      "en": "An empty action can discard whitespace and continue scanning.",
+      "bn": "খালি অ্যাকশন ফাঁকা জায়গা বাদ দিয়ে স্ক্যান চালিয়ে যেতে পারে।"
+    },
+    {
+      "en": "Scanner accepting states must preserve their winning actions.",
+      "bn": "স্ক্যানারের গ্রহণকারী স্টেটে কোন অ্যাকশন চলবে সেটিও রাখতে হয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Explain a Flex file structure and the responsibilities of yytext, yyleng, and yylex.",
+      "marks": 6,
+      "answerHtml": "<p>The definitions section configures generation and declarations. Rules associate patterns with actions. User code supplies helpers. yylex scans input; yytext exposes the selected spelling and yyleng its length. Actions can return a token code or continue scanning.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Trace rule selection on let x==25 using length and rule-order comparisons.",
+      "marks": 6,
+      "answerHtml": "<table class=\"ref\"><caption>A manual trace of Flex rule selection, not an execution record</caption><thead><tr><th scope=\"col\">Input remaining</th><th scope=\"col\">Matching candidates</th><th scope=\"col\">Chosen spelling</th><th scope=\"col\">Action</th></tr></thead><tbody><tr><td>let x==25</td><td>keyword let: 3; identifier let: 3</td><td>let</td><td>Earlier keyword rule prints LET let.</td></tr><tr><td> x==25</td><td>whitespace: 1</td><td>space</td><td>The empty action skips it.</td></tr><tr><td>x==25</td><td>identifier x: 1</td><td>x</td><td>Print ID x.</td></tr><tr><td>==25</td><td>equality ==: 2; assignment =: 1; fallback: 1</td><td>==</td><td>Print EQ ==.</td></tr><tr><td>25</td><td>integer 25: 2; fallback 2: 1</td><td>25</td><td>Print INT 25.</td></tr></tbody></table>"
+    },
+    {
+      "type": "design",
+      "question": "Explain the conceptual regular-expression-to-DFA route for a scanner and why accepting actions need labels.",
+      "marks": 6,
+      "answerHtml": "<p>Build pattern NFAs, combine them under a shared start, then determinise sets of active possibilities. Label accepting sets with the highest-priority winning rule. Preserve those labels during optimisation, because merging different actions would change token categories even if yes/no acceptance stayed unchanged.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Flex input file format",
+      "url": "https://westes.github.io/flex/manual/Format.html"
+    },
+    {
+      "title": "Flex matching rules",
+      "url": "https://westes.github.io/flex/manual/Matching.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
