@@ -222,6 +222,23 @@ export class TutorialService {
     return { type: 'code', language, code: readText(join(x.dir, String(p.solution ?? ''))) ?? '', tests, tryNowUrl: TRY_NOW[language] ?? null };
   }
 
+  /** Title, keyword and summary search over every delivered topic. */
+  search(q: string, lang: Lang) {
+    const words = q.toLowerCase().normalize('NFKC').split(/[^a-z0-9+#\u0980-\u09ff]+/).filter((w) => w.length >= 2).slice(0, 8);
+    if (!words.length) return { q, results: [] };
+    const results: { track: string; trackTitle: string; topic: string; title: string; summary: string; level: string; score: number }[] = [];
+    for (const t of this.tracks.values()) for (const x of t.topics.values()) {
+      const title = `${x.json.title?.en ?? ''} ${x.json.title?.bn ?? ''}`.toLowerCase();
+      const keys = (x.json.keywords ?? []).join(' ').toLowerCase();
+      const summary = `${x.json.summary?.en ?? ''} ${x.json.summary?.bn ?? ''}`.toLowerCase();
+      let score = 0;
+      for (const w of words) score += (title.includes(w) ? 6 : 0) + (keys.includes(w) ? 3 : 0) + (summary.includes(w) ? 1 : 0);
+      if (score >= words.length * 2) results.push({ track: t.id, trackTitle: TRACK_INFO[t.id]?.title[lang] ?? t.id, topic: x.id, title: pick(x.json.title, lang), summary: pick(x.json.summary, lang), level: x.json.level, score });
+    }
+    results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+    return { q, results: results.slice(0, 30).map(({ score: _s, ...r }) => r) };
+  }
+
   // ── labs ──
   private labDir(trackId: string, topicId: string, labId: string, lang: Lang) {
     const { x } = this.topicOr404(trackId, topicId, lang);

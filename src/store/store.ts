@@ -58,7 +58,12 @@ export interface Store {
   getVideoExtras(videoId: string): Promise<VideoExtrasRow | undefined>;
   listVideoExtras(): Promise<VideoExtrasRow[]>;
   saveVideoExtras(row: VideoExtrasRow): Promise<void>;
+  /** Pro waitlist. Returns false when the email was already on the list. */
+  addWaitlist(row: WaitlistRow): Promise<boolean>;
+  waitlistCount(): Promise<number>;
 }
+
+export interface WaitlistRow { email: string; plan: string; lang: string; learnerId: string | null; createdAt: string }
 
 export class StaleStateError extends Error {
   readonly code = 'stale_state';
@@ -148,5 +153,14 @@ export class MemoryStore implements Store {
   }
   async saveVideoExtras(row: VideoExtrasRow) {
     this.extras.set(row.videoId, structuredClone(row));
+  }  private waitlist = new Map<string, WaitlistRow>();
+  async addWaitlist(row: WaitlistRow) {
+    if (this.waitlist.has(row.email)) return false;
+    this.waitlist.set(row.email, { ...row });
+    return true;
   }
+  async waitlistCount() {
+    return this.waitlist.size;
+  }
+
 }

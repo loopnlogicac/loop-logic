@@ -160,5 +160,13 @@ export class SupabaseStore implements Store {
   async saveVideoExtras(row: { videoId: string; data: Record<string, unknown>; updatedAt: string }) {
     await this.rest('POST', 'll_video_extras', { video_id: row.videoId, data: row.data, updated_at: row.updatedAt }, 'resolution=merge-duplicates,return=minimal');
   }
+  async addWaitlist(row: { email: string; plan: string; lang: string; learnerId: string | null; createdAt: string }) {
+    const rows = await this.rest<unknown[]>('POST', 'll_waitlist', { email: row.email, plan: row.plan, lang: row.lang, learner_id: row.learnerId, created_at: row.createdAt }, 'resolution=ignore-duplicates,return=representation');
+    return Array.isArray(rows) && rows.length > 0;
+  }
+  async waitlistCount() {
+    const rows = await this.rest<{ email: string }[]>('GET', 'll_waitlist?select=email&limit=100000');
+    return rows.length;
+  }
 
 }

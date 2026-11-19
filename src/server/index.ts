@@ -57,6 +57,7 @@ const server = createApp({
   watch,
   extras,
   tutorials,
+  store,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),
   publicDir: join(here, '../../public'),
@@ -69,6 +70,7 @@ const server = createApp({
     instructorKey: env.INSTRUCTOR_KEY || null,
     editLocked: Boolean(env.RENDER) && !env.INSTRUCTOR_KEY,
     allowSeed: env.ALLOW_DEMO_SEED !== 'false',
+    freeDailyAi: Number(env.FREE_DAILY_AI_CALLS ?? 10),
   },
 });
 

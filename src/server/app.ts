@@ -13,7 +13,7 @@ import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
-import { StaleStateError } from '../store/store.ts';
+import { StaleStateError, type Store } from '../store/store.ts';
 import { AuthError, type Authenticator } from './auth.ts';
 import { LESSONS } from '../content/lessons.ts';
 
@@ -40,6 +40,7 @@ export interface AppDeps {
   watch: WatchService;
   extras: VideoExtrasService;
   tutorials: TutorialService;
+  store?: Store;
   auth: Authenticator;
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
   labModelFile: string;
@@ -54,6 +55,8 @@ export interface AppDeps {
     /** No instructor key on a public deploy: editing course content is refused. */
     editLocked: boolean;
     allowSeed: boolean;
+    /** Ask AI answers per learner per day on the free plan. */
+    freeDailyAi?: number;
   };
 }
 
@@ -117,6 +120,7 @@ export function buildRoutes(d: AppDeps): Route[] {
       store: d.config.storeKind,
       instructorKeyRequired: Boolean(d.config.instructorKey),
       editing: d.config.instructorKey ? 'key' : d.config.editLocked ? 'locked' : 'open',
+      freeDailyAi: d.config.freeDailyAi ?? 10,
       lessons: LESSONS.map((l) => ({ id: l.id, subject: l.subject, title: l.title, summary: l.summary })),
     }), 'none'),
     route('GET', '/api/me', ({ learnerId, email }) => ({ learnerId, email })),
@@ -139,6 +143,15 @@ export function buildRoutes(d: AppDeps): Route[] {
 
     // tutorials (content-kit packages)
     route('GET', '/api/learn', ({ query }) => tutorials.list(lang(query.get('lang'))), 'none'),
+    route('GET', '/api/learn-search', ({ query }) => tutorials.search(String(query.get('q') ?? '').slice(0, 120), lang(query.get('lang'))), 'none'),
+    route('POST', '/api/waitlist', async ({ body, learnerId }) => {
+      const email = String(body.email ?? '').trim().toLowerCase();
+      const L = lang(body.lang);
+      if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) throw new AppError('bad_email', 400, L === 'bn' ? 'সঠিক ইমেইল ঠিকানা লেখো।' : 'Enter a valid email address.');
+      if (!d.store) throw new AppError('unavailable', 503, 'The waitlist is not available right now.');
+      const added = await d.store.addWaitlist({ email, plan: body.plan === 'live' ? 'live' : 'pro', lang: L, learnerId: learnerId || null, createdAt: new Date().toISOString() });
+      return { ok: true, already: !added };
+    }),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),
@@ -204,7 +217,7 @@ export function createApp(d: AppDeps) {
   const routes = buildRoutes(d);
   const publicDir = resolve(d.publicDir);
   const connect = ["'self'", d.config.supabaseUrl && d.auth.mode === 'supabase' ? new URL(d.config.supabaseUrl).origin : ''].filter(Boolean).join(' ');
-  const csp = `default-src 'self'; img-src 'self' data: https://i.ytimg.com; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ${connect}; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
+  const csp = `default-src 'self'; img-src 'self' data: https://i.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src ${connect}; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
   async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
     const rel = pathname === '/' ? '/index.html' : pathname;

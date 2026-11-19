@@ -117,6 +117,7 @@ export function mountNav(active, onLang) {
       ['dashboard', '/dashboard.html', bn ? 'ড্যাশবোর্ড' : 'Dashboard'],
       ['courses', '/courses.html', bn ? 'কোর্স' : 'Courses'],
       ['learn', '/learn.html', bn ? 'টিউটোরিয়াল' : 'Tutorials'],
+      ['pricing', '/pricing.html', bn ? 'মূল্য' : 'Pricing'],
       ['practice', '/practice.html', bn ? 'অনুশীলন' : 'Practice'],
       ['profile', '/profile.html', bn ? 'প্রোফাইল' : 'Profile'],
       ['instructor', '/instructor.html', bn ? 'শিক্ষক' : 'Instructor'],
@@ -128,6 +129,20 @@ export function mountNav(active, onLang) {
     const a = el('a', { href: '/', class: 'brand', 'aria-label': 'Loop & Logic home' });
     a.append(...brand.childNodes);
     brand.replaceWith(a);
+  }
+  const actions = document.querySelector('.top .top-actions');
+  if (actions && !actions.querySelector('.top-search')) {
+    const input = el('input', { type: 'search', name: 'q', placeholder: bn ? 'খোঁজো: পয়েন্টার, লুপ…' : 'Search: pointers, for loop…', 'aria-label': bn ? 'টিউটোরিয়াল খোঁজো' : 'Search tutorials' });
+    const form = el('form', { class: 'top-search', role: 'search', action: '/learn.html', method: 'get' });
+    form.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5c6b67" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+    form.append(input);
+    actions.prepend(form);
+    if (active !== 'pricing') actions.append(el('a', { class: 'btn-pro', href: '/pricing.html', text: bn ? 'প্রো নাও' : 'Go Pro' }));
+  } else if (actions) {
+    const input = actions.querySelector('.top-search input');
+    if (input) { input.placeholder = bn ? 'খোঁজো: পয়েন্টার, লুপ…' : 'Search: pointers, for loop…'; }
+    const pro = actions.querySelector('.btn-pro');
+    if (pro) pro.textContent = bn ? 'প্রো নাও' : 'Go Pro';
   }
   const btn = document.getElementById('lang');
   if (btn && onLang) btn.onclick = async () => { setLang(getLang() === 'en' ? 'bn' : 'en'); mountNav(active, onLang); await onLang(getLang()); };

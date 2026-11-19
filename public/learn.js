@@ -10,11 +10,12 @@ const T = {
     topics: 'topics', labs: 'labs', of: 'of', soon: 'Coming soon', start: 'Start', open: 'Open', inProgress: 'Being written',
     levels: { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
     kinds: { lesson: 'Lesson', theory: 'Concepts', project: 'Project', 'question-bank': 'Practice sheet' },
-    min: (m) => `${m} min`, lab: 'Lab', all: 'All tutorials', contents: 'Contents', onPage: 'On this page',
+    min: (m) => `${m} min`, lab: 'Lab', freeTag: 'FREE', ready: (a, b) => `${a} of ${b} topics ready`, all: 'All tutorials', contents: 'Contents', onPage: 'On this page',
     example: 'Example', output: 'Output', copy: 'Copy', copied: 'Copied', tryNow: 'Try now', tryNowTip: 'Code copied. Paste it into the online compiler.',
     keyPoints: 'Key points', quiz: 'Check yourself', submit: 'Check my answers', score: (s, n) => `${s} of ${n} correct`, answerAll: 'Answer at least one question first.', retry: 'Try again',
     practice: 'Practice problems', hints: 'Hints', solution: 'Show solution', written: 'Show worked answer', tests: 'Sample test', input: 'Input', expected: 'Expected output',
     exam: 'Exam-style questions', showAnswer: 'Show answer', videos: 'Watch the video', refs: 'Read more', prev: 'Previous', next: 'Next',
+    results: (n, s) => `${n} topics match “${s}”`, noResults: (s) => `No topic matches “${s}” yet. Try another word, or browse the tutorials below.`,
     noBn: 'The full Bangla version of this lesson is coming. You are reading the English text; key points and quiz help are in Bangla where available.',
     bnAvail: 'This lesson is also available in Bangla. Switch with the EN · বাংলা button.', course: 'Video course', notReady: 'not yet written',
   },
@@ -24,11 +25,12 @@ const T = {
     topics: 'টপিক', labs: 'ল্যাব', of: '/', soon: 'শিগগিরই আসছে', start: 'শুরু করো', open: 'খোলো', inProgress: 'লেখা চলছে',
     levels: { beginner: 'শুরুর স্তর', intermediate: 'মাঝারি', advanced: 'উচ্চতর' },
     kinds: { lesson: 'পাঠ', theory: 'ধারণা', project: 'প্রজেক্ট', 'question-bank': 'অনুশীলন শিট' },
-    min: (m) => `${m} মিনিট`, lab: 'ল্যাব', all: 'সব টিউটোরিয়াল', contents: 'সূচিপত্র', onPage: 'এই পাতায়',
+    min: (m) => `${m} মিনিট`, lab: 'ল্যাব', freeTag: 'ফ্রি', ready: (a, b) => `${b}টির মধ্যে ${a}টি টপিক তৈরি`, all: 'সব টিউটোরিয়াল', contents: 'সূচিপত্র', onPage: 'এই পাতায়',
     example: 'উদাহরণ', output: 'আউটপুট', copy: 'কপি', copied: 'কপি হয়েছে', tryNow: 'এখনই চালাও', tryNowTip: 'কোড কপি হয়েছে। অনলাইন কম্পাইলারে পেস্ট করো।',
     keyPoints: 'মূল কথা', quiz: 'নিজেকে যাচাই করো', submit: 'উত্তর মিলিয়ে দেখো', score: (s, n) => `${n}টির মধ্যে ${s}টি সঠিক`, answerAll: 'আগে অন্তত একটি প্রশ্নের উত্তর দাও।', retry: 'আবার চেষ্টা',
     practice: 'অনুশীলনী', hints: 'ইঙ্গিত', solution: 'সমাধান দেখাও', written: 'পূর্ণ উত্তর দেখাও', tests: 'নমুনা টেস্ট', input: 'ইনপুট', expected: 'প্রত্যাশিত আউটপুট',
     exam: 'পরীক্ষার ধাঁচের প্রশ্ন', showAnswer: 'উত্তর দেখাও', videos: 'ভিডিও দেখো', refs: 'আরও পড়ো', prev: 'আগের', next: 'পরের',
+    results: (n, s) => `“${s}”-এর সঙ্গে ${n}টি টপিক মিলেছে`, noResults: (s) => `“${s}”-এর সঙ্গে এখনো কোনো টপিক মেলেনি। অন্য শব্দে খোঁজো, অথবা নিচের টিউটোরিয়াল দেখো।`,
     noBn: 'এই পাঠের পূর্ণ বাংলা সংস্করণ আসছে। এখন ইংরেজি লেখা দেখছ; মূল কথা আর কুইজের সাহায্য যেখানে আছে বাংলায় পাবে।',
     bnAvail: 'এই পাঠ বাংলাতেও আছে। EN · বাংলা বোতাম দিয়ে বদলাও।', course: 'ভিডিও কোর্স', notReady: 'এখনো লেখা হয়নি',
   },
@@ -38,6 +40,7 @@ const main = document.getElementById('main');
 const q = new URLSearchParams(location.search);
 const trackId = q.get('track');
 const topicId = q.get('topic');
+const searchQ = (q.get('q') ?? '').trim();
 const href = (track, topic) => `/learn.html?track=${encodeURIComponent(track)}${topic ? `&topic=${encodeURIComponent(topic)}` : ''}`;
 const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
 
@@ -60,6 +63,22 @@ async function renderOverview() {
     })));
 }
 function icon(id) { return { c: 'C', 'data-structures': 'DS', algorithms: 'ALG', 'oop-java': 'OOP', python: 'PY', dbms: 'DB', 'compiler-design': 'CD', 'machine-learning': 'ML' }[id] ?? '•'; }
+
+// ── search ──
+async function renderSearch() {
+  const L = t();
+  const r = await api('GET', `/api/learn-search?q=${encodeURIComponent(searchQ)}&lang=${getLang()}`);
+  document.title = `${searchQ} · ${L.title}`;
+  const box = el('section', { class: 'tut-search' },
+    el('h2', { text: r.results.length ? L.results(num(r.results.length), searchQ) : L.noResults(searchQ) }),
+    r.results.length ? el('ol', { class: 'tut-results' }, ...r.results.map((x) => el('li', {},
+      el('a', { href: href(x.track, x.topic) }, el('strong', { text: x.title }), el('span', { class: 'muted small', text: ` · ${x.trackTitle}` })),
+      el('p', { class: 'small muted', text: x.summary })))) : null);
+  await renderOverview();
+  main.querySelector('.page-head')?.after(box);
+  const input = document.querySelector('.top-search input');
+  if (input) input.value = searchQ;
+}
 
 // ── one track ──
 async function renderTrack() {
@@ -112,7 +131,11 @@ async function renderTopic() {
   const langNote = lang === 'bn' && !d.topic.hasBangla ? el('div', { class: 'callout note small' }, el('p', { text: L.noBn }))
     : lang === 'en' && d.topic.hasBangla ? el('div', { class: 'callout tip small' }, el('p', { text: L.bnAvail })) : null;
 
-  const side = el('aside', { class: 'tut-side' }, el('h4', { text: L.contents }),
+  const avail = tr.modules.flatMap((m) => m.topics).filter((x) => x.available).length;
+  const total = tr.modules.reduce((n, m) => n + m.topics.length, 0);
+  const side = el('aside', { class: 'tut-side' }, el('h4', { text: tr.title }),
+    el('p', { class: 'small muted', style: 'margin:0', text: L.ready(num(avail), num(total)) }),
+    el('div', { class: 'tut-prog', style: 'margin:6px 0 10px' }, el('div', { style: `width:${pct(avail, total)}%` })),
     ...tr.modules.map((m) => {
       const open = m.id === d.module.id;
       return el('details', { open: open || null }, el('summary', { text: m.title }),
@@ -125,6 +148,7 @@ async function renderTopic() {
     quiz ? el('a', { href: '#quiz', text: L.quiz }) : null, practice ? el('a', { href: '#practice', text: L.practice }) : null, exam ? el('a', { href: '#exam', text: L.exam }) : null) : null;
 
   const meta = el('div', { class: 'tut-meta' },
+    el('span', { class: 'tb free', text: L.freeTag }),
     el('span', { class: `tb lv-${d.topic.level}`, text: L.levels[d.topic.level] ?? d.topic.level }),
     el('span', { class: 'tb', text: L.kinds[d.topic.kind] ?? d.topic.kind }),
     d.topic.minutes ? el('span', { class: 'tb', text: L.min(d.topic.minutes) }) : null,
@@ -142,7 +166,11 @@ async function renderTopic() {
     el('nav', { class: 'crumbs', 'aria-label': 'Breadcrumb' }, el('a', { href: '/learn.html', text: L.all }), ' / ', el('a', { href: href(d.track.id), text: d.track.title }), ' / ', el('span', { text: d.module.title })),
     el('div', { class: 'tut-layout' }, side,
       el('div', { class: 'tut-main' },
-        el('header', { class: 'tut-title' }, el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary }), meta),
+        el('header', { class: 'tut-title' },
+          el('div', { class: 'tut-title-top' }, meta, el('div', { class: 'tut-mini-pager' },
+            d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
+            d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
+          el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
         langNote, toc, body, keyPts, quiz, practice, exam, videos, refs, pager)));
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 }
@@ -247,6 +275,7 @@ async function render() {
   try {
     if (trackId && topicId) await renderTopic();
     else if (trackId) await renderTrack();
+    else if (searchQ) await renderSearch();
     else await renderOverview();
   } catch (e) { errorBox(main, e.message, render); }
 }
