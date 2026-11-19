@@ -132,3 +132,20 @@ Round 2 is merged (except C Batch 3 and Algorithms Batch 2, still running: their
 | R3-D | DBMS | 2 | sql-advanced |
 | R3-E | Compiler Design | 3 | semantic-analysis, intermediate-code, runtime-codegen, practice-exam (last batch) |
 | R3-F | Machine Learning | 3 | math-intuition (9 labs) |
+
+---
+
+## Round 4 (19 Nov 2026): last batches, and Bangla editions for finished subjects
+
+Round 3 is merged. OOP (Java) and Compiler Design are complete. Follow `BANGLA_STYLE.md` in every task.
+
+| Task | Subject | Batch | Modules |
+|---|---|---|---|
+| R4-A | C | 4 | strings, pointers |
+| R4-B | Data Structures | 4 (last) | hashing, graphs, practice-exam (5 labs) |
+| R4-C | Algorithms | 3 | graph-algorithms (9 labs) |
+| R4-D | Python | 4 (last) | data-science, practice-exam |
+| R4-E | DBMS | 3 (last) | normalization, internals, beyond, practice-exam |
+| R4-F | Machine Learning | 4 | data-preparation (5 labs) |
+| R4-G | OOP (Java) | Bangla edition, part 1 | body.bn.html for java-basics, classes-objects |
+| R4-H | Compiler Design | Bangla edition, part 1 | body.bn.html for introduction, lexical-analysis |
