@@ -110,7 +110,7 @@ Review note for every subject (it is also in the messages): writing in Batch 1 w
 | Task | Subject | Batch | Modules |
 |---|---|---|---|
 | R2-A | C | 3 | functions, arrays |
-| R2-B | Data Structures | 2 | stacks, queues (7 labs) |
+| R2-B | Data Structures | 2 | stacks, queues (6 labs) |
 | R2-C | Algorithms | 2 | divide-conquer, greedy, dynamic-programming (10 labs) |
 | R2-D | OOP (Java) | 2 | inheritance-polymorphism, design |
 | R2-E | Python | 2 | data-structures, functions |

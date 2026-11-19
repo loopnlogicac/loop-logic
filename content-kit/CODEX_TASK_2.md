@@ -225,8 +225,8 @@ Each task is one batch of one track, delivered as its own pull request. Several 
 | C | 2 | **fix Batch 1 (all 18 topics, sections 1.1–1.6)** + operators, decision-making, loops | 18 revised + 24 new |
 | C | 3 / 4 / 5 / 6 / 7 | as in `c-tutorial/CODEX_PROMPT.md` §9 | |
 | Data Structures | 1 | foundations, arrays, linked-lists | 14 / 7 labs |
-| Data Structures | 2 | stacks, queues | 11 / 7 |
-| Data Structures | 3 | trees | 10 / 7 |
+| Data Structures | 2 | stacks, queues | 11 / 6 |
+| Data Structures | 3 | trees | 10 / 6 |
 | Data Structures | 4 | hashing, graphs, practice-exam | 12 / 5 |
 | Algorithms | 1 | foundations, searching, sorting | 16 / 9 |
 | Algorithms | 2 | divide-conquer, greedy, dynamic-programming | 17 / 10 |
@@ -271,3 +271,6 @@ Each task is one batch of one track, delivered as its own pull request. Several 
 - [ ] Presets cover the typical, best, worst and an edge case.
 
 Quality first. A smaller batch that passes beats a large batch with errors.
+
+
+> Lab counts in the batch table were corrected on 19 Nov 2026. When the table and `spec/curriculum.json` disagree, the curriculum is right.
