@@ -1,3 +1,18 @@
+# OOP (Java) — Bangla edition, part 1
+
+Package version: 0.3.1. Format: 1.1. Track: oop-java.
+
+- Added full `body.bn.html` lessons for all 16 topics in `java-basics` and `classes-objects` (eight topics per module). The remaining 25 topics retain their existing bilingual metadata and English bodies, so the manifest still uses `bn-partial`.
+- Followed `BANGLA_STYLE.md` and `CODEX_TASK_2.md` section 1.6: conversational Bangladeshi classroom Bangla, addressing the reader as তুমি. Common terms use Bangla script, including ক্লাস, অবজেক্ট, মেথড and কনস্ট্রাক্টর. Java keywords, identifiers, filenames and code remain in English.
+- Translated every lesson's explanations, headings, table text and explanatory diagram labels. Preserved Java rules and qualifications, including pass by value, shallow copies, access restrictions, initialization order, Unicode text units, wrapper caching and version boundaries.
+- Independently compared all 16 English/Bangla pairs: identical ordered `<h2>` ids, identical ordered example/lab placeholders, identical link targets, matching heading/table/definition counts, and byte-identical embedded code blocks. Existing English lessons, metadata, Java programs, input/output fixtures, practice and quizzes are unchanged.
+- Ran from `content-kit/`: `node tools/check.mjs oop-java/content --report oop-java/content/CHECK_REPORT.txt`, with the temporary Eclipse Temurin JDK 21.0.13.1+2 on PATH. The final cumulative report covers all 41 topics and records 0 errors and 0 warnings.
+- All changes are confined to `content-kit/oop-java/content/`. Review status remains draft. Full Bangla bodies for later modules and video links are outside this edition's scope.
+
+The version-specific records below describe the earlier deliveries and their limits at the time.
+
+---
+
 # OOP (Java) — Batch 3
 
 Package version: 0.3.0. Format: 1.1. Track: oop-java.
