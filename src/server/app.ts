@@ -2,7 +2,6 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import type { MasteryService } from '../app/mastery.ts';
 import type { RunnerService } from '../app/runner.ts';
 import { SearchService } from '../app/search.ts';
 import { injectHead, pageMeta, robotsTxt, siteBase, sitemapXml } from './seo.ts';
@@ -17,6 +16,7 @@ import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
+import type { MasteryService } from '../app/mastery.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
@@ -126,6 +126,10 @@ export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   const search = d.search ?? (d.search = new SearchService(tutorials, d.admin));
+  const mastery = () => {
+    if (!d.mastery) throw new AppError('unavailable', 503, 'Mastery checks are unavailable.');
+    return d.mastery;
+  };
   const cls = () => {
     if (!d.classes) throw new AppError('unavailable', 503, 'Classes are not available on this server.');
     return d.classes;
@@ -138,16 +142,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     if (!d.admin) throw new AppError('unavailable', 503, 'The admin site is not available on this server.');
     return d.admin;
   };
-  const mastery = () => {
-    if (!d.mastery) throw new AppError('unavailable', 503, 'Mastery checks are unavailable.');
-    return d.mastery;
-  };
   return [
-    route('GET', '/api/my-mastery', ({ learnerId, query }) => mastery().learner(learnerId, lang(query.get('lang'))), 'learner'),
-    route('GET', '/api/admin/mastery', () => mastery().overall(), 'admin'),
-    route('GET', '/api/learn/:track/:topic/checks', ({ learnerId, params, query }) => mastery().get(learnerId, params.track!, params.topic!, lang(query.get('lang'))), 'learner'),
-    route('POST', '/api/learn/:track/:topic/checks/:phase', ({ learnerId, params, body }) => mastery().start(learnerId, params.track!, params.topic!, params.phase!, lang(body.lang)), 'learner'),
-    route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/health', () => ({ ok: true, service: 'loop-logic' }), 'none'),
     route('GET', '/api/config', () => ({
       authMode: d.auth.mode,
@@ -208,6 +203,11 @@ export function buildRoutes(d: AppDeps): Route[] {
       const added = await d.store.addWaitlist({ email, plan: body.plan === 'live' ? 'live' : 'pro', lang: L, learnerId: learnerId || null, createdAt: new Date().toISOString() });
       return { ok: true, already: !added };
     }),
+    route('GET', '/api/my-mastery', ({ learnerId, query }) => mastery().learner(learnerId, lang(query.get('lang'))), 'learner'),
+    route('GET', '/api/admin/mastery', () => mastery().overall(), 'admin'),
+    route('GET', '/api/learn/:track/:topic/checks', ({ learnerId, params, query }) => mastery().get(learnerId, params.track!, params.topic!, lang(query.get('lang'))), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase', ({ learnerId, params, body }) => mastery().start(learnerId, params.track!, params.topic!, params.phase!, lang(body.lang)), 'learner'),
+    route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang))),

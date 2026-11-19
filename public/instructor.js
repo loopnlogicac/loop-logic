@@ -4,10 +4,7 @@
 // hidden below the privacy minimum, and AI questions are counted, never shown as text.
 import { getLang, api, el, toast, currentUser, showSignIn, num, ago, store } from './common.js';
 
-const T = {
-  en: { masteryGain: 'Average gain per topic', masteryTopic: 'Topic', masteryStudents: 'Students with both checks', masteryPoints: 'Gain (percentage points)', masteryHidden: (n) => `Shown when at least ${n} students completed both checks on a topic.` },
-  bn: { masteryGain: 'টপিক অনুযায়ী গড় উন্নতি', masteryTopic: 'টপিক', masteryStudents: 'দুই চেকই শেষ করেছে', masteryPoints: 'উন্নতি (শতাংশ পয়েন্ট)', masteryHidden: (n) => `একটি টপিকের দুই চেকই অন্তত ${n} জন শেষ করলে দেখাবে।` },
-};
+const T = { en: {}, bn: {} };
 const $ = (id) => document.getElementById(id);
 const content = $('adm-content');
 const NAV = [
@@ -136,6 +133,9 @@ function studentsPage() {
         el('a', { class: 'adm-btn primary', href: `mailto:${sel.email}`, text: 'Email this student' }))) : null),
   ];
 }
+
+Object.assign(T.en, { masteryGain: 'Average gain per topic', masteryTopic: 'Topic', masteryStudents: 'Students with both checks', masteryPoints: 'Gain (percentage points)', masteryHidden: (n) => `Shown when at least ${n} students completed both checks on a topic.` });
+Object.assign(T.bn, { masteryGain: 'টপিক অনুযায়ী গড় উন্নতি', masteryTopic: 'টপিক', masteryStudents: 'দুই চেকই শেষ করেছে', masteryPoints: 'উন্নতি (শতাংশ পয়েন্ট)', masteryHidden: (n) => `একটি টপিকের দুই চেকই অন্তত ${n} জন শেষ করলে দেখাবে।` });
 
 function insightsPage() {
   const L = T[getLang()];
