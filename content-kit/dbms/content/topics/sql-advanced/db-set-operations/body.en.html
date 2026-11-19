@@ -1,0 +1,60 @@
+<h2 id="introduction">Combine answers with the same shape</h2>
+<p class="lead">Two offices hand you lists of department identifiers. One list comes from students; the other comes from teachers. You may want every occurrence, one copy of each identifier, only shared identifiers, or identifiers missing from the second list. Those are four different questions about the same inputs.</p>
+<p>A <dfn>set operation</dfn> combines complete query results by matching columns in corresponding positions. Unlike a join, it does not place related records side by side. It adds, intersects or subtracts rows with the same shape. Think of stacking compatible lists before deciding how repeated entries should behave.</p>
+<p>SQL results normally allow repeated rows. This repeated-row collection is often called a bag or multiset. Mathematical sets contain each value only once. The choice between these models is essential when counting people, merging attendance lists or combining financial activity.</p>
+<p>The university data makes the difference visible. Eight students and four teachers contribute twelve department occurrences. Only three distinct departments appear. Both twelve and three are meaningful answers, provided you state whether you are counting records or department identities.</p>
+<h2 id="syntax">Align columns before choosing an operator</h2>
+<p>The paired queries must return the same number of columns. MySQL also needs compatible types in each position. Column names do not control matching. If the first result returns student_id then section_id, the second must return those meanings in the same order.</p>
+<p>The combined result takes its output column names from the first query block. Give useful aliases there and use them in the final ORDER BY. A final sort applies to the complete combined answer. Sorting an input block does not promise the order of the final result.</p>
+<p>UNION means UNION DISTINCT unless you specify ALL. It removes duplicate complete rows across both inputs. UNION ALL keeps every occurrence. If the same department appears four times among students and twice among teachers, UNION keeps one occurrence while UNION ALL keeps six.</p>
+<p>INTERSECT keeps rows present on both sides. EXCEPT keeps rows from the left side that have no right-side match. These operators also use DISTINCT by default. Their ALL forms preserve multiplicity according to count rules, rather than retaining arbitrary duplicate copies.</p>
+<p>When you mix operators, use parentheses to show your intended grouping. INTERSECT has higher precedence than UNION and EXCEPT in MySQL. A reader should not need to remember precedence to understand an important eligibility rule. Explicit grouping also helps when moving the query between SQL products.</p>
+<pre><code class="language-sql">(&lt;left_query&gt;)
+INTERSECT
+(&lt;right_query&gt;)
+ORDER BY &lt;combined_columns&gt;;</code></pre>
+<h2 id="how-it-works">Count complete rows and their occurrences</h2>
+<p>For INTERSECT DISTINCT, write one copy of each complete row that appears in both inputs. A registered student with a recorded result belongs to both identifier lists. Several result rows for that student still produce one identifier after the distinct intersection.</p>
+<p>For EXCEPT DISTINCT, begin with the distinct left candidates and remove those appearing on the right. Enrolled identifiers minus result identifiers leaves Sadia, 107. Fahim is missing from enrollments entirely, so he is not a candidate for that subtraction. Students minus enrollments answers a different question and finds Fahim.</p>
+<p>INTERSECT ALL keeps the smaller occurrence count from each side. Department 1 appears four times in students and twice in teachers, so two copies survive. Departments 2 and 3 each appear twice in students and once in teachers, leaving one copy each. The intersection therefore has four rows.</p>
+<p>EXCEPT ALL subtracts right occurrence counts from left counts, with a minimum of zero. If the left side has three CSE entries and the right has two, one remains. Reversing the sides leaves none. Difference is directional, while union and intersection have symmetric membership rules for compatible inputs.</p>
+<p>Duplicate comparison treats two NULLs as equal for these set operations. That does not change the meaning of <code>NULL = NULL</code> in an ordinary predicate, which remains unknown. The hometown example uses both missing hometowns and Dhaka values to show that a shared NULL can survive an intersection once.</p>
+<p>Set matching compares all projected columns. Adding student_name beside department_id changes the identity being deduplicated. Two students in CSE are different complete rows when their names differ. Decide the projection first; then choose the operation. DISTINCT on a wider row cannot answer a narrower identity question automatically.</p>
+<table class="ref">
+<caption>Department occurrence counts on each side</caption>
+<thead><tr><th scope="col">Department</th><th scope="col">Students</th><th scope="col">Teachers</th><th scope="col">INTERSECT ALL</th><th scope="col">EXCEPT ALL</th></tr></thead>
+<tbody>
+<tr><td>CSE</td><td>4</td><td>2</td><td>2</td><td>2</td></tr>
+<tr><td>MAT</td><td>2</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>EEE</td><td>2</td><td>1</td><td>1</td><td>1</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Compare native operations and compatible rewrites</h2>
+<p>Read the department union twice: once as a directory, then as a countable list of contributions. The intersection and difference examples show native MySQL syntax alongside EXISTS alternatives. Compare the actual identifiers, rather than assuming that two similarly named reports cover the same population.</p>
+<p>The native and rewritten enrollment reports intentionally use a one-column projection. With nullable multi-column projections, a faithful rewrite needs null-safe comparison for every projected column. Removing DISTINCT from the rewrite would preserve left repetitions and would no longer emulate the default native operator.</p>
+<h3>Compare distinct and repeated department membership</h3>
+<p>UNION returns three departments. UNION ALL returns twelve rows because eight students and four teachers contribute independently.</p>
+<div data-example="ex-1"></div>
+<h3>Find students with both enrollment and results</h3>
+<p>Both versions return 101 through 106. DISTINCT in the older EXISTS version removes repeated enrollments.</p>
+<div data-example="ex-2"></div>
+<h3>Subtract students with recorded marks</h3>
+<p>Sadia, 107, has enrollment but no result. Fahim is absent from the left input and cannot appear in this difference.</p>
+<div data-example="ex-3"></div>
+<h3>Show NULL matching and intersection multiplicity</h3>
+<p>The first intersection contains NULL and Dhaka. INTERSECT ALL keeps two CSE occurrences and one each for MAT and EEE.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Do not confuse membership with row pairing</h2>
+<h3>Pair counts differ from set counts</h3>
+<p>An inner join can emulate an intersection only with the right projection and duplicate handling. If each side contains repeated values, joining creates every matching pair. Three left copies and two right copies make six joined rows, while INTERSECT ALL would keep two. The algorithms answer different multiplicity questions.</p>
+<p>An anti-join can emulate distinct difference when the matched-side key cannot be NULL. NOT EXISTS is often easier to reason about for nullable projections. Use MySQL&#x27;s <code>&lt;=&gt;</code> null-safe equality if two NULL values should count as a match. Ordinary equality would incorrectly retain a missing value in some difference rewrites.</p>
+<h3>Duplicate removal is a semantic choice</h3>
+<p>Do not replace UNION ALL with UNION merely to make an unexpectedly large output shorter. Two genuine transactions with identical displayed fields may both need to remain. Conversely, UNION ALL is wrong for a directory that promises one copy of each town. Choose according to meaning before considering deduplication cost.</p>
+<p>Avoid using unrelated values merely because their types line up. Combining a marks column with a product stock column produces a syntactically compatible number list with no useful interpretation. Column compatibility is a technical requirement, not evidence that the combined report makes sense.</p>
+<h2 id="best-practices">Make population and repetition explicit</h2>
+<p>Describe each input in a short sentence, including its filters and projection. Then describe whether repetitions matter. For eligibility, membership often matters; for event accounting, every occurrence usually matters. This habit exposes mistakes before you inspect a long combined result.</p>
+<p>Parenthesize mixed operations and place one final ORDER BY after the whole expression. Include enough ordering columns to distinguish displayed rows. Equal duplicate rows need no additional tie breaker because exchanging identical rows cannot change their displayed sequence.</p>
+<h2 id="version-notes">Respect the native syntax boundary</h2>
+<p>UNION and UNION ALL are available in older MySQL releases. Native INTERSECT and EXCEPT, including their ALL forms, require MySQL 8.0.31 or later. This lesson&#x27;s native examples therefore need that version. On earlier 8.0 servers use the demonstrated DISTINCT plus EXISTS or NOT EXISTS rewrites with appropriate NULL matching.</p>
+<h2 id="summary">Choose identity before combination</h2>
+<p>Set operators compare complete projected rows, and ALL changes how occurrence counts are combined. Keep the candidate population visible, especially for directional difference. Next, <a href="topic:db-views">views</a> give reusable names to query interfaces while introducing separate questions about updates and access control.</p>

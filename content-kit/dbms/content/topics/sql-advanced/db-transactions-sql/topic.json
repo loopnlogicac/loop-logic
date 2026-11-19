@@ -1,0 +1,392 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-transactions-sql",
+  "module": "sql-advanced",
+  "order": 10,
+  "kind": "lesson",
+  "title": {
+    "en": "Transactions in SQL",
+    "bn": "SQL-এ ট্রানজেকশন"
+  },
+  "summary": {
+    "en": "Control which InnoDB changes become permanent and undo selected work with savepoints.",
+    "bn": "InnoDB-তে কোন পরিবর্তন স্থায়ী হবে ঠিক করো, আর দরকার হলে সেভপয়েন্ট পর্যন্ত ফিরে যাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 50,
+  "prerequisites": [
+    "db-triggers"
+  ],
+  "related": [],
+  "keywords": [
+    "transactions sql",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Keep related changes together"
+    },
+    {
+      "id": "syntax",
+      "title": "Start, finish and mark partial progress"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace pending and permanent values"
+    },
+    {
+      "id": "examples",
+      "title": "Read values on both sides of the boundary"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "A statement error is not always a full rollback"
+    },
+    {
+      "id": "best-practices",
+      "title": "Make transaction ownership explicit"
+    },
+    {
+      "id": "version-notes",
+      "title": "InnoDB and implicit commits remain essential"
+    },
+    {
+      "id": "summary",
+      "title": "Know which writes are still pending"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Commit a stock adjustment",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>Exercise book stock becomes 98. The conditional predicate prevents this statement from making stock negative.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Undo a trial mark change",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Inside the transaction the mark is 100 and grade A+. After rollback the row returns to mark 40 and grade D.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Undo only the second stock change",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>Book stock commits at 99. Pen stock returns to 200 because only changes after the savepoint are undone.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Control the session autocommit setting",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>A fresh default session reports autocommit 1. With it disabled, the stock change can be rolled back; the session setting is restored explicitly.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Roll back two dependent changes",
+      "statementHtml": "<p>In one transaction create order 206 for customer 5 on 2026-03-02 and add one item for product 1 at 60 BDT. Count that order, roll back, then count it again.</p>",
+      "hints": [
+        "The order must exist before its child item."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Keep one edit and cancel another",
+      "statementHtml": "<p>Change student 101 hometown to Gazipur, set a savepoint, and change student 102 hometown to Dhaka. Undo to the savepoint, commit, and print both hometowns. Then start an empty transaction and roll it back.</p>",
+      "hints": [
+        "ROLLBACK TO keeps the transaction active for COMMIT."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Handle a failed second statement",
+      "statementHtml": "<p>An order insert succeeds but an item insert fails a CHECK. Does MySQL necessarily undo the order? Describe the application response.</p>",
+      "hints": [
+        "Statement failure and transaction failure are different boundaries."
+      ],
+      "answerHtml": "<p>No. Many statement errors roll back only the failing statement while leaving the transaction active. The application must detect the error and issue a full ROLLBACK when the whole operation must fail. It should not continue to COMMIT the incomplete order. Deadlocks can roll back the entire transaction, so error handling must also distinguish retryable failures.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "DDL between row edits",
+      "statementHtml": "<p>A session starts a transaction, updates stock, then issues CREATE INDEX. Can a later ROLLBACK reliably undo the stock update?</p>",
+      "hints": [
+        "Check implicit-commit rules before mixing statement types."
+      ],
+      "answerHtml": "<p>No. CREATE INDEX is DDL that causes an implicit commit. The preceding stock update has already committed. Keep schema changes outside business transactions and define a recovery plan for migrations. InnoDB atomic DDL concerns the DDL operation itself; it does not make DDL part of a user rollback group.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What stock remains after rolling back a deduction from product 1?",
+      "language": "sql",
+      "code": "START TRANSACTION;\nUPDATE products SET stock = stock - 2 WHERE product_id = 1;\nROLLBACK;\nSELECT stock AS n FROM products WHERE product_id = 1 ORDER BY n;\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+-----+\n| n   |\n+-----+\n| 100 |\n+-----+",
+        "+-----+\n| n   |\n+-----+\n| -1  |\n+-----+",
+        "+-----+\n| n   |\n+-----+\n| 999 |\n+-----+"
+      ],
+      "answer": 0,
+      "explanation": "The original stock of 100 is restored."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What stock commits when the second deduction is undone to a savepoint?",
+      "language": "sql",
+      "code": "START TRANSACTION;\nUPDATE products SET stock = 99 WHERE product_id = 1;\nSAVEPOINT a;\nUPDATE products SET stock = 98 WHERE product_id = 1;\nROLLBACK TO SAVEPOINT a;\nCOMMIT;\nSELECT stock AS n FROM products WHERE product_id = 1 ORDER BY n;\n",
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "options": [
+        "+----+\n| n  |\n+----+\n| 999 |\n+----+",
+        "+----+\n| n  |\n+----+\n| 99 |\n+----+",
+        "+----+\n| n  |\n+----+\n| -1 |\n+----+"
+      ],
+      "answer": 1,
+      "explanation": "Only the earlier change to 99 survives."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What count remains after rolling back a new registration?",
+      "language": "sql",
+      "code": "START TRANSACTION;\nINSERT INTO enrollments VALUES (108, 36, '2026-01-17');\nROLLBACK;\nSELECT COUNT(*) AS n FROM enrollments WHERE student_id = 108;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 0 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "The insertion is undone, so Fahim still has no registration."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which storage engine backs the shared transactional tables?",
+      "options": [
+        "InnoDB",
+        "MyISAM",
+        "MEMORY only"
+      ],
+      "answer": 0,
+      "explanation": "The datasets explicitly use InnoDB, which supports transactions and foreign keys."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does ROLLBACK TO SAVEPOINT leave active?",
+      "options": [
+        "No transaction and no earlier changes",
+        "The surrounding transaction",
+        "Only a new connection"
+      ],
+      "answer": 1,
+      "explanation": "It undoes later work while preserving earlier work and the active transaction."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What does RELEASE SAVEPOINT do?",
+      "options": [
+        "Commits every pending row change",
+        "Rolls back to that marker",
+        "Removes the named marker"
+      ],
+      "answer": 2,
+      "explanation": "Release forgets the savepoint without committing or undoing transaction changes."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Does START TRANSACTION permanently set @@autocommit to zero?",
+      "options": [
+        "No",
+        "Yes",
+        "Only when a savepoint exists"
+      ],
+      "answer": 0,
+      "explanation": "It starts an explicit transaction while the session autocommit setting can remain one."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which action may implicitly commit earlier DML?",
+      "options": [
+        "An ordinary SELECT",
+        "CREATE INDEX",
+        "SAVEPOINT"
+      ],
+      "answer": 1,
+      "explanation": "Many DDL statements cause implicit commits. A savepoint cannot protect earlier work from that boundary."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why check affected rows after a conditional stock UPDATE?",
+      "options": [
+        "COMMIT always means a product matched.",
+        "A check constraint inserts missing products.",
+        "Zero rows may mean insufficient stock or a missing product."
+      ],
+      "answer": 2,
+      "explanation": "A valid statement can affect zero rows. Business success requires verifying the intended row changed."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Should an application ignore a failed item insert and commit the order anyway?",
+      "options": [
+        "No; roll back the intended atomic operation.",
+        "Yes; every error rolls back everything.",
+        "Yes; a foreign key will create the missing item."
+      ],
+      "answer": 0,
+      "explanation": "The caller must handle statement errors and choose full rollback when the operation cannot be completed."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "START TRANSACTION groups compatible changes into a transaction.",
+      "bn": "START TRANSACTION দিয়ে সম্পর্কিত পরিবর্তন এক ট্রানজেকশনে রাখো।"
+    },
+    {
+      "en": "COMMIT makes a successful transaction permanent.",
+      "bn": "COMMIT দিলে সফল ট্রানজেকশনের পরিবর্তন স্থায়ী হয়।"
+    },
+    {
+      "en": "ROLLBACK undoes uncommitted transactional changes.",
+      "bn": "ROLLBACK দিলে কমিট না হওয়া পরিবর্তন বাতিল হয়।"
+    },
+    {
+      "en": "ROLLBACK TO SAVEPOINT preserves earlier transaction work.",
+      "bn": "ROLLBACK TO SAVEPOINT দিলে তার আগের কাজ ট্রানজেকশনে থাকে।"
+    },
+    {
+      "en": "DDL can commit implicitly and cannot be undone like row updates.",
+      "bn": "DDL নিজে থেকে কমিট করাতে পারে, তাই সারির আপডেটের মতো রোলব্যাক করা যায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "An order insert succeeds but an item insert fails a CHECK. Does MySQL necessarily undo the order? Describe the application response.",
+      "marks": 6,
+      "answerHtml": "<p>No. Many statement errors roll back only the failing statement while leaving the transaction active. The application must detect the error and issue a full ROLLBACK when the whole operation must fail. It should not continue to COMMIT the incomplete order. Deadlocks can roll back the entire transaction, so error handling must also distinguish retryable failures.</p>"
+    },
+    {
+      "type": "design",
+      "question": "A session starts a transaction, updates stock, then issues CREATE INDEX. Can a later ROLLBACK reliably undo the stock update?",
+      "marks": 8,
+      "answerHtml": "<p>No. CREATE INDEX is DDL that causes an implicit commit. The preceding stock update has already committed. Keep schema changes outside business transactions and define a recovery plan for migrations. InnoDB atomic DDL concerns the DDL operation itself; it does not make DDL part of a user rollback group.</p>"
+    },
+    {
+      "type": "program",
+      "question": "In one transaction create order 206 for customer 5 on 2026-03-02 and add one item for product 1 at 60 BDT. Count that order, roll back, then count it again.",
+      "marks": 8,
+      "answerHtml": "<p>Start a transaction, insert order 206 for customer 5 on 2026-03-02, then insert its product-1 item at 60 BDT. The first COUNT for order 206 returns one. A full ROLLBACK removes parent and child together, and the second COUNT returns zero.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Transactions in SQL",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/commit.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

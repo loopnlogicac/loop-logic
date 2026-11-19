@@ -1,0 +1,422 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-stored-procedures",
+  "module": "sql-advanced",
+  "order": 8,
+  "kind": "lesson",
+  "title": {
+    "en": "Stored Procedures and Functions",
+    "bn": "স্টোরড প্রসিডিউর ও ফাংশন"
+  },
+  "summary": {
+    "en": "Move reusable database work into parameterised routines with explicit control flow and security.",
+    "bn": "ডেটাবেসে বারবার লাগে এমন কাজ প্রসিডিউর আর ফাংশনে রাখো, প্যারামিটার দিয়ে মান পাঠাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 70,
+  "prerequisites": [
+    "db-cte"
+  ],
+  "related": [],
+  "keywords": [
+    "stored procedures",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give repeated database work a callable interface"
+    },
+    {
+      "id": "syntax",
+      "title": "Send a complete definition through the client"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow values through parameters and local state"
+    },
+    {
+      "id": "examples",
+      "title": "Inspect both ordinary and boundary calls"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep routine and transaction boundaries separate"
+    },
+    {
+      "id": "best-practices",
+      "title": "Make routine contracts small and explicit"
+    },
+    {
+      "id": "version-notes",
+      "title": "Client syntax and server features differ"
+    },
+    {
+      "id": "summary",
+      "title": "Choose the interface and trace every value"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Return a count through an OUT parameter",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The OUT value becomes 3 for Ayesha and 0 for Fahim. A session variable receives the value after CALL.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Use IF and a local variable",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The local count is zero for Sadia, so IF assigns no results. The procedure does not mistake a pending mark for zero.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Repeat a bounded calculation with WHILE",
+      "level": "intermediate",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The loop adds 1 + 2 + 3 + 4 to give 10. Validation bounds the work; the increment guarantees progress.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Return a scalar from a stored function",
+      "level": "intermediate",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>MAT 101 labels 72 and 90 as pass and 39 as fail. The separate NULL call returns pending rather than fail.</p>"
+    },
+    {
+      "id": "ex-5",
+      "title": "Use INOUT to adjust a value",
+      "level": "intermediate",
+      "file": "examples/ex-5.sql",
+      "output": "examples/ex-5.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>The input value 20.00 returns as 35.00. INOUT both reads the caller value and sends the updated value back.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Count registration for ordinary and missing students",
+      "statementHtml": "<p>Create count_registrations(IN p_student_id INT, OUT p_count INT). Call it for 102 and 999, printing registrations after each call.</p>",
+      "hints": [
+        "COUNT without grouping always supplies one scalar row."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Label a boundary mark through a function",
+      "statementHtml": "<p>Create pass_label with NULL mapped to pending, marks at least 40 mapped to pass, and lower marks mapped to fail. Show label for 39 and then for 40 and NULL.</p>",
+      "hints": [
+        "Check NULL before numeric comparisons."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Repair a loop that never advances",
+      "statementHtml": "<p>A WHILE loop checks v_step &lt;= p_limit but never changes v_step. Explain the failure and the bounded repair.</p>",
+      "hints": [
+        "Trace the value used by the loop condition."
+      ],
+      "answerHtml": "<p>If the condition starts true, the routine keeps repeating because the tested value stays unchanged. Increment v_step in the body and validate p_limit to a finite supported range before starting. For a limit of zero with v_step initially one, the loop performs no additions.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Choose procedure or function",
+      "statementHtml": "<p>A report needs one reusable pass/fail label per result row. A separate operation needs two output counts. Choose routine forms and explain invocation.</p>",
+      "hints": [
+        "Start with the shape of the required return value."
+      ],
+      "answerHtml": "<p>Use a scalar stored function for the label and call it in a SELECT expression. Use a procedure with two OUT parameters for the counts and invoke it with CALL and two session variables. A function returns one declared scalar value; a procedure can expose several parameter values or result sets.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What count comes back through OUT for student 108?",
+      "language": "sql",
+      "code": "DELIMITER //\nCREATE PROCEDURE count_registrations(IN p_student_id INT, OUT p_count INT)\nSQL SECURITY INVOKER\nBEGIN\n    SELECT COUNT(*) INTO p_count FROM enrollments WHERE student_id = p_student_id;\nEND//\nDELIMITER ;\nCALL count_registrations(108, @n);\nSELECT @n AS n ORDER BY n;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+------+\n| n    |\n+------+\n|    0 |\n+------+",
+        "+------+\n| n    |\n+------+\n| -1   |\n+------+",
+        "+------+\n| n    |\n+------+\n| 999  |\n+------+"
+      ],
+      "answer": 0,
+      "explanation": "Fahim has no enrollment rows."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What label does the stored function return at the pass boundary?",
+      "language": "sql",
+      "code": "DELIMITER //\nCREATE FUNCTION pass_label(p_marks INT) RETURNS VARCHAR(12)\nDETERMINISTIC NO SQL SQL SECURITY INVOKER\nBEGIN\n    IF p_marks IS NULL THEN\n        RETURN 'pending';\n    ELSEIF p_marks >= 40 THEN\n        RETURN 'pass';\n    END IF;\n    RETURN 'fail';\nEND//\nDELIMITER ;\nSELECT pass_label(40) AS n ORDER BY n;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+------+\n| n    |\n+------+\n| 999  |\n+------+",
+        "+------+\n| n    |\n+------+\n| pass |\n+------+",
+        "+------+\n| n    |\n+------+\n| -1   |\n+------+"
+      ],
+      "answer": 1,
+      "explanation": "The first non-null branch accepts 40 because the comparison is inclusive."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What label does the function choose for an unknown mark?",
+      "language": "sql",
+      "code": "DELIMITER //\nCREATE FUNCTION pass_label(p_marks INT) RETURNS VARCHAR(12)\nDETERMINISTIC NO SQL SQL SECURITY INVOKER\nBEGIN\n    IF p_marks IS NULL THEN\n        RETURN 'pending';\n    ELSEIF p_marks >= 40 THEN\n        RETURN 'pass';\n    END IF;\n    RETURN 'fail';\nEND//\nDELIMITER ;\nSELECT pass_label(NULL) AS n ORDER BY n;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---------+\n| n       |\n+---------+\n| -1      |\n+---------+",
+        "+---------+\n| n       |\n+---------+\n| 999     |\n+---------+",
+        "+---------+\n| n       |\n+---------+\n| pending |\n+---------+"
+      ],
+      "answer": 2,
+      "explanation": "NULL is handled explicitly before the numeric comparison."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Why change DELIMITER before a BEGIN-END routine?",
+      "options": [
+        "So internal semicolons do not end the client submission early",
+        "So the server changes SQL grammar",
+        "So SELECT becomes transactional"
+      ],
+      "answer": 0,
+      "explanation": "The mysql client recognizes the temporary terminator and sends the complete definition to the server."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which call can receive an OUT value?",
+      "options": [
+        "CALL count_registrations(101, 7)",
+        "CALL count_registrations(101, @n)",
+        "SELECT count_registrations(101, 0)"
+      ],
+      "answer": 1,
+      "explanation": "An OUT argument needs a writable receiver such as a session variable, not a literal."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Where should DECLARE v_count INT appear in a routine block?",
+      "options": [
+        "After every SELECT",
+        "Outside CREATE PROCEDURE only",
+        "Before executable statements in that block"
+      ],
+      "answer": 2,
+      "explanation": "MySQL local declarations precede executable statements in their BEGIN-END scope."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What does DETERMINISTIC claim for a stored function?",
+      "options": [
+        "The same inputs produce the same result.",
+        "The function is always fast.",
+        "The function may modify any table."
+      ],
+      "answer": 0,
+      "explanation": "It describes input-result behaviour. It is an author promise, not a proof performed by the server."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which statement produces a scalar function result?",
+      "options": [
+        "OUT expression",
+        "RETURN expression",
+        "CALL expression"
+      ],
+      "answer": 1,
+      "explanation": "A function must return a value compatible with its declared return type."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why prefix routine parameters with p_?",
+      "options": [
+        "To make parameters global",
+        "To bypass permissions",
+        "To avoid confusing them with column names"
+      ],
+      "answer": 2,
+      "explanation": "A predicate such as student_id = student_id can become an accidental tautology. Distinct names make intent clear."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Does a CALL automatically make several updates atomic?",
+      "options": [
+        "No; transaction boundaries still matter.",
+        "Yes; procedures always commit as one unit.",
+        "Only if the name contains transaction"
+      ],
+      "answer": 0,
+      "explanation": "An ordinary procedure does not supply an automatic transaction around all its statements."
+    },
+    {
+      "id": "q-11",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Which declaration truthfully describes pass_label, which uses only its parameter?",
+      "options": [
+        "READS SQL DATA because IF reads its argument",
+        "DETERMINISTIC NO SQL",
+        "NOT DETERMINISTIC MODIFIES SQL DATA"
+      ],
+      "answer": 1,
+      "explanation": "The function returns the same label for the same input and does not execute table-data statements."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "DELIMITER is a mysql client command, not server SQL.",
+      "bn": "DELIMITER হলো mysql ক্লায়েন্টের কমান্ড, সার্ভারের SQL নয়।"
+    },
+    {
+      "en": "IN passes a value; OUT returns a parameter value.",
+      "bn": "IN দিয়ে মান পাঠাও, OUT দিয়ে প্যারামিটারে ফল ফেরত নাও।"
+    },
+    {
+      "en": "Local variables belong inside a BEGIN and END block.",
+      "bn": "লোকাল ভেরিয়েবল BEGIN আর END-এর ব্লকের ভেতরে থাকে।"
+    },
+    {
+      "en": "A procedure is called with CALL; a function returns a scalar.",
+      "bn": "প্রসিডিউর CALL দিয়ে চালাও, আর ফাংশন একটিমাত্র মান ফেরত দেয়।"
+    },
+    {
+      "en": "Every loop needs a clear exit and progress step.",
+      "bn": "প্রতিটি লুপে থামার শর্ত আর এগোনোর ধাপ রাখো।"
+    },
+    {
+      "en": "Routine names should not hide table-column names.",
+      "bn": "রুটিনের প্যারামিটারের নাম কলামের নাম থেকে আলাদা রাখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "A WHILE loop checks v_step <= p_limit but never changes v_step. Explain the failure and the bounded repair.",
+      "marks": 6,
+      "answerHtml": "<p>If the condition starts true, the routine keeps repeating because the tested value stays unchanged. Increment v_step in the body and validate p_limit to a finite supported range before starting. For a limit of zero with v_step initially one, the loop performs no additions.</p>"
+    },
+    {
+      "type": "design",
+      "question": "A report needs one reusable pass/fail label per result row. A separate operation needs two output counts. Choose routine forms and explain invocation.",
+      "marks": 8,
+      "answerHtml": "<p>Use a scalar stored function for the label and call it in a SELECT expression. Use a procedure with two OUT parameters for the counts and invoke it with CALL and two session variables. A function returns one declared scalar value; a procedure can expose several parameter values or result sets.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Create count_registrations(IN p_student_id INT, OUT p_count INT). Call it for 102 and 999, printing registrations after each call.",
+      "marks": 8,
+      "answerHtml": "<p>Define count_registrations with an IN student identifier and OUT count. SELECT COUNT(*) INTO the OUT parameter from enrollments using the input identifier. CALL it for 102 with a session receiver, display three, then CALL for 999 and display zero. Use a temporary client delimiter around BEGIN and END.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Stored Procedures and Functions",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/stored-routines.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

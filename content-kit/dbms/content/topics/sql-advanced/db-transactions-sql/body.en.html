@@ -1,0 +1,64 @@
+<h2 id="introduction">Keep related changes together</h2>
+<p class="lead">A shop creates an order and then adds its items. Saving the order while losing every item leaves an incomplete operation. A transaction lets the application treat compatible changes as one unit, choosing whether to keep the completed work or undo it when the operation fails.</p>
+<p>A <dfn>transaction</dfn> is a group of database work controlled by a commit or rollback boundary. COMMIT makes successful changes permanent. ROLLBACK cancels changes that are still uncommitted and transactional. These commands are useful only when you know which statements and storage engines participate in that boundary.</p>
+<p>The shared tables use InnoDB. That engine supports transactional row changes, row locking and foreign keys. Do not assume the same rollback behaviour for a nontransactional table merely because it can be queried with the same SQL syntax. Storage-engine choice affects what the database can undo.</p>
+<p>This lesson focuses on one connection&#x27;s SQL controls. Concurrent transactions, isolation levels and deadlock schedules receive deeper treatment in <a href="topic:db-concurrency-control">concurrency control</a>. A transaction boundary protects a unit of work, but does not by itself settle every question about what other connections can observe.</p>
+<h2 id="syntax">Start, finish and mark partial progress</h2>
+<p>START TRANSACTION begins an explicit transaction. Execute the related DML, verify the required outcomes, then issue COMMIT on success or ROLLBACK on failure. Keep the transaction short enough that it does not hold locks while a person reads a screen or enters unrelated information.</p>
+<p>A <code>savepoint</code> is a named marker inside an active transaction. SAVEPOINT first_item records the current position. ROLLBACK TO SAVEPOINT first_item undoes later work while keeping earlier changes pending. It does not finish the transaction, so you still need COMMIT or a full ROLLBACK afterward.</p>
+<p>RELEASE SAVEPOINT removes the marker without undoing or committing changes. A full COMMIT or ROLLBACK ends the transaction and discards its savepoints. Starting another transaction is not a way to nest independent transactions in MySQL. Use savepoints when the requirement is partial rollback inside one unit.</p>
+<p>The session variable autocommit controls ordinary statement boundaries. With autocommit set to one and no explicit transaction, each successful standalone transactional statement normally commits. START TRANSACTION temporarily groups work without permanently changing the session variable. After its end, the session&#x27;s configured autocommit behaviour resumes.</p>
+<pre><code class="language-sql">START TRANSACTION;
+&lt;first_related_change&gt;;
+SAVEPOINT &lt;marker&gt;;
+&lt;later_related_change&gt;;
+ROLLBACK TO SAVEPOINT &lt;marker&gt;;
+COMMIT;</code></pre>
+<h2 id="how-it-works">Trace pending and permanent values</h2>
+<p>The stock example starts with 100 exercise books. A conditional UPDATE subtracts two only if at least two remain. Inside an explicit transaction, the change is pending until COMMIT. After commit, a later SELECT shows 98. The condition protects the numeric rule, while the transaction controls permanence.</p>
+<p>A conditional update can affect zero rows without raising an error. The product might be missing, or its stock might be insufficient. The application must inspect the affected-row result and decide whether its business operation succeeded. A successful COMMIT does not prove that every intended row was found.</p>
+<p>The mark example temporarily changes student 106 from 40 to 100. The same transaction reads the new mark and its generated A+ grade. ROLLBACK then restores 40 and D. Generated columns follow the restored base value; they do not need a separate manual repair.</p>
+<p>The savepoint example first reduces book stock from 100 to 99. It marks that position, then reduces pen stock from 200 to 198. ROLLBACK TO restores only the pen change. COMMIT keeps the earlier book change. Reading both final stocks proves which side of the marker each operation occupied.</p>
+<p>Disabling autocommit starts a continuing pattern of implicit transactions. After COMMIT or ROLLBACK, the next transactional statement begins another transaction. Setting autocommit back to one can commit outstanding work when changing it from zero. Finish the intended transaction explicitly before restoring a pooled connection&#x27;s setting.</p>
+<p>An empty transaction can be rolled back harmlessly. A rollback after an already committed change cannot recover that change. The relevant boundary is whether the write is still pending, not whether the current connection previously executed it. Recovery after commit requires a new compensating change or a suitable restoration process.</p>
+<table class="ref">
+<caption>One-connection savepoint trace for product stocks</caption>
+<thead><tr><th scope="col">Statement completed</th><th scope="col">Book stock visible</th><th scope="col">Pen stock visible</th><th scope="col">Durability</th></tr></thead>
+<tbody>
+<tr><td>START TRANSACTION</td><td>100</td><td>200</td><td>Original committed state</td></tr>
+<tr><td>Book deduction</td><td>99</td><td>200</td><td>Pending</td></tr>
+<tr><td>SAVEPOINT first_item</td><td>99</td><td>200</td><td>Pending marker</td></tr>
+<tr><td>Pen deduction</td><td>99</td><td>198</td><td>Both edits pending</td></tr>
+<tr><td>ROLLBACK TO first_item</td><td>99</td><td>200</td><td>Book edit still pending</td></tr>
+<tr><td>COMMIT</td><td>99</td><td>200</td><td>Book edit permanent</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Read values on both sides of the boundary</h2>
+<p>The examples demonstrate full commit, full rollback, partial rollback and a session-setting change. Compare the values read before and after each boundary. A SELECT inside your transaction can see your own pending edits, so seeing a new value is not proof that it has committed.</p>
+<p>The practice order has a parent row and one child item. Insertion order matters because the foreign key requires the parent first. Rolling back removes both pending rows. Referential integrity and atomic workflow design work together, but neither replaces checking application errors.</p>
+<h3>Commit a stock adjustment</h3>
+<p>Exercise book stock becomes 98. The conditional predicate prevents this statement from making stock negative.</p>
+<div data-example="ex-1"></div>
+<h3>Undo a trial mark change</h3>
+<p>Inside the transaction the mark is 100 and grade A+. After rollback the row returns to mark 40 and grade D.</p>
+<div data-example="ex-2"></div>
+<h3>Undo only the second stock change</h3>
+<p>Book stock commits at 99. Pen stock returns to 200 because only changes after the savepoint are undone.</p>
+<div data-example="ex-3"></div>
+<h3>Control the session autocommit setting</h3>
+<p>A fresh default session reports autocommit 1. With it disabled, the stock change can be rolled back; the session setting is restored explicitly.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">A statement error is not always a full rollback</h2>
+<h3>Handle statement failure explicitly</h3>
+<p>Suppose an order insert succeeds and its item insert violates a CHECK constraint. Many MySQL errors undo the failing statement while leaving earlier work in the transaction pending. If the application ignores the failure and commits, it can preserve the incomplete order. Detect the error and roll back the intended unit of work.</p>
+<p>Some failures, such as an InnoDB deadlock victim, can roll back the whole transaction. Error handling must know whether to retry the entire operation and must avoid duplicating external effects. Sending a message or charging a separate service is not undone by a database ROLLBACK.</p>
+<h3>DDL and savepoints have different boundaries</h3>
+<p>DDL is another important boundary. CREATE TABLE, ALTER TABLE and CREATE INDEX can cause implicit commits. Placing one between a stock update and a later rollback can make that stock update permanent. Atomic DDL means the DDL operation has internal crash-safe behaviour; it does not make ordinary DDL part of your user-controlled rollback group.</p>
+<p>Do not treat savepoints as independent commits. Earlier changes remain pending after ROLLBACK TO, and a later full rollback still cancels them. Nor should you assume that partial rollback releases every lock acquired since the marker; lock behaviour has engine-specific details. Savepoints control data rollback positions, not a complete resource reset.</p>
+<h2 id="best-practices">Make transaction ownership explicit</h2>
+<p>Choose one layer to own the boundary and document that choice. A stored procedure that unexpectedly commits can break a caller&#x27;s larger operation. A caller that assumes an ordinary CALL is automatically atomic can make the opposite mistake. Review routines and triggers as part of the workflow.</p>
+<p>Keep schema migrations outside ordinary business transactions. Validate inputs before holding locks when possible, verify affected rows during the operation, and handle every error path. Restore connection settings before returning a connection to a pool so the next user does not inherit an unexpected transaction mode.</p>
+<h2 id="version-notes">InnoDB and implicit commits remain essential</h2>
+<p>The transaction and savepoint statements shown here are available throughout MySQL 8.0 and 8.4. The shared schema requires CHECK enforcement from 8.0.16. Implicit-commit rules vary by statement, so consult the MySQL manual when mixing administrative operations with DML instead of assuming that BEGIN protects every command.</p>
+<h2 id="summary">Know which writes are still pending</h2>
+<p>Use COMMIT for completed work, ROLLBACK for failed work and savepoints for deliberate partial undo. Check errors and affected rows, and keep DDL boundaries visible. Continue with <a href="topic:db-users-privileges">users and privileges</a> to limit which accounts can perform these operations in the first place.</p>

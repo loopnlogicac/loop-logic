@@ -1,0 +1,67 @@
+<h2 id="introduction">Ask a small question inside a larger one</h2>
+<p class="lead">A teacher wants results above the class average. First you need the average; then you need the marks that exceed it. A subquery expresses that smaller question inside the larger report. The connection between those questions matters more than how deeply you indent the SQL.</p>
+<p>A <dfn>subquery</dfn> is a SELECT used inside another SQL statement. It can supply one value, a row of values, a set of candidates or a temporary relation. Choose the form that matches your question. Comparing a mark with one mean is different from asking whether a student has any registration.</p>
+<p>You already know how joins return matching pairs. A membership test usually needs only one yes-or-no decision for each outer row. That difference explains why replacing a subquery with a join can unexpectedly repeat people. Neither form is universally better; each expresses a different shape of work.</p>
+<p>The examples reuse university results and shop prices. Their empty cases are deliberate. No enrollment, no recorded mark and no product in a category are different situations. A good query should explain which of those situations it handles and what answer it chooses.</p>
+<h2 id="syntax">Match the subquery shape to the comparison</h2>
+<p>A <code>scalar subquery</code> supplies one column from at most one row. Put it in parentheses where one value is expected. AVG without GROUP BY is a common choice because it returns exactly one aggregate row. If there are no input marks, that row contains NULL.</p>
+<p>A scalar subquery returning no rows also supplies NULL. Returning two rows causes an error, even if both rows contain the same value. A LIMIT 1 can hide this error while choosing an arbitrary row. Use a unique predicate or a meaningful ordered selection when the requirement truly asks for one row.</p>
+<p>A <code>row subquery</code> supplies several columns for a tuple comparison. The enrollment identity is the pair student_id and section_id. The left tuple and the subquery result must have the same number of columns in matching positions. Testing separate IN lists would allow unintended combinations across different enrollments.</p>
+<p>A <code>table subquery</code> appears in FROM and needs an alias in MySQL. It behaves like a temporary relation for the surrounding statement. A grouped payment subquery can provide one total per order, ready for a join without multiplying the original payment rows.</p>
+<pre><code class="language-sql">SELECT &lt;outer_columns&gt;
+FROM &lt;outer_table&gt; AS o
+WHERE EXISTS (
+    SELECT 1 FROM &lt;inner_table&gt; AS i WHERE &lt;correlation&gt;
+)
+ORDER BY &lt;outer_keys&gt;;</code></pre>
+<h2 id="how-it-works">Distinguish membership, witnesses and universal tests</h2>
+<p>Use IN when a value or tuple must belong to the subquery result. Repeated copies inside the result do not create additional outer rows. Ayesha&#x27;s identifier may occur in several enrollment rows, but a membership test on students still returns her once.</p>
+<p>Use EXISTS when any qualifying inner row is enough. The selected expression is irrelevant to existence. SELECT 1 is a readable convention, not a request to count ones. A returned row containing NULL still makes EXISTS true. An empty result makes EXISTS false.</p>
+<p>A <code>correlated subquery</code> refers to a value from its outer query. In the missing-enrollment report, the inner WHERE compares enrollment.student_id with the current student identifier. Think of evaluating that question for each student. The optimizer may transform the work internally, so this mental model does not promise a particular execution strategy.</p>
+<p>The correlated average example compares each result with its own section mean. For section 31 the marks are 85 and 65, giving mean 75. Only 85 qualifies. Comparing both marks with the overall mean would answer a different question and could select different students.</p>
+<p>ANY needs at least one true comparison. A price above ANY study price need only exceed the cheaper study item. ALL needs every comparison to be true. A price above ALL study prices must exceed even the largest one. Equality with the largest price is insufficient for a strict greater-than comparison.</p>
+<p>Empty sets reveal the logic clearly. A greater-than ANY comparison is false when there is no candidate to witness success. A greater-than ALL comparison is true because there is no candidate that violates it. This universal empty-set rule is called vacuous truth. Decide whether that matches the business question before relying on it.</p>
+<table class="ref">
+<caption>Scalar shape and existence answer different questions</caption>
+<thead><tr><th scope="col">Inner result</th><th scope="col">Scalar use</th><th scope="col">EXISTS</th></tr></thead>
+<tbody>
+<tr><td>No rows</td><td>NULL</td><td>False</td></tr>
+<tr><td>One row containing NULL</td><td>NULL</td><td>True</td></tr>
+<tr><td>Two rows</td><td>Cardinality error</td><td>True</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Follow the smaller question to its answer</h2>
+<p>Begin with the global average, then compare the composite enrollment identity and two price quantifiers. The later examples add correlation and a derived table. Read the inner question aloud before deciding whether its result belongs in an expression, a predicate or FROM.</p>
+<p>For the payment summary, the inner query groups actual payment rows. The outer LEFT JOIN preserves orders that have none. COALESCE displays zero for an absent payment total. This display choice should not be confused with inserting a zero-valued payment record.</p>
+<h3>Compare each mark with the overall mean</h3>
+<p>The mean is about 67.18. Six results exceed it; the aggregate subquery returns one scalar value.</p>
+<div data-example="ex-1"></div>
+<h3>Match a composite enrollment identity</h3>
+<p>The row subquery compares both key columns together. Ayesha has 85 and Tanvir has 65 in section 31.</p>
+<div data-example="ex-2"></div>
+<h3>Use ANY and ALL for comparisons</h3>
+<p>Backpack at 1200.00 exceeds at least one study price, 850.00. Nothing exceeds every study price.</p>
+<div data-example="ex-3"></div>
+<h3>Find students without registration</h3>
+<p>The inner predicate changes for each student. Only Fahim has no enrollment match.</p>
+<div data-example="ex-4"></div>
+<h3>Compare a result with its own section mean</h3>
+<p>Section 31 has mean 75, so 85 qualifies and 65 does not. Correlation compares each mark with the relevant group.</p>
+<div data-example="ex-5"></div>
+<h3>Name a derived payment summary</h3>
+<p>The table subquery creates one summary per paid order. Orders 203 and 204 have no payments and display 0.00.</p>
+<div data-example="ex-6"></div>
+<h2 id="common-mistakes">Protect meaning around NULL</h2>
+<h3>Nullable exclusions need a policy</h3>
+<p>NOT IN is tempting for exclusion, but nullable values make it dangerous. Consider <code>101 NOT IN (102, NULL)</code>. The first inequality is true; the comparison with NULL is unknown. The combined condition is unknown, so WHERE removes the row rather than treating it as a confirmed non-member.</p>
+<p>NOT EXISTS is usually clearer for missing-related-row questions. Match the relevant identity inside the subquery and negate the existence decision. An outer NULL key still needs an explicit policy: ordinary equality finds no match for it. If NULL should match NULL, use a null-safe comparison deliberately.</p>
+<h3>Correlate the intended columns</h3>
+<p>The same warning applies to ANY and ALL when their candidate results contain NULL. A true comparison can establish ANY; a false comparison can disprove ALL. Otherwise unknown comparisons may leave the result unknown. The empty-set rules apply to an actually empty result, not a one-row result containing NULL.</p>
+<p>Avoid unqualified correlation. A condition such as <code>student_id = student_id</code> may compare the inner column with itself. Give each table an alias and write both owners explicitly. A syntactically valid self-comparison can make EXISTS true for every student as soon as one inner row exists.</p>
+<h2 id="best-practices">Choose a readable equivalent before tuning</h2>
+<p>When considering a join rewrite, check uniqueness. A join to a unique department key has one match per student. A join to enrollments can have several. If only existence matters, keep EXISTS or make the deduplication requirement explicit. Compare semantics before comparing plans.</p>
+<p>Inspect a small group by hand, including a missing match and a repeated match. Then try an empty inner result. Those cases distinguish queries that look equivalent on ordinary data. Use <a href="topic:db-indexes">indexes</a> and EXPLAIN later to investigate performance without changing the question being asked.</p>
+<h2 id="version-notes">Keep the result shape portable</h2>
+<p>The scalar, row, derived-table and quantified comparisons shown here are available in MySQL 8.0 and 8.4. The shared schema requires MySQL 8.0.16 for enforced CHECK constraints. Optimizer improvements can change how a subquery runs, while its required cardinality and NULL rules remain part of the SQL meaning.</p>
+<h2 id="summary">State the inner question precisely</h2>
+<p>Decide whether you need one value, a membership set or an existence decision. Correlate with complete keys, and reason separately about empty results and NULL values. Continue with <a href="topic:db-set-operations">set operations</a> to combine entire compatible query results rather than testing each outer row against an inner answer.</p>

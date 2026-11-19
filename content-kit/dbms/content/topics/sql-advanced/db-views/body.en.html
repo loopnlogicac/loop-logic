@@ -1,0 +1,60 @@
+<h2 id="introduction">Give a useful query a stable name</h2>
+<p class="lead">A librarian repeatedly needs member identifiers and names, but not email addresses. Instead of rewriting the same projection, you can name it and query that name like a table. A view provides this interface while the underlying member records remain in their original table.</p>
+<p>A <dfn>view</dfn> is a stored query definition. An ordinary MySQL view does not preserve a private snapshot of its result. When you query it, the server obtains data through its definition. If a member name changes in the base table, a later view query can show that change.</p>
+<p>Views can simplify reports and separate public columns from sensitive ones. They can also provide a controlled route for updates. These uses require different checks: a readable query is not necessarily updatable, and hiding a column in a view does not revoke another route to that column.</p>
+<p>Imagine a view as a named window onto the same records. Changing what the window shows does not create a second set of student rows. Your design must specify the visible columns, visible population, permitted operations and security context of that window.</p>
+<h2 id="syntax">Define the interface explicitly</h2>
+<p>CREATE VIEW names the interface and attaches a SELECT definition. Use explicit columns and meaningful aliases. A student_directory view can expose student_id, student_name and department_id while leaving email out. Consumers then know the intended shape instead of depending on every column of students.</p>
+<p>The examples use SQL SECURITY INVOKER unless they are demonstrating a controlled security interface. INVOKER checks the caller&#x27;s privileges for underlying access. SQL SECURITY DEFINER instead evaluates underlying access using the view definer&#x27;s privileges. Neither mode means the caller can ignore the grant required to access the view itself.</p>
+<p>A simple filtered view can use WITH CHECK OPTION. This option requires writes through the view to keep rows inside its condition. In a CSE-only view, changing department_id from 1 to 2 would move the row out of the visible population. CHECK OPTION rejects that change through the view.</p>
+<p>CASCADED is the default check behaviour and considers applicable conditions through underlying views. LOCAL checks the current view condition while respecting underlying views that declare their own check options. When stacking filtered views, inspect every definition instead of assuming that one visible filter protects all write paths.</p>
+<pre><code class="language-sql">CREATE SQL SECURITY INVOKER VIEW &lt;view_name&gt; AS
+SELECT &lt;visible_columns&gt; FROM &lt;base_table&gt;
+WHERE &lt;visible_population&gt;
+WITH CASCADED CHECK OPTION;</code></pre>
+<h2 id="how-it-works">Separate live results from update mappings</h2>
+<p>A simple projection can map each visible row directly to one base-table row. Updating student_name through that view changes the same column in students. Keeping the primary key visible makes the intended target easy to identify, although key visibility alone does not guarantee that every view is updatable.</p>
+<p>Aggregates break that simple mapping. An enrollment_totals row may summarise three registrations. Setting its count to four does not identify which new enrollment should exist. MySQL therefore makes views with GROUP BY and aggregate functions non-updatable. DISTINCT and many other constructs impose restrictions too.</p>
+<p>Some joined views can support limited updates under MySQL&#x27;s rules, but do not assume every join is writable. An update must still map correctly to the permitted base table. For an introductory maintenance interface, a clear single-table view is easier to review than a complex multi-table update path.</p>
+<p>An updatable view is not automatically insertable in every useful way. A view may omit a required base column that has no default. Inserting through it can fail because the base row cannot be completed. Check the base table&#x27;s NOT NULL, defaults, generated columns and constraints before promising an insertion interface.</p>
+<p>The available-products example shows live evaluation. Product 1 disappears after stock becomes zero. Rolling back restores stock and makes the product visible again. No REFRESH statement is involved because this ordinary view stores a query definition rather than a separately maintained result table.</p>
+<p>CHECK OPTION does not constrain all changes to the underlying table. An authorized user updating students directly can move a student out of the CSE population. If the view is meant to enforce a workflow boundary, the privilege design must remove inappropriate direct write access.</p>
+<table class="ref">
+<caption>Review reading, writing and authority separately</caption>
+<thead><tr><th scope="col">Definition choice</th><th scope="col">What it controls</th></tr></thead>
+<tbody>
+<tr><td>Explicit projection</td><td>Which columns the view exposes</td></tr>
+<tr><td>WHERE condition</td><td>Which base rows the view shows</td></tr>
+<tr><td>WITH CHECK OPTION</td><td>Whether view writes may escape its predicate</td></tr>
+<tr><td>SQL SECURITY</td><td>Whose underlying privileges are used</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Read, update and revisit the same data</h2>
+<p>The directory starts with two MAT students. The next view updates one student&#x27;s name while retaining the department restriction. The grouped view demonstrates a reporting-only interface, and the stock view shows that transaction changes and rollback affect what its query sees.</p>
+<p>Inspect both the base table and the view when learning an update. That makes the shared storage relationship visible. Do not infer that every interface with the same column names has the same update behaviour; the definition, not the appearance of the result, determines that behaviour.</p>
+<h3>Name a public student directory</h3>
+<p>The MAT directory exposes Rafi and Fahim without email or hometown. INVOKER uses the caller permissions.</p>
+<div data-example="ex-1"></div>
+<h3>Update through a filtered view</h3>
+<p>The base student row changes. CHECK OPTION would reject moving this row to department 2 through this view.</p>
+<div data-example="ex-2"></div>
+<h3>Summarise enrollments in a read-only view</h3>
+<p>Seven summary rows describe registered students. GROUP BY and COUNT prevent updates because each view row can represent several base rows.</p>
+<div data-example="ex-3"></div>
+<h3>Observe live data and rollback</h3>
+<p>Product 1 disappears while its stock is zero and returns after rollback. The view does not keep yesterday&#x27;s result.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">A shorter column list is not a complete security policy</h2>
+<h3>Close the direct-table route</h3>
+<p>Suppose a clerk receives SELECT on a name-only view and also SELECT on students. The omitted email column remains readable through students. The view reduces convenient exposure, but the broader grant defeats the intended boundary. Effective permissions must be reviewed across tables, views, databases and active roles.</p>
+<p>A definer view can expose approved data without granting the caller direct base access. Its owner should have only the necessary base privileges. An all-powerful owner expands the consequences of a bad definition or unsafe later change. Manage ownership deliberately and plan for account removal, since an unavailable definer can break the interface.</p>
+<h3>Do not mistake a query for history</h3>
+<p>Do not put an ORDER BY inside a view and assume every consumer receives that order. Outer queries and optimizer transformations can affect ordering. Apply ORDER BY in the final consuming SELECT whenever the displayed sequence matters. The view describes a relation, not a printed report layout.</p>
+<p>Another mistake is expecting a view to freeze an old semester. A date filter selects qualifying current rows; it does not copy their earlier values. If historical reporting requires a snapshot, design appropriate history or summary storage. Renaming a current query to old_results does not create history.</p>
+<h2 id="best-practices">Treat the definition as an interface contract</h2>
+<p>Choose stable column names and avoid SELECT * when defining public reporting interfaces. View definitions expand the star at creation, so later table changes can create surprising expectations. An explicit projection makes intentional exposure and future migration review easier.</p>
+<p>Check view metadata such as IS_UPDATABLE when investigating maintenance behaviour, then test the actual intended operation. Metadata is helpful, but insertability also depends on required base values and constraints. Keep DROP VIEW distinct from DELETE: dropping the view removes its definition while leaving base rows intact.</p>
+<h2 id="version-notes">Use MySQL security and update rules</h2>
+<p>These view features are supported by MySQL 8.0 and 8.4. The shared data&#x27;s CHECK constraints require 8.0.16 or later. MySQL&#x27;s ordinary views are not native materialized views. Stored-query convenience, transaction visibility, update permissions and definer ownership remain separate concerns even when the result looks like a familiar table.</p>
+<h2 id="summary">Name the query and review its authority</h2>
+<p>A useful view has an explicit projection, a clear population and a documented update policy. Pair its SQL SECURITY mode with grants that enforce the intended boundary. Continue with <a href="topic:db-indexes">indexes</a> to improve access paths without changing the logical data a query returns.</p>

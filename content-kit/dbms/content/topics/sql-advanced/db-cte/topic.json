@@ -1,0 +1,392 @@
+{
+  "schemaVersion": "1.1",
+  "id": "db-cte",
+  "module": "sql-advanced",
+  "order": 7,
+  "kind": "lesson",
+  "title": {
+    "en": "Common Table Expressions",
+    "bn": "কমন টেবিল এক্সপ্রেশন"
+  },
+  "summary": {
+    "en": "Break a report into named steps and traverse a hierarchy with controlled recursion.",
+    "bn": "CTE দিয়ে কোয়েরির ধাপের নাম দাও, আর থামার শর্ত রেখে হায়ারার্কি ঘুরে দেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 70,
+  "prerequisites": [
+    "db-window-functions"
+  ],
+  "related": [],
+  "keywords": [
+    "cte",
+    "MySQL",
+    "SQL",
+    "database"
+  ],
+  "standards": {
+    "minimum": "MySQL 8.0.16",
+    "notes": [
+      "The examples were executed on MySQL 8.4.7. Shared CHECK constraints need MySQL 8.0.16."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Name the steps in a report"
+    },
+    {
+      "id": "syntax",
+      "title": "Separate ordinary names from recursive self-reference"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace a hierarchy one round at a time"
+    },
+    {
+      "id": "examples",
+      "title": "Build stages before walking relationships"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "A different depth still makes a different row"
+    },
+    {
+      "id": "best-practices",
+      "title": "Define the traversal contract first"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use the server limit as a backstop"
+    },
+    {
+      "id": "summary",
+      "title": "Name stages and prove recursive progress"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Name a per-student result summary",
+      "level": "basic",
+      "file": "examples/ex-1.sql",
+      "output": "examples/ex-1.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>The CTE supplies six student summaries for this one statement. It does not create a permanent table.</p>"
+    },
+    {
+      "id": "ex-2",
+      "title": "Keep payment and item totals independent",
+      "level": "intermediate",
+      "file": "examples/ex-2.sql",
+      "output": "examples/ex-2.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/shop.sql"
+      ],
+      "explanationHtml": "<p>Order 202 has 1380.00 billed and 1380.00 paid. Separate aggregation avoids the two-item, two-payment multiplication.</p>"
+    },
+    {
+      "id": "ex-3",
+      "title": "Walk a small mentoring hierarchy",
+      "level": "advanced",
+      "file": "examples/ex-3.sql",
+      "output": "examples/ex-3.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Nusrat is depth 0; Arif and Sajid are depth 1; Farhana is depth 2. The local teaching relation extends the shared teachers without changing the dataset.</p>"
+    },
+    {
+      "id": "ex-4",
+      "title": "Stop a cyclic walk using a visited path",
+      "level": "advanced",
+      "file": "examples/ex-4.sql",
+      "output": "examples/ex-4.out",
+      "language": "sql",
+      "tryNow": false,
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "explanationHtml": "<p>Starting explicitly at 11 still visits four teachers. The path rejects revisiting 11 through 13; commas prevent confusing identifier 1 with 11.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "type": "code",
+      "difficulty": "easy",
+      "title": "Stage a missing-result report",
+      "statementHtml": "<p>Use an enrolled CTE containing distinct registered student ids. Return registered ids without results. Then remove all results in a transaction and repeat before rollback.</p>",
+      "hints": [
+        "The CTE must be written again for the second statement."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-1.sql",
+      "tests": [
+        {
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "type": "code",
+      "difficulty": "medium",
+      "title": "Traverse from a selected mentor",
+      "statementHtml": "<p>Create the teaching mentor relation from the hierarchy example. Walk downward from teacher 12, returning teacher_id and depth. Then repeat from leaf 14.</p>",
+      "hints": [
+        "A leaf still contributes its anchor row."
+      ],
+      "language": "sql",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "solution": "practice/p-2.sql",
+      "tests": [
+        {
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Explain recursive rounds",
+      "statementHtml": "<p>Trace the mentoring walk from 11 with children 12 and 14, and grandchild 13 under 12.</p>",
+      "hints": [
+        "Use the previous round rather than expanding every old row again."
+      ],
+      "answerHtml": "<p>The anchor emits 11 at depth 0. The first recursive round uses 11 to find 12 and 14 at depth 1. The next round uses those newly produced rows and finds 13 at depth 2. No child refers to 13, so the following round is empty and recursion ends. Final ORDER BY controls presentation independently of evaluation order.</p>"
+    },
+    {
+      "id": "p-4",
+      "type": "written",
+      "difficulty": "hard",
+      "title": "Prevent unbounded revisits",
+      "statementHtml": "<p>Does UNION DISTINCT always stop recursion if the CTE also returns depth? Explain using a two-node cycle.</p>",
+      "hints": [
+        "Ask which columns participate in duplicate comparison."
+      ],
+      "answerHtml": "<p>No. The pairs (11,0), (12,1), (11,2), (12,3) are all different complete rows. Deduplication does not recognize that the teacher was already visited at another depth. Track visited identifiers in a path or use an appropriate identity-only recursion, and retain a deliberate depth bound.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many rows are in the per-student CTE?",
+      "language": "sql",
+      "code": "WITH t AS (SELECT student_id FROM results GROUP BY student_id) SELECT COUNT(*) AS n FROM t;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| 6 |\n+---+",
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+"
+      ],
+      "answer": 0,
+      "explanation": "The eleven results belong to six students."
+    },
+    {
+      "id": "q-2",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What sum does a recursive sequence from one through four produce?",
+      "language": "sql",
+      "code": "WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM seq WHERE n < 4) SELECT SUM(n)\n    AS n FROM seq;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+------+\n| n    |\n+------+\n| 999  |\n+------+",
+        "+------+\n| n    |\n+------+\n|   10 |\n+------+",
+        "+------+\n| n    |\n+------+\n| -1   |\n+------+"
+      ],
+      "answer": 1,
+      "explanation": "The anchor is one, then three recursive rounds add two, three and four."
+    },
+    {
+      "id": "q-3",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many teachers are reachable from leaf 14 in the mentoring relation?",
+      "language": "sql",
+      "code": "CREATE TABLE teacher_links (\n    teacher_id INT PRIMARY KEY,\n    mentor_id INT NULL,\n    FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id),\n    FOREIGN KEY (mentor_id) REFERENCES teachers(teacher_id)\n) ENGINE=InnoDB;\nINSERT INTO teacher_links VALUES (11, NULL), (12, 11), (13, 12), (14, 11);\nWITH RECURSIVE team AS (\nSELECT teacher_id FROM teacher_links WHERE teacher_id = 14\nUNION ALL SELECT c.teacher_id FROM teacher_links AS c JOIN team AS p ON c.mentor_id = p.teacher_id\n) SELECT COUNT(*) AS n FROM team;\n",
+      "setup": [
+        "shared/datasets/university.sql"
+      ],
+      "options": [
+        "+---+\n| n |\n+---+\n| -1 |\n+---+",
+        "+---+\n| n |\n+---+\n| 999 |\n+---+",
+        "+---+\n| n |\n+---+\n| 1 |\n+---+"
+      ],
+      "answer": 2,
+      "explanation": "The leaf contributes one anchor row and has no children."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "How long does a WITH name remain available?",
+      "options": [
+        "For the attached statement",
+        "Until the connection closes",
+        "Until DROP TABLE is called"
+      ],
+      "answer": 0,
+      "explanation": "A CTE is scoped to one statement; reuse in another statement needs another WITH."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "Which recursive component selects starting teachers?",
+      "options": [
+        "The server recursion error",
+        "The anchor member",
+        "The ORDER BY clause"
+      ],
+      "answer": 1,
+      "explanation": "The anchor seeds the traversal before any self-reference is expanded."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "easy",
+      "prompt": "What ends an ordinary acyclic recursive walk?",
+      "options": [
+        "The first child is found.",
+        "A CTE always stops after two rounds.",
+        "A round produces no new rows."
+      ],
+      "answer": 2,
+      "explanation": "Each round expands the previous round. No new children means no further work."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why cast a recursive path as CHAR(200) in the anchor?",
+      "options": [
+        "The anchor determines the result column width.",
+        "CHAR disables cycles.",
+        "Paths must always be exactly 200 characters."
+      ],
+      "answer": 0,
+      "explanation": "Recursive concatenation may otherwise exceed the narrow type inferred from the first path value."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Does writing a CTE force materialization in MySQL?",
+      "options": [
+        "No; CTEs cannot be executed.",
+        "No; the optimizer can merge or materialize suitable CTEs.",
+        "Yes; every CTE creates an on-disk table."
+      ],
+      "answer": 1,
+      "explanation": "A CTE expresses query structure. Its physical execution depends on optimizer rules."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "Why aggregate item totals and payment totals in separate CTEs?",
+      "options": [
+        "To convert BDT into integers",
+        "To make every order fully paid",
+        "To prevent many-to-many amount multiplication"
+      ],
+      "answer": 2,
+      "explanation": "Separate one-row-per-order summaries preserve the intended cardinality."
+    },
+    {
+      "id": "q-10",
+      "type": "mcq",
+      "difficulty": "hard",
+      "prompt": "What does cte_max_recursion_depth provide?",
+      "options": [
+        "A server recursion limit",
+        "A proof that the hierarchy is acyclic",
+        "A sort order for the result"
+      ],
+      "answer": 0,
+      "explanation": "A limit bounds accidental runaway recursion. Reaching it raises an error; it is not a business termination rule."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A CTE name exists for one SQL statement.",
+      "bn": "CTE-এর নাম শুধু সেই SQL স্টেটমেন্টে ব্যবহার করা যায়।"
+    },
+    {
+      "en": "Several CTEs can build a report in readable stages.",
+      "bn": "একাধিক CTE দিয়ে রিপোর্টের ধাপগুলো গুছিয়ে লেখা যায়।"
+    },
+    {
+      "en": "A recursive CTE has an anchor and a recursive member.",
+      "bn": "রিকার্সিভ CTE-তে শুরুর অংশ আর নিজেকে ব্যবহার করা অংশ থাকে।"
+    },
+    {
+      "en": "Recursion must stop through exhausted children or an explicit guard.",
+      "bn": "সন্তান সারি শেষ হলে বা স্পষ্ট সীমায় পৌঁছালে রিকার্শন থামতে হবে।"
+    },
+    {
+      "en": "Cast growing paths wide enough in the anchor.",
+      "bn": "পথের স্ট্রিং বড় হলে শুরুর অংশেই যথেষ্ট চওড়া টাইপে কাস্ট করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Trace the mentoring walk from 11 with children 12 and 14, and grandchild 13 under 12.",
+      "marks": 6,
+      "answerHtml": "<p>The anchor emits 11 at depth 0. The first recursive round uses 11 to find 12 and 14 at depth 1. The next round uses those newly produced rows and finds 13 at depth 2. No child refers to 13, so the following round is empty and recursion ends. Final ORDER BY controls presentation independently of evaluation order.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Does UNION DISTINCT always stop recursion if the CTE also returns depth? Explain using a two-node cycle.",
+      "marks": 8,
+      "answerHtml": "<p>No. The pairs (11,0), (12,1), (11,2), (12,3) are all different complete rows. Deduplication does not recognize that the teacher was already visited at another depth. Track visited identifiers in a path or use an appropriate identity-only recursion, and retain a deliberate depth bound.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Use an enrolled CTE containing distinct registered student ids. Return registered ids without results. Then remove all results in a transaction and repeat before rollback.",
+      "marks": 8,
+      "answerHtml": "<p>Define enrolled as the distinct student identifiers in enrollments. Select its identifiers with no matching results through NOT EXISTS and order by identifier. Initially the answer is 107. After deleting results in a transaction, repeat the WITH definition and report all seven registered students. Roll back to restore marks.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "MySQL Reference Manual: Common Table Expressions",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/with.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

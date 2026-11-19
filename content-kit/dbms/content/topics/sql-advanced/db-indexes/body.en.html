@@ -1,0 +1,61 @@
+<h2 id="introduction">Add a route to the rows you need</h2>
+<p class="lead">Imagine finding a student in a thick register. Reading every page works, but a name directory can take you close to the right page. A database index plays a similar role. It gives the server another way to locate rows without promising that every lookup will be faster.</p>
+<p>An <dfn>index</dfn> is an auxiliary data structure maintained alongside table data. A B-tree index keeps searchable key values in order. The server can follow that structure to an equality match or a range. The saved search work must outweigh traversal, storage and row-fetching costs.</p>
+<p>The shared datasets are deliberately small enough to inspect by hand. Their timings cannot demonstrate production-scale speedups. Use them to learn index declarations and plan vocabulary. Judge performance on representative data sizes and realistic query patterns, including writes and concurrent work.</p>
+<p>Keep correctness separate from access paths. Adding or removing a normal secondary index should leave the result membership unchanged. A missing ORDER BY can make the printed order change, but that is an ordering defect in the query rather than an index changing the meaning of its predicate.</p>
+<h2 id="syntax">Build the key in a useful order</h2>
+<p>CREATE INDEX names an index and lists its key columns in order. A <code>composite index</code> contains more than one key part. For <code>(department_id, student_name)</code>, entries are ordered first by department, then by student name within each department. Reversing those columns creates a different access path.</p>
+<p>The ordinary B-tree lookup rule begins with the leftmost prefix. An equality on department_id can use the first key part. Equality on department_id and student_name can use both. A name-only condition does not provide that leading department interval, although MySQL may consider scanning, skip-scan access where applicable, or another index.</p>
+<p>Range conditions affect later key use. With <code>(department_id, admitted_on, student_id)</code>, one department equality followed by an admission-date range describes a clear interval. Later columns may help filtering, covering or ordering, but they do not necessarily narrow that interval like another leading equality.</p>
+<p>DROP INDEX removes the named secondary structure. It does not erase table rows. Be careful around indexes required for constraints: primary keys, unique keys and foreign-key support have additional responsibilities. Do not drop a key merely because one SELECT does not appear to use it.</p>
+<pre><code class="language-sql">CREATE INDEX &lt;index_name&gt;
+ON &lt;table_name&gt; (&lt;leading_equality_column&gt;, &lt;range_column&gt;);
+EXPLAIN &lt;query_to_inspect&gt;;
+DROP INDEX &lt;index_name&gt; ON &lt;table_name&gt;;</code></pre>
+<h2 id="how-it-works">Read a plan as a choice, not a stopwatch</h2>
+<p>InnoDB stores table rows in the clustered primary-key structure. A secondary-index entry includes the primary key needed to locate its row. A lookup may therefore visit a secondary tree and then fetch the clustered row. If the index already supplies every requested value, the server may avoid that extra row fetch.</p>
+<p>A <code>covering index</code> is an index containing the values needed by a particular query. Covering is a relationship between an index and a query, not a universal property of the index. Selecting an additional unindexed column can remove that benefit. Wider indexes also take more space and maintenance work.</p>
+<p>EXPLAIN shows the optimizer&#x27;s proposed execution plan. Traditional output includes type, possible_keys, key, key_len, ref, rows, filtered and Extra. The primary-key example has one fixed identifier and uses const access. The following SELECT confirms the actual row, while EXPLAIN itself reports planning information.</p>
+<p>The type column describes access, such as const, ref, range, index or ALL. ALL means a table scan; index can mean a full index scan. Neither label alone proves a bad plan. A six-row products table may be cheaper to scan than to access through several secondary lookups.</p>
+<p>possible_keys lists candidate indexes considered useful for locating rows. key names the chosen index, which can differ from what you expected. rows is an estimate of examined rows, not the exact output count. filtered estimates the percentage remaining after conditions. Statistics and server versions can change these estimates.</p>
+<p>Extra adds clues about work such as Using where, Using index or Using filesort. Using index commonly indicates covering access. Using filesort names a sorting method, not proof that a disk file was written. A useful explanation connects each label to the query&#x27;s predicates, projection and order.</p>
+<table class="ref">
+<caption>Traditional plan fields are planning evidence</caption>
+<thead><tr><th scope="col">Field</th><th scope="col">Interpretation</th></tr></thead>
+<tbody>
+<tr><td>type</td><td>Chosen access method</td></tr>
+<tr><td>possible_keys</td><td>Candidate lookup indexes</td></tr>
+<tr><td>key</td><td>Selected index</td></tr>
+<tr><td>rows and filtered</td><td>Estimated work and remaining percentage</td></tr>
+<tr><td>Extra</td><td>Additional filtering, covering or sorting details</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Compare access declarations with stable answers</h2>
+<p>The department-name example creates a composite path and returns the CSE names in a deliberate order. The suffix comparison then asks for Rafi with and without the leading department equality. Both queries remain logically valid even though their efficient search options differ.</p>
+<p>The primary-key EXPLAIN is intentionally simple so its structure is easy to read. Its captured columns reflect MySQL 8.4.7. Plans for larger reports can vary with statistics, selectivity, available indexes and optimizer settings. Do not turn a sample estimate into a promise about every installation.</p>
+<h3>Add a department and name access path</h3>
+<p>The leading department equality narrows the range, then names are ordered within it. Result correctness does not depend on the optimizer using this index.</p>
+<div data-example="ex-1"></div>
+<h3>Inspect a stable primary-key lookup</h3>
+<p>The plan uses PRIMARY with const access and one estimated row. EXPLAIN reports a plan; the following SELECT returns Exercise book.</p>
+<div data-example="ex-2"></div>
+<h3>Keep suffix-only filtering correct</h3>
+<p>Both return Rafi. Only the second supplies the leftmost equality of the composite index; the first may need scanning or another access method.</p>
+<div data-example="ex-3"></div>
+<h3>Remove an unnecessary secondary index</h3>
+<p>Desk lamp remains the zero-stock product after the index is dropped. Removing a secondary index changes access choices, not logical answers.</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Avoid indexes that cost more than they save</h2>
+<h3>Low selectivity and write costs</h3>
+<p>An index on a low-selectivity column may return much of the table. Selectivity describes how strongly a condition narrows candidates. A status with only a few common values can still be useful in a suitable composite key, but indexing it alone does not guarantee a worthwhile lookup.</p>
+<p>Extra indexes make writes more expensive. An INSERT adds entries to applicable indexes. DELETE removes them. UPDATE may change index keys as well as row data. These actions consume CPU, buffer space, logging and storage. A report-only experiment can miss the cost paid by every order entry.</p>
+<h3>Expressions and display order need care</h3>
+<p>Functions around indexed columns can prevent a straightforward lookup using an ordinary index. Instead of <code>YEAR(admitted_on) = 2026</code>, consider a half-open date range from 2026-01-01 through before 2027-01-01. That expresses a contiguous interval on the stored date values. Functional indexes are a separate design option with their own rules.</p>
+<p>Another trap is inferring sort order from a successful index scan. The optimizer can choose another path tomorrow. Put ORDER BY in the SELECT when the application needs a sequence. Match tie breakers to the report&#x27;s meaning, rather than relying on an incidental primary-key suffix.</p>
+<h2 id="best-practices">Design for a workload, then measure</h2>
+<p>Start with the most important query predicates and joins. Consider equality columns, range columns, ordering requirements and the returned projection together. Avoid building one index for every column in isolation. Several overlapping indexes can duplicate costs while still missing the useful composite order.</p>
+<p>Compare plans before and after a proposed change on representative data. Record the read benefit and the write cost. EXPLAIN ANALYZE can provide actual execution information, but it runs the query, so use it with appropriate care. Revisit indexes when application queries and data distributions change.</p>
+<h2 id="version-notes">Expect plan details to vary</h2>
+<p>CREATE INDEX, composite B-tree access and traditional EXPLAIN are available throughout MySQL 8.0 and 8.4. EXPLAIN ANALYZE arrived in 8.0.18. The shared tables additionally need CHECK enforcement from 8.0.16. Cost estimates and newer optimizer strategies are version-sensitive, even when the logical answer is unchanged.</p>
+<h2 id="summary">Pay for access paths that serve real work</h2>
+<p>A good index follows useful leading keys and saves enough lookup work to justify its maintenance. Read the chosen plan, inspect estimates and measure representative queries. Next, <a href="topic:db-window-functions">window functions</a> add ranking and cumulative calculations while retaining individual result rows.</p>

@@ -1,0 +1,69 @@
+<h2 id="introduction">Join relationships, not merely tables</h2>
+<p class="lead">Imagine a department noticeboard beside a student register. One lists department codes; the other lists each student&#x27;s department identifier. A join lets you read those records together without storing the department name in every student row. You decide which pairs belong together and what to do when one side has no match.</p>
+<p>A <dfn>join</dfn> combines rows according to a condition. The most familiar condition compares a foreign key with its referenced key. That gives each student the correct department. However, a join can compare other columns too. SQL does not automatically choose a relationship because two columns have similar names.</p>
+<p>Before writing a join, say what one output row means. It might mean one student, one enrollment, or one payment. This decision is called the result&#x27;s grain. A report can have correct syntax and still answer the wrong question when its grain changes unexpectedly.</p>
+<p>The university data contains eight students and twelve enrollments. Fahim, student 108, has no enrollment. Sadia, student 107, has an enrollment without a result. These two cases help you see the difference between preserving people and preserving recorded activity.</p>
+<h2 id="syntax">Choose the pair rule and the preserved side</h2>
+<p>An <code>INNER JOIN</code> returns pairs whose ON condition is true. A <code>LEFT JOIN</code> also keeps each left row that finds no partner. For that unmatched row, columns from the right side become NULL. A <code>RIGHT JOIN</code> gives the same protection to the right input instead.</p>
+<p>Read <code>students AS s LEFT JOIN enrollments AS e ON e.student_id = s.student_id</code> from left to right. Students is the population you promise to retain. Enrollments supplies optional matches. The ON condition identifies registrations belonging to the current student. Short aliases make column ownership visible without repeatedly writing long table names.</p>
+<p>A <code>CROSS JOIN</code> creates every possible pair. Eight students crossed with six sections produce 48 choices, including registrations that never happened. A <code>self join</code> reads one table under two aliases. The aliases represent separate roles, such as the first and second classmate.</p>
+<p>MySQL has no native FULL OUTER JOIN. Combine a left join with a second branch containing only unmatched right rows. Use UNION ALL so legitimate duplicate rows survive. The second branch must test a non-null key from the left input. Testing an optional descriptive column could incorrectly classify a matched row as missing.</p>
+<pre><code class="language-sql">SELECT &lt;columns&gt;
+FROM &lt;left_table&gt; AS l
+LEFT JOIN &lt;right_table&gt; AS r ON &lt;matching_condition&gt;
+WHERE &lt;result_filter&gt;
+ORDER BY &lt;display_keys&gt;;</code></pre>
+<h2 id="how-it-works">Trace pairs before counting them</h2>
+<p>Start with Ayesha, student 101. She matches three enrollment rows, so a student-enrollment join emits three pairs. Tanvir also emits three. Nabila emits two, and students 104 through 107 emit one each. An inner join stops there, producing twelve rows.</p>
+<p>Now apply the left-join rule to Fahim. His match list is empty, so SQL emits one padded row with NULL enrollment columns. The left join therefore contains thirteen rows. It has eight distinct student identifiers, but thirteen student-enrollment rows. Neither count is automatically the number your report needs.</p>
+<p>When you group by student, <code>COUNT(e.section_id)</code> counts actual registrations because section_id cannot be NULL in enrollments. <code>COUNT(*)</code> counts the padded row too. For Fahim those expressions return zero and one respectively. Always connect an aggregate to the object it is supposed to count.</p>
+<p>The relationship between enrollments and results uses two columns. Student 101 has several results, and section 31 has several students. Joining on student_id alone mixes sections; joining on section_id alone mixes students. Compare both student_id and section_id to preserve the composite enrollment identity.</p>
+<p>A three-table join follows a chain. An enrollment names a section, and that section names a course. Department membership cannot replace this path. A CSE student can take MAT 101, so matching student and course departments would lose real registrations and invent others.</p>
+<p>For self joins, decide whether pair direction matters. If Ayesha and Tanvir are one unordered classmate pair, require the first identifier to be smaller. Equality would pair each student with themselves. Inequality alone would include both Ayesha-Tanvir and Tanvir-Ayesha.</p>
+<table class="ref">
+<caption>Registration pairs for selected students</caption>
+<thead><tr><th scope="col">Student</th><th scope="col">Actual enrollments</th><th scope="col">INNER rows</th><th scope="col">LEFT rows</th></tr></thead>
+<tbody>
+<tr><td>101 Ayesha</td><td>3</td><td>3</td><td>3</td></tr>
+<tr><td>107 Sadia</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>108 Fahim</td><td>0</td><td>0</td><td>1 padded row</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Inspect preserved rows and actual pairs</h2>
+<p>The department example begins with a guaranteed parent match. Later reports deliberately keep absent enrollments and missing results. Compare the columns that become NULL with the columns copied from the preserved input.</p>
+<p>The full-join example uses the real enrollment-result relationship. Its right-only branch is empty because the foreign key prevents an orphan result. An empty branch still teaches an important distinction: query semantics allow right-only rows, while the current schema rules out that particular data state.</p>
+<h3>Students with department codes</h3>
+<p>All eight students have a matching department. The foreign key explains that coverage; the join itself does not invent departments.</p>
+<div data-example="ex-1"></div>
+<h3>Include students without enrollments</h3>
+<p>Fahim, student 108, remains with zero enrollments. COUNT(*) would count his padded row as one.</p>
+<div data-example="ex-2"></div>
+<h3>Keep the same report using RIGHT JOIN</h3>
+<p>The right side is students. Sadia has section 35; Fahim has a NULL section because no enrollment matches.</p>
+<div data-example="ex-3"></div>
+<h3>Build pairs and compare classmates</h3>
+<p>The self join returns the MAT pair 104 and 108 once. The cross join makes two planning combinations without claiming course ownership.</p>
+<div data-example="ex-4"></div>
+<h3>Full outer join of enrollments and results</h3>
+<p>The anti-match branch is empty because every result references an enrollment. The pending enrollment for 107 still appears with NULL marks.</p>
+<div data-example="ex-5"></div>
+<h3>Follow enrollments through sections to courses</h3>
+<p>Ayesha takes CSE 212, CSE 213 and MAT 101. Section identity connects the enrollment to the correct course.</p>
+<div data-example="ex-6"></div>
+<h3>Compare match filtering with result filtering</h3>
+<p>ON preserves students 106, 107 and 108 with NULL marks. Moving the marks condition into WHERE removes all three.</p>
+<div data-example="ex-7"></div>
+<h2 id="common-mistakes">Locate filters at the right stage</h2>
+<h3>An outer filter can remove preserved rows</h3>
+<p>A condition in ON decides whether two rows match. A condition in WHERE filters the joined rows afterward. For an inner join, moving an ordinary filter between these locations often preserves the result. For an outer join, it can remove the very rows you meant to protect.</p>
+<p>Suppose you need every student, with any marks of at least 80 beside their name. Put the marks condition in ON. Students with no such result receive NULL result columns. If you put <code>r.marks &gt;= 80</code> in WHERE, those padded rows fail because the comparison is unknown. The report then lists only students with high marks.</p>
+<h3>Joining two child lists multiplies amounts</h3>
+<p>Another common error is multiplying money. Order 202 has two items and two payments. Joining both child tables directly to orders makes four combinations. Each item amount and each payment amount appears twice. Adding those repeated amounts doubles both totals even though the join conditions are individually correct.</p>
+<p>Repair that report by summarising each child separately to one row per order. Then join the summaries. Do not use SUM(DISTINCT amount) as a general repair: two genuine payments may have the same amount and both should count. The issue is repeated row identity, not repeated numeric value.</p>
+<h2 id="best-practices">Make relationship assumptions visible</h2>
+<p>Write explicit ON conditions and qualify shared column names. Prefer ordinary JOIN syntax over NATURAL JOIN, which can silently gain new matching columns after schema changes. Select only the columns your report promises so students and reviewers can inspect its grain.</p>
+<p>Estimate the expected count before running a complicated report. Ask whether each new relationship is one-to-one, one-to-many or optional. If adding a table unexpectedly increases the row count, examine its matches before adding DISTINCT. Deduplication can hide a wrong condition instead of fixing it.</p>
+<h2 id="version-notes">MySQL outer-join limits</h2>
+<p>These joins work on MySQL 8.0 and 8.4. FULL OUTER JOIN still needs an emulation. The shared tables additionally rely on CHECK enforcement from MySQL 8.0.16. An ORDER BY on the complete result controls display order; index order or branch order is not a substitute.</p>
+<h2 id="summary">Keep the report population explicit</h2>
+<p>Choose the preserved population, define the matching key, and track the number of partners per row. That makes missing data and duplicate totals easier to explain. Next, use <a href="topic:db-subqueries">subqueries</a> when your question asks for a comparison, membership decision or existence test rather than every matching pair.</p>
