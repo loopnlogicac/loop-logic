@@ -1,3 +1,73 @@
+# Batch 3 — Maths You Can See
+
+Package `machine-learning-tutorial` is now **0.3.0**, format 1.1. This delivery adds all ten `math-intuition` topics in curriculum order:
+
+1. `ml-points-and-vectors` — coordinate positions, arrow addition/scaling, higher dimensions and NumPy.
+2. `ml-distance` — Euclidean/Manhattan routes, feature similarity and unit-sensitive rankings.
+3. `ml-mean-spread` — mean, median, modes, range, variance, standard deviation, outliers and pandas `describe()`.
+4. `ml-lines-and-slopes` — slope/intercept, query predictions, signed residuals and a preview of fitting on held-out invented study data.
+5. `ml-functions-curves` — line, square, exponential, natural logarithm, sigmoid and domain-aware plotting.
+6. `ml-probability` — outcomes/events, counting, observed frequencies, the law of large numbers and seeded NumPy coin/die experiments.
+7. `ml-conditional-probability` — changed denominators, independence, Bayes, medical-test base rates and an SMS clue count.
+8. `ml-slopes-and-minimums` — local change ratios, derivatives, gradient steps, stability, partial slopes and stationary points.
+9. `ml-matrices` — shape, row dot products, `X @ w`, transpose and feature/weight alignment.
+10. `ml-math-practice-sheet` — six printable picture warm-ups, paper numericals, two code-reading questions, coding tasks, discussion and an answers guide.
+
+The nine lessons have original stories, a picture/table before formulas, 5–10-row paper examples where applicable, an unplugged activity, runnable code and optional deeper maths. English lesson bodies meet their level's full depth target. Required Bangla titles, summaries, key points, figure captions and key lab notes follow `BANGLA_STYLE.md`. Complete Bangla bodies remain present for all nine Module 1 topics.
+
+## Labs and numerical conventions
+
+All nine prescribed labs are delivered with their required panels, adjustable inputs, bilingual explanatory notes, three presets and three explicit checks:
+
+- `vector-play`: two student arrows, head-to-tail addition and positive/zero/negative scaling; first preset sum (3,4), scaled (6,8).
+- `distance-explorer`: student endpoints, signed changes, labelled straight/block segments; default distances 5 and 7.
+- `mean-and-spread`: editable observations plus an outlier slider, mean/median markers and squared-gap bars; default mean 3.333, median 3, population variance 1.889, standard deviation 1.374.
+- `line-explorer`: slope/intercept/query sliders and student points, actual vertical residuals; default query 13, MSE 0.4. It evaluates chosen parameters and does not claim to fit them.
+- `curve-shapes`: five real functions sampled on their valid domains, positive query slider; default outputs 5,4,7.389,0.693,0.881.
+- `coin-flips`: probability/trial/seed controls and up to 500 actual simulated tosses; seed 7 at p=0.5 gives 52 heads in 100 trials, frequency 0.52. Show every early toss, then every fifth and the final toss, explicitly narrated.
+- `bayes-table`: expected counts for 1000 people; default TP=9, FP=99, positives=108, posterior 0.083. Fractional cells are explicitly expected counts; no early rounding to people. Sensitivity is at least 0.1 and the ill count at least one, ensuring a nonzero positive denominator in the interactive lab; coding tasks also handle undefined denominators.
+- `roll-to-the-bottom`: exact gradient updates on `(x-1)^2`, including a diverging learning rate 1.25; default final x=1.001 and displayed cost=0 after twelve updates. The chart point's x and cost coordinates update in the same operation. Rounded zero is explicitly distinguished from exact convergence.
+- `matrix-vector`: student rows and two weights, matching cells highlighted before each product, all outputs filled; default outputs 4,7,8,2,8, total 29.
+
+These are exact mathematical demonstrations, with no hidden approximate estimator solver. Curve drawing uses finite samples; the coin generator is an explicitly specified teaching LCG, not a physical randomness test. Population variance divides by n, while pandas' default sample standard deviation divides by n-1. These distinctions are taught in the relevant bodies and notes.
+
+Each default lab result agrees numerically with **both** `ex-1` (explicit arithmetic) and `ex-2` (NumPy), and its first check proves the stated result. `codeExample` links to `ex-1`. Mathematical primitives use their appropriate NumPy counterparts rather than inventing scikit-learn estimator APIs; scikit-learn additionally verifies distances and previews a fitted straight line. Course-data examples use the existing fruit, study and SMS collections. The separate NumPy Generator experiment intentionally uses a different seeded stream from the lab and explains this distinction.
+
+## Questions and pictures
+
+The module adds 28 runnable examples, 42 practice items (including 20 coding tasks), 106 quiz items with **29 executed output questions**, 28 picture questions and 37 exam questions with worked answers. Correct answer positions rotate. The practice sheet uses its curriculum override of two output questions.
+
+`shared/make_math_figures.py` computes 22 panel figures and six worksheet SVGs from actual arrays, function evaluations, the seeded coin recurrence and gradient updates. The six printable images exactly match the first six worksheet quiz panels, carry meaningful alt text in the body, and can be regenerated. No internet data or additional runtime packages are used.
+
+## Earlier-module Bangla fixes
+
+Module 1's eight warnings are resolved in context: মেশিন for machine, ডেটাসেট for collections of cards/data, and ডেটা rather than object-language wording about examples. Dataset size phrases explicitly refer to the number of examples. Common technical terms in Bangla prose now consistently use মডেল, ডেটা, ফিচার, লেবেল, ট্রেনিং and টেস্ট. The three lab placements, section ids, calculations and English lessons are preserved. The earlier figure builder/catalogue and affected worksheet SVG remain consistent with the revised Bangla captions. The cumulative content audit now expects version 0.3.0.
+
+## Verification
+
+From `content-kit/`, on Python 3.12.14, NumPy 2.3.5, pandas 2.2.3, scikit-learn 1.8.0 and Matplotlib 3.10.8:
+
+```sh
+python3 -m pip install "numpy>=2.0" "pandas>=2.2" "scikit-learn>=1.5" "matplotlib>=3.8"
+python3 -I -X utf8 machine-learning/content/shared/make_math_figures.py
+python3 -I -X utf8 machine-learning/content/shared/verify_math_module.py
+python3 -I -X utf8 machine-learning/content/shared/verify_content.py
+python3 -I -X utf8 machine-learning/content/shared/verify_python_module.py
+node tools/check.mjs machine-learning/content --require-packages --report machine-learning/content/CHECK_REPORT.txt
+```
+
+The installation command completed with all four minimum versions satisfied. Writable temporary `MPLCONFIGDIR` and `XDG_CACHE_HOME` directories were supplied for headless plotting in this read-only-home environment; course programs do not depend on those particular paths.
+
+The new independent audit checks **369 traces**: all presets/checks plus 35 seeded input combinations per lab. It compares numeric results against independent NumPy calculations (and a closed-form gradient recurrence), verifies drawn gaps, curves, counts, row outputs and atomic position/cost updates, and checks input preservation, pure deterministic replay and 20–400-step preset lengths. It executes all 28 new saved examples and all 29 output questions, checks package declarations and lesson layers, and verifies the 28 figure questions and six SVGs. Coding solutions and their edge cases are executed by the required checker.
+
+All six shared CSV files were regenerated twice and remained byte-identical. The Module 1 audit, its 156-trace lab audit and references pass; the Module 2 audit still passes all 110 broadcasting traces and figure/worksheet checks. All new `.out` files were captured from real successful runs. `git diff --check` passes. All six worksheet SVGs were rasterised with Inkscape and visually inspected together for labels, values and clipping.
+
+Final required checker result: **0 error(s), 0 warning(s); RESULT: READY FOR IMPORT**. It checks all 27 cumulative topics and 13 labs. Only files under `content-kit/machine-learning/content/` change.
+
+No curriculum points are omitted, no curriculum changes are proposed and there are no open implementation questions. Editorial review should focus on natural Bangla, the child-to-university progression, and the explicit limits of the invented datasets and toy medical probabilities. Review status remains `draft` for human editorial review. Python syntax supports 3.10+; actual runs used the recorded 3.12 toolchain and compatible installed package versions.
+
+---
+
 # Machine Learning delivery notes
 
 Current package: `machine-learning-tutorial`, version `0.2.0`, format `1.1`.

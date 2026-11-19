@@ -1,0 +1,54 @@
+<h2 id="introduction">One price card for every shopping basket</h2>
+<div class="callout story"><p>Mina records two kinds of fruit in five pretend shopping baskets. Nana writes one price for each kind. Tuktuk starts multiplying every basket by a fresh copy of the same price card. Rafi lines the baskets up in a table. The repeated calculation becomes visible: read a row, match its two prices, multiply and add.</p></div>
+<p>A matrix is a rectangular table of numbers. In machine learning, rows commonly represent examples and columns represent features. Multiplying that table by a matching weight vector produces one combined score per example.</p>
+<p>You will do each row calculation by hand, read its dimensions, use NumPy's matrix operator and understand a transpose. The arithmetic is familiar multiplication and addition; the new challenge is keeping positions and meanings aligned.</p>
+
+<h2 id="intuition">Rows meet the same weight card</h2>
+<p>A <dfn>matrix</dfn> is a rectangular numeric table. Its <dfn>shape</dfn> gives row count and column count in that order. A <dfn>dot product</dfn> multiplies matching entries of two equal-length vectors and adds their products.</p>
+<table class="ref"><caption>Five example rows, each with two numeric features</caption><thead><tr><th scope="col">Row</th><th scope="col">Feature 1</th><th scope="col">Feature 2</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>2</td></tr><tr><td>2</td><td>3</td><td>1</td></tr><tr><td>3</td><td>2</td><td>4</td></tr><tr><td>4</td><td>0</td><td>2</td></tr><tr><td>5</td><td>4</td><td>0</td></tr></tbody></table>
+<p>Use weights two for the first column and one for the second. Every row receives that same weight pair. If the table represented shopping counts and prices, each output would be the basket's total price. For fruit measurements, these are only declared toy score weights.</p>
+<div data-lab="matrix-vector"></div>
+<p>The lab turns clicked point coordinates into rows. It highlights one feature cell and its matching weight, then adds their product to that row's output. The original table and weights remain unchanged. A highlighted multiplication is not an edit to the data.</p>
+
+<h2 id="how-it-works">One dot product per example</h2>
+<p>Name the table X and weights w. X has shape (5,2), meaning five rows and two columns. w has two entries. The matrix-vector product Xw takes one dot product between each row and w.</p>
+<p>For row one, multiply 1×2 and 2×1, then add: four. Row two gives 3×2+1×1=7. Row three gives 2×2+4×1=8. Row four gives 0×2+2×1=2. Row five gives 4×2+0×1=8. The output vector is (4,7,8,2,8), with total twenty-nine.</p>
+<pre class="diagram">X = rows of feature pairs; w = two weights
+for each row i:
+    output[i] = 0
+    for each column j: output[i] += X[i,j] * w[j]
+sum the output entries</pre>
+<p>The number of feature columns must equal the number of weights. With two feature columns and three weights, the matching rule is incomplete: which feature should multiply the extra weight? NumPy raises a dimension error rather than inventing a pairing.</p>
+<p>A transpose swaps rows and columns. For the first three rows, the original table is [[1,2],[3,1],[2,4]]. Its transpose is [[1,3,2],[2,1,4]]. The shape changes from (3,2) to (2,3). The entries are not sorted or otherwise changed; their two index roles are exchanged.</p>
+<p>NumPy writes a transpose as <code>X.T</code> and a matrix product as <code>X @ w</code>. In contrast, <code>X * w</code> broadcasts the two weights across columns and leaves a (5,2) array of products. Summing those products across columns would recover the five dot products.</p>
+<p>A numeric shape cannot tell you whether a column is size or sweetness. A weight vector in reversed feature order still has length two and passes the dimension check, yet generally gives different scores. Carry the column specification alongside your arrays.</p>
+
+<h2 id="try-it-yourself">Make the highlighted pair on paper</h2>
+<p>Change the first weight in the lab while keeping the second at one. Predict which zero-feature rows cannot change. Set both weights to zero, then make the first weight negative and inspect the sign of each contribution.</p>
+<div class="callout unplugged"><p>Write the five rows on separate cards and the two weights on another card. Align one row above the weights, draw lines between matching positions, and write the two products underneath. Add them on an output card. Slide the weight card to the next row without changing its order.</p></div>
+<p>Rearrange the cards into a transpose: the first feature values become one horizontal row and the second feature values another. Check the corner entries and shape before reading any new multiplication.</p>
+
+<h2 id="examples">Loops and @ agree on the same table</h2>
+<p>The first program uses a row comprehension with explicit products. Its output summary matches the default lab, while the lesson lists each individual row result.</p>
+<div data-example="ex-1"></div>
+<p>The NumPy program replaces the repeated row arithmetic with <code>@</code>. It does not multiply every possible row by every other row. The weights supply one entry for each feature, and each row produces one score.</p>
+<div data-example="ex-2"></div>
+<p>The shared-data program applies the same declared weights to ten fruit rows. These scores are a mathematical illustration, not learned labels or probabilities. It also transposes the table and multiplies by a vector of ones to sum each feature column.</p>
+<div data-example="ex-3"></div>
+<p>Check the shapes printed in the third example. A column total has one entry per feature, whereas a row score has one entry per fruit. Both are products, but they answer different questions because the table orientation differs.</p>
+
+<h2 id="common-mistakes">A valid shape is necessary, not sufficient</h2>
+<ul><li><strong>Using * when you mean @:</strong> decide whether you need individual products or a dot product with a sum.</li><li><strong>Transposing a one-dimensional vector to create a column:</strong> <code>w.T</code> keeps shape (2,). Add an axis with <code>w[:, None]</code> when you need shape (2,1).</li><li><strong>Reading shape backwards:</strong> the first dimension counts rows and the second counts columns for this matrix.</li><li><strong>Swapping feature columns alone:</strong> reorder their weights consistently or restore the documented feature order.</li><li><strong>Interpreting toy weights as trained knowledge:</strong> these weights were chosen to show arithmetic, not fitted to evidence.</li></ul>
+
+<h2 id="going-deeper">Optional: indices explain the compact operator</h2>
+<div class="callout math"><p>For n rows and d features, X is n×d and w is a d-entry vector. Output z has n entries. Its ith entry is z<sub>i</sub>=ΣX<sub>ij</sub>w<sub>j</sub>, where j runs over the d feature columns. This is exactly the inner loop in the pseudocode.</p>
+<p>Computing all row products takes O(nd) multiplications and additions. Storing the input needs O(nd) space; weights and output need O(d+n). Extra working storage can be constant per row if you emit results one at a time.</p>
+<p>In two-dimensional matrix notation, use w with shape d×1 to obtain an n×1 output. NumPy's one-dimensional w instead yields shape (n,). Both can represent the same list of row scores, but later broadcasting operations treat their shapes differently.</p>
+<p>Transpose obeys (AB)ᵀ=BᵀAᵀ for compatible matrices. If A is m×n and B is n×p, AB is m×p. Reversing the transposed factors gives p×n times n×m, hence p×m, which matches the required transpose shape. The reversed order matters because matrix multiplication is not generally commutative.</p>
+<p>A dot product can represent a linear score. Adding one shared intercept b gives z=Xw+b, where scalar b is added to every output. This generalises the earlier single-input line to many features. It still needs a later fitting procedure to choose useful weights.</p>
+<p>When columns have physical units, each weight needs compatible units for the summed terms to make sense. Software can multiply two numeric arrays successfully while producing a meaningless quantity. Document the intended score before assigning interpretation to its output.</p><p>For a concrete order check, take A=[[1,1],[0,1]] and B=[[2,0],[0,1]]. Multiplication gives AB=[[2,1],[0,1]] but BA=[[2,2],[0,1]]. Both products have the same shape, yet their upper-right entries differ. Shape compatibility permits an operation; it does not make changing the order harmless.</p>
+</div>
+
+<h2 id="summary">Match columns, then add products</h2>
+<ul><li>A matrix is a rectangular table of numbers.</li><li>Examples normally occupy rows.</li><li>Feature count must match weight count.</li><li>A row dot product multiplies matching entries and sums.</li><li>Transpose swaps two-dimensional row and column roles.</li><li>NumPy @ differs from element-wise multiplication.</li><li>Names, units and order still need human attention.</li></ul>
+<p>Use these ideas together in the <a href="topic:ml-math-practice-sheet">maths practice sheet</a>.</p>

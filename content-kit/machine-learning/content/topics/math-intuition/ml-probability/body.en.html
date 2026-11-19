@@ -1,0 +1,50 @@
+<h2 id="introduction">Five tails at the cricket toss</h2>
+<div class="callout story"><p>Mina and her friends practise a coin toss before cricket. Five tails appear in a row. Tuktuk declares that heads must come next to repair the record. Nana asks whether the coin remembers the earlier tosses. Mina starts a tally chart. The next result will test Tuktuk's claim, but one result cannot tell them everything about chance.</p></div>
+<p>Probability describes how likely an event is under a stated model. Frequency records what happened in an actual or simulated collection of trials. Their numbers can differ in a short run.</p>
+<p>You will count simple outcomes, follow a running head share and simulate coins and dice with fixed seeds. The goal is to understand a long-run tendency without turning it into a guarantee about the next toss.</p>
+
+<h2 id="intuition">A model of chance beside a tally</h2>
+<p>An <dfn>outcome</dfn> is one possible result of a trial. An <dfn>event</dfn> is a set of outcomes you care about. A <dfn>probability</dfn> is a number from zero to one describing an event's chance under the model.</p>
+<table class="ref"><caption>Six equally likely outcomes on one fair die</caption><thead><tr><th scope="col">Face</th><th scope="col">Even?</th><th scope="col">Above four?</th></tr></thead><tbody><tr><td>1</td><td>No</td><td>No</td></tr><tr><td>2</td><td>Yes</td><td>No</td></tr><tr><td>3</td><td>No</td><td>No</td></tr><tr><td>4</td><td>Yes</td><td>No</td></tr><tr><td>5</td><td>No</td><td>Yes</td></tr><tr><td>6</td><td>Yes</td><td>Yes</td></tr></tbody></table>
+<p>There are three even faces but only two above four. Face six belongs to both events. The table lets you count before using symbols.</p>
+<div data-lab="coin-flips"></div>
+<p>The horizontal reference is the head probability you choose. The moving curve is the running share observed so far. A share can jump early because one extra toss is a large part of a tiny total. Later, that same single toss changes the share less.</p>
+
+<h2 id="how-it-works">Count the relevant outcomes</h2>
+<p>For equally likely elementary outcomes, probability is favourable count divided by total count. The even event on a fair die contains 2,4,6, giving 3/6=0.5. Above four contains 5,6, giving 2/6=1/3. Even and above four contains only six, giving 1/6.</p>
+<p>For a coin model, let p be the chosen head probability. A simulation produces a number u from zero inclusive to one exclusive. Count a head when u&lt;p. With p=0 no draw qualifies; with p=1 every draw qualifies. A fair coin uses p=0.5.</p>
+<p>After t tosses, running frequency is heads/t. The lab starts with integer seed seven and uses an explicit pseudorandom recurrence. That recurrence makes this illustration reproducible. It does not claim to be a cryptographic generator or a physical source of independent randomness.</p>
+<pre class="diagram">state = seed
+for t from 1 to trials:
+    state = (1664525*state + 1013904223) mod 2^32
+    u = state / 2^32
+    heads += 1 if u &lt; probability else 0
+    plot heads/t against the probability</pre>
+<p>In the first preset, one hundred tosses give fifty-two heads and frequency 0.52. The model probability stays 0.5. Do not change the reference line to the observed share and call that proof of the true probability.</p>
+<p>The law of large numbers says that independent repeated trials with the same probability have a sample share that approaches that probability in the long run. It does not say every next trial reduces the current gap.</p>
+
+<h2 id="try-it-yourself">Keep a paper tally</h2>
+<p>Run the lab with probability zero and then one. Predict both entire paths. Return to one half and change the seed while preserving the trial count. The target is unchanged, although the observed sequence changes.</p>
+<div class="callout unplugged"><p>Toss a classroom coin twenty times and record every result. Update the head share after each toss using a tally. Combine several classmates' records and compare the combined share with each short record. Discuss whether tossing style or the surface might challenge the fair-independent-coin assumption.</p></div>
+<p>Try a biased probability of 0.8. A long run should tend towards that value, not towards one half. Fairness is an assumption about a particular model, not a requirement imposed on every coin simulation.</p>
+
+<h2 id="examples">Reproduce a sequence without confusing generators</h2>
+<p>The first program uses exactly the lab recurrence. It prints the head count and running share at the final checkpoint.</p>
+<div data-example="ex-1"></div>
+<p>The NumPy version deliberately retains that recurrence while storing its draws in an array. Merely using the same seed with a different generator would not reproduce the same sequence.</p>
+<div data-example="ex-2"></div>
+<p>The third program uses NumPy's recommended Generator for a separate coin and die experiment. It sets the seed once, then draws successive samples. Checkpoints use prefixes of the same long sequences, so their comparisons describe one growing experiment.</p>
+<div data-example="ex-3"></div>
+<p>The upper endpoint of <code>integers(1,7)</code> is excluded, giving die faces one through six. Every printed share is rounded; the underlying counts remain integers.</p>
+
+<h2 id="common-mistakes">Chance does not repay a debt</h2>
+<ul><li><strong>Expecting a compensating head after tails:</strong> independent trials keep the same next-toss probability.</li><li><strong>Equating frequency with truth:</strong> a finite observed share is an estimate or illustration, not the underlying model parameter.</li><li><strong>Counting unequal outcomes as equal:</strong> favourable-count ratios require equal elementary chances.</li><li><strong>Resetting a seed inside the loop:</strong> that repeats the start instead of producing successive draws. Initialise once.</li><li><strong>Demanding a smooth path:</strong> inspect the long-run tendency and allow short-run fluctuations.</li></ul>
+
+<h2 id="going-deeper">Optional: indicators and sample-share variation</h2>
+<div class="callout deeper"><p>Let H<sub>i</sub> be one for heads and zero for tails on trial i. The observed share is p̂=(1/n)ΣH<sub>i</sub>. Under independent identical Bernoulli trials, its expectation is p and its variance is p(1-p)/n.</p>
+<p>The standard deviation of that share therefore shrinks like 1/sqrt(n). Multiplying the trial count by four halves this typical fluctuation scale; it does not force one particular run to have exactly half its earlier error.</p>
+<p>A finite deterministic generator mimics randomness for teaching and numerical work. The probability theorem refers to the ideal trial assumptions. Reproducible code helps you inspect an example of those ideas, while empirical checks still matter for actual coins and data collection.</p></div>
+
+<h2 id="summary">Separate the model from the observed run</h2>
+<ul><li>Events contain outcomes.</li><li>Probabilities range from zero to one.</li><li>Counting ratios need equally likely elementary outcomes.</li><li>Frequency is an observed proportion.</li><li>Long-run convergence can include short-run reversals.</li><li>Seeds reproduce a specified generator's sequence.</li></ul>
+<p>Next, change the relevant group in <a href="topic:ml-conditional-probability">Conditional Probability and Bayes' Rule</a>.</p>
