@@ -98,3 +98,22 @@ Work inside the folder content-kit/. Re-read CODEX_TASK_2.md (and CODEX_TASK_ML.
 | DBMS | `dbms/content` | 2–3 | `--require-sql` (start MySQL first) |
 | Compiler Design | `compiler-design/content` | 2–3 | |
 | Machine Learning | `machine-learning/content` | 2–11 (see `CODEX_TASK_ML.md` §8) | `--require-packages` |
+
+---
+
+## Round 2 (19 Nov 2026): next batch of every subject
+
+Batch 1 of every subject (and C Batch 2) is merged and live on the site. Start each message as a **new task with the `loopnlogicac/loop-logic` repo attached**, one subject per task. These can all run at the same time.
+
+Review note for every subject (it is also in the messages): writing in Batch 1 was good. Avoid sentences that describe the lesson's own placeholders or templates (for example "The body descriptions above stand for your statements"). Show a real line of code instead.
+
+| Task | Subject | Batch | Modules |
+|---|---|---|---|
+| R2-A | C | 3 | functions, arrays |
+| R2-B | Data Structures | 2 | stacks, queues (7 labs) |
+| R2-C | Algorithms | 2 | divide-conquer, greedy, dynamic-programming (10 labs) |
+| R2-D | OOP (Java) | 2 | inheritance-polymorphism, design |
+| R2-E | Python | 2 | data-structures, functions |
+| R2-F | DBMS | 1 | foundations, er-modelling, relational-model, sql-basics + the 3 datasets (task F above) |
+| R2-G | Compiler Design | 2 | syntax-analysis |
+| R2-H | Machine Learning | 2 | python-for-ml (1 lab) |
