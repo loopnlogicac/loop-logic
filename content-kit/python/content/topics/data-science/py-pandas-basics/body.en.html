@@ -1,0 +1,57 @@
+<h2 id="introduction">Ask questions about labeled tables</h2>
+<p class="lead">A marks sheet contains more than numbers. Each row belongs to a student, and each column has a meaning. pandas provides a <dfn>DataFrame</dfn>, a table with row labels and named columns. You can select students, combine categories and summarize measurements while keeping those labels nearby.</p>
+<p>A <dfn>Series</dfn> is one labeled collection of values, like a column with its own index. A DataFrame combines columns that may have different types. Rolls may be strings, marks may be numbers, and attendance may be boolean. This makes pandas useful for CSV files that do not fit one uniform numerical matrix.</p>
+<p>Install pandas with python -m pip install pandas in your project environment, then import pandas as pd. If your work only needs a small dictionary, pandas may be unnecessary. Use the library when labeled selection and table operations make the question clearer.</p>
+<h2 id="syntax">Construct columns and select with intent</h2>
+<p>pd.DataFrame accepts a dictionary whose keys become column names. The column lists must have matching lengths. Unless you supply an index, rows receive labels starting at zero. Those default labels resemble positions, but labels and positions remain different ideas.</p>
+<pre><code class="language-python">frame = pd.DataFrame({"roll": [11, 12], "mark": [39, 80]})
+mask = frame["mark"] &gt;= 40
+passed = frame.loc[mask, ["roll", "mark"]]
+first_row = frame.iloc[0]</code></pre>
+<p>frame["mark"] selects a Series. frame[["mark"]] selects a one-column DataFrame. That extra list preserves a table shape. Use loc for labels and iloc for integer positions. After filtering or sorting, the index may no longer match the visible row positions.</p>
+<p>A label slice with loc includes its final label when present. A position slice with iloc follows Python's excluded stop rule. For an index [10, 20, 30], loc[10:20] selects labels ten and twenty. iloc[0:2] selects the first two positions. Write the selection rule before choosing the accessor.</p>
+<h2 id="how-it-works">Separate alignment, filtering and reduction</h2>
+<p>Series arithmetic aligns entries by index label. If one Series lists quiz then lab and another lists lab then quiz, matching labels still combine. A label missing from one side normally creates a missing result. This differs from adding two NumPy arrays by position.</p>
+<p>A filter first calculates a boolean Series from a column comparison. loc then selects the rows whose mask is true. Combining comparisons requires parenthesized conditions with &amp; or |. Python's and cannot combine whole Series in the intended entry-by-entry way.</p>
+<p>A <dfn>grouped reduction</dfn> collects rows with matching keys and calculates one result for each group. For expenses, groupby("category")["taka"].sum() adds amounts within each category. Choosing the numeric column explicitly prevents unrelated columns from entering the calculation.</p>
+<table class="ref"><caption>Food and travel expenses</caption><thead><tr><th scope="col">Row</th><th scope="col">Category</th><th scope="col">Taka</th></tr></thead><tbody><tr><td>0</td><td>food</td><td>50</td></tr><tr><td>1</td><td>travel</td><td>30</td></tr><tr><td>2</td><td>food</td><td>70</td></tr></tbody></table>
+<p>The food group contains fifty and seventy, producing 120. The travel group contains thirty, producing 30. Sorting the grouped index makes presentation order deliberate. A group total says how much was recorded; it does not prove why that category cost more.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>A DataFrame resembles records with named fields, but columns can carry separate dtypes and missing values. The index is a label system, not a memory address. Do not use a roll label as though it must equal an array offset.</p></div>
+<h2 id="examples">Read, select and summarize real columns</h2>
+<h3>Align a Series by its labels</h3>
+<p>Series arithmetic matches labels, even when their order differs. The label order is selected explicitly before printing.</p>
+<div data-example="ex-1"></div>
+<h3>Filter a labeled marks table</h3>
+<p>loc combines a boolean row condition with named columns. Only the two marks reaching forty are displayed.</p>
+<div data-example="ex-2"></div>
+<h3>Read a real UTF-8 CSV file</h3>
+<p>The program creates a temporary CSV and reads it with explicit column types. The leading zero remains part of each roll label.</p>
+<div data-example="ex-3"></div>
+<h3>Combine expenses by category</h3>
+<p>groupby gathers matching category labels, then sum reduces each group. Sorting makes the category order deliberate.</p>
+<div data-example="ex-4"></div>
+<h3>Describe known marks without guessing missing values</h3>
+<p>describe counts three known marks, and its standard deviation uses the sample definition. The missing mark is counted separately.</p>
+<div data-example="ex-5"></div>
+
+<h2 id="csv-and-missing-values">Decide what the file means</h2>
+<p>pd.read_csv reads a path or an open text stream. The first row normally supplies column names. CSV quoting handles commas inside fields, so splitting every line manually on commas is unsafe. Use the CSV parser and inspect the resulting columns before computing a report.</p>
+<p>Type inference is convenient, but it can mistake an identifier for a number. A roll written as 001 carries formatting that integer one cannot preserve. Give the roll column a string dtype when those characters matter. Explicit numeric dtypes also make unexpected text fail visibly instead of silently changing a column's meaning.</p>
+<p>Check required columns before selecting them. Validate numeric ranges after parsing; a value of 150 may parse as a number while remaining invalid as a percentage mark. For numeric-looking text, pd.to_numeric can reject malformed values. errors="coerce" converts failures to missing values, so count and investigate those conversions if you choose that policy.</p>
+<p>A missing value means no usable observation is available. It does not mean the student scored zero. isna identifies missing entries, count counts known entries, and many numerical reductions skip missing entries. Decide whether to exclude, report or replace unknown values based on the question.</p>
+<p>groupby normally drops rows whose grouping key is missing. Use dropna=False if an unknown-category group belongs in the report. Likewise, an all-missing sum may look like zero under default settings. min_count=1 can keep such a sum missing. State the policy rather than letting a default invent meaning.</p>
+<h2 id="descriptive-statistics">Read describe as several separate measurements</h2>
+<p>For a numeric Series, describe reports count, mean, sample standard deviation, minimum, quartiles and maximum. The median is labeled 50%. Quartiles divide the ordered observations into parts; their values can fall between recorded marks. They summarize distribution rather than identifying specific students.</p>
+<p>The sample standard deviation uses one fewer than the known count as its divisor. With only one known value, that statistic is missing. NumPy's ordinary std instead defaults to a population divisor. If you compare the libraries, align the definition before assuming the numbers disagree.</p>
+<p>Print selected statistics with explicit formatting rather than relying on the full DataFrame display. Decimal precision, column truncation and dtype footers can depend on settings. Looping through chosen labels makes both the question and the displayed values clear. Formatting two decimals should follow the precision meaningful for your report.</p>
+<h2 id="common-mistakes">Keep labels and unknown values visible</h2>
+<h3>Using the first row label as the first position</h3>
+<p>After filtering, label zero may be absent. Use iloc[0] for the first remaining position, and check that the result is not empty before selecting it.</p>
+<h3>Editing through chained selection</h3>
+<p>A chained expression can create unclear assignment behavior across pandas versions. To edit the original, use one direct loc assignment. To edit an independent subset, create it with copy(). Do not depend on whether a temporary object shares storage.</p>
+<h3>Turning every absent mark into zero</h3>
+<p>That replacement lowers averages and changes the question. Report how many marks are known and how many are missing. Only fill values when your domain supplies a justified rule.</p>
+<h2 id="version-notes">Use stable operations across supported releases</h2>
+<p>These examples use established pandas APIs and work with the tested pandas 2.2 release. Package support for Python depends on the pandas release you install. Selection and copy behavior has evolved, so the programs avoid chained assignment and print selected scalar values instead of version-sensitive table representations.</p>
+<h2 id="summary">Keep the labels attached to the question</h2>
+<p>Choose Series for one labeled collection and DataFrame for a table. Read CSV types deliberately, filter with clear masks and report missing values honestly. Next, turn selected measurements into a picture with <a href="topic:py-matplotlib-basics">Matplotlib</a>.</p>

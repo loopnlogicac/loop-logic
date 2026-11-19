@@ -1,0 +1,46 @@
+<h2 id="introduction">Build a small tool with persistent state</h2>
+<p class="lead">An expense tracker combines several Python skills around one useful question: where did the money go? You will build a menu-driven command-line program that adds expenses, summarizes categories and exports CSV. JSON keeps the records between runs. This is a small, local learning project for one user.</p>
+<p>The project uses functions and dictionaries rather than a large class hierarchy. Each function has one responsibility: parsing, validation, storage, aggregation or interaction. That separation lets you check calculations without navigating the menu and check file handling without typing every command again.</p>
+<h2 id="data-model">Keep the smallest useful record</h2>
+<p>Each record has exactly two fields: category and paisa. category is normalized with strip and casefold so Food and food share a group. It must contain one to forty printable characters after normalization. Spaces and commas are allowed, which makes correct CSV quoting necessary.</p>
+<p>paisa is a positive integer from one through 1000000000. The limit corresponds to ten million BDT per expense. Storing the smallest accepted money unit avoids decimal approximation during addition. The display function uses integer division and a two-digit remainder, so 1050 paisa appears as 10.50.</p>
+<p>Amount text accepts digits with an optional one- or two-digit decimal part. Thus 10, 10.5 and 10.50 describe the same amount. Negative values, zero, scientific notation, nonfinite words and fractions of a paisa are rejected. The contract intentionally excludes refunds; supporting them would require a deliberate revision.</p>
+<h2 id="menu-flow">Separate commands from their calculations</h2>
+<p>The menu offers four choices: add, summary, export and quit. Add asks for category and amount, then validates both. Summary groups the stored paisa amounts and displays categories in sorted order. Export writes category and amount_bdt columns to expenses.csv beside the JSON file.</p>
+<p>An unknown choice prints a short message and shows the menu again. End of input exits cleanly, including when an add command is unfinished. Input that has not produced a fully valid record never reaches storage. The program catches expected input and file errors while leaving programming defects visible.</p>
+<p>The default JSON filename is expenses.json in your current folder. You can choose another path with --path, such as python tracker.py --path records.json after saving the full program as tracker.py. The parent folder must already exist. Export replaces the fixed sibling expenses.csv file, so use a dedicated project folder.</p>
+<h2 id="examples">Build from totals to a complete interface</h2>
+<h3>Summarize exact paisa values</h3>
+<p>Ten taka fifty paisa plus nineteen taka seventy-five paisa gives 30.25 BDT. Integer addition keeps every paisa.</p>
+<div data-example="ex-1"></div>
+<h3>Round-trip JSON and quote a CSV category</h3>
+<p>JSON preserves integer paisa. The CSV writer quotes a category containing a comma, so reading it restores one field.</p>
+<div data-example="ex-2"></div>
+<h3>Run the complete menu and persist each addition</h3>
+<p>Add food and travel expenses, read the category summary, export CSV, then quit. The default storage files live in the current folder.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="storage-flow">Validate before replacing the saved record list</h2>
+<p>Startup distinguishes a missing JSON file from an unreadable or invalid one. Missing storage begins with an empty list. Invalid existing storage prints a failure and stops, preserving the existing bytes for investigation. Silently replacing corrupt data with an empty list would hide a problem and risk losing records.</p>
+<p>JSON decoding proves only that the file has valid JSON syntax. validate_records checks that the top-level value is a list, every item is a dictionary, and the key set is exactly the expected pair. It also checks category normalization and exact integer paisa bounds.</p>
+<p>Python's bool is a subclass of int, so isinstance(True, int) is true. A stored true value is not a valid one-paisa expense here. type(paisa) is int enforces the precise field contract. This is a domain-specific reason for exact type checking; most general Python interfaces should accept compatible behavior instead.</p>
+<p>When adding an expense, the program builds candidate = records + [new_record]. It does not append to the live list first. After save_records returns successfully, records is rebound to the candidate. If saving fails, the previous list still drives the current summary.</p>
+<p>save_records creates a temporary file in the destination's own folder. It writes and closes that file before replacing the destination. Creating the temporary file beside the destination avoids a cross-filesystem move in ordinary use. Finally cleanup removes a leftover temporary file if replacement did not complete.</p>
+<p>This pattern reduces exposure to a partially rewritten JSON destination. It does not provide concurrent-writer coordination or a guarantee that every completed write survives sudden power loss. The project does not call fsync or implement transactions. Use a database and a stronger design when those requirements matter.</p>
+<h2 id="csv-export">Use a parser and writer that understand fields</h2>
+<p>The JSON file is the saved application state. CSV is an export for a spreadsheet or another report. Do not treat the two formats as interchangeable by splitting lines or changing the filename extension. Each format has its own parser and quoting rules.</p>
+<p>csv.writer handles a category such as food, campus by quoting the complete field. newline="" lets the CSV module control line endings, and explicit UTF-8 preserves text. The amount_bdt field is a formatted decimal string for a reader; exact integer paisa remains the JSON storage representation.</p>
+<p>An empty tracker can still export the header row. Export failure prints a file-operation message without changing the JSON records. CSV export is a direct write, so a failure could leave a partial CSV. Export can be repeated; it does not replace the authoritative JSON state.</p>
+<h2 id="checking-the-project">Exercise transitions across separate runs</h2>
+<p>Start in an empty project folder. Request a summary and confirm No expenses followed by Total 0.00. Add food for 10.50 and food for 19.75. Their category total must be 30.25, including after quitting and restarting with the same path.</p>
+<p>Try 1.001, zero and a negative amount. Each should be rejected without adding a record. Try an empty category separately; that rejection occurs before an amount is requested. Finally, use a comma-containing category and read the export with csv.reader to confirm its field boundary.</p>
+<p>Copy the JSON into a disposable folder before experimenting with corruption. Replace its list with an object, remove a required key or use true as an amount. Startup should report an error and preserve the file. To investigate a save failure, use a controlled test that makes replacement fail and confirm that Added never appears.</p>
+<h2 id="common-mistakes">Protect the meaning of a successful command</h2>
+<h3>Printing success before persistence completes</h3>
+<p>That message promises data was stored even if the write fails later. Publish the new list and success message only after save_records succeeds.</p>
+<h3>Converting decimal text through float</h3>
+<p>Binary floating-point can approximate a decimal before conversion to paisa. Parse the accepted text with Decimal and enforce at most two decimal places before making an integer amount.</p>
+<h3>Using one broad handler to reset storage</h3>
+<p>A read failure is not evidence that the user wants an empty history. Preserve the original file and report the issue. Only FileNotFoundError selects the empty starting state.</p>
+<h2 id="summary">Keep the project small enough to explain</h2>
+<p>The complete tool joins exact money, validated records, file cleanup and menu interaction. You can extend it with dates or deletion after defining their contracts and tests. Finish the track with <a href="topic:py-interview-questions">Python interview questions</a>, where these design choices become short explanations.</p>
