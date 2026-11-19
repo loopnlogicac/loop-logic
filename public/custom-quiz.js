@@ -9,7 +9,7 @@ async function load() {
   if (!currentUser()) { main.replaceChildren(el('button', { type: 'button', class: 'btn primary', text: L.signIn, onclick: () => showSignIn() })); return; }
   try {
     const d = await api('GET', `/api/custom-quizzes/${encodeURIComponent(id)}?lang=${getLang()}`); const answers = {};
-    const fields = d.questions.map((q) => el('fieldset', { class: 'card' }, el('legend', { text: q.prompt }), ...q.options.map((o, i) => el('label', { class: 'opt' }, el('input', { type: 'radio', name: q.id, required: true, onchange: () => { answers[q.id] = i; } }), el('span', { text: o })))));
+    const fields = d.questions.map((q) => el('fieldset', { class: 'card' }, el('legend', { text: q.prompt }), ...q.options.map((o, i) => el('label', { class: 'opt', style: 'display:flex;align-items:flex-start;gap:8px;margin:10px 0' }, el('input', { type: 'radio', name: q.id, required: true, onchange: () => { answers[q.id] = i; } }), el('span', { text: o })))));
     const submit = el('button', { type: 'submit', class: 'btn primary', text: L.submit }), status = el('div', { role: 'status' });
     const form = el('form', {}, ...fields, submit, status);
     form.onsubmit = async (e) => { e.preventDefault(); if (Object.keys(answers).length !== d.questions.length) { status.textContent = L.pick; return; } submit.disabled = true; try { const r = await api('POST', `/api/custom-quizzes/${encodeURIComponent(id)}/grade`, { answers, lang: getLang() }); status.replaceChildren(el('h2', { text: L.score(r.score, r.total) }), ...d.questions.map((q) => el('p', { text: `${q.prompt}: ${r.results[q.id].correct ? L.correct : L.wrong} — ${r.results[q.id].explanation}` }))); } catch { status.textContent = L.error; } finally { submit.disabled = false; } };
