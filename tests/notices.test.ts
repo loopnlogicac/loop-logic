@@ -62,3 +62,14 @@ test('notices persist through the Supabase generic docs interface', async () => 
   const notices = new NoticeService(new SupabaseStore('https://test.invalid', 'test', fakeFetch as any));
   await notices.emit('a', 'assignment', 'one', { title: 'Quiz' }); assert.equal((await notices.list('a', 'en')).unread, 1); await notices.readAll('a'); assert.equal((await notices.list('a', 'en')).unread, 0);
 });
+
+test('each learner keeps one capped inbox; course titles follow the reader language', async () => {
+  const store = new MemoryStore(), notices = new NoticeService(store);
+  for (let i = 0; i < 105; i++) await notices.emit('many', 'announcement', String(i), { title: `Note ${i}` });
+  const r = await notices.list('many', 'en'); assert.equal(r.notices.length, 100); assert.equal(r.unread, 100);
+  assert.equal((await store.listDocs('inbox')).length, 1);
+  await notices.emit('buyer', 'payment_approved', 'o1', { title: 'C Programming', courseId: 'c-programming' });
+  assert.equal((await notices.list('buyer', 'bn')).notices[0]!.text, 'পেমেন্ট অনুমোদিত: সি প্রোগ্রামিং');
+  await Promise.all([notices.emit('race', 'assignment', 'a', { title: 'A' }), notices.emit('race', 'assignment', 'b', { title: 'B' })]);
+  assert.equal((await notices.list('race', 'en')).unread, 2);
+});
