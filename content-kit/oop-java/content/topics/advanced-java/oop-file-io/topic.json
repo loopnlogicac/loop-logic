@@ -1,0 +1,349 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-file-io",
+  "module": "advanced-java",
+  "order": 8,
+  "kind": "lesson",
+  "title": {
+    "en": "File Input and Output",
+    "bn": "ফাইল ইনপুট আর আউটপুট"
+  },
+  "summary": {
+    "en": "Read and write UTF-8 text, close buffered resources and keep failed loads from corrupting state.",
+    "bn": "UTF-8 ফাইল পড়ো ও লেখো, রিসোর্স বন্ধ করো আর ফাইল পড়া ব্যর্থ হলে আগের ডেটা রাখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "oop-exceptions",
+    "oop-collections"
+  ],
+  "related": [],
+  "keywords": [
+    "File Input and Output",
+    "Java",
+    "file io"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "Path.of and Files.readString/writeString need Java 11; programs use Java 17."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Turn a path into text with a clear encoding"
+    },
+    {
+      "id": "syntax",
+      "title": "Choose a small-file or streaming operation"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow characters through buffers and storage"
+    },
+    {
+      "id": "examples",
+      "title": "Programs to explore"
+    },
+    {
+      "id": "formats",
+      "title": "Define records before splitting lines"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid guessing about paths and successful saves"
+    },
+    {
+      "id": "version-notes",
+      "title": "Use Java 17 file APIs deliberately"
+    },
+    {
+      "id": "summary",
+      "title": "Treat file access as a fallible boundary"
+    }
+  ],
+  "examples": [
+    {
+      "title": "Round-trip Bangla and English text",
+      "explanationHtml": "<p>The temporary file stores UTF-8 bytes. Reading reconstructs the original two lines.</p>\n",
+      "tryNow": false,
+      "id": "ex-1",
+      "file": "examples/ex-1.java",
+      "level": "basic",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "title": "Write buffered lines and read a total",
+      "explanationHtml": "<p>The writer closes before the reader opens. The read loop distinguishes EOF from content.</p>\n",
+      "tryNow": false,
+      "id": "ex-2",
+      "file": "examples/ex-2.java",
+      "level": "intermediate",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "title": "Handle an absent file",
+      "explanationHtml": "<p>The new directory contains no absent.txt file. The handler prints a stable useful message.</p>\n",
+      "tryNow": false,
+      "id": "ex-3",
+      "file": "examples/ex-3.java",
+      "level": "advanced",
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Save marks then read their total",
+      "statementHtml": "<p>Read n (0..30) then n marks (0..100). Save one mark per line to a temporary UTF-8 file, read it back and print the total. Delete the temporary file. No prompt.</p>\n",
+      "hints": [
+        "Close writing before reading."
+      ],
+      "difficulty": "easy",
+      "id": "p-1",
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Append a second word",
+      "statementHtml": "<p>Read two ASCII word tokens. Write the first plus newline, append the second plus newline, and print the file contents. Use a temporary UTF-8 file and delete it. No prompt.</p>\n",
+      "hints": [
+        "Use APPEND only for the second write."
+      ],
+      "difficulty": "medium",
+      "id": "p-2",
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "title": "Protect live records",
+      "statementHtml": "<p>An inventory has ten valid books. Loading another file fails on its third row. What should the live inventory contain afterward?</p>\n",
+      "answerHtml": "<p>Keep the original ten books. Parse into temporary storage and replace only after every row validates. Explain the failed load to the user and preserve its diagnostic cause.</p>\n",
+      "hints": [
+        "A failed load is not a partial successful replacement."
+      ],
+      "difficulty": "hard",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Explain a relative path",
+      "statementHtml": "<p>Why can marks.txt work in an IDE but fail from another terminal directory?</p>\n",
+      "answerHtml": "<p>The path resolves against the current working directory. The IDE and terminal may use different directories. Configure the path or document the required working directory.</p>\n",
+      "hints": [
+        "Path resolution is unrelated to the source file location."
+      ],
+      "difficulty": "medium",
+      "id": "p-4"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "output",
+      "prompt": "Which two lines survive the UTF-8 text round trip?",
+      "code": "import java.nio.file.Path;\nimport java.nio.file.Files;\nimport java.nio.charset.StandardCharsets;\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Path file = Files.createTempFile(\"oop-text-\", \".txt\");\n        try {\n            Files.writeString(file, \"বই\\nCSE\\n\", StandardCharsets.UTF_8);\n            System.out.print(Files.readString(file, StandardCharsets.UTF_8));\n        } finally {\n            Files.deleteIfExists(file);\n        }\n    }\n}\n",
+      "options": [
+        "বই\nCSE",
+        "CSE",
+        "বইCSE"
+      ],
+      "answer": 0,
+      "explanation": "The explicit UTF-8 write and read preserve Bangla and the two newline separators.",
+      "difficulty": "medium",
+      "id": "q-1"
+    },
+    {
+      "type": "output",
+      "prompt": "What total is read through the buffered line loop?",
+      "code": "import java.nio.file.Path;\nimport java.nio.file.Files;\nimport java.nio.charset.StandardCharsets;\nimport java.io.BufferedReader;\nimport java.io.BufferedWriter;\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Path file = Files.createTempFile(\"oop-lines-\", \".txt\");\n        try {\n            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {\n                writer.write(\"10\\n20\\n\");\n            }\n            int total = 0;\n            try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {\n                String line;\n                while ((line = reader.readLine()) != null) { total += Integer.parseInt(line); }\n            }\n            System.out.println(total);\n        } finally {\n            Files.deleteIfExists(file);\n        }\n    }\n}\n",
+      "options": [
+        "1020",
+        "30",
+        "10"
+      ],
+      "answer": 1,
+      "explanation": "readLine removes terminators; parsing adds ten and twenty.",
+      "difficulty": "medium",
+      "id": "q-2"
+    },
+    {
+      "type": "output",
+      "prompt": "What message appears when the deliberately absent file is opened?",
+      "code": "import java.nio.file.Path;\nimport java.nio.file.Files;\nimport java.nio.charset.StandardCharsets;\nimport java.io.IOException;\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Path directory = Files.createTempDirectory(\"oop-missing-\");\n        try {\n            try {\n                Files.readString(directory.resolve(\"absent.txt\"), StandardCharsets.UTF_8);\n            } catch (IOException problem) {\n                System.out.println(\"Cannot read file\");\n            }\n        } finally {\n            Files.deleteIfExists(directory);\n        }\n    }\n}\n",
+      "options": [
+        "null",
+        "absent.txt",
+        "Cannot read file"
+      ],
+      "answer": 2,
+      "explanation": "IOException is handled at the operation boundary rather than treated as empty content.",
+      "difficulty": "medium",
+      "id": "q-3"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does readLine return at end of file?",
+      "options": [
+        "null",
+        "An empty string always",
+        "The last line repeatedly"
+      ],
+      "answer": 0,
+      "explanation": "An empty string is a valid blank line, while null signals EOF.",
+      "difficulty": "medium",
+      "id": "q-4"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does Path.of do by itself?",
+      "options": [
+        "Creates all parent folders",
+        "Describes a location",
+        "Opens the file for reading"
+      ],
+      "answer": 1,
+      "explanation": "File access happens in subsequent operations.",
+      "difficulty": "medium",
+      "id": "q-5"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What is the default effect of Files.writeString on an existing file?",
+      "options": [
+        "Append automatically",
+        "Reject every existing file",
+        "Replace its contents"
+      ],
+      "answer": 2,
+      "explanation": "Choose APPEND explicitly when that is the intended operation.",
+      "difficulty": "medium",
+      "id": "q-6"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why specify UTF-8 in a file format?",
+      "options": [
+        "So bytes have a consistent text interpretation",
+        "To make files uneditable",
+        "To prevent IOException"
+      ],
+      "answer": 0,
+      "explanation": "Encoding controls character representation, not storage reliability.",
+      "difficulty": "medium",
+      "id": "q-7"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why load into a temporary collection first?",
+      "options": [
+        "To force duplicate ids",
+        "To preserve old state if any row is invalid",
+        "To skip validation"
+      ],
+      "answer": 1,
+      "explanation": "Commit validated data only after the full load succeeds.",
+      "difficulty": "medium",
+      "id": "q-8"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which resource policy fits a BufferedReader?",
+      "options": [
+        "Rely on eventual garbage collection",
+        "Close only on successful parsing",
+        "Try-with-resources"
+      ],
+      "answer": 2,
+      "explanation": "The reader must close on both success and failure.",
+      "difficulty": "medium",
+      "id": "q-9"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Does flush guarantee survival after power loss?",
+      "options": [
+        "No",
+        "Yes for every filesystem",
+        "Only for relative paths"
+      ],
+      "answer": 0,
+      "explanation": "Flushing a Java writer is not a full durable-storage guarantee.",
+      "difficulty": "medium",
+      "id": "q-10"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A Path names a location without opening it.",
+      "bn": "Path শুধু ফাইলের ঠিকানা বোঝায়, ফাইল খোলে না।"
+    },
+    {
+      "en": "An explicit encoding makes text portable.",
+      "bn": "এনকোডিং ঠিক করে দিলে অন্য কম্পিউটারেও টেক্সট ঠিকমতো পড়া যায়।"
+    },
+    {
+      "en": "readLine returns null at end of file.",
+      "bn": "ফাইলের শেষ হলে readLine null দেয়।"
+    },
+    {
+      "en": "Close readers and writers on every exit path.",
+      "bn": "কাজ সফল বা ব্যর্থ যাই হোক, রিডার আর রাইটার বন্ধ করো।"
+    },
+    {
+      "en": "Validate a full load before replacing current data.",
+      "bn": "সব ডেটা যাচাই করে তবেই আগের ডেটা বদলাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Compare Files.readString with BufferedReader.",
+      "answerHtml": "<p>readString loads the whole bounded text into memory. BufferedReader processes lines incrementally and must be closed. Both can use explicit UTF-8 and both can fail with IOException.</p>\n",
+      "marks": 4
+    },
+    {
+      "type": "design",
+      "question": "Explain safe replacement of an in-memory inventory after load.",
+      "answerHtml": "<p>Parse all rows into temporary records, reject invalid fields and duplicate ids, then replace the live collection only after the whole operation succeeds.</p>\n",
+      "marks": 4
+    },
+    {
+      "type": "short",
+      "question": "Why does a file writer need closure despite garbage collection?",
+      "answerHtml": "<p>The writer owns an external resource and may buffer data. Closing flushes and releases it promptly; object-memory reclamation is a separate concern.</p>\n",
+      "marks": 4
+    }
+  ],
+  "references": [
+    {
+      "title": "Files API",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Files.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

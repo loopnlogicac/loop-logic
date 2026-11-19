@@ -1,0 +1,54 @@
+<h2 id="introduction">Turn a path into text with a clear encoding</h2>
+<p class="lead">A library inventory should still exist after the program closes. <dfn>File input and output</dfn> moves data between program memory and storage. A Path names a location; a reader or writer performs text operations there. The distinction helps you decide where errors can happen and what needs cleanup.</p>
+<p>A file contains bytes. To interpret those bytes as text, choose an encoding. UTF-8 supports Bangla and English, and stating it explicitly makes a file format portable. A program that works only with an implicit machine default can read the same bytes differently on another computer.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>If you know C FILE pointers, Java readers and writers have a similar acquire-use-close lifecycle. Garbage collection handles object memory, but you must still close open resources. The <a href="topic:oop-exceptions">exception lesson</a> explains try-with-resources, which makes this lifecycle reliable when reading or writing fails.</p></div>
+<h2 id="syntax">Choose a small-file or streaming operation</h2>
+<p>Files.readString reads the entire file as text. Files.writeString writes a String, creating a missing file and replacing an existing file's contents by default. These are convenient for bounded small files. Passing StandardCharsets.UTF_8 makes the encoding contract visible even where a method already defaults to UTF-8.</p>
+<p>Files.newBufferedReader and newBufferedWriter provide streaming text access. A BufferedReader.readLine returns one line without its terminator, or null at end of file. An empty string is a real empty line, not end of file. A BufferedWriter.newLine writes the platform's line separator; explicit newline characters are useful when defining a fixed LF format.</p>
+<p>The Path object does not open the file. Path.of can describe a nonexistent location. Opening the reader or calling readString performs the access and may throw IOException. Do not treat constructing a path or checking exists as proof that the next operation will succeed.</p>
+<pre><code class="language-java">Path path = Path.of(&quot;marks.txt&quot;);
+try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+    String line;
+    while ((line = reader.readLine()) != null) {
+        System.out.println(line);
+    }
+}
+</code></pre>
+<h2 id="how-it-works">Follow characters through buffers and storage</h2>
+<p>Writing a character does not necessarily send it immediately to storage. A buffer groups small writes so the underlying device receives fewer operations. Closing the writer flushes buffered data and releases the resource. flush asks the writer to pass data onward but is not a promise against power loss.</p>
+<p>Read operations consume input from their current position. A second readLine gets the following line, not the first again. After end of file, it returns null. To reread a file, open a new reader. Keep the loop condition tied to the actual read result rather than a guessed line count.</p>
+<p>A file failure may occur while opening, reading, writing, flushing or closing. Try-with-resources attempts closure when the body exits. Catch IOException at a boundary that can explain the failure or choose another location. A library model should not claim that a save succeeded before the writing operation completes.</p>
+<p>These examples create temporary files, use their actual paths without printing them, and delete them in finally. Random temporary names therefore never appear in the output. Each run starts from its own storage and can demonstrate deterministic contents without depending on a student's existing files.</p>
+<pre class="diagram">String characters -&gt; UTF-8 writer -&gt; buffered bytes -&gt; file
+file bytes -&gt; UTF-8 reader -&gt; lines -&gt; parsed records
+Path: names the location; it does not itself perform either transfer
+</pre>
+<h2 id="examples">Programs to explore</h2>
+<h3>Round-trip Bangla and English text</h3>
+<p>The temporary file stores UTF-8 bytes. Reading reconstructs the original two lines.</p>
+<div data-example="ex-1"></div>
+<h3>Write buffered lines and read a total</h3>
+<p>The writer closes before the reader opens. The read loop distinguishes EOF from content.</p>
+<div data-example="ex-2"></div>
+<h3>Handle an absent file</h3>
+<p>The new directory contains no absent.txt file. The handler prints a stable useful message.</p>
+<div data-example="ex-3"></div>
+<h2 id="formats">Define records before splitting lines</h2>
+<p>A text format needs more than a file extension. Decide field order, separators, allowed characters and how to represent missing values. A tab-separated book format can use id, title and loan status, provided titles cannot contain tabs or newlines. Reject incompatible titles before saving rather than writing an ambiguous row.</p>
+<p>Separate parsing from mutation. Read every row into a temporary collection, validate ids and status values, and reject duplicates. Only replace the live inventory after the whole file is valid. If row five is damaged, the first four rows should not silently replace a previously valid library.</p>
+<p>IOException covers storage failures. NumberFormatException and IllegalArgumentException can indicate invalid file contents. Translate parsing failure into a clear load failure at the file boundary, preserving the cause where useful. An empty valid inventory file differs from a file that could not be read.</p>
+<p>A direct overwrite may truncate an old file before the new content is fully written. For valuable data, write a temporary file in the same directory and then replace the target after successful closure. An atomic move is filesystem-dependent and can be unsupported. State your policy rather than promising crash-proof persistence from a simple writeString call.</p>
+<h3>Keep a file format small enough to validate</h3>
+<p>A title containing the separator cannot be stored unambiguously by a naive split operation. Either restrict those characters, as the project does, or adopt a documented escaping format. Do not claim full CSV support from splitting on commas; quoted fields and embedded separators need actual parsing rules.</p>
+<p>Line endings also belong to the format contract. BufferedReader.readLine accepts common line terminators and removes them. A writer using newLine follows the host convention. If byte-for-byte interchange matters, choose an explicit newline representation and explain it. If logical lines matter, avoid treating a harmless host line-ending difference as a changed record.</p>
+<p>Finally, bound file input when it comes from an uncontrolled source. readAllLines is convenient for a small inventory, but a much larger file may exhaust memory before row validation completes. A streaming parser can validate incrementally while still retaining a temporary candidate until the full load succeeds.</p>
+<h2 id="common-mistakes">Avoid guessing about paths and successful saves</h2>
+<p>A relative path is resolved from the process working directory. It is not automatically relative to the source file. If a program launches from another folder, marks.txt can name a different location. Show the intended working directory in real application instructions, and accept a configured path when the location matters.</p>
+<p>Appending and replacing are different operations. Default writeString replaces contents. Use StandardOpenOption.APPEND and an explicit creation policy when adding a line to a log. Avoid appending an entire inventory snapshot repeatedly, because the next load may see duplicate ids.</p>
+<p>Using readAllLines for a very large input can consume excessive memory. Stream through a BufferedReader when the file size is not tightly bounded. Streaming alone does not guarantee correct parsing: still validate each row and decide how partial results are handled.</p>
+<p>Do not catch IOException and return success. Let the user retry or choose another path. Also avoid printing a random temporary path as if it were stable output. User-facing messages should explain the operation that failed, while diagnostic context can retain the exact path and cause.</p>
+<h2 id="version-notes">Use Java 17 file APIs deliberately</h2>
+<p>Path and Files are part of the NIO.2 APIs introduced in Java 7. Files.readString, Files.writeString and Path.of arrived in Java 11. The examples require only Java 17 APIs. They specify UTF-8 and avoid assumptions about the host line separator in saved records.</p>
+<p>Files.lines returns a lazy stream backed by an open file and must be closed, normally with try-with-resources. A stream from a collection has no such file handle. The similar method names should not hide that resource difference. BufferedReader is used here so the ownership of the open file remains visible.</p>
+<h2 id="summary">Treat file access as a fallible boundary</h2>
+<p>Choose an encoding, define the row format, and close resources automatically. Validate loaded records before changing live state, and report storage failures honestly. The <a href="topic:oop-mini-project-library">library project</a> puts these choices behind a storage class. Next, study <a href="topic:oop-multithreading">threads</a> to coordinate work that can overlap.</p>

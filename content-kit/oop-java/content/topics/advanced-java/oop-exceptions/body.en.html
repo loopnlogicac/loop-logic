@@ -1,0 +1,60 @@
+<h2 id="introduction">Recover where you can make a decision</h2>
+<p class="lead">When a student types a mark, the text may be wrong. A network connection may also fail while you save it. An <dfn>exception</dfn> is an object describing a problem that interrupts the normal path. You can handle that problem where enough information exists to choose another action. You should not hide it and pretend the operation succeeded.</p>
+<p>Imagine a library clerk accepting a return. A damaged barcode needs a different response from an overdue book. Java lets you distinguish failures by type. A catch block can deal with one problem while an unrelated problem continues to its caller. This keeps the normal operation readable without losing the reason for failure.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>If you know C, you have probably checked return codes after a function call. Java still uses ordinary results for expected choices. Exceptions add a separate path for failures that prevent a method from fulfilling its promise. Start with the input and resource examples here before handling every possible failure in a larger application.</p></div>
+<h2 id="syntax">Separate protected work, recovery and cleanup</h2>
+<p>A <code>try</code> block encloses work that may fail. A <code>catch</code> parameter receives a matching exception object. The first compatible catch runs. Place specific exception types before broader types; otherwise the broad handler would make the specific one unreachable. A <code>finally</code> block performs cleanup when control leaves try or catch normally, through return, or through an exception.</p>
+<p>The keyword <code>throw</code> actually raises one exception object. The declaration <code>throws</code> lists exception types a method may pass to its caller. A declaration does not create an exception or recover from one. Its purpose is to describe part of the method contract. Choose a message that states the failed condition without revealing private information.</p>
+<pre><code class="language-java">try {
+    int mark = Integer.parseInt(text);
+    saveMark(mark);
+} catch (NumberFormatException problem) {
+    System.out.println(&quot;Enter a whole number&quot;);
+} finally {
+    System.out.println(&quot;Attempt finished&quot;);
+}
+</code></pre>
+<h2 id="how-it-works">Follow the first matching handler</h2>
+<p>Suppose parsing the text fails. Java stops evaluating the statements in try at that point. It does not call saveMark. It looks for a compatible catch in the current method, then in calling methods if necessary. This search is called stack unwinding. Local primitive values disappear with abandoned calls, but resource cleanup still needs an explicit policy.</p>
+<p>If parsing succeeds and saveMark throws another exception, the NumberFormatException handler does not match it. The exception continues outward after finally runs. If every operation succeeds, catch is skipped and finally still runs. Use a small trace to distinguish these three paths before reading a nested example.</p>
+<p>The exception hierarchy starts with Throwable. Most application handlers catch a suitable Exception subtype. Error represents serious conditions such as exhausted memory and is normally outside routine recovery. Avoid catch(Throwable): it can swallow failures your method cannot repair. Uncaught exceptions usually terminate that thread and print a diagnostic stack trace.</p>
+<pre class="diagram">text -&gt; parse -&gt; validate -&gt; store
+          |         |
+          v         v
+     parse catch  caller handles domain failure
+          \         /
+           cleanup before leaving
+</pre>
+<h2 id="checked-exceptions">Know what the compiler requires</h2>
+<p>A checked exception is an Exception subtype outside RuntimeException and its descendants. IOException is a familiar example. A method must catch a checked exception or declare it. The compiler checks the possibility from declarations; it does not predict whether a disk will fail during this particular run.</p>
+<p>Unchecked exceptions include RuntimeException and Error families. IllegalArgumentException describes an unacceptable argument; NumberFormatException is one subtype. You may catch unchecked exceptions when recovery is meaningful. Their unchecked status does not mean that they are harmless, nor that throwing them is always a good interface design.</p>
+<p>Use a custom exception when callers need a distinct domain decision. InvalidMarkException can carry the rejected value or a clear message. Extending Exception makes it checked; extending RuntimeException makes it unchecked. Choose deliberately. An exception class is serializable through its parent, so these examples declare serialVersionUID to make that inherited contract explicit.</p>
+<p>A custom checked exception fits a service whose caller can request another mark. A programming invariant broken deep inside a model often deserves an unchecked exception instead. Do not create a new type solely to rename an existing precise exception. Catching the precise standard type often makes the caller easier to understand.</p>
+<h2 id="examples">Programs to explore</h2>
+<h3>Catch a parsing failure</h3>
+<p>The numeric conversion fails before println can print a number. The handler gives an action, and cleanup prints Done.</p>
+<div data-example="ex-1"></div>
+<h3>Reject an invalid mark with a checked type</h3>
+<p>accept declares InvalidMarkException and throws it only outside the allowed range. Main catches the domain problem.</p>
+<div data-example="ex-2"></div>
+<h3>Release a small resource</h3>
+<p>The resource closes after the body. No manual close call is needed in the success path.</p>
+<div data-example="ex-3"></div>
+<h3>Inspect a suppressed close failure</h3>
+<p>Opened comes first, followed by the primary body message and the suppressed close message.</p>
+<div data-example="ex-4"></div>
+<h2 id="resources">Close resources even when an operation fails</h2>
+<p>A resource is something you acquire and must release, such as an open reader. Garbage collection manages ordinary object memory. It does not promise timely closure of file handles. A try-with-resources statement closes objects implementing AutoCloseable when its body exits. Resources close in the reverse order of their declarations.</p>
+<p>If the body throws and close also throws, Java keeps the body exception as the main failure. The close failure becomes a suppressed exception available from getSuppressed(). If only close fails, its exception is the main one. This preserves the original reason for failure while retaining cleanup evidence.</p>
+<p>Do not put a return in finally. It can replace a result or hide an exception that was already travelling outward. Finally also is not a guarantee against process termination or machine failure. Use it for predictable control flow inside the running JVM, and prefer try-with-resources for resources with an appropriate close method.</p>
+<h3>Decide whether retry can preserve state</h3>
+<p>A retry is useful only when the failed operation can safely be attempted again. Parsing another token is usually harmless. Repeating a payment after an uncertain network response may charge twice. Before offering retry, identify which side effects have already happened and whether the operation has an identity that prevents duplication.</p>
+<h2 id="common-mistakes">Recover without losing the original cause</h2>
+<p>An empty catch block silently converts failure into apparent success. A later method may then use data that was never loaded. Either recover with a valid alternative, show a useful error, or propagate the failure. Printing a message and continuing is correct only if the remaining state still satisfies its rules.</p>
+<p>Catching Exception around an entire menu hides which operation failed. Narrow the try block to parsing or saving, then choose a handler for that operation. Do not catch NullPointerException as routine validation. Check an optional reference deliberately, and repair unexpected null values at their source.</p>
+<p>When translating a low-level failure into a domain exception, keep the cause with a constructor accepting Throwable. That lets a maintainer find the original IOException later. Avoid exposing an entire stack trace to a student using the application. Give the user a useful action and keep technical diagnostics at an appropriate boundary.</p>
+<h2 id="version-notes">Use stable exception features in Java 17</h2>
+<p>Try-with-resources arrived in Java 7. Java 9 allowed an existing final or effectively final resource variable in its header. These examples create resources directly in the header and need no newer syntax. Multi-catch uses a vertical bar between unrelated exception types when their recovery code is identical.</p>
+<p>InterruptedException needs special care in threaded code. If a method cannot propagate interruption, restoring the interrupt flag is usually appropriate. The <a href="topic:oop-multithreading">thread lesson</a> explains that cooperation. Here, checked declarations describe possible failure without claiming that every declaration must throw during every invocation.</p>
+<h2 id="summary">Choose a meaningful recovery boundary</h2>
+<p>Exception handling keeps the normal path clear while preserving failure details. Match narrow types, validate domain rules, and close acquired resources automatically. Trace the try, matching catch and cleanup steps separately. Next, <a href="topic:oop-generics">generics</a> let you express another kind of contract: which types a container may hold.</p>

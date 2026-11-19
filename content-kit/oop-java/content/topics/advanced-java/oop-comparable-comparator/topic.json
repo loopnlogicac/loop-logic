@@ -1,0 +1,352 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-comparable-comparator",
+  "module": "advanced-java",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Comparable and Comparator",
+    "bn": "কম্প্যারেবল আর কম্প্যারেটর"
+  },
+  "summary": {
+    "en": "Define safe natural and alternate orders, including explicit tie breakers.",
+    "bn": "স্বাভাবিক ক্রম আর আলাদা সর্টিং নিয়ম লেখো, আর মান সমান হলে কী হবে তা ঠিক করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 45,
+  "prerequisites": [
+    "oop-collections"
+  ],
+  "related": [],
+  "keywords": [
+    "Comparable and Comparator",
+    "Java",
+    "comparable comparator"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "All programs use Java 17 APIs and language rules."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Describe what comes before what"
+    },
+    {
+      "id": "syntax",
+      "title": "Use the sign rather than a particular integer"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Trace the first key, then the tie breaker"
+    },
+    {
+      "id": "examples",
+      "title": "Programs to explore"
+    },
+    {
+      "id": "contracts",
+      "title": "Keep comparison laws consistent"
+    },
+    {
+      "id": "design",
+      "title": "Give each report a named policy"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Check zero results and reversal placement"
+    },
+    {
+      "id": "version-notes",
+      "title": "Comparator chains are available in Java 17"
+    },
+    {
+      "id": "summary",
+      "title": "Turn ranking rules into explicit comparisons"
+    }
+  ],
+  "examples": [
+    {
+      "title": "Sort by natural roll order",
+      "explanationHtml": "<p>Passing null asks List.sort to use the elements’ natural Comparable order.</p>\n",
+      "id": "ex-1",
+      "file": "examples/ex-1.java",
+      "level": "basic",
+      "tryNow": true,
+      "output": "examples/ex-1.out"
+    },
+    {
+      "title": "Rank by marks and resolve ties",
+      "explanationHtml": "<p>Roll 7 leads with 90. Rolls 3 and 12 share 80, so ascending roll orders that pair.</p>\n",
+      "id": "ex-2",
+      "file": "examples/ex-2.java",
+      "level": "intermediate",
+      "tryNow": true,
+      "output": "examples/ex-2.out"
+    },
+    {
+      "title": "See why subtraction is unsafe",
+      "explanationHtml": "<p>The extreme int subtraction wraps around. Integer.compare preserves the mathematical ordering.</p>\n",
+      "id": "ex-3",
+      "file": "examples/ex-3.java",
+      "level": "advanced",
+      "tryNow": true,
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Rank a class",
+      "statementHtml": "<p>Read n (0..30) then n pairs roll (1..999) and mark (0..100). Rolls are unique. Sort by descending mark then ascending roll. Print [roll:mark, ...], or []. No prompt.</p>\n",
+      "hints": [
+        "Reverse the mark comparator before adding the roll tie breaker."
+      ],
+      "difficulty": "medium",
+      "id": "p-1",
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        }
+      ]
+    },
+    {
+      "title": "Order short words",
+      "statementHtml": "<p>Read n (0..30) then lowercase ASCII words. Print a bracketed list by increasing length, then lexical order. Keep duplicates. No prompt.</p>\n",
+      "hints": [
+        "Chain length with natural String order."
+      ],
+      "difficulty": "easy",
+      "id": "p-2",
+      "solution": "practice/p-2.java",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "title": "Find a broken comparison",
+      "statementHtml": "<p>A comparator returns 1 for every unequal pair and 0 otherwise. Explain which law fails.</p>\n",
+      "answerHtml": "<p>Swapping two unequal inputs still returns positive. Sign reversal fails, so each value claims to follow the other. Use a real key comparison.</p>\n",
+      "hints": [
+        "Compare a,b and b,a."
+      ],
+      "difficulty": "hard",
+      "id": "p-3"
+    },
+    {
+      "type": "written",
+      "title": "Choose the location of a policy",
+      "statementHtml": "<p>A class has natural roll order. A report needs descending marks. Should compareTo change?</p>\n",
+      "answerHtml": "<p>Keep roll as the documented natural order. Supply a separate report comparator for marks and a tie breaker. Other natural-order clients remain predictable.</p>\n",
+      "hints": [
+        "Separate a class convention from a report choice."
+      ],
+      "difficulty": "medium",
+      "id": "p-4"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "output",
+      "prompt": "Which student comes first under the natural roll order?",
+      "code": "import java.util.List;\nimport java.util.ArrayList;\n\nclass Student implements Comparable<Student> {\n    private final int roll;\n    private final int mark;\n    Student(int roll, int mark) { this.roll = roll; this.mark = mark; }\n    int roll() { return roll; }\n    int mark() { return mark; }\n    @Override\n    public int compareTo(Student other) { return Integer.compare(roll, other.roll); }\n    @Override\n    public String toString() { return roll + \":\" + mark; }\n}\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        List<Student> students = new ArrayList<>(List.of(new Student(12, 80), new Student(3, 90)));\n        students.sort(null);\n        System.out.println(students);\n    }\n}\n",
+      "options": [
+        "[3:90, 12:80]",
+        "[12:80, 3:90]",
+        "[3:80, 12:90]"
+      ],
+      "answer": 0,
+      "explanation": "Natural comparison uses roll, not mark.",
+      "difficulty": "medium",
+      "id": "q-1"
+    },
+    {
+      "type": "output",
+      "prompt": "How does descending mark with ascending roll break the 80-mark tie?",
+      "code": "import java.util.List;\nimport java.util.ArrayList;\nimport java.util.Comparator;\n\nclass Student implements Comparable<Student> {\n    private final int roll;\n    private final int mark;\n    Student(int roll, int mark) { this.roll = roll; this.mark = mark; }\n    int roll() { return roll; }\n    int mark() { return mark; }\n    @Override\n    public int compareTo(Student other) { return Integer.compare(roll, other.roll); }\n    @Override\n    public String toString() { return roll + \":\" + mark; }\n}\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        List<Student> students = new ArrayList<>(List.of(\n                new Student(12, 80), new Student(7, 90), new Student(3, 80)));\n        students.sort(Comparator.comparingInt(Student::mark).reversed()\n                .thenComparingInt(Student::roll));\n        System.out.println(students);\n    }\n}\n",
+      "options": [
+        "[3:80, 12:80, 7:90]",
+        "[7:90, 3:80, 12:80]",
+        "[7:90, 12:80, 3:80]"
+      ],
+      "answer": 1,
+      "explanation": "Only the mark comparator is reversed; the roll comparator stays ascending.",
+      "difficulty": "medium",
+      "id": "q-2"
+    },
+    {
+      "type": "output",
+      "prompt": "How does overflow change subtraction compared with Integer.compare?",
+      "code": "class Main {\n    public static void main(String[] args) throws Exception {\n        int low = Integer.MIN_VALUE;\n        int high = Integer.MAX_VALUE;\n        System.out.println(low - high);\n        System.out.println(Integer.compare(low, high));\n    }\n}\n",
+      "options": [
+        "-1\n-1",
+        "1\n1",
+        "1\n-1"
+      ],
+      "answer": 2,
+      "explanation": "The subtraction overflows to positive one, but the safe comparison returns negative one.",
+      "difficulty": "medium",
+      "id": "q-3"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Where is a natural order normally defined?",
+      "options": [
+        "In compareTo on the element class",
+        "Only in Main",
+        "In hashCode"
+      ],
+      "answer": 0,
+      "explanation": "Comparable attaches a default ordering policy to the element type.",
+      "difficulty": "medium",
+      "id": "q-4"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Which comparator result means the left argument comes first?",
+      "options": [
+        "Any positive value",
+        "Any negative value",
+        "Exactly zero"
+      ],
+      "answer": 1,
+      "explanation": "Only the sign has meaning.",
+      "difficulty": "medium",
+      "id": "q-5"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does thenComparing do after unequal primary keys?",
+      "options": [
+        "Always overrides the result",
+        "Always reverses it",
+        "Keeps the primary result"
+      ],
+      "answer": 2,
+      "explanation": "The secondary key is consulted only for a primary tie.",
+      "difficulty": "medium",
+      "id": "q-6"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does reversed at the end of a full chain reverse?",
+      "options": [
+        "Every ordering decision in the chain",
+        "Only the final field",
+        "Only null handling"
+      ],
+      "answer": 0,
+      "explanation": "Reversing the complete comparator reverses its overall order.",
+      "difficulty": "medium",
+      "id": "q-7"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What should a comparison do to its arguments?",
+      "options": [
+        "Remove duplicates directly",
+        "Read keys without modifying them",
+        "Update both keys"
+      ],
+      "answer": 1,
+      "explanation": "Comparison should give a stable relation without side effects.",
+      "difficulty": "medium",
+      "id": "q-8"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does TreeSet do when comparison returns zero?",
+      "options": [
+        "Stores both in random order",
+        "Throws immediately",
+        "Treats the elements as the same set entry"
+      ],
+      "answer": 2,
+      "explanation": "Ordering equivalence defines membership for the tree set.",
+      "difficulty": "medium",
+      "id": "q-9"
+    },
+    {
+      "type": "mcq",
+      "prompt": "When is stable list sorting useful?",
+      "options": [
+        "When comparator ties should preserve previous relative order",
+        "When all elements must be unique",
+        "When keys may change during comparison"
+      ],
+      "answer": 0,
+      "explanation": "Stability preserves input order among elements considered equivalent.",
+      "difficulty": "medium",
+      "id": "q-10"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Comparable defines a natural order.",
+      "bn": "Comparable ক্লাসের স্বাভাবিক ক্রম ঠিক করে।"
+    },
+    {
+      "en": "Comparator supplies an outside ordering policy.",
+      "bn": "Comparator দিয়ে বাইরের আলাদা সর্টিং নিয়ম দেওয়া যায়।"
+    },
+    {
+      "en": "Comparison results are interpreted by sign.",
+      "bn": "তুলনার ফলে ধনাত্মক, ঋণাত্মক বা শূন্য হওয়াটাই দরকারি।"
+    },
+    {
+      "en": "Compare numeric keys without subtracting them.",
+      "bn": "সংখ্যা তুলতে বিয়োগ না করে compare মেথড ব্যবহার করো।"
+    },
+    {
+      "en": "Tie breakers make ranking requirements explicit.",
+      "bn": "দুই মান সমান হলে পরের মান দিয়ে ক্রম ঠিক করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Compare Comparable and Comparator for student ranking.",
+      "answerHtml": "<p>Comparable supplies one natural order inside Student. Comparator supplies external alternatives such as descending marks with ascending roll. Both return a sign and must obey ordering laws.</p>\n",
+      "marks": 4
+    },
+    {
+      "type": "short",
+      "question": "Explain why marks-only TreeSet ordering can lose students.",
+      "answerHtml": "<p>Two different students with equal marks compare as zero. TreeSet considers them the same entry. Include the intended identity tie breaker or use a list when duplicates should remain.</p>\n",
+      "marks": 4
+    },
+    {
+      "type": "short",
+      "question": "Why is Integer.compare safer than a-b?",
+      "answerHtml": "<p>Subtraction may overflow and produce the wrong sign. Integer.compare compares values without computing their potentially overflowing difference.</p>\n",
+      "marks": 4
+    }
+  ],
+  "references": [
+    {
+      "title": "Comparator contract",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Comparator.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

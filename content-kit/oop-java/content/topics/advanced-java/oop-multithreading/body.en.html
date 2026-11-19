@@ -1,0 +1,63 @@
+<h2 id="introduction">Let independent work overlap without guessing its order</h2>
+<p class="lead">A library application might load a catalogue while another task prepares a report. A <dfn>thread</dfn> is an execution path within a running process. Threads share ordinary objects, so overlapping work introduces both useful coordination and the possibility of conflicting access. Knowing that two tasks run is not enough to know which finishes first.</p>
+<p>Concurrency means tasks can make progress during overlapping periods. Parallelism means work executes at the same instant on different processing resources. A concurrent program must be correct even when the scheduler switches between tasks on one core. Adding threads does not prove either faster execution or parallel execution.</p>
+<p>The examples here use small tasks and explicit completion rules. They do not depend on a lucky console-print order or a delay that happens to be long enough. Start with independent work, then protect shared state only where a clear invariant requires it.</p>
+<h2 id="syntax">Separate a task from the thread that runs it</h2>
+<p>Runnable describes an operation with public void run(). A Thread can receive a Runnable and execute it after start is called. Calling run directly is an ordinary call on the current thread. Calling start requests a new execution path that eventually invokes run. A Thread instance can be started only once.</p>
+<p>Extending Thread is possible, but implementing Runnable separates the work from its execution mechanism. The same task can later be submitted to an executor. Use named task classes when state and purpose need explanation, and lambdas for a short one-operation task.</p>
+<p>join waits for a particular thread to finish. sleep pauses the current thread for approximately the requested duration, subject to scheduling. Neither method makes the scheduler run tasks in a specified console order. Both can throw InterruptedException, which represents a cooperative request to stop waiting or sleeping.</p>
+<pre><code class="language-java">Runnable task = () -&gt; doWork();
+Thread worker = new Thread(task);
+worker.start();
+worker.join();
+// Only after join returns normally do we consume the completed result.
+</code></pre>
+<h2 id="how-it-works">Find the completion relationship before reading results</h2>
+<p>When you start two workers, either may run first. Their individual instructions can interleave. If the main thread prints a worker result immediately after start, the worker might not have computed it yet. Wait for completion with join, then read the result. Successful joining also supplies a memory-visibility relationship for the finished worker's actions.</p>
+<p>The Java memory model describes these guarantees through happens-before relationships. You do not need to guess whether a processor cache has updated. A correct synchronization design supplies the relationship that makes results visible. Unsynchronized polling of an ordinary boolean is not a reliable completion protocol.</p>
+<p>A worker may finish before the main thread calls join. Joining is still useful and returns when completion is established. If join is interrupted, do not act as though it completed successfully. Propagate InterruptedException when your method can, or restore the interrupt flag and follow a cancellation policy.</p>
+<p>The examples print from the main thread after joining workers. This fixes the displayed result without imposing an arbitrary order on the workers themselves. Deterministic reporting comes from a proper completion boundary rather than from sleeps or assumptions about which task is faster.</p>
+<pre class="diagram">main: start A -&gt; start B -&gt; join A -&gt; join B -&gt; print result
+A:         perform work ---------&gt; finish
+B:             perform work -&gt; finish
+Worker order may vary; final reading waits for both.
+</pre>
+<h2 id="examples">Programs to explore</h2>
+<h3>Read a result after join</h3>
+<p>Only the worker writes the result; main reads after successful joining.</p>
+<div data-example="ex-1"></div>
+<h3>Synchronize a shared counter</h3>
+<p>Both workers increment the same protected state. Main waits for both completions.</p>
+<div data-example="ex-2"></div>
+<h3>Collect two executor results</h3>
+<p>Future.get supplies each completed result, and finally shuts down the service.</p>
+<div data-example="ex-3"></div>
+<h3>Pause and finish cooperatively</h3>
+<p>The worker may pause briefly. The displayed completion depends on join, not the length of the sleep.</p>
+<div data-example="ex-4"></div>
+<h2 id="races">Protect a shared invariant with one lock</h2>
+<p>A <dfn>race condition</dfn> occurs when a result depends on conflicting timing that the design has not controlled. The expression count++ reads count, adds one and writes it back. Two workers can read the same old count and both write the same new count, losing one increment.</p>
+<p>A synchronized instance method acquires that object's monitor. Only one thread at a time executes code guarded by the same monitor. Protect both updates and relevant reads with the same lock, and keep the invariant inside that protected region. Two different counter objects have different monitors.</p>
+<p>Synchronization supplies mutual exclusion and visibility. A volatile int makes individual reads and writes visible under its rules, but count++ is still a compound read-modify-write action. Volatile alone does not make the increment atomic. Use synchronization or a suitable atomic class when an atomic update is needed.</p>
+<p>Locking every tiny field independently can fail when one invariant spans several fields. If available and borrowed counts must sum to total, change both under the same policy. On the other hand, holding a lock while doing slow file or network work can block unrelated operations. Keep protected sections focused and avoid calling unknown code while holding a lock.</p>
+<p>Deadlock can arise when one thread holds lock A while waiting for B, and another holds B while waiting for A. Prefer one lock for a small model, or establish a consistent acquisition order for several locks. Synchronization prevents a particular race only when every conflicting access follows the same rule.</p>
+<h2 id="executors">Submit tasks and manage the service lifecycle</h2>
+<p>ExecutorService separates tasks from worker management. A fixed thread pool reuses a bounded number of workers. submit can accept a Callable that returns a result and gives the caller a Future. Future.get waits for completion and either returns the value or reports failure through ExecutionException.</p>
+<p>A Future also supports cancellation. Cancellation is cooperative: interrupting a worker is a request, not a safe forced kill of arbitrary code. Long computations should check interruption at reasonable boundaries. Code blocked in interruptible operations can react through InterruptedException. Do not swallow interruption and continue an endless loop.</p>
+<p>shutdown rejects new tasks and lets already submitted work finish. awaitTermination waits up to a specified period after shutdown. shutdownNow attempts to interrupt active workers and returns tasks that never started. It does not guarantee that all active code instantly stops, so do not claim immediate termination.</p>
+<p>In Java 17, ExecutorService is not AutoCloseable. Use a finally block to shut it down rather than borrowing a newer try-with-resources example. The short result example waits through Future.get and then shuts down the pool. A larger application should state a timeout and cancellation policy for tasks that might not finish.</p>
+<p>Exceptions inside submit tasks are captured by the Future. If nobody inspects get, a task failure can be missed by application code. Observe the completion result deliberately, and distinguish task failure from interruption of the waiting caller. Report a useful operation failure at the application boundary.</p>
+<h2 id="interruption">Treat sleep as a pause rather than coordination</h2>
+<p>sleep does not release a monitor that the current thread holds. Sleeping inside synchronized code can therefore keep other workers blocked. Move unnecessary waiting outside the critical section. If the requirement is to wait for a condition, use an appropriate coordination mechanism rather than guessing a delay.</p>
+<p>In a Runnable whose run method cannot declare InterruptedException, a common response is to catch it, restore the flag with Thread.currentThread().interrupt(), and return. The flag lets higher-level code observe that cancellation was requested. Whether to finish a small operation first depends on the application's documented consistency rules.</p>
+<p>Do not use deprecated Thread.stop, suspend or resume methods. Forcibly stopping code can leave shared state halfway through an invariant update. Cooperative cancellation lets the worker close resources and leave the model valid. A cancellation request and successful completion are different outcomes.</p>
+<h3>Separate safety from progress</h3>
+<p>A synchronized counter can be safe yet still belong to a program that never finishes because another task waits forever. Safety asks whether an invalid state can occur; progress asks whether useful work can complete. Join without a timeout is appropriate for these bounded exercises, while external operations need a deliberate timeout and cancellation policy. A correct final-value formula does not by itself prove that a production task will reach that final state.</p>
+<h2 id="common-mistakes">Do not turn scheduling observations into rules</h2>
+<p>Seeing A print before B in several runs does not establish an ordering guarantee. The scheduler, workload and machine may change. If order matters, encode the dependency with joining, futures or another appropriate mechanism. Avoid tests that expect a race to fail on every run; races may hide until conditions change.</p>
+<p>Calling start twice on the same Thread throws IllegalThreadStateException. Create a new Thread for another execution or use an executor for repeated tasks. Calling run twice is legal as an ordinary method call, but it does not create two new threads.</p>
+<p>A synchronized writer paired with an unsynchronized reader may still leave visibility or atomicity assumptions broken. Apply one access policy consistently. Final references do not make a mutable shared collection thread-safe. An ordinary ArrayList needs protection when concurrent structural updates are possible.</p>
+<h2 id="version-notes">Stay within the Java 17 thread APIs</h2>
+<p>Thread, Runnable and synchronized are long-established Java features. Executors and futures are available since Java 5. Virtual threads became standard after Java 17 and are not used here. ExecutorService gains newer lifecycle conveniences in later releases, so the Java 17 code uses explicit shutdown.</p>
+<h2 id="summary">Coordinate ownership, updates and completion</h2>
+<p>Separate task logic from execution. Protect shared invariants with a consistent lock and read results after a real completion boundary. Treat interruption as cooperation. The <a href="topic:oop-swing-basics">Swing lesson</a> applies these ideas to a special thread that owns user-interface work.</p>

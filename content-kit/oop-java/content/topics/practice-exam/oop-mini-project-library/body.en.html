@@ -1,0 +1,39 @@
+<h2 id="introduction">Build a small library with explicit state transitions</h2>
+<p class="lead">This project combines a menu, a domain model and a text store. You can add books, borrow them, return them, list the inventory, save a snapshot and load it again. Each layer has one job, so a file failure does not become a half-completed borrowing operation.</p>
+<p>The application is deliberately a single-user console program. A book has a positive unique id, a title and an availability state. Borrowing an available book changes it to BORROWED. Returning a borrowed book changes it to AVAILABLE. Repeating either operation in the wrong state reports failure without changing the model.</p>
+<h2 id="design">Name the model, capability and storage boundary</h2>
+<p>LibraryItem is an abstract parent for common id and title data. Book extends it and implements Loanable. The interface describes borrowing and returning without requiring every possible library item to support those operations. Library owns the inventory map, and TextStore reads and writes snapshots without knowing about menu commands.</p>
+<p>TreeMap gives increasing id order for listing and saving. Book keeps borrowed private and changes it only through its capability methods. Library.add rejects duplicate ids instead of overwriting an existing book. A returned snapshot copies the list structure, but it still refers to the same books; it is not a deep immutable snapshot.</p>
+<pre class="diagram">LibraryItem &lt;|-- Book ----implements----&gt; Loanable
+                    ^
+                    | many books, keyed by id
+                 Library
+                    |
+                 Main menu ----uses----&gt; TextStore ----UTF-8----&gt; library.tsv
+Key: hollow triangle points to parent; interface arrow denotes realization.
+</pre>
+<h2 id="interaction">Run the menu with line-oriented input</h2>
+<p>At startup the application prints the command menu once. Enter one command number per line. Add asks for an id on the next line and a title on the following line. Borrow and Return ask for one id. List, Save and Load need no additional line. Zero prints BYE and exits.</p>
+<p>Ids must be 1..999999. Titles are stripped of surrounding whitespace, must be 1..80 UTF-16 code units after stripping, and cannot contain tab or line-break characters. Ordinary spaces inside titles are allowed. Empty or invalid fields print INVALID INPUT. If the input ends halfway through a command, the program prints INCOMPLETE COMMAND and exits.</p>
+<p>For an invalid id in Add, the program rejects before requesting the title. The next line is therefore interpreted as another command. During interactive use, follow the displayed prompts. Numeric commands outside 0..6 print UNKNOWN COMMAND. The program does not promise a sophisticated recovery protocol for a prewritten malformed command sequence.</p>
+<h2 id="storage">Save a complete snapshot and validate a complete load</h2>
+<p>The default path is library.tsv in the process working directory. An optional first command-line argument chooses another path. The application does not automatically load on startup or save on exit. Choose Load and Save explicitly so you can see whether each operation succeeded.</p>
+<p>The file has one tab-separated row per book: id, title and AVAILABLE or BORROWED. UTF-8 preserves Bangla titles. The writer first creates a temporary file in the target directory, writes and closes it, then moves it over the target. Parent directories must already exist. A failed write does not print SAVED.</p>
+<p>The final replacement move does not request a guaranteed atomic move, so this small application does not claim crash-proof storage. Another process could also change the file between operations. A production application would need a clearer durability, backup and concurrency policy. The temporary file is removed when the save attempt ends.</p>
+<p>Loading reads all rows into a separate collection. It validates field count, ids, titles, status names and duplicate ids. Only after all rows succeed does Library.replace install a new map. A missing or damaged file prints LOAD FAILED and leaves the current library unchanged. An empty file is a valid empty inventory and replaces the old inventory with no books.</p>
+<h2 id="walkthrough">Follow a borrow, save and restore session</h2>
+<p>Add book 7 titled Java Notes and borrow it. A second borrow reports UNAVAILABLE. Save the inventory while the book is borrowed. Return it, then Load. The stored borrowed state comes back because loading replaces the current in-memory snapshot rather than merging one row at a time.</p>
+<p>Next, add a second book with id 3. List prints 3 before 7 because the map orders ids. Adding id 7 again reports DUPLICATE and keeps the original title and status. Returning a nonexistent id reports NOT FOUND. These operations exercise model rules independently of file parsing.</p>
+<h2 id="implementation">Complete application and a failed-load demonstration</h2>
+<h3>Complete menu-driven library</h3>
+<p>The menu coordinates a plain Library model and a TextStore. Save and Load are explicit; sorted ids make displays predictable.</p>
+<div data-example="ex-1"></div>
+<h3>Reject duplicate stored ids without changing the library</h3>
+<p>The file repeats id 9. Loading fails before replacement, so the existing id 3 stays available. The display uses a LibraryItem reference to dispatch status.</p>
+<div data-example="ex-2"></div>
+<h2 id="verification">Check invariants before extending the menu</h2>
+<p>For borrowing, cover available, already borrowed and missing ids. For returning, cover borrowed, already available and missing ids. For persistence, save an empty library, reload a borrowed book, and confirm that duplicate or damaged file rows cannot partially replace current data.</p>
+<p>A simple extension is a reference-only item that extends LibraryItem without implementing Loanable. Another is a separate Member value with a borrowing limit. Before writing either, decide which object owns the new invariant. Avoid using inheritance merely to share menu code or making storage responsible for lending decisions.</p>
+<p>This application holds its complete inventory in memory and loads bounded learning files. It has no authentication, due-date calculation, multi-user locking or database. Those additions need their own rules rather than hidden assumptions in Book.borrow. The current code gives you a small complete model whose limits are visible.</p>
+<h2 id="summary">Keep operations and persistence honest</h2>
+<p>The library combines encapsulation, inheritance, interfaces, ordered collections and explicit file failure handling. Trace the state before and after each command. Then use the <a href="topic:oop-interview-questions">interview questions</a> to explain why these design boundaries help when requirements change.</p>

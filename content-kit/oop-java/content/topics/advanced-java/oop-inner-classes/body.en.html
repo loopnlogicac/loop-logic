@@ -1,0 +1,61 @@
+<h2 id="introduction">Place a helper near the code that owns its meaning</h2>
+<p class="lead">A library catalogue may need a tiny entry type used nowhere else. A window may need one listener that reads its fields. <dfn>Nested classes</dfn> let you place such helpers inside another declaration. Their location communicates a relationship, but different nested forms have different rules about enclosing objects.</p>
+<p>A static nested class belongs inside a class without needing an instance of that class. An inner class is non-static and has an enclosing instance. A local class is declared inside a block. An anonymous class creates an unnamed subclass or implementation at an expression. Choose the smallest useful scope that still communicates the helper's purpose.</p>
+<p>Nesting is not inheritance by itself. Library.Entry does not extend Library merely because its source declaration is inside Library. It may extend another class or implement an interface, following ordinary Java rules. Keep source placement, object ownership and is-a relationships separate when drawing a design diagram.</p>
+<h2 id="syntax">Construct the static and instance forms differently</h2>
+<p>You construct a visible static nested class with new Outer.Nested(...). No Outer object is required. You construct an inner class through an existing object, such as outer.new Ticket(). That expression supplies the enclosing instance. The distinction is important when two Outer objects have different private state.</p>
+<p>A nested class can access private members of its enclosing top-level nest under Java access rules. A static nested class still needs an object reference to read an instance field. Lexical access permission does not create a hidden Outer object. An inner class can use its particular enclosing object's fields directly.</p>
+<p>When both an inner class and its outer class define a field with the same name, this refers to the inner instance. Outer.this refers to the enclosing instance. Avoid unnecessary name collisions, but learn the qualified form so you can trace code that deliberately demonstrates the two objects.</p>
+<pre><code class="language-java">Outer.Nested helper = new Outer.Nested();
+Outer outer = new Outer();
+Outer.Inner member = outer.new Inner();
+// Inside Inner:
+// this.value is the inner field.
+// Outer.this.value is the enclosing object&#x27;s field.
+</code></pre>
+<h2 id="how-it-works">Draw the extra enclosing reference</h2>
+<p>Suppose Library north has a name North and creates a Ticket. That ticket remembers north as its enclosing Library instance. Creating a ticket from south connects it to south instead. Reading the enclosing name therefore produces different results even though both tickets use the same Inner class definition.</p>
+<p>The association can extend the lifetime of the outer object. If a long-lived registry keeps an inner object, that inner object can keep its enclosing object reachable. Garbage collection cannot reclaim a still-reachable outer object merely because the local outer variable went out of scope. Consider this retention before using an inner class as a long-lived callback.</p>
+<p>A static nested class has no automatic outer-instance association. It may still store an explicit Library reference if you give it one. Static therefore describes the absence of an implicit enclosing instance, not a ban on every possible reference. Prefer the static form when the helper does not need outer instance state.</p>
+<p>Object creation and method dispatch remain ordinary operations. An anonymous class implementation has its own object identity and can override methods. Its omitted source name does not make the object temporary or force immediate collection. Any retained reference can keep it alive like an instance of a named class.</p>
+<pre class="diagram">Library north &lt;----- Ticket made by north.new Ticket()
+Library south &lt;----- Ticket made by south.new Ticket()
+Library.Entry        no automatic enclosing Library object
+</pre>
+<h2 id="examples">Programs to explore</h2>
+<h3>A static nested entry</h3>
+<p>The entry needs only its id, so creating it requires no Library object.</p>
+<div data-example="ex-1"></div>
+<h3>Two enclosing instances</h3>
+<p>Each ticket reads the private name from its own enclosing library.</p>
+<div data-example="ex-2"></div>
+<h3>A local class captures a rate</h3>
+<p>The rate is effectively final and remains available to Fee.total.</p>
+<div data-example="ex-3"></div>
+<h3>An anonymous class keeps private state</h3>
+<p>The unnamed implementation has one counter field shared by its two invocations.</p>
+<div data-example="ex-4"></div>
+<h2 id="local-classes">Limit a named helper to one operation</h2>
+<p>A local class is declared within a method or another block. Its name is available only in that scope, so unrelated application code cannot construct it. Use it when the helper needs a meaningful name, perhaps more than one method, but has no purpose outside that operation.</p>
+<p>Local classes can capture local variables that are final or effectively final. Effectively final means the variable is assigned once and not reassigned afterward. The referenced object's own contents may still change. Capturing a list reference does not make the list immutable, and capturing a counter array does not make updates thread-safe.</p>
+<p>The captured local value can outlive the stack frame. Java preserves the value needed by the helper object rather than leaving it pointing at a vanished C-style stack variable. This is why reassignment of the captured local variable is restricted. The <a href="topic:oop-final-keyword">final lesson</a> develops the distinction between stable references and mutable objects.</p>
+<p>A local class in an instance context can also access the enclosing instance. In a static method there is no implicit outer instance to capture. Decide which environment is actually required: local configuration, outer fields, or both. When many dependencies are hidden in capture, a small named class with explicit constructor parameters may become clearer.</p>
+<h2 id="anonymous-classes">Name the contract when the implementation is one-off</h2>
+<p>An anonymous class expression names a parent class or interface and supplies a body. new Runnable() { public void run() { ... } } constructs an implementation of Runnable. It can declare fields and additional methods, though callers holding only Runnable see the Runnable contract. It can override inherited methods and supply instance initialization logic.</p>
+<p>An anonymous class has no declared constructor because it has no source-level class name. Arguments after the parent class name select a superclass constructor. For an interface implementation, the empty argument list does not mean that interfaces have constructors. The object is still a concrete implementing class instance.</p>
+<p>Inside an anonymous class method, this means the anonymous object. Inside a lambda, this retains the surrounding meaning. That difference matters when a listener wants the window reference rather than the listener reference. Do not mechanically replace every anonymous class with a lambda without checking this and any extra state.</p>
+<p>A lambda works only for a functional-interface target. An anonymous class can extend a class or implement an interface with several required methods. It is useful for short adapters where a lambda cannot express the contract. Once the implementation grows or is reused, give it a clear class name and a focused responsibility.</p>
+<h2 id="choosing-form">Compare scope and instance needs</h2>
+<p>Use a top-level class when several parts of the application share the concept independently. Use a static nested class when it belongs with one outer type but does not require an outer object. Use an inner class when each helper genuinely works with one enclosing instance. Use a local class for a named implementation limited to a block.</p>
+<p>Use an anonymous class for a small one-off implementation when its parent contract is enough to understand the object. Use a lambda for a short operation matching a functional interface. These are readability choices as well as syntax choices. Avoid deep chains of nested declarations that force the reader to track several meanings of this.</p>
+<p>Nesting also affects visibility of an API. A public nested type is still part of the outer class's exposed interface. A private helper is an implementation detail. Making a type nested does not automatically hide it, and making it static does not automatically make it a global singleton. State the intended visibility deliberately.</p>
+<p>When drawing UML, show Library.Entry as a named helper if it matters to the design. Draw any actual object association separately. A source-level containment box cannot prove exclusive ownership or lifecycle control. The helper might escape into a collection or be shared through an interface reference elsewhere.</p>
+<h2 id="common-mistakes">Do not assume nesting supplies every context</h2>
+<p>Trying to create new Outer.Inner() from a static context fails when Inner requires an enclosing object. First obtain the correct Outer instance, then use outer.new Inner(). If the helper never reads Outer state, reconsider whether static would better express the design.</p>
+<p>Reassigning a captured local variable is another common compile-time mistake. Instead of fighting the rule with a mutable holder, ask whether the changing state belongs in a model object. A deliberately mutable model can be appropriate, but its state and synchronization policy should be visible to callers.</p>
+<p>An anonymous listener that refers to a large screen can keep that screen reachable while registered elsewhere. Unregister callbacks when their owner is finished. A static nested listener with an explicit dependency can make this relationship easier to inspect, though it still needs sensible lifecycle management.</p>
+<h2 id="version-notes">Apply the Java 17 inner-class rules</h2>
+<p>Nested and anonymous classes have existed since early Java releases. Java 16 relaxed restrictions on static declarations inside inner classes. Older tutorials may say that an inner class can contain only static constant variables. That older restriction should not be presented as the Java 17 rule.</p>
+<p>The examples focus on the enclosing-instance and capture rules, which remain the important design distinctions here. They use no preview feature. The next topic shows how Java 8 lambdas reduce one-operation implementation syntax while preserving a clear interface contract.</p>
+<h2 id="summary">Keep helper scope and object links visible</h2>
+<p>Choose a nested form according to scope, reuse and required state. Trace both this and the enclosing reference before predicting output. Keep capture small and deliberate. Continue with <a href="topic:oop-lambdas-streams">functional interfaces and streams</a> to express one-operation behaviour more directly.</p>

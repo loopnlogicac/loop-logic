@@ -1,0 +1,60 @@
+<h2 id="introduction">Build a window from cooperating components</h2>
+<p class="lead">A console program asks for input in a fixed sequence. A graphical application displays controls and waits for the user to choose an action. <dfn>Swing</dfn> is Java's desktop user-interface toolkit. You assemble a window from components rather than printing a new screen for every question.</p>
+<p>A JFrame is a top-level window. A JPanel groups controls. A JLabel displays text, a JButton offers an action, and a JTextField accepts a single line. Layout managers arrange these components when the window changes size. A small borrowing form can combine all five without drawing individual pixels yourself.</p>
+<p>Swing belongs to the desktop environment. The window examples need a graphical display and are intended to be compiled before you run them on your own desktop. Their visible result is a window, so the accompanying descriptions tell you which controls to inspect and how resizing should behave.</p>
+<h2 id="syntax">Construct the interface on its event thread</h2>
+<p>Swing uses an event-dispatch thread, often called the EDT, to process user actions and most component work. Schedule initial construction with SwingUtilities.invokeLater. The lambda creates the window after it reaches the event queue. Do not build and show a JFrame on an arbitrary background thread.</p>
+<p>Set a close operation deliberately. EXIT_ON_CLOSE exits this small standalone application. DISPOSE_ON_CLOSE releases one window without automatically ending an entire multi-window application. Add components, call pack to obtain a size from preferred component dimensions, then set the location and show the window.</p>
+<p>A JFrame's default content pane uses BorderLayout. A JPanel uses FlowLayout by default. Calling add repeatedly without thinking about the target layout can replace a component in the same BorderLayout region. Use explicit panels and region constraints to make the intended structure clear.</p>
+<pre><code class="language-java">SwingUtilities.invokeLater(() -&gt; {
+    JFrame frame = new JFrame(&quot;Library&quot;);
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.add(new JLabel(&quot;Ready&quot;));
+    frame.pack();
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
+});
+</code></pre>
+<h2 id="how-it-works">Arrange a hierarchy rather than fixed coordinates</h2>
+<p>A component hierarchy is a tree. The frame owns a content area, the content area contains panels, and panels contain labels and input controls. Each container's layout manager assigns bounds to its immediate children. A nested panel can use a different layout without affecting the outer panel's rule.</p>
+<p>FlowLayout places controls in a row and wraps when space becomes limited. It suits a short action bar. BorderLayout has PAGE_START, PAGE_END, LINE_START, LINE_END and CENTER regions. The centre takes remaining space. Add a panel when a region needs several controls rather than adding competing controls to the same region.</p>
+<p>GridLayout divides its container into equal-sized cells. It suits a simple keypad or a uniform form grid. BoxLayout places components along one axis and respects more size information. More complicated forms can use GridBagLayout, but the small examples here keep the hierarchy visible with nested basic layouts.</p>
+<p>Avoid a null layout and fixed pixel positions. Font sizes, translated labels and desktop scaling can change preferred sizes. A layout manager can adapt while fixed coordinates may overlap or cut off text. pack asks the component tree for a suitable initial size; resizing then lets layouts distribute the new space.</p>
+<pre class="diagram">JFrame
+  content pane: BorderLayout
+    PAGE_START: JLabel(&quot;Borrow a book&quot;)
+    CENTER: JPanel GridLayout(2,2)
+      JLabel     JTextField
+      JLabel     JTextField
+    PAGE_END: JPanel FlowLayout
+      JButton
+</pre>
+<h2 id="examples">Programs to explore</h2>
+<h3>A simple input row</h3>
+<p>The FlowLayout panel shows a label, text field and Find button. The button has no action yet.</p>
+<div data-example="ex-1"></div>
+<h3>A nested borrowing form</h3>
+<p>The central grid arranges two labelled fields. BorderLayout keeps the heading and Borrow button around it.</p>
+<div data-example="ex-2"></div>
+<h3>A greeting preview</h3>
+<p>Clicking Show trims the name and changes the label on the EDT. The next lesson develops that listener pattern.</p>
+<div data-example="ex-3"></div>
+<h2 id="thread-ownership">Keep actions short and move long work away</h2>
+<p>The EDT handles painting and input events as well as your listeners. If a listener sleeps or reads a large file, the same thread cannot promptly redraw the window or process another click. The screen may look frozen even though the application has not crashed. Keep event handlers short.</p>
+<p>For longer operations, use an appropriate worker and send the final display update back to the EDT. SwingWorker is one option: doInBackground runs off the EDT, while done and process are scheduled on it. The <a href="topic:oop-event-handling">event lesson</a> explains separating input, model work and display updates.</p>
+<p>Most Swing component access should happen on the EDT unless a method's documentation explicitly promises thread safety. A final JTextField reference does not make getText and setText safe from every thread. Thread ownership is a rule about operations on the component, not about whether the variable can be reassigned.</p>
+<p>The console exercises here model input state without creating windows. That lets you reason about validation and summaries independently from a display. Their output is text because they exercise the model. The real window examples remain complete desktop programs with their visual behaviour described alongside the source.</p>
+<h2 id="accessibility">Make the form readable before adding decoration</h2>
+<p>Give controls clear labels and useful initial text. A JTextField column count influences preferred width; it does not limit how much the user can type. If a field should accept a bounded number or a particular format, validate the content when an action uses it. Layout size is not data validation.</p>
+<p>A label can identify its related component with setLabelFor. Keyboard mnemonics can help users reach controls without a mouse. Do not communicate failure only through colour: include a useful text message. A borrowed-book form should explain which field needs attention and retain the entered text for correction.</p>
+<p>Think about resizing as part of the interface, not as an afterthought. Use readable button text, leave enough room for status messages and avoid forcing a window below its useful minimum size. Desktop appearance can vary with the look and feel, so inspect structure and behaviour instead of requiring identical pixels on every machine.</p>
+<h3>Inspect the visible hierarchy</h3>
+<p>After opening the borrowing form, enlarge and shrink the window. Check that both fields stay beside their labels and the action remains reachable. Then use keyboard navigation to move between controls. These observations test whether your layout choices support actual interaction rather than merely fitting one initial screenshot.</p>
+<h2 id="common-mistakes">Check containment and the event queue</h2>
+<p>Constructing every component correctly is not enough if you never add it to a visible container. Trace the hierarchy from each control to the frame. Conversely, one component cannot occupy two containers at once. Create separate labels when two parts of a form need similar text.</p>
+<p>Calling setVisible before adding controls can produce confusing initial sizing. Build the intended hierarchy, pack it, and show it afterward. If the interface changes dynamically later, the affected container may need revalidate and repaint. Those calls serve layout and painting; they do not repair a wrong component hierarchy.</p>
+<p>Using Thread.sleep to wait for a window action blocks whichever thread calls it. On the EDT that also blocks input and repainting. An event-driven application should respond to listeners rather than poll controls in a sleeping loop. Keep the model independent so a slow operation can be moved off the EDT safely.</p>
+<h2 id="version-notes">Swing works within the Java 17 desktop module</h2>
+<p>Swing is part of java.desktop and remains available in Java 17 desktop JDK distributions. The programs use explicit javax.swing and java.awt imports. No JavaFX setup or external GUI dependency is required. A headless environment cannot show a JFrame, so compilation and desktop visual inspection are distinct validation steps.</p>
+<h2 id="summary">Let layout and thread ownership guide the window</h2>
+<p>Build a clear component hierarchy and let layout managers arrange it. Construct and update Swing controls on the EDT, while longer work runs elsewhere. Continue with <a href="topic:oop-event-handling">listeners and model-view separation</a> to make buttons do useful work.</p>

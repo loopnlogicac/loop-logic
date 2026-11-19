@@ -1,0 +1,315 @@
+{
+  "schemaVersion": "1.1",
+  "id": "oop-mini-project-library",
+  "module": "practice-exam",
+  "order": 2,
+  "kind": "project",
+  "title": {
+    "en": "Mini Project: Library Management",
+    "bn": "মিনি প্রজেক্ট: লাইব্রেরি ম্যানেজমেন্ট"
+  },
+  "summary": {
+    "en": "Build a menu-driven library with borrowing rules, ordered collections and validated file storage.",
+    "bn": "মেনু দিয়ে বই যোগ, ধার আর ফেরত দেওয়ার অ্যাপ বানাও এবং ফাইলে ডেটা রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 65,
+  "prerequisites": [
+    "oop-exam-questions",
+    "oop-file-io",
+    "oop-collections"
+  ],
+  "related": [],
+  "keywords": [
+    "Mini Project: Library Management",
+    "Java",
+    "mini project library"
+  ],
+  "standards": {
+    "minimum": "Java 17",
+    "notes": [
+      "All programs use Java 17 APIs and language rules."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Build a small library with explicit state transitions"
+    },
+    {
+      "id": "design",
+      "title": "Name the model, capability and storage boundary"
+    },
+    {
+      "id": "interaction",
+      "title": "Run the menu with line-oriented input"
+    },
+    {
+      "id": "storage",
+      "title": "Save a complete snapshot and validate a complete load"
+    },
+    {
+      "id": "walkthrough",
+      "title": "Follow a borrow, save and restore session"
+    },
+    {
+      "id": "implementation",
+      "title": "Complete application and a failed-load demonstration"
+    },
+    {
+      "id": "verification",
+      "title": "Check invariants before extending the menu"
+    },
+    {
+      "id": "summary",
+      "title": "Keep operations and persistence honest"
+    }
+  ],
+  "examples": [
+    {
+      "title": "Complete menu-driven library",
+      "explanationHtml": "<p>The menu coordinates a plain Library model and a TextStore. Save and Load are explicit; sorted ids make displays predictable.</p>\n",
+      "id": "ex-1",
+      "file": "examples/ex-1.java",
+      "level": "basic",
+      "tryNow": false,
+      "output": "examples/ex-1.out",
+      "stdin": "examples/ex-1.in"
+    },
+    {
+      "id": "ex-2",
+      "title": "Reject duplicate stored ids without changing the library",
+      "level": "advanced",
+      "file": "examples/ex-2.java",
+      "output": "examples/ex-2.out",
+      "tryNow": false,
+      "explanationHtml": "<p>The file repeats id 9. Loading fails before replacement, so the existing id 3 stays available. The display uses a LibraryItem reference to dispatch status.</p>"
+    }
+  ],
+  "practice": [
+    {
+      "title": "Complete the library commands",
+      "statementHtml": "<p>Implement the menu described in the lesson. Read line-oriented commands 0..6. Add reads id then title; Borrow and Return read id. Use the exact prompts and messages from the complete example. The isolated session starts without library.tsv. Persist only on Save; failed Load preserves current state.</p>\n",
+      "hints": [
+        "Parse all stored rows before committing the loaded map."
+      ],
+      "difficulty": "hard",
+      "id": "p-1",
+      "solution": "practice/p-1.java",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "type": "written",
+      "title": "Extend with a reference-only item",
+      "statementHtml": "<p>Add a ReferenceItem concept that is listed but cannot be borrowed. Describe class and interface changes without weakening the existing capability contract.</p>\n",
+      "answerHtml": "<p>ReferenceItem extends LibraryItem and implements status for display, but does not implement Loanable. Widen the inventory to LibraryItem and make the controller check for Loanable before borrowing. Extend the file format with an explicit item-kind field and validate it during loading.</p>\n",
+      "hints": [
+        "A shared base does not require every item to have every capability."
+      ],
+      "difficulty": "hard",
+      "id": "p-2"
+    },
+    {
+      "type": "written",
+      "title": "Plan a damaged-file check",
+      "statementHtml": "<p>The live library contains ids 3 and 7. A load file contains valid id 9 followed by another id 9. State the required outcome and explain the control flow.</p>\n",
+      "answerHtml": "<p>TextStore rejects the duplicate before returning its candidate list. Main catches IOException and prints LOAD FAILED. Library.replace is never called, so ids 3 and 7 remain and id 9 is not partially installed.</p>\n",
+      "hints": [
+        "Look for the commit point after validation."
+      ],
+      "difficulty": "medium",
+      "id": "p-3"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "output",
+      "prompt": "Which borrow and return transitions succeed for a new book?",
+      "code": "class Book {\n    private boolean borrowed;\n    boolean borrow() {\n        if (borrowed) { return false; }\n        borrowed = true; return true;\n    }\n    boolean giveBack() {\n        if (!borrowed) { return false; }\n        borrowed = false; return true;\n    }\n}\n\nclass Main {\n    public static void main(String[] args) throws Exception {\n        Book b = new Book();\n        System.out.println(b.borrow());\n        System.out.println(b.borrow());\n        System.out.println(b.giveBack());\n    }\n}\n",
+      "options": [
+        "true\nfalse\ntrue",
+        "true\ntrue\ntrue",
+        "false\nfalse\ntrue"
+      ],
+      "answer": 0,
+      "explanation": "Only the first borrow succeeds before a return makes the book available again.",
+      "difficulty": "medium",
+      "id": "q-1"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why does Book implement Loanable rather than making every LibraryItem borrowable?",
+      "options": [
+        "It removes the need for methods",
+        "Borrowing is a capability some item types may lack",
+        "Interfaces store the whole inventory"
+      ],
+      "answer": 1,
+      "explanation": "A narrow capability avoids forcing unsupported operations onto all item types.",
+      "difficulty": "medium",
+      "id": "q-2"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why use TreeMap for the inventory?",
+      "options": [
+        "It automatically writes a file",
+        "It makes Book deeply immutable",
+        "It provides unique id lookup with sorted id traversal"
+      ],
+      "answer": 2,
+      "explanation": "The map expresses lookup and deterministic id order.",
+      "difficulty": "medium",
+      "id": "q-3"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What happens after a duplicate add?",
+      "options": [
+        "The original book remains",
+        "The original is overwritten silently",
+        "Both share one id entry"
+      ],
+      "answer": 0,
+      "explanation": "putIfAbsent enforces the uniqueness invariant.",
+      "difficulty": "medium",
+      "id": "q-4"
+    },
+    {
+      "type": "mcq",
+      "prompt": "When should a load replace the live inventory?",
+      "options": [
+        "Before opening the file",
+        "After every row has validated",
+        "After the first row"
+      ],
+      "answer": 1,
+      "explanation": "A temporary candidate preserves the old model on failure.",
+      "difficulty": "medium",
+      "id": "q-5"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Why reject tabs in titles?",
+      "options": [
+        "Swing cannot display tabs",
+        "Java Strings cannot contain tabs",
+        "Tabs separate fields in the file format"
+      ],
+      "answer": 2,
+      "explanation": "The simple format has no escaping protocol for embedded delimiters.",
+      "difficulty": "medium",
+      "id": "q-6"
+    },
+    {
+      "type": "mcq",
+      "prompt": "Does copying the snapshot list clone its Book objects?",
+      "options": [
+        "No",
+        "Yes recursively",
+        "Only borrowed books are cloned"
+      ],
+      "answer": 0,
+      "explanation": "A structural list copy preserves references to the same mutable books.",
+      "difficulty": "medium",
+      "id": "q-7"
+    },
+    {
+      "type": "mcq",
+      "prompt": "When does the application save automatically?",
+      "options": [
+        "On every exit",
+        "Never; Save is explicit",
+        "On every borrow"
+      ],
+      "answer": 1,
+      "explanation": "Explicit persistence makes success and failure visible.",
+      "difficulty": "medium",
+      "id": "q-8"
+    },
+    {
+      "type": "mcq",
+      "prompt": "What does a missing storage file mean for Load?",
+      "options": [
+        "An implicit empty successful inventory",
+        "Automatic creation of a borrowed book",
+        "LOAD FAILED with current data retained"
+      ],
+      "answer": 2,
+      "explanation": "A missing input is a storage failure rather than a valid empty snapshot.",
+      "difficulty": "medium",
+      "id": "q-9"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Model methods guard loan state transitions.",
+      "bn": "মডেলের মেথড বই ধার আর ফেরতের নিয়ম ঠিক রাখে।"
+    },
+    {
+      "en": "Interfaces express capabilities independently of shared fields.",
+      "bn": "ইন্টারফেসে কী কাজ করা যায় তা বলা হয়, শুধু ফিল্ড ভাগ করা নয়।"
+    },
+    {
+      "en": "Ordered maps keep listing predictable.",
+      "bn": "TreeMap-এ বইয়ের আইডি অনুযায়ী তালিকা সাজানো থাকে।"
+    },
+    {
+      "en": "Loading commits only after all records validate.",
+      "bn": "সব রেকর্ড ঠিক থাকলেই ফাইলের ডেটা বসে।"
+    },
+    {
+      "en": "Save and load failures must remain visible.",
+      "bn": "ফাইলে ডেটা লেখা বা পড়া ব্যর্থ হলে ব্যবহারকারীকে জানাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "design",
+      "question": "Draw and explain the project class relationships.",
+      "answerHtml": "<p>Book extends LibraryItem and implements Loanable. Library contains a map of Book references keyed by id. TextStore converts snapshots to and from UTF-8 rows. Main coordinates menu actions without owning the storage format.</p>\n",
+      "marks": 10
+    },
+    {
+      "type": "long",
+      "question": "Explain why loading into live storage row by row is unsafe.",
+      "answerHtml": "<p>A later invalid row would leave a partly replaced inventory. A temporary collection allows full validation before one replacement, preserving the previous model after failure.</p>\n",
+      "marks": 6
+    },
+    {
+      "type": "design",
+      "question": "Propose the next requirements for multi-user lending.",
+      "answerHtml": "<p>Define transaction boundaries for borrow checks and updates, persistent consistency across users, identity and permissions, and conflict feedback. A synchronized local method alone cannot coordinate several separate processes sharing a file.</p>\n",
+      "marks": 8
+    }
+  ],
+  "references": [
+    {
+      "title": "Java Files storage operations",
+      "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Files.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

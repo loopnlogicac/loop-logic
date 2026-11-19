@@ -1,0 +1,53 @@
+<h2 id="introduction">Choose a container from the question you ask</h2>
+<p class="lead">A class register keeps an ordered list of students. Attendance needs unique roll numbers. A result sheet looks up a mark by roll number. The <dfn>collections framework</dfn> offers different containers for these different jobs. Start with the required behaviour rather than whichever class name you remember first.</p>
+<p>A List keeps positions and permits duplicates. A Set keeps unique elements. A Map associates each unique key with a value and does not extend Collection. These interfaces describe contracts. ArrayList, HashSet and TreeMap are implementations with different ordering and cost choices. Generic arguments tell the compiler what each container may hold.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>If you know C arrays, remember that Java collections hold references and can manage growth for you. ArrayList&lt;Integer&gt; uses boxed values, while int[] holds primitives directly. A collection is convenient, but not free: consider memory, boxing and operations before replacing every small fixed array.</p></div>
+<h2 id="syntax">Declare the behaviour and choose an implementation</h2>
+<p>Prefer List&lt;String&gt; names = new ArrayList&lt;&gt;() when callers only need the list contract. You can later change the implementation without changing that variable's clients. Use a more specific declaration only when you need operations outside the interface. Import each collection class explicitly so a reader can see its source.</p>
+<p>List.add appends, get reads a position, and set replaces without changing the size. Set.add returns false for an existing equal element. Map.put replaces the old value for an existing equal key and returns the previous value. A map size counts keys, not every attempted insertion.</p>
+<p>Collection equality uses element equality rather than reference identity. Hash-based structures also need a consistent hashCode. Equal objects must have equal hash codes. Different objects may collide. The <a href="topic:oop-object-class">Object contract</a> explains why both methods matter when you introduce custom key classes.</p>
+<pre><code class="language-java">List&lt;String&gt; names = new ArrayList&lt;&gt;();
+names.add(&quot;Mita&quot;);
+Set&lt;Integer&gt; rolls = new TreeSet&lt;&gt;();
+rolls.add(17);
+Map&lt;Integer, Integer&gt; marks = new TreeMap&lt;&gt;();
+marks.put(17, 82);
+</code></pre>
+<h2 id="how-it-works">Compare order, access and membership</h2>
+<p>ArrayList stores a resizable array of element references. Reading by index is constant time. Appending is amortized constant time, because occasional growth copies existing references. Inserting at the beginning shifts later elements and takes linear time. Removing a middle element also shifts the tail.</p>
+<p>LinkedList stores nodes linked in both directions. Accessing a position walks through nodes and takes linear time. Adding or removing at either end is constant time. An insertion through an iterator already at the node avoids another search. Calling get(i) repeatedly in an indexed loop can make a full traversal quadratic.</p>
+<p>HashSet and HashMap use hash-based lookup. Basic operations are typically constant time with a suitable distribution. They do not promise iteration order. Do not print their raw iteration order as a sorted result. TreeSet and TreeMap maintain sorted order and provide logarithmic basic lookup and update costs.</p>
+<p>For a hash container, duplicate identity follows equals and hashCode. For a tree container, comparison returning zero treats keys as equivalent. Your ordering should normally agree with equals. Otherwise two unequal students with the same compared mark might collapse into one tree-set entry. Compare enough fields to match the intended identity.</p>
+<pre class="diagram">List:  [17, 17, 22]       ordered positions, duplicates
+Set:   {17, 22}           one entry per equal element
+Map:   17 -&gt; 82, 22 -&gt; 91 one value per key
+</pre>
+<h2 id="examples">Programs to explore</h2>
+<h3>Contrast a list and an endpoint queue</h3>
+<p>Value removal leaves the later duplicate in place. LinkedList removes A from the front.</p>
+<div data-example="ex-1"></div>
+<h3>Keep unique rolls and display them sorted</h3>
+<p>The hash set handles uniqueness. A tree set gives a predictable increasing display.</p>
+<div data-example="ex-2"></div>
+<h3>Count words and order the keys</h3>
+<p>Each repeated word updates its existing map entry. Sorting is applied explicitly before printing.</p>
+<div data-example="ex-3"></div>
+<h2 id="iteration">Read entries without accidental structural changes</h2>
+<p>Enhanced for visits each element through an iterator. A map offers keySet, values and entrySet views. Use entrySet when you need both key and value; it avoids a separate lookup for each key. The views are backed by the map, so allowed removals through a view affect the map itself.</p>
+<p>Do not remove directly from a list inside enhanced for. Many iterators detect unexpected structural changes and throw ConcurrentModificationException. The detection is best effort and is not a thread-safety mechanism. Use Iterator.remove after next, or removeIf when a predicate describes the removal clearly.</p>
+<p>List.remove has an important overload distinction for Integer lists. remove(1) removes the element at index one. remove(Integer.valueOf(1)) removes an equal value if present. Inspect the argument type before predicting output. Set.remove and Map.remove have different contracts, so do not transfer the index assumption to them.</p>
+<p>An unmodifiable factory such as List.of rejects add, remove and set. It also rejects null elements. That does not make referenced elements deeply immutable. A mutable object inside the list may still change. Distinguish a fixed sequence of references from an immutable domain model when sharing collections between components.</p>
+<h2 id="choosing">Match the collection to a small use case</h2>
+<p>For a mark sequence where index order matters, ArrayList is a good starting point. For unique roll numbers printed in increasing order, use TreeSet. For counting how often each word appears, use a Map from word to count. TreeMap makes the final output sorted without an extra sorting step.</p>
+<p>Choose HashSet when only membership matters and you do not need a predictable display order. To display its contents, copy them into a sorted structure or sort a list. Do not assume a particular order because one run happened to print small integers in sequence. That observation is not an API promise.</p>
+<p>LinkedList also implements Deque, but it is not automatically the fastest queue. ArrayDeque is often a better queue or stack choice when null elements are unnecessary. Name the access pattern first: indexed reading, endpoint operations, membership or key lookup. Then compare the cost and memory tradeoffs of suitable implementations.</p>
+<h3>Separate a lookup from a display policy</h3>
+<p>A membership query and a report do not need the same representation. You can retain a hash set for repeated membership checks, then create an ordered snapshot for a report. This keeps the primary access pattern efficient while making the display contract explicit. Consider how often each operation occurs before maintaining two permanent structures.</p>
+<h2 id="common-mistakes">Protect key identity and state assumptions</h2>
+<p>Changing fields used by hashCode after insertion can make a key difficult to find. The object may remain in the bucket chosen by its old hash. Prefer immutable key values, or remove the key before a controlled identity change and insert again. A final reference alone does not make the key object's fields immutable.</p>
+<p>Map.get returning null can mean an absent key or a stored null value in implementations that allow it. Use containsKey when you need to distinguish those cases. TreeMap with natural ordering rejects null keys, and factory maps reject nulls entirely. Read the selected implementation's contract rather than assuming every Map behaves identically.</p>
+<p>An empty list has size zero and no valid index. Validate a position against size before get. An empty set or map can still answer membership queries safely. Separate these edge cases in your design: asking whether an item exists is different from assuming there is a first item to read.</p>
+<h2 id="version-notes">Collections used here work on Java 17</h2>
+<p>The core collection interfaces date from Java 1.2. Generics arrived later in Java 5. List.of and the related factory methods need Java 9, while Map.getOrDefault has been available since Java 8. The programs here run on the requested Java 17 baseline and use sorted structures whenever displayed order matters.</p>
+<h2 id="summary">Make collection behaviour part of the design</h2>
+<p>Pick List for positions, Set for uniqueness and Map for lookup by key. Then choose ordering, mutation and performance rules deliberately. Sorting your own domain objects needs a comparison contract; the next lesson explains <a href="topic:oop-comparable-comparator">Comparable and Comparator</a>.</p>

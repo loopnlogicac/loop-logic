@@ -1,0 +1,56 @@
+<h2 id="introduction">Connect a user action to one meaningful operation</h2>
+<p class="lead">A button is useful only when a click changes something. An <dfn>event listener</dfn> is an object that receives a notification about an action. A JButton sends an ActionEvent to registered ActionListener objects. The listener can read input, call a model operation and update the visible result.</p>
+<p>Think of a calculator as three cooperating parts. The view holds fields and labels. The model knows arithmetic rules. A small controller translates a click into a model request. This separation lets you reason about arithmetic without opening a window and change the layout without rewriting calculation rules.</p>
+<p>Events do not arrive through a loop you write around the button. Swing's event queue dispatches them on the EDT. Your handler should finish promptly so the next event and repaint can proceed. The <a href="topic:oop-swing-basics">Swing basics lesson</a> explains that ownership rule.</p>
+<h2 id="syntax">Register a class or a lambda listener</h2>
+<p>ActionListener declares void actionPerformed(ActionEvent event). A named class implements that method and can receive dependencies through its constructor. A lambda can implement the same interface for a short handler. addActionListener registers the object; merely constructing a listener does not connect it to the button.</p>
+<p>The ActionEvent contains information such as its source and action command. For one button with one clear purpose, the handler can directly call that operation. For several related controls, action commands or shared Action objects can make routing clearer. Avoid depending on display text as a permanent internal identifier.</p>
+<p>Do not call actionPerformed manually to simulate normal application structure. Extract the underlying model operation into a method and call that from the listener. A console test or another interface can then use the same operation without inventing a Swing event object.</p>
+<pre><code class="language-java">button.addActionListener(event -&gt; {
+    int left = Integer.parseInt(leftField.getText().strip());
+    int right = Integer.parseInt(rightField.getText().strip());
+    resultLabel.setText(Integer.toString(model.add(left, right)));
+});
+</code></pre>
+<h2 id="how-it-works">Trace a click from the queue back to the label</h2>
+<p>The user clicks Add. Swing creates an event and later invokes each registered action listener on the EDT. The listener reads the current field text, strips optional spaces and parses the numbers. Only after successful parsing does it call the arithmetic model. It then turns the returned value into label text.</p>
+<p>A NumberFormatException indicates that the entered text is not an acceptable int. Catch that precise failure around conversion and show an instruction. Keep the user's text so it can be corrected. A calculation should not silently replace invalid input with zero, because that changes the user's intended operation.</p>
+<p>The model owns rules beyond text parsing. For bounded arithmetic, it can reject operands outside the documented range. It should not refer to JFrame or JLabel. This lets another caller use the same model and receive the same result or failure. The view owns how those results are presented.</p>
+<p>If two listeners are registered, one click can invoke both. Accidentally registering again whenever a screen refreshes can double a calculation. Register handlers as part of construction or manage registration deliberately. Keep a reference when you need removeActionListener later, because a new lambda expression is not a reliable way to identify the old registration.</p>
+<pre class="diagram">Click -&gt; event queue -&gt; ActionListener
+                            |
+                    parse field text
+                            |
+                    model.add(a,b)
+                            |
+                    resultLabel.setText(...)
+</pre>
+<h2 id="examples">Programs to explore</h2>
+<h3>A lambda-driven calculator</h3>
+<p>The lambda parses inputs and delegates addition to Calculator. Validation messages replace the result label.</p>
+<div data-example="ex-1"></div>
+<h3>The same calculation through a named listener</h3>
+<p>AddListener receives its dependencies explicitly and implements the same event contract as the lambda.</p>
+<div data-example="ex-2"></div>
+<h3>A counter with a separate model</h3>
+<p>Each action increments the Counter object. The label is a display of that state.</p>
+<div data-example="ex-3"></div>
+<h2 id="calculator">Specify arithmetic and error behaviour</h2>
+<p>The calculator examples accept whole numbers from -1000 through 1000. Addition and subtraction stay safely within int bounds. The view reports a useful message for nonnumeric or out-of-range input. These constraints make the model contract precise without requiring arbitrary-precision arithmetic in a first desktop exercise.</p>
+<p>A four-operation calculator would also need a division policy. Integer division truncates toward zero and rejects zero divisors. Decimal division needs a precision and rounding decision. Do not add a divide button without explaining those choices. A familiar symbol is not enough to define its model behaviour.</p>
+<p>A named listener is useful when it has state, dependencies or a reusable purpose. The example passes fields, output label and model to its constructor rather than reaching through unrelated global variables. A lambda is useful when the handler is short and its captured dependencies are obvious. Both forms still need the same validation.</p>
+<p>A model can be tested through ordinary method calls. For a counter, call increment twice and read value. For the calculator, pass boundary operands and inspect the sum. A separate view check confirms that clicks reach the model and display the result. Neither kind of check alone establishes every layer's correctness.</p>
+<h2 id="responsiveness">Make background completion an explicit event</h2>
+<p>A file-loading listener should start background work and return. When work finishes, schedule a display update on the EDT or use SwingWorker's done method. Read field text on the EDT before launching a worker so the worker receives an ordinary input value rather than a Swing component.</p>
+<p>Consider repeated requests. If a user starts two searches, the earlier request may finish last. Disable conflicting actions or attach a request identity so an older result cannot overwrite a newer display. This is a state-management issue rather than a promise that thread scheduling follows click order.</p>
+<p>During failure, leave the model valid and show an actionable message. During success, update status and controls consistently. A listener should coordinate a small operation; it should not become the entire persistence layer, arithmetic engine and window builder in one method.</p>
+<h3>Keep event errors distinct from model errors</h3>
+<p>A parsing failure means the view could not turn text into the required numeric request. A range failure means parsing succeeded but the model rejected the value. Distinguishing those cases gives the user a better correction. In both cases, keep the existing valid model state and avoid showing a success result for an operation that never completed.</p>
+<h2 id="common-mistakes">Avoid duplicate effects and hidden model dependencies</h2>
+<p>Attaching a listener to a panel does not make a child button emit actions through that registration. Register for the event type on the component that supplies it. MouseListener and ActionListener also serve different meanings: an action can be activated through the keyboard as well as a mouse click.</p>
+<p>Catching Exception around the entire screen can hide programming failures as input mistakes. Limit the parsing handler and let the model report its documented argument failures. Unexpected failures should remain diagnosable rather than appearing as a vague Enter a number message.</p>
+<p>Writing the result only into a label and later parsing that label as model state makes presentation part of the data contract. Keep the counter or calculation state in a plain object. The label should display a result, not serve as the application's only source of truth.</p>
+<h2 id="version-notes">Use stable event APIs on Java 17</h2>
+<p>ActionListener predates Java 8. Lambdas became available in Java 8 and work because ActionListener has one abstract operation. The programs use Java 17 without newer desktop features. The window examples are compiled separately; their output notes describe visible actions for a desktop check.</p>
+<h2 id="summary">Keep event translation thin and model rules reusable</h2>
+<p>Register one intentional handler, validate external text and call a plain model operation. Update the view on the EDT and keep slow work elsewhere. The <a href="topic:oop-exam-questions">exam questions</a> now combine these design habits with Java's dispatch and value rules.</p>

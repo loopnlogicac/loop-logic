@@ -1,0 +1,62 @@
+<h2 id="introduction">Give fixed choices and data values different types</h2>
+<p class="lead">A loan is AVAILABLE, BORROWED or LOST. A receipt has an id and an amount. An <dfn>enum</dfn> describes a fixed set of named choices, while a <dfn>record</dfn> describes a compact data carrier with named components. Both can make a program clearer than loosely related integers and strings.</p>
+<p>An enum value is an object of its enum type. It can carry fields and methods. A record instance carries component values and receives useful methods from the compiler. These features solve different problems: enums limit the allowed alternatives, while records reduce repeated value-class code.</p>
+<div class="callout note"><p class="callout-title">If you know C</p><p>If you know C enums and structs, keep the comparison limited. Java enums are classes with typed instances and behaviour. Records are reference types, not C structs copied as raw storage. A record reference can be shared, and a record component can itself refer to a mutable object.</p></div>
+<h2 id="syntax">Declare names and components explicitly</h2>
+<p>Enum constants appear first, separated by commas. If fields or methods follow, put a semicolon after the constant list. Each constant can pass arguments to the enum constructor. Constructors are not public: callers cannot create arbitrary new enum values with new.</p>
+<p>A record header declares components, such as record Result(int roll, int mark). It generates private final fields and public accessors named roll() and mark(). It also supplies a canonical constructor, equals, hashCode and toString based on the components. A record is implicitly final and cannot extend another class because it extends java.lang.Record.</p>
+<p>A record may implement interfaces and declare methods or static fields. It cannot add extra instance fields beyond its components. A compact canonical constructor lets you validate or normalize component parameters without rewriting the entire parameter list and field assignments.</p>
+<pre><code class="language-java">enum Status {
+    AVAILABLE(0), BORROWED(5);
+    private final int dailyFee;
+    Status(int dailyFee) { this.dailyFee = dailyFee; }
+    int dailyFee() { return dailyFee; }
+}
+record Result(int roll, int mark) {
+    Result {
+        if (mark &lt; 0 || mark &gt; 100) {
+            throw new IllegalArgumentException(&quot;mark&quot;);
+        }
+    }
+}
+</code></pre>
+<h2 id="how-it-works">Trace a named choice into its behaviour</h2>
+<p>Status.BORROWED identifies the constant created for that name during enum initialization. Its constructor receives five, and dailyFee returns that stored amount. Calling values() returns the constants in declaration order in a new array. name() returns the declared identifier; toString may be overridden for a display label.</p>
+<p>Use == to compare enum constants. Each declared constant has a unique identity within its loaded enum class, so identity comparison expresses the intended question. Avoid ordinal as a business code. Reordering constants changes ordinal values even when their meanings stay the same. Store an explicit stable code when a file format needs one.</p>
+<p>A switch over an enum selects the branch for a named constant. A Java 17 switch expression must cover all possible enum constants or include a default. Handle null before switching because an ordinary Java 17 enum switch on null throws NullPointerException. Do not teach newer pattern-switch null handling as part of this baseline.</p>
+<p>A record's equality is value-based across its components and requires the same record type. Two Result values with equal primitive components are equal even when separately constructed. This is different from ordinary Object identity. Hash codes follow record component equality, making records useful keys when their components also have stable equality.</p>
+<pre class="diagram">Status.BORROWED -&gt; one named enum constant -&gt; dailyFee 5
+Result(7,80)   -&gt; component values roll=7, mark=80
+Result(7,80)   -&gt; a second object, equal component values
+</pre>
+<h2 id="examples">Programs to explore</h2>
+<h3>Enum values carry fields</h3>
+<p>Each declared constant initializes its fee once. The identity comparison checks the exact named constant.</p>
+<div data-example="ex-1"></div>
+<h3>Switch on an enum</h3>
+<p>Both alternatives are covered, so the switch expression needs no default for this declaration.</p>
+<div data-example="ex-2"></div>
+<h3>Compare record components</h3>
+<p>Equal record components give value equality. Accessors use the component names.</p>
+<div data-example="ex-3"></div>
+<h3>Copy a mutable input list</h3>
+<p>The record stores an unmodifiable snapshot. Later source additions do not change the stored list.</p>
+<div data-example="ex-4"></div>
+<h2 id="validation">Build valid records at the boundary</h2>
+<p>A compact constructor checks parameters before the implicit field assignments. If validation fails, no valid instance is returned to the caller. You can normalize a String parameter, for example by stripping surrounding whitespace, and the normalized parameter value becomes the stored component. Keep such transformations clearly documented.</p>
+<p>Records provide shallow immutability. A final List component prevents replacing that reference inside the record, but does not stop a caller from changing the referenced list. Make a defensive copy with List.copyOf when an unmodifiable snapshot fits the model. That copy rejects null elements and still does not deeply copy mutable elements.</p>
+<p>Arrays require special care. A record with an array component uses the array's ordinary equality, which is identity-based. Two separate arrays with the same numbers do not automatically become equal record components. Prefer a list of immutable values when component equality should compare contents, or write a deliberate custom policy.</p>
+<p>Records are useful for query results, coordinates and small request values. They are less suitable for an entity whose identity remains stable while many fields change. A mutable Library service with an evolving inventory should be an ordinary class. A BookView containing an id and title can be a record returned by that service.</p>
+<h3>Choose a stable external representation</h3>
+<p>Suppose a file stores the loan status. Writing BORROWED is understandable, but renaming that constant later changes the accepted text unless you preserve compatibility. An explicit stable code separates file identity from a display label. The same issue applies to a record: generated toString is useful for inspection, not automatically a permanent interchange format.</p>
+<p>For record validation, distinguish rejecting an invalid value from silently changing it. A negative fee might be a data-entry error that should be rejected. Stripping spaces from a title may be harmless normalization. State which transformations occur so callers can predict the stored components.</p>
+<p>A record's generated hashCode follows its components, but it should not be treated as a permanent database identifier. Hash algorithms and collisions do not provide unique business identity. Keep an explicit receipt id when the application needs to retrieve one particular receipt later.</p>
+<h2 id="common-mistakes">Keep persistence and display decisions separate</h2>
+<p>Enum.valueOf requires an exact declared name, including case. Unknown text throws IllegalArgumentException. Validate external input or catch that precise failure where the user can choose again. Do not silently substitute the first enum constant for every unknown value, because that hides damaged data.</p>
+<p>Treating ordinal as a permanent file identifier is fragile. Adding a new constant in the middle shifts later numbers. An explicit text code or declared name may be more suitable, but names also need a migration policy if renamed. A file format is a contract separate from the order of source declarations.</p>
+<p>A record is not automatically deeply immutable, and generated equals does not recursively invent content equality for every component type. Inspect component contracts. If a record contains mutable keys, putting it into a HashMap still creates the usual mutable-key hazard. A concise declaration cannot replace a careful model design.</p>
+<h2 id="version-notes">Mark the Java 16 record boundary</h2>
+<p>Enums were introduced in Java 5. Switch expressions became standard in Java 14. Records became a standard feature in Java 16, after preview releases. The Java 17 programs here need no preview flags. Pattern matching for instanceof is also standard since Java 16, but record patterns are a later feature and are not used.</p>
+<p>Sealed classes became standard in Java 17 and describe a controlled subtype family. They are useful when alternatives need different data shapes or behaviour through subclasses. An enum instead gives a fixed collection of instances. Do not confuse limiting permitted subclasses with fixing the number of ordinary object instances.</p>
+<h2 id="summary">Choose a type that states the model</h2>
+<p>Use enums for fixed named alternatives and records for compact component-based values. Validate construction and protect mutable components deliberately. These values can travel through collections and <a href="topic:oop-file-io">text files</a> when you define a stable representation.</p>
