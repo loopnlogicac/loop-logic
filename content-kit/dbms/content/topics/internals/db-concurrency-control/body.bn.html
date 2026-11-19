@@ -1,0 +1,61 @@
+<h2 id="introduction">দুই cashier একসঙ্গে</h2>
+<p class="lead">শেষ notebook দুইজন একসঙ্গে বিক্রি করে। দুজন stock1 পড়ে0 লিখলে দুই sale-এ এক deduction থাকে। <dfn>Concurrency control</dfn> overlap-কে intended ফল রাখার rule-এ চালায়।</p>
+<p><dfn>Schedule</dfn> প্রত্যেক ট্রানজ্যাকশন-এর নিজস্ব অর্ডার রেখে mixed operation। Serial-এ একটির পরে অন্য। Serializable interleave হলেও নির্দিষ্ট equivalence-এ serial-এর মতো। Disk-lock অপেক্ষায় অন্য কাজ চলে বলে overlap দরকারি।</p>
+<p>r1(X),w1(X) read-write। Commit-abort recovery-তে জরুরি,conflict test read-write অর্ডার দেখে। Serializability আর recoverability আলাদা;acyclic হলেই dirty-read safe নয়।</p>
+
+<h2 id="how-it-works">আন্দাজের আগে precedence graph</h2>
+<p>ভিন্ন ট্রানজ্যাকশন,same item,অন্তত এক write হলে conflict। Read-read নয়। Ordered conflicting pair Ti আগেTj হলে edgeTi→Tj। Graph acyclic হলে conflict-serializable,topological অর্ডার equivalent serial।</p>
+<table class="ref"><thead><tr><th scope="col">সময়</th><th scope="col">T1</th><th scope="col">T2</th><th scope="col">Conflict ফল</th></tr></thead><tbody><tr><td>1</td><td>r1(X)</td><td></td><td></td></tr><tr><td>2</td><td></td><td>r2(Y)</td><td>আলাদা item</td></tr><tr><td>3</td><td>w1(X)</td><td></td><td></td></tr><tr><td>4</td><td></td><td>r2(X)</td><td>T1 → T2</td></tr><tr><td>5</td><td></td><td>w2(Y)</td><td>T1,Y ছোঁয়নি</td></tr></tbody></table>
+<pre class="diagram">T1 ----&gt; T2
+Topological order: T1, T2</pre>
+<p>এক edge,তাইT1 তারপরT2-equivalent। Different item operation relevant conflict না বদলে পার হয়। Node ট্রানজ্যাকশন,SQL স্টেটমেন্ট/অ্যাকাউন্ট নয়।</p>
+<p>r1(X),r2(X),w1(X),w2(X)-এ প্রথম read→শেষ write T1→T2,অন্য read→আগের write T2→T1। Cycle,কোন serial সব conflict রাখে না। Old read থেকে দুই compute-এ last write lost আপডেট। Single conditional UPDATE engine lock-evaluate-এ এই race এড়ায়।</p>
+<pre class="diagram">T1 ----&gt; T2
+ ^        |
+ |________|
+Cycle: conflict-serializable নয়</pre>
+<p><dfn>Recoverable</dfn>-এ অন্যের value পড়া reader source commit-এর পরে commit। Cascadeless uncommitted read এড়ায়,strict uncommitted overwrite-ও। Recovery শক্ত করে,graph test-এর বদলি নয়।</p>
+
+<h2 id="worked-examples">Schedule থেকে actual lock</h2>
+<h3>Locking-এর দুই phase</h3>
+<p>Shared compatible reader দেয়,exclusive writer রক্ষা। Basic <dfn>2PL</dfn>-এ আগে acquire করে grow,কোনো release-এর পরে shrink-এ আর acquire নয়। Lock model-এ conflict serializable নিশ্চিত,deadlock হতে পারে।</p>
+<p>Strict2PL exclusive boundary পর্যন্ত,dirty read-overwrite ঠেকায়। Rigorous shared-ও রাখে। বইয়ে নাম আলাদা হতে পারে,কোন lock বলো। InnoDB lock+MVCC,ordinary consistent SELECT textbook shared-lock2PL নয়।</p>
+<table class="ref"><thead><tr><th scope="col">সময়</th><th scope="col">Session A</th><th scope="col">Session B</th></tr></thead><tbody><tr><td>1</td><td>Account1 exclusive</td><td></td></tr><tr><td>2</td><td></td><td>Account2 exclusive</td></tr><tr><td>3</td><td>Account2 চেয়ে অপেক্ষা</td><td></td></tr><tr><td>4</td><td></td><td>Account1 চেয়ে deadlock</td></tr></tbody></table>
+<pre class="diagram">Wait-for graph:
+A ----অপেক্ষা----&gt; B
+A &lt;---অপেক্ষা----- B</pre>
+<p>Cycle-এ একজন rollback/interruption ছাড়া শেষ নয়। Detection on হলে InnoDB victim বেছে1213। Timing-work-এ choice,কে হারবে ধরে logic নয়। Whole ট্রানজ্যাকশন bounded retry-backoff।</p>
+<p>Same ID অর্ডার-এ lock এই cycle কমায়। Short ট্রানজ্যাকশন,selective ইনডেক্স,user-ইনপুট wait নয়। Timeout1205 ডিফল্ট-এ সাধারণত waiting স্টেটমেন্ট rollback,deadlock victim whole। Timeout retry-এর আগে business unit explicit rollback।</p>
+<h3>Snapshot visibility দেখো</h3>
+<p>দুই actual MySQL8.4.7 কানেকশন-এর observed ফল। প্রত্যেকবার account1 শুরু1000,A read,B900,A আবার। প্রথম দুইয়েB commit,READ UNCOMMITTED-এ pending,পরে rollback।</p>
+<table class="ref"><thead><tr><th scope="col">A level</th><th scope="col">প্রথম read</th><th scope="col">পরে B</th><th scope="col">দ্বিতীয় read</th></tr></thead><tbody><tr><td>REPEATABLE READ</td><td>1000</td><td>900 commit</td><td>1000</td></tr><tr><td>READ COMMITTED</td><td>1000</td><td>900 commit</td><td>900</td></tr><tr><td>READ UNCOMMITTED</td><td>1000</td><td>900 pending</td><td>900</td></tr></tbody></table>
+<p>InnoDB RR-এ প্রথম ordinary consistent read snapshot স্থাপন,পরে same snapshot-এ B commit-এর পরেও1000। START TRANSACTION একাই সবসময় snapshot নয়;WITH CONSISTENT SNAPSHOT supported level-এ explicit। Own write-ও দেখো,mixed read surprising হতে পারে।</p>
+<p>RC-তে প্রতি read fresh,তাই900। RU-তে900 dirty,B পরে ফেরায়,সেই never-committed state-এ রিপোর্ট সিদ্ধান্ত নিতে পারে। Visibility আলাদা, B write-lock চাই কি না নয়।</p>
+<pre><code class="language-sql">SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+START TRANSACTION;
+SELECT balance FROM accounts WHERE id = 1 ORDER BY id;
+-- B updates account 1 and commits before A repeats this SELECT.
+SELECT balance FROM accounts WHERE id = 1 ORDER BY id;
+COMMIT;</code></pre>
+<h3>Consistent আর locking read</h3>
+<p>Ordinary SELECT সাধারণত MVCC-তে selected রো lock নয়। FOR UPDATE current ডেটা আর exclusive lock। Observed-এ A account1 lock,B UPDATE অপেক্ষা করে short timeout-এ1205। A commit release।</p>
+<p>একই RR-এ locking read আগের snapshot থেকে ভিন্ন ভার্সন পেতে পারে। Invariant-এ casually mix নয়। Explicit ট্রানজ্যাকশন চাই,autocommit-এ স্টেটমেন্ট শেষে protection যায়। একই boundary-তে validate-change রো lock।</p>
+<p>RR রেঞ্জ-এ next-কী রেকর্ড+gap। Existing unique equality সাধারণত রেকর্ড only। RC-তে অধিকাংশ search gap কমে,FK-duplicate check exception। Access path কোন রেকর্ড-gap দেখা-lock হবে বদলায়।</p>
+<h3>চার level-এর অর্থ</h3>
+<table class="ref"><thead><tr><th scope="col">Level</th><th scope="col">Explicit ট্রানজ্যাকশন-এ plain read</th><th scope="col">সতর্কতা</th></tr></thead><tbody><tr><td>READ UNCOMMITTED</td><td>Pending পড়তে পারে</td><td>Rollback-এর পরেও dirty সিদ্ধান্ত থাকে</td></tr><tr><td>READ COMMITTED</td><td>প্রতি read নতুন snapshot</td><td>মান-রো set বদলায়</td></tr><tr><td>REPEATABLE READ</td><td>Stable consistent snapshot</td><td>General serializable নয়</td></tr><tr><td>SERIALIZABLE</td><td>Autocommit off-এ shared locking SELECT</td><td>Block-deadlock handling চাই</td></tr></tbody></table>
+<p>Serializable explicit-এ plain SELECT writer block করতে পারে। Autocommit read-only এক-স্টেটমেন্ট ট্রানজ্যাকশন-এ consistent read হতে পারে। এক-স্টেটমেন্ট experiment থেকে multi-স্টেটমেন্ট business নয়,boundary-level দুটো দেখো।</p>
+<p>RR ডিফল্ট হলেও config বদলায়,actual @@transaction_isolation পড়ো। Strong লেবেল missing predicate,unchecked রো বা বাইরের কনস্ট্রেইন্ট সারায় না। Invariant-access থেকে level,competing session-এ যাচাই।</p>
+
+<h3>Recoverability-তে commit অর্ডার-ও</h3>
+<p>w1(X),r2(X),c2,a1-এT2 dirty পড়ে commit,T1 abort। Graph শুধুT1→T2,acyclic,তবু reader আগে commit বলে nonrecoverable।</p>
+<p>T1 commit-এর পরে T2 commit হলে dependency recoverable হতে পারে। Dirty read না হলে cascading abort এড়ায়। Serial test পুরো recovery proof নয়;conflict অর্ডার আর commit dependency আলাদা property।</p>
+<h2 id="common-mistakes">এক কানেকশন থেকে ভুল সিদ্ধান্ত নয়</h2>
+<h3>দুই read-এ edge</h3>
+<p>Read-read মান বদলায় না। Same item-এরRW,WR,WW-ই। বাড়তি edge মিথ্যা cycle বানায়।</p>
+<h3>Savepoint সব deadlock সারাবে</h3>
+<p>Victim whole rollback-এ savepoint gone। Whole business restart। অন্য এরর-এ documented effect দেখো,SQLSTATE দেখে আন্দাজ নয়।</p>
+<h3>Snapshot-কে serial proof</h3>
+<p>Overlapping শর্ত পড়ে আলাদা রো আপডেট-এ write skew হতে পারে। Shared invariant suitable lock,কনস্ট্রেইন্ট,serializable-তে। Stable read একা যথেষ্ট নয়।</p>
+
+<h2 id="summary">Graph,boundary,observation মিলাও</h2>
+<p>Precedence conflict অর্ডার,wait-for blocking cycle। InnoDB snapshot আর locking read আলাদা। Captured দুই-session schedule-এ ভাবো,পরে <a href="topic:db-recovery">undo,redo,recovery</a>-তে failure মেলাও।</p>

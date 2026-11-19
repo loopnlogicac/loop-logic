@@ -1,0 +1,43 @@
+<h2 id="introduction">Transfer-কে এক সিদ্ধান্ত ধরো</h2>
+<p class="lead">Ayesha Tanvir-কে100 BDT পাঠায়। একপাশে বিয়োগ,অন্যপাশে যোগ দুই স্টেটমেন্ট হলেও এক transfer। <dfn>ট্রানজ্যাকশন</dfn> এগুলো গুছায়। শুধু প্রথমটি টিকলে model থেকে টাকা হারায়।</p>
+<p><dfn>ACID</dfn>-এ atomicity all-or-nothing,consistency valid-state rule,isolation concurrent কাজ,durability failure-এর পরে committed effect। দায় আলাদা,COMMIT একা চারটি proof নয়।</p>
+<p>দুই শিক্ষার্থী-এর InnoDB অ্যাকাউন্ট-এ শুরু1000 আর500। Invariant total1500,কোনোটিই negative নয়। Fixed ID,DECIMAL money,fee/external system নেই—এই assumption-এ expected state নির্দিষ্ট।</p>
+
+<h2 id="how-it-works">ট্রানজ্যাকশন state ধরো</h2>
+<table class="ref"><thead><tr><th scope="col">State</th><th scope="col">Transfer-এ অর্থ</th><th scope="col">পরের state</th></tr></thead><tbody><tr><td>Active</td><td>Debit/credit চেষ্টা</td><td>Partially committed/failed</td></tr><tr><td>Partially committed</td><td>শেষ logical কাজ,commit durable নয়</td><td>Committed/failed</td></tr><tr><td>Committed</td><td>Commit protocol সফল</td><td>Terminated</td></tr><tr><td>Failed</td><td>Operation/system failure-এ শেষ নয়</td><td>Undo-তে aborted</td></tr><tr><td>Aborted</td><td>Uncommitted effect ফেরানো</td><td>Restart/terminate</td></tr></tbody></table>
+<p>Partially committed conceptual recovery boundary,SELECT-এ দেখা MySQL status নয়। শেষ UPDATE-এর পরেও persistence-এর আগে failure পারে। Configured durability policy-তে successful acknowledgment ক্লায়েন্ট boundary।</p>
+<p>Atomicity crash/rollback-এ অর্ধেক unit committed রাখে না,InnoDB undo সাহায্য করে। তবে বহু স্টেটমেন্ট এরর শুধু failing স্টেটমেন্ট ফেরায়। Debit-এর পরে credit fail হলে app whole transfer rollback করবে,কানেকশন আছে বলেই commit নয়।</p>
+<p>Consistency valid শুরু থেকে valid শেষ। CHECK negative ঠেকায়,দুই রো মোট নিজে মানায় না। Same amount debit-credit,missing অ্যাকাউন্ট ধরতে কোড চাই। কনস্ট্রেইন্ট সব business invariant আন্দাজ করে না।</p>
+<p>Isolation chosen level-access pattern অনুযায়ী interference আটকায়। Plain read পরে unconditional write concurrent change হারায়। Conditional আপডেট/locking read,affected-রো আর consistent lock অর্ডার নাও। Stronger isolation concurrency কমিয়ে proof সহজ করতে পারে।</p>
+<p>Durability system promise-এর failure-এ commit রাখে। Redo-তে dirty page final জায়গায় না গেলেও চলে,log যথাযথ persist চাই। সাধারণ durable সেটিং innodb_flush_log_at_trx_commit=1,binary log-এ sync_binlog-ও। Device flush মানবে, disk loss-এ backup তবু চাই।</p>
+<p>ACID consistency app invariant,CAP consistency distributed replica-র single-copy ভিউ। শব্দ মেলে,দাবি একে অন্যের বদলি নয়।</p>
+
+<h2 id="worked-examples">একক কাজ trace</h2>
+<h3>অসমাপ্ত debit বাতিল</h3>
+<p>Rollback-এ1000,500। Debit committed history-তে আসে না।</p>
+<div data-example="ex-1"></div>
+<h3>দুইপাশ commit</h3>
+<p>দুই affected-রো এক। Balance900,600,total1500। ID অর্ডার-এ দুই অ্যাকাউন্ট lock clear protocol।</p>
+<div data-example="ex-2"></div>
+<h3>টাকা নেই এমন transfer reject</h3>
+<p>Zero affected মানে debit হয়নি। Caller rollback,recipient credit নয়। SQL সফল হলেও business failure।</p>
+<div data-example="ex-3"></div>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">Ayesha</th><th scope="col">Tanvir</th><th scope="col">মোট</th><th scope="col">অর্থ</th></tr></thead><tbody><tr><td>শুরু</td><td>1000</td><td>500</td><td>1500</td><td>Valid committed</td></tr><tr><td>ভেতরে debit</td><td>900</td><td>500</td><td>1400</td><td>Intermediate,final invariant নয়</td></tr><tr><td>ভেতরে credit</td><td>900</td><td>600</td><td>1500</td><td>Valid candidate</td></tr><tr><td>COMMIT পরে</td><td>900</td><td>600</td><td>1500</td><td>Committed transfer</td></tr></tbody></table>
+<p>ভেতরের1400 controlled ট্রানজ্যাকশন-এ গ্রহণযোগ্য,completed transfer বলে অন্য session নেবে না। Unsuitable isolation রিপোর্ট-এ intermediate দেখা যেতে পারে,atomic write আর উপযুক্ত read isolation একসঙ্গে চাই।</p>
+<p>Destination missing হলে UPDATE zero,whole failure ধরে debit rollback। আগে দুই রো check,পরে এরর-ও handle। COMMIT-এ network loss-এ ফল অজানা হতে পারে। Blind debit নয়,unique transfer ID আর reconciliation।</p>
+<p>Retry whole ট্রানজ্যাকশন,current ডেটা,same business idempotency কী-তে। Deadlock retry external পেমেন্ট আবার নয়। DB rollback sent email বা independently accepted charge ফেরায় না। উপযুক্ত delivery-reconciliation design চাই।</p>
+
+<h3>Retry-র আগে business request-এর নাম</h3>
+<p>COMMIT পাঠিয়ে response-এর আগে কানেকশন গেলে সার্ভার committed-response lost অথবা commit unfinished দুই সম্ভাবনা। Unlabelled replay-এ double debit,সরাসরি fail বললেও সফল transfer লুকায়।</p>
+<p>Unique request ID আর completed outcome balance change-এর একই ট্রানজ্যাকশন-এ রাখো। Reconnect-এ lookup করে reconcile। Unique rule একই request-এর দুই committed রেকর্ড আটকায়। Amount-অ্যাকাউন্ট-ও মেলাও,এক ID অন্য payload-এ অন্য transfer না হয়।</p>
+<p>Idempotent handling-এ same logical request established ফল দেয়,দ্বিতীয় পেমেন্ট নয়। Concurrency-safe implementation আর প্রথম ট্রানজ্যাকশন active থাকলে policy চাই। Timeout মানে সার্ভার কাজ করেনি proof নয়। Durable commit আর reliable business response related,আলাদা design।</p>
+<h2 id="common-mistakes">কোন promise ভাঙল দেখো</h2>
+<h3>Valid SQL মানেই consistency</h3>
+<p>দুই UPDATE ভিন্ন amount-এও রো CHECK মানতে পারে। Before-after invariant দেখো। Arithmetic আর affected-রো ট্রানজ্যাকশন design-এর।</p>
+<h3>স্টেটমেন্ট এরর আগের সব abort</h3>
+<p>CHECK fail-এ অনেকসময় আগের pending-সহ active থাকে। Business শেষ না হলে full rollback। Deadlock whole abort করতে পারে,এরর classify করে retry।</p>
+<h3>Rollback সব disaster recovery</h3>
+<p>Uncommitted change ফেরায়,গতকালের committed ভুল ডিলিট বা নষ্ট disk নয়। Log আর tested backup অন্য failure সামলায়।</p>
+
+<h2 id="summary">Logic,isolation,persistence মেলাও</h2>
+<p>Safe transfer-এ invariant,অ্যাকাউন্ট match check,এক boundary,এরর path। App logic-engine মিলে ACID। পরের <a href="topic:db-concurrency-control">concurrency control</a>-এ overlap দেখো।</p>
