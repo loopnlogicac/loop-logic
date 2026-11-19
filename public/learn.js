@@ -6,6 +6,7 @@ import { fillAdSlots, api, getLang, applyI18n, mountNav, el, num, errorBox, toas
 import { savedStrings, savedEditor } from './saved.js';
 import { mountLab, renderFigure } from './lab-player.js';
 import { codeRunner, runnerStatus } from './runner.js';
+import { adaptiveStrings, adaptiveQuiz } from './adaptive-quiz.js';
 
 let RUN = { enabled: false, languages: [] };
 
@@ -49,6 +50,8 @@ const T = {
 };
 const t = () => T[getLang()];
 const main = document.getElementById('main');
+Object.assign(T.en, adaptiveStrings.en);
+Object.assign(T.bn, adaptiveStrings.bn);
 const q = new URLSearchParams(location.search);
 const trackId = q.get('track');
 const topicId = q.get('topic');
@@ -276,7 +279,8 @@ function quizBlock(d) {
     } catch (e) { result.textContent = e.message; }
     btn.disabled = false;
   };
-  return el('section', { class: 'tut-extra', id: 'quiz' }, el('h2', { text: L.quiz }), ...items, el('div', { class: 'quiz-actions' }, btn, result));
+  const adaptive = adaptiveQuiz(d, L, (on) => { for (const item of items) item.hidden = on; btn.disabled = on; result.hidden = on; });
+  return el('section', { class: 'tut-extra', id: 'quiz' }, el('h2', { text: L.quiz }), ...items, el('div', { class: 'quiz-actions' }, btn, adaptive.button, result), adaptive.panel);
 }
 
 function practiceBlock(d) {

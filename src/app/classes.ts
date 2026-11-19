@@ -188,7 +188,7 @@ export class ClassService {
       const t = this.topicOf(e);
       if (!t || (track && t.track !== track)) continue;
       if (e.type === 'view') seen.add(t.topic);
-      if (e.type === 'quiz' && !e.payload.review) { seen.add(t.topic); quizzes.set(t.topic, { score: Number(e.payload.score) || 0, total: Number(e.payload.total) || 0, at: e.at }); }
+      if (e.type === 'quiz' && !e.payload.review && !(e.payload.adaptive && !e.payload.complete)) { seen.add(t.topic); quizzes.set(t.topic, { score: Number(e.payload.score) || 0, total: Number(e.payload.total) || 0, at: e.at }); }
       if (e.type === 'lab_check' && e.payload.lab) labs.add(`${t.topic}/${e.payload.lab}`);
     }
     const qs = [...quizzes.values()].filter((q) => q.total);
@@ -268,7 +268,7 @@ export class ClassService {
     const qStats = new Map<string, { wrong: number; n: number; who: Set<string>; topic: string; qid: string }>();
     for (const e of events) {
       const t = this.topicOf(e);
-      if (e.type !== 'quiz' || e.payload.review || !t || (cls.track && t.track !== cls.track)) continue;
+      if (e.type !== 'quiz' || e.payload.review || (e.payload.adaptive && !e.payload.complete) || !t || (cls.track && t.track !== cls.track)) continue;
       const s = topicScores.get(t.topic) ?? { sum: 0, n: 0, who: new Set() };
       if (Number(e.payload.total)) { s.sum += Number(e.payload.score) / Number(e.payload.total); s.n++; s.who.add(e.learnerId); }
       topicScores.set(t.topic, s);

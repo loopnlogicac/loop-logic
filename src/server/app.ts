@@ -17,6 +17,7 @@ import type { LearnerService } from '../app/learner.ts';
 import type { WatchService } from '../app/watch.ts';
 import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
+import type { AdaptiveQuizService } from '../app/adaptive-quiz.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
 import type { MasteryService } from '../app/mastery.ts';
@@ -52,6 +53,7 @@ export interface AppDeps {
   watch: WatchService;
   notes?: NoteService;
   extras: VideoExtrasService;
+  adaptiveQuiz?: AdaptiveQuizService;
   tutorials: TutorialService;
   mastery?: MasteryService;
   admin?: AdminService;
@@ -236,6 +238,14 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/learn/:track/:topic/checks/:phase/submit', ({ learnerId, params, body }) => mastery().submit(learnerId, params.track!, params.topic!, params.phase!, body.answers, lang(body.lang)), 'learner'),
     route('GET', '/api/learn/:track', ({ params, query }) => tutorials.track(params.track!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic', ({ params, query }) => tutorials.topic(params.track!, params.topic!, lang(query.get('lang'))), 'none'),
+    route('POST', '/api/learn/:track/:topic/adaptive', ({ learnerId, params, body }) => {
+      if (!d.adaptiveQuiz) throw new AppError('unavailable', 503, 'Adaptive quizzes are unavailable.');
+      return d.adaptiveQuiz.start(learnerId, params.track!, params.topic!, lang(body?.lang));
+    }, 'learner'),
+    route('POST', '/api/learn/:track/:topic/adaptive/answer', ({ learnerId, params, body }) => {
+      if (!d.adaptiveQuiz) throw new AppError('unavailable', 503, 'Adaptive quizzes are unavailable.');
+      return d.adaptiveQuiz.answer(learnerId, params.track!, params.topic!, body, lang(body?.lang));
+    }, 'learner'),
     route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang), body.review === true)),
     route('GET', '/api/learn/:track/:topic/practice/:pid', ({ params, query }) => tutorials.solution(params.track!, params.topic!, params.pid!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic/labs/:lab', ({ params, query }) => tutorials.lab(params.track!, params.topic!, params.lab!, lang(query.get('lang'))), 'none'),

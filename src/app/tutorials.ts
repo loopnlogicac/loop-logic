@@ -327,6 +327,14 @@ export class TutorialService {
     return { score, answered, total: (x.json.quiz ?? []).length, results };
   }
 
+  /** Grade one server-selected adaptive question; never trust a client answer key. */
+  gradeAnswer(trackId: string, topicId: string, id: string, choice: unknown, lang: Lang) {
+    const { x } = this.topicOr404(trackId, topicId, lang);
+    const q = (x.json.quiz ?? []).find((q: Json) => q.id === id);
+    if (!q || !Number.isInteger(choice) || Number(choice) < 0 || Number(choice) >= q.options.length) throw new AppError('bad_input', 400, lang === 'bn' ? 'একটি উত্তর বেছে নাও।' : 'Choose an answer.');
+    return { correct: choice === q.answer, answer: q.answer, explanation: String(q.explanation ?? '') };
+  }
+
   /** A learner opened a topic, or ran one of its labs (for their instructor's class view). */
   async recordActivity(learnerId: string, body: Json) {
     const kind = body?.kind === 'lab' ? 'lab' : 'view';
