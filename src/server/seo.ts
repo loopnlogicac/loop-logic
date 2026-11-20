@@ -152,7 +152,9 @@ export function injectHead(html: string, meta: Meta): string {
     `<meta name="twitter:title" content="${esc(meta.title)}">`,
     `<meta name="twitter:description" content="${esc(meta.description)}">`,
     `<meta name="twitter:image" content="${esc(meta.image)}">`,
-    '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    '<link rel="icon" href="/favicon.png" type="image/png" sizes="64x64">',
+    '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+    '<meta name="theme-color" content="#0c1822">',
     ...meta.ld.map((o) => `<script type="application/ld+json">${ldJson(o)}</script>`),
   ].join('\n  ');
   let out = /<title>[\s\S]*?<\/title>/.test(html) ? html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(meta.title)}</title>`) : html.replace(/<head>/, `<head>\n  <title>${esc(meta.title)}</title>`);
