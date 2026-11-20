@@ -24,7 +24,7 @@ type Lang = 'en' | 'bn';
 export interface Staff { learnerId: string; email: string; role: 'admin' | 'instructor' }
 
 const str = (v: unknown, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-const bad = (msg: string) => new AppError('bad_input', 400, msg);
+const bad = (msg: string, bn?: string) => new AppError('bad_input', 400, msg, undefined, bn);
 const DAY = 86_400_000;
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newCode = () => [...randomBytes(8)].map((b) => CODE_CHARS[b % CODE_CHARS.length]).join('').replace(/^(.{4})/, '$1-');
@@ -55,8 +55,8 @@ export class ClassService {
   // ── classes ──
   private async classOr404(id: string, staff?: Staff) {
     const d = await this.store.getDoc('class', id);
-    if (!d || d.data.archived) throw new AppError('not_found', 404, 'No such class.');
-    if (staff && staff.role !== 'admin' && d.data.ownerId !== staff.learnerId) throw new AppError('forbidden', 403, 'This is another instructor’s class.');
+    if (!d || d.data.archived) throw new AppError('not_found', 404, 'No such class.', undefined, 'এমন কোনো ক্লাস নেই।');
+    if (staff && staff.role !== 'admin' && d.data.ownerId !== staff.learnerId) throw new AppError('forbidden', 403, 'This is another instructor’s class.', undefined, 'এটা অন্য একজন ইনস্ট্রাক্টরের ক্লাস।');
     return d;
   }
   async myClasses(staff: Staff) {
@@ -71,11 +71,11 @@ export class ClassService {
   async saveClass(staff: Staff, body: Json, id?: string) {
     const prev = id ? await this.classOr404(id, staff) : undefined;
     const name = str(body.name, 120);
-    if (!name) throw bad('Name the class, e.g. "CSE 2103 · Data Structures · Section A".');
+    if (!name) throw bad('Name the class, e.g. "CSE 2103 · Data Structures · Section A".', 'ক্লাসের একটা নাম দাও, যেমন "CSE 2103 · Data Structures · Section A"।');
     const track = str(body.track, 60) || null;
-    if (track && !this.tutorials.adminTracks().some((t) => t.id === track)) throw bad('Choose a tutorial track.');
+    if (track && !this.tutorials.adminTracks().some((t) => t.id === track)) throw bad('Choose a tutorial track.', 'একটা টিউটোরিয়াল ট্র্যাক বেছে নাও।');
     const course = str(body.course, 80) || null;
-    if (course && !getCourse(course)) throw bad('Choose a video course.');
+    if (course && !getCourse(course)) throw bad('Choose a video course.', 'একটা ভিডিও কোর্স বেছে নাও।');
     const data = {
       name, track, course, requireApproval: body.requireApproval === true,
       ownerId: prev?.data.ownerId ?? staff.learnerId, ownerEmail: prev?.data.ownerEmail ?? staff.email,
@@ -108,10 +108,10 @@ export class ClassService {
 
   // ── students joining ──
   async join(learnerId: string, email: string | null, signedIn: boolean, codeIn: unknown) {
-    if (!signedIn || !email) throw new AppError('unauthenticated', 401, 'Sign in first, so your instructor knows who you are.');
+    if (!signedIn || !email) throw new AppError('unauthenticated', 401, 'Sign in first, so your instructor knows who you are.', undefined, 'আগে সাইন ইন করো, যাতে তোমার ইনস্ট্রাক্টর বুঝতে পারেন তুমি কে।');
     const code = str(codeIn, 20).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^(.{4})/, '$1-');
     const cls = (await this.store.listDocs('class')).find((c) => c.data.code === code && !c.data.archived);
-    if (!cls) throw bad('No class has this code. Check it with your instructor.');
+    if (!cls) throw bad('No class has this code. Check it with your instructor.', 'এই কোডে কোনো ক্লাস নেই। ইনস্ট্রাক্টরের কাছ থেকে কোডটা আবার মিলিয়ে নাও।');
     const key = `${cls.id}:${learnerId}`;
     const prev = await this.store.getDoc('enrol', key);
     if (prev?.data.status === 'active') return { id: cls.id, name: cls.data.name, status: 'active', already: true };
@@ -127,7 +127,7 @@ export class ClassService {
     await this.classOr404(classId, staff);
     const key = `${classId}:${learnerId}`;
     const e = await this.store.getDoc('enrol', key);
-    if (!e) throw new AppError('not_found', 404, 'No such request.');
+    if (!e) throw new AppError('not_found', 404, 'No such request.', undefined, 'এমন কোনো অনুরোধ নেই।');
     if (ok) {
       await this.put('enrol', key, { ...e.data, status: 'active' });
       const c = await this.classOr404(classId, staff);
@@ -142,13 +142,13 @@ export class ClassService {
   async saveAssignment(staff: Staff, classId: string, body: Json, id?: string) {
     const c = await this.classOr404(classId, staff);
     const title = str(body.title, 140);
-    if (!title) throw bad('Give the assignment a title.');
+    if (!title) throw bad('Give the assignment a title.', 'অ্যাসাইনমেন্টের একটা শিরোনাম দাও।');
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 30).map((it: Json) => ({
       kind: ['read', 'quiz', 'lab', 'custom_quiz'].includes(it?.kind) ? it.kind : 'read', track: str(it?.track, 60) || c.data.track, topic: str(it?.topic, 80), lab: str(it?.lab, 80) || null, questionIds: it?.questionIds,
     })).filter((it: Json) => it.topic && (it.kind !== 'lab' || it.lab));
-    if (!items.length) throw bad('Add at least one topic, quiz or lab.');
+    if (!items.length) throw bad('Add at least one topic, quiz or lab.', 'অন্তত একটা টপিক, কুইজ বা ল্যাব যোগ করো।');
     const due = str(body.due, 40);
-    if (due && !Number.isFinite(Date.parse(due))) throw bad('Choose a valid due date.');
+    if (due && !Number.isFinite(Date.parse(due))) throw bad('Choose a valid due date.', 'জমা দেওয়ার একটা সঠিক তারিখ বেছে নাও।');
     const aid = id ?? randomUUID();
     const prepared = [];
     for (const item of items) prepared.push(item.kind === 'custom_quiz' ? await new QuestionBankService(this.store, this.tutorials).prepare(staff, classId, aid, item, body.lang === 'bn' ? 'bn' : 'en') : { kind: item.kind, track: item.track, topic: item.topic, lab: item.lab });
@@ -168,7 +168,7 @@ export class ClassService {
     await this.classOr404(classId, staff);
     const title = str(body.title, 140);
     const text = str(body.body, 4000);
-    if (!title || !text) throw bad('Write a title and a message.');
+    if (!title || !text) throw bad('Write a title and a message.', 'শিরোনাম আর মেসেজ দুটোই লেখো।');
     const id = randomUUID();
     const data = { classId, title, body: text, pinned: body.pinned === true, at: this.iso(), by: staff.email };
     await this.put('classpost', id, data);
@@ -255,9 +255,10 @@ export class ClassService {
       const asks = (byStudent.get(e.data.learnerId) ?? []).filter((x) => x.type === 'ask').length;
       const inactiveDays = f.last ? Math.floor((now - Date.parse(f.last)) / DAY) : null;
       const reasons: string[] = [];
-      if (inactiveDays === null) reasons.push('Has not started yet');
-      else if (inactiveDays >= 7) reasons.push(`Not active for ${inactiveDays} days`);
-      if (f.quizAvg !== null && f.quizzes.size >= 2 && f.quizAvg < 0.5) reasons.push(`${Math.round(f.quizAvg * 100)}% quiz average`);
+      const bn = lang === 'bn';
+      if (inactiveDays === null) reasons.push(bn ? 'এখনো শুরু করেনি' : 'Has not started yet');
+      else if (inactiveDays >= 7) reasons.push(bn ? `${inactiveDays} দিন ধরে সক্রিয় নয়` : `Not active for ${inactiveDays} days`);
+      if (f.quizAvg !== null && f.quizzes.size >= 2 && f.quizAvg < 0.5) reasons.push(bn ? `কুইজের গড় ${Math.round(f.quizAvg * 100)}%` : `${Math.round(f.quizAvg * 100)}% quiz average`);
       return {
         learnerId: e.data.learnerId, email: e.data.email, joinedAt: e.data.joinedAt, done: f.seen.size, labs: f.labs.size,
         quizAvg: f.quizAvg === null ? null : Math.round(f.quizAvg * 100), lastActive: f.last, asks, reasons,
@@ -387,10 +388,10 @@ export class ClassService {
   }
   async savePack(staff: Staff, body: Json, id?: string) {
     const prev = id ? await this.store.getDoc('pack', id) : undefined;
-    if (id && !prev) throw new AppError('not_found', 404, 'No such pack.');
-    if (prev && staff.role !== 'admin' && prev.data.ownerId !== staff.learnerId) throw new AppError('forbidden', 403, 'This is another instructor’s pack.');
+    if (id && !prev) throw new AppError('not_found', 404, 'No such pack.', undefined, 'এমন কোনো প্যাক নেই।');
+    if (prev && staff.role !== 'admin' && prev.data.ownerId !== staff.learnerId) throw new AppError('forbidden', 403, 'This is another instructor’s pack.', undefined, 'এটা অন্য একজন ইনস্ট্রাক্টরের প্যাক।');
     const title = str(body.title, 140);
-    if (!title) throw bad('Name the pack.');
+    if (!title) throw bad('Name the pack.', 'প্যাকের একটা নাম দাও।');
     const lines = (v: unknown, max: number) => (Array.isArray(v) ? v : String(v ?? '').split('\n')).map((x) => str(x, 200)).filter(Boolean).slice(0, max);
     const links = (Array.isArray(body.files) ? body.files : []).slice(0, 30).map((f: Json) => ({ name: str(f?.name, 120), url: str(f?.url, 400) })).filter((f: Json) => f.name && /^https:\/\//.test(f.url));
     const wantReview = body.submit === true;

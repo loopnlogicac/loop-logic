@@ -523,7 +523,7 @@ export function createApp(d: AppDeps) {
       }
       send(res, req.method === 'POST' && url.pathname === '/api/sessions' ? 201 : 200, result, headers);
     } catch (err) {
-      if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details } }, headers);
+      if (err instanceof AppError) return send(res, err.status, { error: { code: err.code, message: err.message, details: err.details, ...(err.bn ? { bn: err.bn } : {}) } }, headers);
       if (err instanceof AuthError) return send(res, 401, { error: { code: err.code, message: err.message } }, headers);
       if (err instanceof StaleStateError) return send(res, 409, { error: { code: err.code, message: err.message } }, headers);
       console.error(err);
