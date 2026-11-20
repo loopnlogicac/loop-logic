@@ -11,7 +11,7 @@ export function normalize(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)))
-    .replace(/[^\p{L}\p{N}\s.%]/gu, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\s.%]/gu, ' ') // \p{M}: Bangla vowel signs are marks, not letters
     .split(/\s+/)
     .map((t) => t.replace(/^\.+|\.+$/g, ''))
     .filter((t) => t.length > 1 && !STOP.has(t));

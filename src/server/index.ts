@@ -134,4 +134,6 @@ server.listen(port, host, () => {
   console.log(`  live search: ${live.enabled ? 'on (approved sites only)' : 'off'}`);
   console.log(`  instructor:  ${env.INSTRUCTOR_KEY ? 'key required' : 'open (set INSTRUCTOR_KEY before sharing)'}`);
   console.log(`  admin:       ${(env.ADMIN_EMAILS ?? '').split(',').filter((e) => e.trim()).length} email(s) in ADMIN_EMAILS; YouTube import ${env.YOUTUBE_API_KEY ? 'on' : 'off (set YOUTUBE_API_KEY)'}`);
+  // Build the AI Teacher's search index now, so the first question doesn't wait for it.
+  setTimeout(() => { const t = Date.now(); tutorials.searchSections(''); console.log(`  AI search:   tutorial index ready in ${Date.now() - t} ms`); }, 0);
 });
