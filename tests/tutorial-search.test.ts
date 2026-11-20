@@ -27,6 +27,7 @@ test('BM25 ranks the section that matches best, and boosts the current and relat
 test('site-wide search finds the right topic for English and Bangla questions', () => {
   assert.equal(tutorials.searchSections('normalization 3NF')[0]!.topic, 'db-normalization');
   assert.equal(tutorials.searchSections('malloc free memory leak')[0]!.topic, 'c-memory-leaks');
+  assert.equal(tutorials.searchSections('how does gradient descent pick the learning rate')[0]!.topic, 'ml-gradient-descent', 'a question that names a topic lands on it');
   assert.equal(tutorials.searchSections('হ্যাশ টেবিলে collision হলে কী করি')[0]!.topic, 'ds-hashing-intro');
   assert.ok(tutorials.searchSections('how are arrays and pointers related', 3).some((h) => h.topic === 'c-pointers-and-arrays'));
 });

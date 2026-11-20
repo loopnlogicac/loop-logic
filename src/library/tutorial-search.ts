@@ -34,7 +34,7 @@ export interface SearchHit {
   score: number;
 }
 
-interface Doc extends SearchHit { tf: Map<string, number>; len: number; titleTokens: Set<string> }
+interface Doc extends SearchHit { tf: Map<string, number>; len: number; titleTokens: Set<string>; nameTokens: string[] }
 
 // Common Bangla endings (ordered longest first). Stripped so "লুপের", "লুপে" and "লুপটা" all match "লুপ".
 const BN_SUFFIXES = ['গুলোর', 'গুলোকে', 'গুলো', 'গুলি', 'দেরকে', 'দের', 'টার', 'টির', 'টাকে', 'টিকে', 'টা', 'টি', 'য়ের', 'য়ে', 'তে', 'কে', 'ের', 'রা', 'র', 'ে', 'য়'];
@@ -76,7 +76,8 @@ export class TutorialIndex {
       if (!tf.size) continue;
       const len = [...tf.values()].reduce((n, v) => n + v, 0);
       const titleTokens = new Set(searchTokens([s.topicTitle.en, s.topicTitle.bn ?? '', ...(s.keywords ?? [])].join(' ')));
-      this.docs.push({ id: `tutorial:${s.topic}#${s.section}`, track: s.track, topic: s.topic, section: s.section, topicTitle: s.topicTitle, sectionTitle: s.sectionTitle, text: s.text, score: 0, tf, len, titleTokens });
+      const nameTokens = [...new Set(searchTokens(s.topicTitle.en))];
+      this.docs.push({ id: `tutorial:${s.topic}#${s.section}`, track: s.track, topic: s.topic, section: s.section, topicTitle: s.topicTitle, sectionTitle: s.sectionTitle, text: s.text, score: 0, tf, len, titleTokens, nameTokens });
       for (const t of tf.keys()) this.df.set(t, (this.df.get(t) ?? 0) + 1);
     }
     this.avgLen = this.docs.length ? this.docs.reduce((n, d) => n + d.len, 0) / this.docs.length : 1;
@@ -108,11 +109,13 @@ export class TutorialIndex {
       if (score <= 0) continue;
       // A question that names the topic ("pointers and arrays") should land on that topic.
       const inTitle = q.filter((t) => d.titleTokens.has(t)).length;
+      // The question names this topic in full ("gradient descent", "memory leaks"): it is the topic being asked about.
+      if (d.nameTokens.length && d.nameTokens.every((t) => q.includes(t))) score *= 1.35;
       score *= 1 + 1.2 * (inTitle / q.length) ** 2;
       if (opts.topic && d.topic === opts.topic) score *= 1.6;
       else if (related.has(d.topic)) score *= 1.25;
       else if (opts.track && d.track === opts.track) score *= 1.1;
-      const { tf: _tf, len: _len, titleTokens: _tt, ...hit } = d;
+      const { tf: _tf, len: _len, titleTokens: _tt, nameTokens: _nt, ...hit } = d;
       out.push({ ...hit, score });
     }
     return out.sort((a, b) => b.score - a.score).slice(0, opts.limit ?? 5);
