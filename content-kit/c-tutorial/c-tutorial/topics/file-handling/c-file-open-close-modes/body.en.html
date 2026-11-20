@@ -1,0 +1,62 @@
+<h2 id="introduction">Choose access before touching existing records</h2>
+<p class="lead">You want to add today’s attendance to yesterday’s log. Opening that log with the wrong mode can erase yesterday before you write anything. A <dfn>file mode</dfn> tells fopen whether you need reading, replacement, appending or a combination. Choose it from the task, not from a memorised example.</p>
+<p>A mode is a short string, but its effects are substantial. Reading an absent file should normally fail. Creating a fresh report may deliberately replace an old report. Extending a journal should retain earlier entries. Those three jobs should not share one careless opening line.</p>
+<p>Decide whether a missing file is acceptable. Then decide whether existing bytes must survive. Finally decide whether new output belongs at a selected position or always at the end. These questions lead directly to the mode table.</p>
+
+<h2 id="syntax">Compare the six main text modes</h2>
+<pre><code class="language-c">FILE *in = fopen("attendance.txt", "r");
+FILE *replacement = fopen("report.txt", "w");
+FILE *journal = fopen("events.txt", "a");</code></pre>
+<table class="ref"><thead><tr><th scope="col">Mode</th><th scope="col">Access</th><th scope="col">Missing file</th><th scope="col">Existing file</th></tr></thead><tbody><tr><td>r</td><td>Read</td><td>Fail</td><td>Keep contents</td></tr><tr><td>w</td><td>Write</td><td>Create</td><td>Truncate</td></tr><tr><td>a</td><td>Append output</td><td>Create</td><td>Keep; writes go to end</td></tr><tr><td>r+</td><td>Read and write</td><td>Fail</td><td>Keep contents</td></tr><tr><td>w+</td><td>Read and write</td><td>Create</td><td>Truncate</td></tr><tr><td>a+</td><td>Read and append</td><td>Create</td><td>Keep; writes go to end</td></tr></tbody></table>
+<p><dfn>Truncate</dfn> means discard the old contents. A successful w or w+ open performs that action even if the next statement returns without writing. The plus sign adds the other transfer direction. It does not mean preserve, append, or automatically synchronise every operation.</p>
+<p>Add b for binary stream handling, as in rb, wb or r+b. The plus and b markers can appear in either order, such as rb+ or r+b. Keep ordinary mode strings clear and conventional. Extra letters are not a portable way to invent permissions or locking.</p>
+
+<h2 id="how-it-works">Separate mode effects from stream position</h2>
+<h3>Replacement and overwriting are different</h3>
+<p>Replacement mode removes the previous content at open time. An update write at an existing position instead replaces the characters it covers. If an existing line is ABC and you write X at its beginning through r+, the later BC remains. This is not insertion: later characters do not automatically move right.</p>
+<p>The third example reads A, returns to the beginning, writes X, and returns again before reading. Its result XBC demonstrates the preserved suffix. A longer replacement could overwrite more characters or extend the file. Designing variable-length record edits needs more than choosing r+.</p>
+<h3>Append describes every output operation</h3>
+<p>In append mode, writes are forced to the current end of file. That remains true after a positioning operation. fseek requests a stream position; in the second example it requests the beginning. The following output still appends 34 after 12. The append promise overrides that attempted overwrite location.</p>
+<p>For a+ reading, explicitly select the place you intend to read. Do not depend on an assumed initial read position across implementations. The fourth example seeks to the beginning after its output, then reads the first line. Full positioning rules appear in <a href="topic:c-file-positioning">file positioning</a>.</p>
+<h3>Text and binary describe transfer rules</h3>
+<p>A text stream can translate between the program’s characters and the external text representation. Newline handling is a familiar example. A binary stream avoids those text translations under the implementation’s binary I/O model. On some systems the visible difference is small; on others it matters immediately.</p>
+<p>Binary mode does not reverse bytes, compress records or select a fixed integer width. It also does not make structure dumps universally portable. The mode chooses stream handling. A portable file format must separately define what its bytes mean.</p>
+<h3>Closing ends the resource lifetime</h3>
+<p>After a successful open, fclose flushes pending output as needed and closes the stream. Zero reports success; EOF reports failure. Check that result when successful delivery matters. Do not retry fclose on the same invalidated pointer, even when its first close reports an error.</p>
+<p>Save both the transfer result and the close result. If you combine them carelessly with short-circuit evaluation, a failed write may skip cleanup. The examples compute written or ok first, then call fclose separately. This ensures the close attempt happens after a valid open.</p>
+
+<h2 id="examples">Watch the contents as the mode changes</h2>
+<h3>Replace an existing note deliberately</h3>
+<p>The previous two lines are replaced, not preserved. Opening with w performs truncation before the later fputs call. The read-back contains only new note.</p>
+<div data-example="ex-1"></div>
+<h3>Append still writes at the end after a seek</h3>
+<p>fseek requests the beginning, but append-mode output is still forced to the end. Both 12 and 34 survive. The positioning request does not turn a into an overwrite mode.</p>
+<div data-example="ex-2"></div>
+<h3>Read and patch through an existing update stream</h3>
+<p>The explicit positioning calls separate input from output and output from input. r+ preserves the other characters, so replacing the first character gives XBC rather than a one-character file.</p>
+<div data-example="ex-3"></div>
+<h3>Create an append-update stream and select a read position</h3>
+<p>The file begins absent in this run. a+ creates it and permits reading. The program explicitly selects the beginning before its read instead of relying on an initial append-update read position.</p>
+<div data-example="ex-4"></div>
+
+<h2 id="edge-cases">Respect update-stream direction changes</h2>
+<p>An <dfn>update stream</dfn> permits both input and output. It does not allow arbitrary alternation with no intervening action. The library may still have buffered data or position state associated with the previous direction. C therefore states a rule for each transition.</p>
+<p>After output, perform fflush or a positioning operation before input. After input, perform a positioning operation before output, unless that input encountered end-of-file. Notice the asymmetry: a flush alone is not the general input-to-output solution.</p>
+<p>The positioned patch example uses fseek between both transitions. Each request chooses offset zero from the beginning and checks whether it succeeded. That both establishes the intended edit location and supplies the required sequencing. A seek is useful only when the stream supports the requested positioning.</p>
+<p>Do not call fflush(stdin) to discard unread keyboard input. That is not a portable input-cleaning operation in ISO C. If you need to consume remaining input, read and handle it deliberately. Stream direction rules and input validation are separate concerns.</p>
+
+<h2 id="common-mistakes">Protect old data and valid handles</h2>
+<h3>Using w because it opened successfully before</h3>
+<p>A previous experiment with a scratch file says nothing about the intended policy for an attendance log. Write the preservation requirement beside the open. Inspect the table before running a new write experiment. Use expendable teaching names until replacement and append effects are clear.</p>
+<h3>Using a NULL or already closed stream</h3>
+<p>Failure to open does not supply a usable FILE object. After closing, the old pointer is not valid for more stream operations. Reopening returns a new handle that must be checked again. Assigning NULL to a local variable can help prevent accidental reuse, but it does not fix aliases elsewhere.</p>
+<h3>Assuming plus means automatic insertion</h3>
+<p>r+ does not shift the suffix to make room for new text. Editing a longer name over a shorter field can overwrite the following record. For variable-length text records, rewriting a validated new file is often clearer than patching arbitrary character positions. Keep the original safe until the replacement has succeeded.</p>
+<h3>Ignoring a late output failure</h3>
+<p>An earlier fputs can report success while output remains buffered. fclose may discover delivery failure. Return a failure result to the caller instead of claiming that a log entry was saved. Also preserve the first useful error information when later cleanup could change library error state.</p>
+
+<h2 id="version-notes">Keep portable modes separate from extensions</h2>
+<div class="callout version"><p>The six modes, binary marker and update sequencing rules used here are supported by C17. C11 added an exclusive-create x option for appropriate w modes. Platform-specific mode letters and sharing flags need their own documentation. An append stream alone is not a portable multi-process transaction protocol.</p></div>
+
+<h2 id="summary">Match preservation, position and direction to the task</h2>
+<p>r inspects, w replaces, and a appends. Plus permits both directions while keeping the base mode’s creation and truncation effects. Check open and close, sequence update operations, and select binary handling deliberately. Next, move actual records with <a href="topic:c-file-read-write-text">text reading and writing</a>.</p>

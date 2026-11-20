@@ -1,0 +1,398 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-const-volatile",
+  "module": "advanced",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "const and volatile",
+    "bn": "const ও volatile দিয়ে access-এর নিয়ম বোঝা"
+  },
+  "summary": {
+    "en": "Express read-only access with const and understand volatile without confusing it with atomicity or thread synchronisation.",
+    "bn": "const দিয়ে read-only access বোঝাও; volatile কোথায় লাগে এবং কেন এটি thread নিরাপদ করে না, তা শেখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 55,
+  "prerequisites": [
+    "c-multi-file-programs"
+  ],
+  "related": [
+    "c-pointers-intro"
+  ],
+  "keywords": [
+    "const correctness",
+    "volatile",
+    "pointer qualifiers",
+    "bit mask"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A label describes how you may use a value"
+    },
+    {
+      "id": "syntax",
+      "title": "Read the pointed-to type and pointer separately"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Follow the access path rather than the spelling alone"
+    },
+    {
+      "id": "examples",
+      "title": "Observe access restrictions without inventing hardware"
+    },
+    {
+      "id": "volatile-boundaries",
+      "title": "What volatile does and does not promise"
+    },
+    {
+      "id": "bit-flags",
+      "title": "Read a status bit with unsigned arithmetic"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep each promise narrow and truthful"
+    },
+    {
+      "id": "version-notes",
+      "title": "Established qualifiers with target-specific device rules"
+    },
+    {
+      "id": "summary",
+      "title": "Choose the qualifier that matches the operation"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Read an array through a const-qualified parameter",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The function promises not to change elements through its parameter. The original array remains mutable in main, which changes its first mark between calls. const restricts an access path; it does not make every alias to an originally mutable object read-only.</p>",
+      "standard": "c17",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Separate pointer reassignment from pointee modification",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": true,
+      "explanationHtml": "<p>view can point elsewhere but cannot modify an int through that pointer. owner cannot be reassigned, but it can modify first. const int *const would combine both access restrictions.</p>",
+      "standard": "c17",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Observe explicit volatile reads in a hosted simulation",
+      "level": "basic",
+      "file": "examples/ex-3.c",
+      "tryNow": true,
+      "explanationHtml": "<p>This ordinary object simulates a status value; it is not a real device address. Bit two becomes set, so the unsigned mask detects readiness. volatile preserves accesses according to the implementation rules, while the mask operation itself is ordinary unsigned arithmetic.</p>",
+      "standard": "c17",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "See the compiler reject an assignment through a read-only view",
+      "level": "basic",
+      "file": "examples/ex-4.c",
+      "tryNow": true,
+      "explanationHtml": "<p>This program has a mistake on purpose. The assignment violates the const-qualified access path and requires a diagnostic. Repair the design by deciding whether the function is a reader or a writer; a cast is not a substitute for that decision.</p>",
+      "standard": "c17",
+      "demonstrates": "compile-error"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Find the maximum without modifying the input array",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n from 1 to 10, then n marks from 0 to 100. Print the maximum. Use a helper taking const int marks[] and a positive count. All input tokens fit int; missing or out-of-range input prints invalid.</p>",
+      "hints": [
+        "Initialise from the first element.",
+        "The helper needs no writable access to the array."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Decode low-byte flags with unsigned masks",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read one unsigned integer from 0 to 255. Print the values of bits zero and two as 0 or 1, separated by a space. Tokens are nonnegative decimal integers of at most three digits; other input prints invalid. Do not change the input variable.</p>",
+      "hints": [
+        "Use 1U shifted by the named bit index.",
+        "Compare the masked value with zero."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Choose qualifiers for three pointer contracts",
+      "difficulty": "medium",
+      "statementHtml": "<p>Describe declarations for a movable read-only view, a fixed pointer to mutable data, and a fixed read-only view.</p>",
+      "hints": [
+        "Read the const nearest the pointed-to type separately from the pointer const."
+      ],
+      "type": "written",
+      "answerHtml": "<p>const int *view permits reassignment of view but not modification through *view. int *const fixed forbids reassignment of fixed but permits modification through *fixed. const int *const fixed_view forbids both through that declaration. None prevents another permitted alias from changing an originally mutable object.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Reject a volatile thread flag as a synchronisation plan",
+      "difficulty": "medium",
+      "statementHtml": "<p>A worker writes data and then sets a volatile flag. Another thread spins on the flag and reads the data. Explain why volatile alone is insufficient.</p>",
+      "hints": [
+        "Access preservation is different from inter-thread ordering."
+      ],
+      "type": "written",
+      "answerHtml": "<p>volatile does not make shared accesses atomic or establish the required inter-thread synchronisation. Conflicting unsynchronised accesses can form a data race. Use a suitable atomic protocol with the required memory ordering or a mutex. The hosted status demonstration in this lesson has one thread and does not establish a thread communication pattern.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Can main change an originally mutable array after passing it to a const int parameter?",
+      "options": [
+        "No, the object becomes permanently immutable",
+        "Only after free",
+        "Only with volatile",
+        "Yes, through its permitted mutable access"
+      ],
+      "answer": 3,
+      "explanation": "The parameter restricts that access path, not every alias."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which declaration makes the pointer itself non-reassignable?",
+      "options": [
+        "volatile int *p = &x;",
+        "int *p = &x;",
+        "int *const p = &x;",
+        "const int *p = &x;"
+      ],
+      "answer": 2,
+      "explanation": "const after the star qualifies the pointer object."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is wrong with casting away const and modifying an actually const-defined object?",
+      "options": [
+        "It only changes a local pointer",
+        "The modification has undefined behavior",
+        "The cast copies the object",
+        "It is always safe"
+      ],
+      "answer": 1,
+      "explanation": "Removing a qualifier from an expression does not make the original object writable."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does volatile make a read-modify-write increment atomic?",
+      "options": [
+        "No",
+        "Yes on every C system",
+        "Only if signed",
+        "Only if the variable is global"
+      ],
+      "answer": 0,
+      "explanation": "The qualifier supplies neither atomicity nor a thread synchronisation protocol."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why may a device register be declared const volatile?",
+      "options": [
+        "The value can never change",
+        "Both qualifiers cancel",
+        "It is a constant expression",
+        "Software reads a value that external hardware may change"
+      ],
+      "answer": 3,
+      "explanation": "const restricts program writes; volatile marks the relevant accesses."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which unsigned expression tests bit two?",
+      "options": [
+        "status | 2U",
+        "status + 2U",
+        "(status & (1U << 2)) != 0U",
+        "status && 2U"
+      ],
+      "answer": 2,
+      "explanation": "Bit two has mask four; AND selects that bit."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does const int n = 4 make n an integer constant expression in C17?",
+      "options": [
+        "Only when global",
+        "No",
+        "Always",
+        "Only after printing"
+      ],
+      "answer": 1,
+      "explanation": "A const-qualified object is not automatically a C17 integer constant expression."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which object changes through a const pointer to mutable int?",
+      "options": [
+        "7",
+        "3",
+        "4",
+        "0"
+      ],
+      "answer": 0,
+      "explanation": "The pointer is fixed, but the pointed-to int is writable.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int a = 3;\n    int *const p = &a;\n    *p += 4;\n    printf(\"%d\\n\", a);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Can a read-only view observe a later permitted write?",
+      "options": [
+        "5",
+        "0",
+        "14",
+        "9"
+      ],
+      "answer": 3,
+      "explanation": "The object was not defined const, so main can update it and view reads nine.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int value = 5;\n    const int *view = &value;\n    value = 9;\n    printf(\"%d\\n\", *view);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What remains after clearing an unsigned ready bit?",
+      "options": [
+        "4",
+        "0",
+        "3",
+        "7"
+      ],
+      "answer": 2,
+      "explanation": "Clearing bit two leaves bits zero and one, which represent three.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    unsigned int flags = 7U;\n    const unsigned int ready = 1U << 2;\n    flags &= ~ready;\n    printf(\"%u\\n\", flags);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "const qualifies permitted access; it does not freeze every alias.",
+      "bn": "const দিয়ে ওই access-এর নিয়ম বোঝায়; সব alias একসঙ্গে জমে যায় না।"
+    },
+    {
+      "en": "Distinguish a pointer to const data from a const pointer.",
+      "bn": "পয়েন্টার দিয়ে read-only ডেটা দেখা আর পয়েন্টার নিজে স্থির থাকা আলাদা।"
+    },
+    {
+      "en": "Modifying an object originally defined const has undefined behavior.",
+      "bn": "শুরুতেই const দিয়ে বানানো অবজেক্ট বদলানোর চেষ্টা undefined behavior।"
+    },
+    {
+      "en": "volatile is not a substitute for atomic operations or locks.",
+      "bn": "Thread-এর জন্য atomic operation বা lock-এর বদলে volatile ব্যবহার কোরো না।"
+    },
+    {
+      "en": "Use unsigned masks for fixed bit positions and validate shift counts.",
+      "bn": "নির্দিষ্ট বিটের জন্য unsigned mask নাও এবং shift-এর সীমা যাচাই করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Compare const int *p, int *const p and const int *const p.",
+      "marks": 6,
+      "answerHtml": "<p>The first makes the pointed-to int read-only through p while p can move. The second fixes p but allows changing the pointed-to int. The third combines both restrictions. Each declaration needs a suitable initial pointer. An originally mutable object may still change through another valid alias.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why const volatile is not contradictory for a status register.",
+      "marks": 7,
+      "answerHtml": "<p>const describes writes through the software access path. volatile describes relevant observable accesses to a value that may change for reasons outside ordinary program assignments. Hardware mapping, legal access width and ordering require target documentation. Neither qualifier alone supplies atomicity or a general memory barrier.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Evaluate whether volatile solves a two-thread producer-consumer flag.",
+      "marks": 6,
+      "answerHtml": "<p>It does not establish the required synchronisation or atomic accesses. A data race can remain. Use a documented mutex or atomic protocol, including the ordering needed to publish the associated data. Single-thread register examples do not justify a concurrent design.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Type qualifiers",
+      "url": "https://en.cppreference.com/w/c/language/const"
+    },
+    {
+      "title": "Volatile qualifier",
+      "url": "https://en.cppreference.com/w/c/language/volatile"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,63 @@
+<h2 id="introduction">Keep a result after the program stops</h2>
+<p class="lead">A club collects fees at several desks. Your program can add them, but a local array disappears when the program ends. A named file gives tomorrow’s run somewhere to find yesterday’s records. <dfn>File handling</dfn> is the work of opening that external storage, moving data through it and reporting failures.</p>
+<p>Think of a notebook on a desk. The notebook can remain after the person writing in it leaves. A file has a similar useful lifetime. However, a program does not write with a pencil. It asks the C library to move characters or bytes through a stream. The library and operating system handle the route to storage.</p>
+<p>You already know variables, arrays, pointers and functions. Those ideas still apply. A pointer can name an open stream, a loop can read records, and a helper can validate a value. The new responsibility is managing a resource that can fail independently of your arithmetic.</p>
+<p>Saving a fee is different from printing it. A receipt on screen helps a person now. A file record helps another run later. Decide which destination each message belongs to before choosing the output function.</p>
+
+<h2 id="syntax">Read the stream handle before the data</h2>
+<pre><code class="language-c">FILE *fees = fopen("fees.txt", "r");
+if (fees == NULL) {
+    return 1;
+}
+/* Use fees only while the stream remains open. */
+int closed = fclose(fees) == 0;</code></pre>
+<table class="ref"><thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td>FILE</td><td>A library type describing stream state</td></tr><tr><td>FILE *</td><td>A pointer through which you use that state</td></tr><tr><td>fees.txt</td><td>The external name requested here</td></tr><tr><td>r</td><td>A request to read an existing file</td></tr><tr><td>NULL</td><td>No usable stream was opened</td></tr></tbody></table>
+<p>Include stdio.h for these declarations. Do not invent fields inside FILE or copy its object representation. Its internal layout belongs to the implementation. Your interface is the pointer and the documented library functions.</p>
+
+<h2 id="how-it-works">Give a stream one clear lifetime</h2>
+<h3>Opening creates access, not a copy of the file</h3>
+<p>A <dfn>stream</dfn> is the library’s model for a sequence of input or output. It keeps information such as position, buffering and error indicators. fopen connects a stream to a named file when that request is possible. Returning a pointer does not mean every byte has been loaded into the pointer.</p>
+<p>The mode tells fopen what kind of access you want. The first example uses w to create or replace its small teaching file. It later uses r to read that file. More modes appear in <a href="topic:c-file-open-close-modes">opening and closing files</a>. Never choose a writing mode while merely trying to inspect existing records.</p>
+<h3>Check each stage separately</h3>
+<p>Opening can fail because the name is absent, permission is insufficient, or another resource is unavailable. A NULL result means stop using that handle. It is not an empty file that you may read normally. Report failure or return it to the caller before any operation requiring a valid stream.</p>
+<p>After a successful open, check the operation that moves data. A read can reach the end or encounter an error. A write can fail before completion. Closing also returns a result. Buffered output may be delivered only later, so a successful earlier write is not the final success test.</p>
+<p>A buffer is temporary memory used to collect transfers. It can reduce many small external operations. This is useful, but it separates accepting characters into the library from completing their delivery. Closing an output stream normally deals with its remaining buffered output and releases the stream resource.</p>
+<h3>Use, close, then forget the handle</h3>
+<p>The stream owner closes it once after its last use. After fclose, do not read through that pointer or close it again. Giving a second variable the same pointer creates an alias, not another independently closable stream. Both names become unusable when their shared stream closes.</p>
+<p>A helper that receives a stream may only borrow it. For example, a line-reading helper should leave the caller able to read another line. State ownership in the interface. This makes cleanup a deliberate part of the design rather than a guess based on which function returns first.</p>
+
+<h2 id="examples">Observe named and standard streams</h2>
+<h3>Save a fee, close it, and read it again</h3>
+<p>The first stream is closed before a new read stream opens the same name. The stored line remains available. A successful close is checked because buffered output can fail late.</p>
+<div data-example="ex-1"></div>
+<h3>Read a fee through stdin and write a receipt through stdout</h3>
+<p>The input value is 125. The prompt and receipt use stdout. The rejected-input branch uses stderr, which is a separate destination even when both appear in one terminal.</p>
+<div data-example="ex-2"></div>
+<h3>Read a named stream without changing its file</h3>
+<p>The club file has two newline-terminated records. The loop reads until an operation reports no character, then distinguishes a read failure from normal completion.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="real-world-use">Separate input, ordinary results and diagnostics</h2>
+<p>C provides three standard streams when the program starts: stdin, stdout and stderr. Standard input normally supplies typed values. Standard output normally carries ordinary results. Standard error normally carries diagnostics. Their names describe roles, not a promise that every one is always attached to your keyboard or screen.</p>
+<p>printf writes to stdout. fprintf takes an explicit destination, so fprintf(stdout, ...) makes that choice visible. scanf reads stdin; other reading functions can accept a different FILE pointer. fputs writes a string without automatically adding a newline. These relationships help you move an existing terminal task toward a file-based version.</p>
+<p>A command environment may redirect standard streams. For example, a report can send normal output to a file while leaving error messages visible separately. Redirection belongs to that environment, so its syntax is not a C expression. Keeping diagnostics out of ordinary data makes such arrangements much more useful.</p>
+<p>The receipt example accepts 125 and prints its prompt and receipt on stdout. Its invalid-input branch writes a diagnostic to stderr instead. Seeing both in one terminal does not make them the same stream. A caller may capture one without capturing the other.</p>
+
+<h2 id="common-mistakes">Do not confuse a name, a handle and a guarantee</h2>
+<h3>Assuming every relative name means the source directory</h3>
+<p>A relative name such as club.txt is interpreted from the process working directory. That need not be the folder containing your C source. Check where you launched the program before diagnosing a missing file. Keep a small, known input file beside your chosen working directory while learning.</p>
+<h3>Counting an end marker as data</h3>
+<p>fgetc returns int so it can represent every unsigned character value and EOF. Store that result before testing it. A failed read does not produce one extra character. The line counter increments only after a real newline has been returned. Its result counts completed newline-terminated lines, not an unfinished final fragment.</p>
+<h3>Announcing success before cleanup</h3>
+<p>Do not print a permanent success message and ignore a failed close. Keep the task’s result until all owned resources have been dealt with. On a failure path, release the resources that were actually acquired. Never call fclose on NULL merely to make the cleanup look symmetrical.</p>
+<h3>Believing files cannot be lost</h3>
+<p>A file can outlive a process without being invulnerable. Wrong modes, later edits, storage faults and crashes can still lose data. The simple record here is not a database transaction or a backup system. Larger applications need explicit formats, recovery rules and protection for private information.</p>
+
+<h2 id="best-practices">Start with a small, inspectable record</h2>
+<ul><li>Choose a private teaching file, so a writing experiment cannot replace valuable records.</li><li>Write down which function owns each successfully opened stream.</li><li>Validate a record before treating it as a meaningful fee or attendance entry.</li><li>Keep ordinary output and error diagnostics in their appropriate streams.</li><li>Reopen a saved file and inspect its contents rather than trusting a screen receipt.</li></ul>
+
+<h2 id="version-notes">Use the standard I/O interface deliberately</h2>
+<div class="callout version"><p>FILE, fopen, fclose and the standard streams are older than C17. The examples use C17 declarations and small text records. Text streams may translate line endings on different systems. Do not infer portable binary layouts from what a short text file looks like on one computer.</p></div>
+
+<h2 id="summary">A file is useful only when each operation is checked</h2>
+<p>A named file stores external data; a FILE pointer gives access to a library stream. Open it, check data operations, close it once and keep ownership clear. Standard streams have separate roles. Next, compare the access promises and destructive effects of <a href="topic:c-file-open-close-modes">file modes</a>.</p>

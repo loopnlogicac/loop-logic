@@ -1,0 +1,429 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-command-line-arguments",
+  "module": "advanced",
+  "order": 1,
+  "kind": "lesson",
+  "title": {
+    "en": "Command-Line Arguments",
+    "bn": "কমান্ড লাইন থেকে আর্গুমেন্ট নেওয়া"
+  },
+  "summary": {
+    "en": "Read argc and argv, parse complete integers with strtol, and reject invalid or overflowing sums.",
+    "bn": "কমান্ড লাইনের আর্গুমেন্ট পড়ো, strtol দিয়ে সংখ্যা যাচাই করো এবং ভুল ইনপুটে পরিষ্কার বার্তা দাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 55,
+  "prerequisites": [
+    "c-file-error-handling"
+  ],
+  "related": [
+    "c-standard-library-tour"
+  ],
+  "keywords": [
+    "argc",
+    "argv",
+    "strtol",
+    "ERANGE",
+    "command line"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Give a program its instructions before it starts"
+    },
+    {
+      "id": "syntax",
+      "title": "Read the count and the string array"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Ask three questions about each conversion"
+    },
+    {
+      "id": "examples",
+      "title": "Inspect, reject and safely accumulate arguments"
+    },
+    {
+      "id": "safe-sum",
+      "title": "Guard arithmetic before performing it"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not let convenience hide an invalid launch"
+    },
+    {
+      "id": "testing",
+      "title": "Choose cases that separate the contracts"
+    },
+    {
+      "id": "version-notes",
+      "title": "Run shell-argument examples locally"
+    },
+    {
+      "id": "summary",
+      "title": "Strings become operands only after validation"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Walk the arguments without assuming a nonempty program name",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The shell supplies two arguments, although the first contains a space. The program starts at index one and checks the null pointer sentinel without passing it to %s. It does not print the host-specific spelling of argv[0].</p>",
+      "standard": "c17",
+      "args": [
+        "Dhaka College",
+        "2026"
+      ],
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Reject a numeric prefix that leaves trailing characters",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The supplied argument is 12kg. strtol can convert its prefix, but end points at k. The helper rejects the whole argument rather than silently treating a measurement as the integer 12. It leaves the caller destination untouched on failure.</p>",
+      "standard": "c17",
+      "args": [
+        "12kg"
+      ],
+      "exitCode": 1,
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Check each addition before summing signed arguments",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The three signed values produce 15. Parsing and addition have separate range checks: each argument may fit long while their total does not. The subtraction bounds are evaluated only in the sign branch where they are representable.</p>",
+      "standard": "c17",
+      "args": [
+        "20",
+        "-8",
+        "3"
+      ],
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Treat an empty argument as missing digits",
+      "level": "basic",
+      "file": "examples/ex-4.c",
+      "tryNow": false,
+      "explanationHtml": "<p>A shell can pass an empty string as an argument. No conversion happens, so end equals the original pointer. The output also confirms that rejection does not overwrite a previously valid caller value.</p>",
+      "standard": "c17",
+      "args": [
+        ""
+      ],
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Validate a complete mark argument as a line",
+      "difficulty": "medium",
+      "statementHtml": "<p>Model one argv string using one input line, at most 80 characters. Accept a decimal long from 0 to 100 inclusive. strtol may accept leading whitespace and a sign, but trailing characters, including spaces, are invalid. Print the value or invalid. A missing line is invalid.</p>",
+      "hints": [
+        "Set errno to zero before conversion.",
+        "Validate the complete token before checking the mark range."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Recognise decimal syntax without converting an unbounded value",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read one line of at most 80 characters. Accept exactly an optional + or - followed by at least one ASCII digit, with no spaces. Print syntax-ok or invalid. This task checks syntax only, so an arbitrarily large digit sequence within the stated length is allowed.</p>",
+      "hints": [
+        "Skip at most one leading sign.",
+        "Require a digit and scan to the final newline or null."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Plan shell invocations for a safe sum utility",
+      "difficulty": "medium",
+      "statementHtml": "<p>Give a test matrix covering no arguments, one zero, mixed signs, quoted whitespace, empty strings, trailing junk, conversion overflow and total overflow.</p>",
+      "hints": [
+        "Keep shell quoting separate from numeric parsing."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Run sum with no numbers for usage; 0 for zero; 20 -8 3 for 15; \" 12\" for accepted leading whitespace; \"12 \" and \"\" for rejection; 12kg for rejection; a decimal larger than LONG_MAX for conversion rejection. On the target long width, LONG_MAX followed by 1 must fail the addition check. An overflowing prefix is rejected even if a later negative argument could make the final mathematical total fit.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Design a -- option separator",
+      "difficulty": "medium",
+      "statementHtml": "<p>Explain a parser policy that supports --help without mistaking every negative integer for an option.</p>",
+      "hints": [
+        "State what happens after --."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Recognise only documented option spellings. Before --, handle --help explicitly and reject unknown long options. Treat strings such as -8 as numeric operands. After --, interpret every string as an operand. Validate operands with the numeric helper rather than deleting their first character. Decide and document whether --help may be combined with operands.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does argc count when the usual hosted invocation supplies a program name?",
+      "options": [
+        "All argument strings including the program-name string",
+        "Bytes in argv",
+        "The null sentinel",
+        "Only numeric operands"
+      ],
+      "answer": 0,
+      "explanation": "The usual count includes argv[0]; user operands normally begin at one."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which argv access names a guaranteed null pointer sentinel?",
+      "options": [
+        "argv[-1]",
+        "*argv[argc]",
+        "argv[argc]",
+        "argv[argc + 1]"
+      ],
+      "answer": 2,
+      "explanation": "The sentinel is a pointer, not an empty argument string."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which strtol check detects no digits?",
+      "options": [
+        "end != NULL",
+        "value == 0",
+        "end == input",
+        "errno == 0"
+      ],
+      "answer": 2,
+      "explanation": "A valid zero also has value zero; compare the end pointer with the start."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why set errno to zero immediately before strtol?",
+      "options": [
+        "To repair input",
+        "To distinguish a new ERANGE result from a stale value",
+        "To force base ten",
+        "To clear argv"
+      ],
+      "answer": 1,
+      "explanation": "strtol need not clear an earlier error on success."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why check *end after successful prefix conversion?",
+      "options": [
+        "To require the entire operand to be numeric",
+        "To free the string",
+        "To change the shell quoting",
+        "To allow arbitrary suffixes"
+      ],
+      "answer": 0,
+      "explanation": "A numeric prefix such as 12 in 12kg does not validate the whole string."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does the C program receive from the shell for \"Dhaka College\"?",
+      "options": [
+        "The quote marks on every shell",
+        "A FILE pointer",
+        "Two operands split by C",
+        "One argument containing a space"
+      ],
+      "answer": 3,
+      "explanation": "The shell performs quoting before starting the program."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why does safe summation need more than strtol range checks?",
+      "options": [
+        "Negative inputs are always invalid",
+        "argc can only be one",
+        "Several representable operands can overflow their accumulated total",
+        "strtol changes LONG_MAX"
+      ],
+      "answer": 2,
+      "explanation": "Check each addition before evaluating it."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which limitation makes atoi unsuitable for this validator?",
+      "options": [
+        "It returns no end pointer or reliable range-error report",
+        "It cannot convert zero",
+        "It requires a file",
+        "It returns a string"
+      ],
+      "answer": 0,
+      "explanation": "Use strtol when malformed input must be distinguished from valid zero."
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many operand strings precede the simulated argv sentinel?",
+      "options": [
+        "3 1",
+        "2 0",
+        "4 1",
+        "2 1"
+      ],
+      "answer": 3,
+      "explanation": "Two strings follow the program name; index argc holds the null pointer.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    char *args[] = {\"sum\", \"4\", \"-2\", NULL};\n    int argc = 3;\n    printf(\"%d %d\\n\", argc - 1, args[argc] == NULL);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Where does base-ten conversion of 12kg stop?",
+      "options": [
+        "12 g",
+        "12 0",
+        "12 k",
+        "0 k"
+      ],
+      "answer": 2,
+      "explanation": "The prefix is twelve and k is the first unconverted character.",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    char *end;\n    long n = strtol(\"12kg\", &end, 10);\n    printf(\"%ld %c\\n\", n, *end);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Does a no-digit conversion move its end pointer?",
+      "options": [
+        "1 1",
+        "0 1",
+        "0 0",
+        "1 0"
+      ],
+      "answer": 1,
+      "explanation": "A sign without digits is not a conversion; the end pointer returns to the start.",
+      "code": "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void)\n{\n    char text[] = \"+\";\n    char *end;\n    long n = strtol(text, &end, 10);\n    printf(\"%ld %d\\n\", n, end == text);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "argc bounds the argument array; argv[argc] is its null sentinel.",
+      "bn": "argc দিয়ে আর্গুমেন্টের সীমা বোঝো; argv[argc] হলো null sentinel।"
+    },
+    {
+      "en": "The shell resolves quoting before the C program receives its strings.",
+      "bn": "শেলের quote সামলানোর পর প্রোগ্রাম আর্গুমেন্টের স্ট্রিং পায়।"
+    },
+    {
+      "en": "Validate digits, the end pointer and range rather than accepting a numeric prefix.",
+      "bn": "শুধু শুরুর সংখ্যা নিও না; digit, শেষের অক্ষর ও range যাচাই করো।"
+    },
+    {
+      "en": "A representable operand can still overflow an accumulated sum.",
+      "bn": "প্রতিটি আর্গুমেন্ট ঠিক হলেও যোগফল range ছাড়াতে পারে।"
+    },
+    {
+      "en": "Usage failures and invalid values should produce a failure exit status.",
+      "bn": "ব্যবহারের ভুল বা অবৈধ মানে failure exit status দাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Describe all three independent strtol validation questions.",
+      "marks": 6,
+      "answerHtml": "<p>Did any digits convert? Test end != input. Did the entire allowed string convert? Require the chosen trailing-character policy, here *end == zero. Was the value representable? Clear errno first and reject ERANGE. Then apply any narrower application range such as 0–100. Do not treat return value zero as proof of failure.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Prove the signed-sum overflow guards are evaluated safely.",
+      "marks": 8,
+      "answerHtml": "<p>For a positive addend, LONG_MAX − value is representable, so total must not exceed that bound. For a negative addend, LONG_MIN − value is representable, so total must not be below it. Zero needs neither branch. Evaluate total + value only after its branch passes; checking the already-overflowed result would be too late.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain argc, argv[0], argv[argc], and a quoted empty operand.",
+      "marks": 6,
+      "answerHtml": "<p>argc is nonnegative. In the usual hosted launch, argv[0] is a program-name string, but its spelling and availability are not a portable display contract. argv[argc] is null. An empty operand is a non-null pointer to a string whose first byte is zero, so it is different from the sentinel and still counts as an argument.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "strtol conversion contract",
+      "url": "https://en.cppreference.com/w/c/string/byte/strtol"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,0 +1,31 @@
+<h2 id="introduction">Treat a game as controlled state changes</h2>
+<p class="lead">Tic-tac-toe uses a small board but demands careful rules. Two players alternate placing X and O. A player wins by completing a row, column or diagonal, while a full board without a winner is a draw. The interesting programming task is keeping every input attempt consistent with those rules.</p><p>The program stores nine cells in a two-dimensional array, the current player and a count of accepted moves. An invalid coordinate or occupied cell must change none of them. This makes the project a useful exercise in validation and state transitions rather than only nested loops.</p>
+
+<h2 id="setup">Compile a local two-player game</h2>
+<p>Save the complete source as game.c and compile in C17 mode with strict warnings. No external files or libraries are needed. Enter row and column from one through three on each prompted line. X starts. The display uses a dot for an empty cell.</p><p>The program reads a complete bounded line and converts coordinates with range checks. Text after the second number is invalid. An overlong line is drained and rejected as one attempt. Ending input before a win or draw prints Unfinished, which is different from a completed draw.</p>
+
+<h2 id="examples">Observe wins, draws and rejected attempts</h2>
+<h3>Finish when X completes the first row</h3>
+<p>Players alternate legal placements. X wins on the fifth accepted move with the first row filled. The game checks a win before a draw and terminates without offering another turn.</p>
+<div data-example="ex-1"></div>
+<h3>Recognise a full board with no winning line</h3>
+<p>All nine moves are legal and no row, column or diagonal has three equal nonempty marks. The final board is a draw. Move count tracks accepted placements, not input attempts.</p>
+<div data-example="ex-2"></div>
+<h3>Keep the current player after an invalid or occupied request</h3>
+<p>The out-of-range request and repeated occupied cell do not change the board, move count or player. O must still supply a valid move after rejection. End of input leaves this game unfinished rather than inventing a winner.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="transition">Validate before changing a single cell</h2>
+<p>Begin each iteration by displaying whose turn it is. Parse the two coordinates and require the one-based range before subtracting one. Only then index board[row][col]. This ordering prevents an invalid request such as row zero from becoming an out-of-bounds access.</p><p>If the selected cell is occupied, report that condition and repeat for the same player. A legal placement writes one cell and increments moves once. Therefore moves must always equal the number of nonempty board cells. Counting input attempts would break draw detection after a rejected request.</p><p>After rendering the changed board, check the winner first. If there is none and moves equals nine, declare a draw. Otherwise switch X to O or O to X and repeat. A ninth move can win, so a full-board test before the win test would incorrectly call some winning games draws.</p>
+
+<h2 id="win-lines">Look for one nonempty symbol across a whole line</h2>
+<p>There are eight possible winning lines: three rows, three columns and two diagonals. A loop checks corresponding row and column lines for each index. Two additional conditions check the diagonals. Every test requires a nonempty selected symbol as well as equality.</p><p>The nonempty condition is essential because the initial board contains three equal dots in every row. Equality alone would declare a winner before any move. A diagonal can use the centre as its selected symbol, but it still needs both endpoints to match.</p><p>The function receives a read-only view of the board and returns X, O or the empty marker. Its C17 call uses an explicit read-only pointer-to-row conversion because qualification conversions for pointers to arrays have stricter pre-C23 rules than a simple int pointer. The function does not cast away const or change the board.</p>
+
+<h2 id="design">Separate display, rules and interaction</h2>
+<p>show_board prints only the board. winner answers only the win question. The main loop owns interaction and transitions. Keeping these jobs separate helps you inspect an incorrect result: a rendering error should not alter the win logic, and a win check should not silently consume input.</p><p>The reference game has no computer player or networked mode. A deterministic computer opponent would be an extension with the same legal-move contract. It must still choose an empty cell and stop when the game is terminal. A minimax extension needs an explicit search over copied states and a clear scoring rule rather than hidden modifications to the live board.</p><p>A rematch extension must reset all game state, not only the visible cells. Decide whether the starting player alternates and keep any match counter separate from move count. Test a win and a draw followed by a fresh board to catch stale terminal state.</p>
+
+<h2 id="tests">Choose lines and invalid transitions deliberately</h2>
+<p>Test a row win, a column win and each diagonal. Include a full nine-move draw and a winning ninth move. Also test an out-of-range request, malformed numbers, an occupied cell and early EOF. Confirm that rejection preserves the current player and that no extra turn is offered after a result.</p><p>The worked practice includes an O diagonal win, which also checks that detection does not assume X. For deeper testing, enumerate reachable legal boards or generate valid games and compare the winner with an independent line list. Exclude impossible boards with both players winning; the live loop prevents those by stopping immediately at the first win.</p>
+
+<h2 id="summary">One accepted move, one consistent transition</h2>
+<p>Keep coordinates safe, preserve turns on rejection and check terminal conditions in the right order. The final <a href="topic:c-interview-questions">interview question bank</a> revisits the language and ownership rules behind these projects.</p>

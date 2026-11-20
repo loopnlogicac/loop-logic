@@ -1,0 +1,425 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-queue",
+  "module": "data-structures",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Queue",
+    "bn": "Circular অ্যারে ও linked নোড দিয়ে queue"
+  },
+  "summary": {
+    "en": "Preserve first-in, first-out order using a circular array or linked front/rear pointers, including wraparound and singleton transitions.",
+    "bn": "Circular অ্যারে বা linked front/rear দিয়ে আগে আসা মান আগে বের করো; wraparound ও এক নোডের সীমা সামলাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 75,
+  "prerequisites": [
+    "c-stack"
+  ],
+  "related": [],
+  "keywords": [
+    "queue",
+    "FIFO",
+    "circular buffer",
+    "enqueue",
+    "dequeue",
+    "round robin"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Serve the earliest waiting item"
+    },
+    {
+      "id": "syntax",
+      "title": "Count live elements and wrap physical positions"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Update a boundary instead of moving every value"
+    },
+    {
+      "id": "examples",
+      "title": "Preserve arrival order through wraparound and empty transitions"
+    },
+    {
+      "id": "linked-queue",
+      "title": "Maintain both endpoints as one invariant"
+    },
+    {
+      "id": "applications",
+      "title": "Order is a tool, not the entire service policy"
+    },
+    {
+      "id": "costs-tests",
+      "title": "Measure the transitions that can break order"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not lose the distinction between storage and order"
+    },
+    {
+      "id": "admission",
+      "title": "State what a rejected arrival means"
+    },
+    {
+      "id": "version-notes",
+      "title": "Single-threaded C17 queues"
+    },
+    {
+      "id": "summary",
+      "title": "Preserve the oldest remaining arrival"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Reuse released array slots after circular wraparound",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>After removing ten and twenty, front is two. New values occupy physical slots zero and one, but logical service order remains thirty, forty, fifty, sixty. A full rejection leaves the previous sequence untouched.</p>",
+      "standard": "c17",
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module/queue.c"
+      ],
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Reset both linked endpoints when removing the only node",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>A stale rear pointer after singleton removal would name freed storage. Resetting both endpoints allows the next enqueue to start a new chain safely. Subsequent removals preserve arrival order.</p>",
+      "standard": "c17",
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module/queue.c"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Give each unfinished job one round-robin time unit",
+      "level": "advanced",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>Each job enters the queue once. After one unit, unfinished jobs return at the rear and finished jobs leave. The queue stores job indices; remaining stores their separate state. Three active jobs fit the four-slot capacity throughout.</p>",
+      "standard": "c17",
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module/queue.c"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Serve rolls in arrival order",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n from 0 to 4 and n rolls from 1 through 999. Enqueue all rolls, then dequeue and print each on its own line. Print invalid for a bad count, missing roll or out-of-range roll. Do not print a partial service list. All tokens fit int.</p>",
+      "hints": [
+        "Use FIFO rather than an array-stack pop.",
+        "Accept the entire bounded input before displaying service."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ],
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module/queue.c"
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Simulate a bounded sequence of queue commands",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read a command count from 0 to 20. Each command is E followed by an int from -100 to 100, D, or P. E prints ok/full, D prints the removed value/empty, and P prints the front/empty. Capacity is four. Missing, unknown or out-of-range input prints invalid and stops; earlier command results remain visible. All numeric tokens fit int.</p>",
+      "hints": [
+        "Each command has a distinct input shape.",
+        "Peek must not change front or count."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        },
+        {
+          "stdin": "practice/p-2.t5.in",
+          "output": "practice/p-2.t5.out"
+        }
+      ],
+      "compilerFlags": [
+        "-I",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module",
+        "c-tutorial/c-tutorial/topics/data-structures/c-queue/module/queue.c"
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Trace physical slots after wraparound",
+      "difficulty": "medium",
+      "statementHtml": "<p>Capacity is four. Enqueue 10,20,30,40; dequeue twice; enqueue 50,60. Draw physical indices and logical order.</p>",
+      "hints": [
+        "Front advances while count determines the next insertion slot."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Physical slots become [50,60,30,40], front is two and count is four. Logical order starts at front and wraps: 30,40,50,60. Sorting the physical array or printing it from zero would destroy or misrepresent the queue order.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Repair a dangling linked rear pointer",
+      "difficulty": "medium",
+      "statementHtml": "<p>A linked dequeue advances front to null but leaves rear pointing at the freed final node. Explain the next enqueue defect and repair.</p>",
+      "hints": [
+        "Empty must have a consistent representation at both ends."
+      ],
+      "type": "written",
+      "answerHtml": "<p>The next enqueue may write rear->next through freed storage. When advancing front makes it null, also set rear to null before completing removal. Enqueue then recognises the empty case and sets front to the new node as well as rear. Keep both-null exactly equivalent to empty.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which queue element is removed first?",
+      "options": [
+        "The newest arrival",
+        "The largest value",
+        "The smallest physical index always",
+        "The earliest remaining arrival"
+      ],
+      "answer": 3,
+      "explanation": "FIFO describes arrival order rather than value order."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does count distinguish in this circular representation?",
+      "options": [
+        "Sorted and unsorted data",
+        "Allocated and freed code",
+        "Empty at zero and full at capacity",
+        "Only negative values"
+      ],
+      "answer": 2,
+      "explanation": "A separate count avoids ambiguity when indices wrap."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where does the next circular enqueue write?",
+      "options": [
+        "capacity always",
+        "(front + count) % capacity",
+        "front - count",
+        "count always"
+      ],
+      "answer": 1,
+      "explanation": "The expression follows logical order and wraps within the array."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must happen after linked dequeue removes the last node?",
+      "options": [
+        "Both front and rear become null",
+        "Only rear advances to a random node",
+        "Rear keeps the freed address",
+        "A dummy value becomes zero"
+      ],
+      "answer": 0,
+      "explanation": "The empty invariant prevents a later dangling write."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why avoid shifting every array element on each dequeue?",
+      "options": [
+        "Shifting is always undefined",
+        "Queues cannot use arrays",
+        "Modulo sorts values",
+        "Circular indices reuse space with constant structural work"
+      ],
+      "answer": 3,
+      "explanation": "Moving front preserves logical order without moving all values."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does round-robin re-enqueue when work remains?",
+      "options": [
+        "Only the largest job",
+        "A copy of all jobs",
+        "The unfinished job at the rear",
+        "Every completed job at the front"
+      ],
+      "answer": 2,
+      "explanation": "Each active job receives a turn before a repeated turn."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does FIFO alone guarantee real-world fairness under all admission policies?",
+      "options": [
+        "Only if the array is sorted",
+        "No, the application still defines admission and service rules",
+        "Yes for every possible workflow",
+        "Only if values are positive"
+      ],
+      "answer": 1,
+      "explanation": "The data structure gives order within the queue, not a complete scheduling policy."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which physical slot follows front three after a circular removal?",
+      "options": [
+        "0",
+        "1",
+        "3",
+        "4"
+      ],
+      "answer": 0,
+      "explanation": "Modulo wraps four back to zero within the four slots.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    unsigned int front = 3U;\n    front = (front + 1U) % 4U;\n    printf(\"%u\\n\", front);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Where is the next insertion with front two and count three?",
+      "options": [
+        "0",
+        "2",
+        "3",
+        "1"
+      ],
+      "answer": 3,
+      "explanation": "The logical rear wraps five to physical index one.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    unsigned int front = 2U;\n    unsigned int count = 3U;\n    printf(\"%u\\n\", (front + count) % 4U);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which value is served first from a simple arrival array?",
+      "options": [
+        "102 1",
+        "103 0",
+        "103 1",
+        "101 1"
+      ],
+      "answer": 2,
+      "explanation": "FIFO serves the first arrival, not the smallest roll.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int arrivals[] = {103, 101, 102};\n    int front = 0;\n    int served = arrivals[front++];\n    printf(\"%d %d\\n\", served, front);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "A queue removes values in first-in, first-out order.",
+      "bn": "Queue-তে আগে আসা মান আগে বের হয়।"
+    },
+    {
+      "en": "Circular indices reuse slots without shifting the live sequence.",
+      "bn": "Circular index দিয়ে live মান না সরিয়েই খালি slot আবার ব্যবহার করো।"
+    },
+    {
+      "en": "Keep front in range and count between zero and capacity.",
+      "bn": "Front-এর index সীমার মধ্যে এবং count শূন্য থেকে capacity-এর মধ্যে রাখো।"
+    },
+    {
+      "en": "The empty linked queue has both endpoint pointers null.",
+      "bn": "Linked queue খালি হলে দুই প্রান্তের পয়েন্টারই null থাকবে।"
+    },
+    {
+      "en": "Re-enqueue unfinished work only under an explicit scheduling policy.",
+      "bn": "Scheduling-এর নিয়ম মেনে অসমাপ্ত কাজ আবার queue-তে দাও।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Explain circular enqueue and dequeue with a count field.",
+      "marks": 8,
+      "answerHtml": "<p>Maintain front in [0,capacity) and count in [0,capacity]. Enqueue rejects full, writes at (front+count)%capacity and increments count. Dequeue rejects empty, reads front, advances front modulo capacity and decrements count. Count distinguishes full and empty without sacrificing a slot.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Describe linked enqueue for empty and nonempty queues and singleton removal.",
+      "marks": 8,
+      "answerHtml": "<p>Allocate and initialise a node with null next before changing endpoints. If empty, set front to it; otherwise link rear.next to it. Set rear to the new node. Dequeue advances front and frees the former front; if front becomes null, reset rear too. Allocation failure leaves both endpoints unchanged.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Trace round-robin jobs requiring two, one and three units.",
+      "marks": 6,
+      "answerHtml": "<p>The service sequence is job 1, job 2, job 3, job 1, job 3, job 3. Each turn removes the front and consumes one unit. An unfinished job returns to the rear; a completed job does not. The queue stores identities while a separate array stores remaining work.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C allocated storage",
+      "url": "https://en.cppreference.com/w/c/memory"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

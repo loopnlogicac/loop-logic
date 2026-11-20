@@ -200,7 +200,7 @@ function build(lang, src, { std = 'c17', flags = [], werror = true, sanitize = f
   if (lang === 'c') {
     const file = join(dir, 'main.c'); writeFileSync(file, src);
     const exe = join(dir, process.platform === 'win32' ? 'main.exe' : 'main');
-    const r = spawnSync(RT.c.cmd, [`-std=${C_STD[std] ?? 'c17'}`, '-Wall', '-Wextra', '-Wpedantic', '-O2', '-fno-diagnostics-color', ...(werror ? ['-Werror'] : []), ...(sanitize ? ['-fsanitize=address,undefined', '-fno-omit-frame-pointer', '-fno-sanitize-recover=all'] : []), file, '-o', exe, ...flags], { encoding: 'utf8' });
+    const r = spawnSync(RT.c.cmd, [`-std=${C_STD[std] ?? 'c17'}`, '-Wall', '-Wextra', '-Wpedantic', '-O2', '-fno-diagnostics-color', ...(werror ? ['-Werror'] : []), ...(sanitize ? ['-fsanitize=address,undefined', '-fno-omit-frame-pointer', '-fno-sanitize-recover=all'] : []), file, '-o', exe, ...flags], { encoding: 'utf8', cwd: join(here, '..') }); // relative compilerFlags paths are relative to content-kit/
     return { ok: r.status === 0, diagnostics: firstLines(r.stderr || ''), dir, cmd: [exe] };
   }
   if (lang === 'java') {

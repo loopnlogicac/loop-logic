@@ -1,0 +1,405 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-undefined-behavior",
+  "module": "advanced",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Undefined Behavior",
+    "bn": "Undefined behavior চিনে নিরাপদ কোড লেখা"
+  },
+  "summary": {
+    "en": "Separate undefined, unspecified and implementation-defined behavior, then repair bounds, overflow and sequencing defects.",
+    "bn": "কোন আচরণে কী নিশ্চয়তা আছে তা আলাদা করো; অ্যারেয়ের সীমা, overflow ও sequencing-এর ভুল সারাও।"
+  },
+  "level": "advanced",
+  "estMinutes": 65,
+  "prerequisites": [
+    "c-const-volatile"
+  ],
+  "related": [],
+  "keywords": [
+    "undefined behavior",
+    "signed overflow",
+    "bounds",
+    "sequencing",
+    "sanitizer"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A successful compile is not a promise about every execution"
+    },
+    {
+      "id": "syntax",
+      "title": "Three categories with different obligations"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Check the assumptions behind each operation"
+    },
+    {
+      "id": "examples",
+      "title": "Valid repairs beside one explicitly invalid operation"
+    },
+    {
+      "id": "common-defects",
+      "title": "Recognise the common families"
+    },
+    {
+      "id": "sanitizers",
+      "title": "Use a diagnostic instrument with a stated scope"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Avoid reasoning from an accident"
+    },
+    {
+      "id": "review-trace",
+      "title": "A small review before an output trace"
+    },
+    {
+      "id": "version-notes",
+      "title": "State the language version before a sequencing argument"
+    },
+    {
+      "id": "summary",
+      "title": "Validate first, then trace"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Guard an addition before signed overflow can occur",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The first addition is rejected without evaluating INT_MAX + 1. The caller value remains 99. The valid addition then stores twelve. This is a precondition check, not an attempt to detect overflow after it has already happened.</p>",
+      "standard": "c17",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Form a one-past pointer without dereferencing it",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The end pointer is a valid loop boundary for this array. The loop never dereferences it. Forming arbitrary pointers beyond one past, or subtracting pointers to unrelated arrays, does not inherit this guarantee.</p>",
+      "standard": "c17",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Replace an unsequenced update with explicit statements",
+      "level": "basic",
+      "file": "examples/ex-3.c",
+      "tryNow": true,
+      "explanationHtml": "<p>Separate full expressions establish the intended order. The program deliberately does not use i = i++, whose competing unsequenced modifications have undefined behavior in C17. The repair states which value should be kept rather than guessing a compiler order.</p>",
+      "standard": "c17",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Compile an intentional signed-overflow defect without predicting output",
+      "level": "advanced",
+      "file": "examples/ex-4.c",
+      "tryNow": true,
+      "explanationHtml": "<p>This program intentionally has undefined behavior when it evaluates the signed addition. There is no correct expected numeric output. A local undefined-behavior sanitizer run can diagnose the operation, but ordinary compilation does not make it valid.</p>",
+      "standard": "c17",
+      "demonstrates": "undefined-behavior"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Validate an array index before access",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read one integer index from -100 to 100. For the array {11, 22, 33, 44}, print the selected element only when the index is from 0 through 3. Otherwise print invalid. Missing input also prints invalid.</p>",
+      "hints": [
+        "Both lower and upper bounds matter.",
+        "Do not read the array before the condition."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Divide only when signed division is defined",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read two decimal integers, each representable as int. Print their quotient unless the divisor is zero or the pair is INT_MIN and -1. Print invalid for those cases or missing input. The exceptional pair matters even when no remainder is requested.</p>",
+      "hints": [
+        "Check before / is evaluated.",
+        "The most negative int may have no positive counterpart."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Classify three kinds of uncertainty",
+      "difficulty": "medium",
+      "statementHtml": "<p>Classify the order of two independent function arguments, the implementation choice of plain char signedness, and dereferencing a null pointer.</p>",
+      "hints": [
+        "Ask whether the standard permits alternatives, demands documentation, or imposes no requirement."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Independent argument evaluation order is unspecified: the implementation may choose a permitted order without documenting each choice. Plain char signedness is implementation-defined and must be documented. Dereferencing a null pointer has undefined behavior. An unspecified order becomes dangerous when the expressions introduce conflicting unsequenced accesses; do not classify every such expression as merely a choice of order.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Explain a sanitizer test boundary",
+      "difficulty": "medium",
+      "statementHtml": "<p>A program passes several sanitizer runs. Explain what that evidence does and does not establish, and propose additional boundary tests.</p>",
+      "hints": [
+        "Dynamic checking only observes executed paths."
+      ],
+      "type": "written",
+      "answerHtml": "<p>The checked executions produced no enabled sanitizer diagnosis. That is useful evidence, not proof that all inputs and lifetimes are valid. Add empty arrays, the last valid index, the first invalid index, arithmetic limits, failed allocations and missing terminators where the program accepts those situations. Review unexecuted branches and contracts. Keep strict compiler warnings as a separate check.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What numeric result is guaranteed after signed INT_MAX + 1 in C17?",
+      "options": [
+        "INT_MIN on all systems",
+        "Zero",
+        "INT_MAX",
+        "None; the operation has undefined behavior"
+      ],
+      "answer": 3,
+      "explanation": "A familiar machine wrap is not the language contract for signed addition."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which one-past-array operation is permitted?",
+      "options": [
+        "Increment it again arbitrarily",
+        "Treat it as a new object",
+        "Use it as a comparison boundary within the array traversal",
+        "Dereference it for the final element"
+      ],
+      "answer": 2,
+      "explanation": "The pointer may be formed but does not point to an array element."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is i = i++ not a portable C17 puzzle with one answer?",
+      "options": [
+        "Only printf decides",
+        "Its unsequenced modifications have undefined behavior",
+        "It always preserves i",
+        "It always doubles i"
+      ],
+      "answer": 1,
+      "explanation": "Write separate statements to express the intended update."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does implementation-defined mean?",
+      "options": [
+        "A permitted choice that the implementation documents",
+        "Anything may happen without requirements",
+        "A choice that must change every run",
+        "A syntax error"
+      ],
+      "answer": 0,
+      "explanation": "Plain char signedness is a common documented choice."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does an uninitialised automatic int provide a reliable random seed?",
+      "options": [
+        "Yes on every compiler",
+        "Only if printed first",
+        "Only if named seed",
+        "No; reading an indeterminate value is not a valid randomness method"
+      ],
+      "answer": 3,
+      "explanation": "Initialise objects before using their values."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a clean sanitizer run establish?",
+      "options": [
+        "Correctness for every input",
+        "That bounds checks are unnecessary",
+        "No enabled diagnosis on the executed path",
+        "Absence of all possible defects"
+      ],
+      "answer": 2,
+      "explanation": "Unexecuted cases and unsupported checks remain outside that evidence."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which arithmetic uses defined modulo reduction?",
+      "options": [
+        "A negative shift count",
+        "Unsigned addition",
+        "Overflowing signed addition",
+        "Division by zero"
+      ],
+      "answer": 1,
+      "explanation": "Unsigned arithmetic wraps modulo one more than its maximum; the other cases are invalid."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How does defined unsigned wrap differ from signed overflow?",
+      "options": [
+        "0",
+        "1",
+        "-1",
+        "2"
+      ],
+      "answer": 0,
+      "explanation": "Unsigned addition is reduced modulo UINT_MAX + 1, producing zero.",
+      "code": "#include <stdio.h>\n#include <limits.h>\n\nint main(void)\n{\n    unsigned int value = UINT_MAX;\n    value += 1U;\n    printf(\"%u\\n\", value);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which values are observed when increments are sequenced in separate statements?",
+      "options": [
+        "2 3 4",
+        "3 4 4",
+        "2 4 3",
+        "2 4 4"
+      ],
+      "answer": 3,
+      "explanation": "The first statement stores two and leaves three; the next increments to four.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int i = 2;\n    int before = i++;\n    int after = ++i;\n    printf(\"%d %d %d\\n\", before, after, i);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What does the guarded final-element access print?",
+      "options": [
+        "2",
+        "5",
+        "13",
+        "8"
+      ],
+      "answer": 2,
+      "explanation": "Index two is the third element and satisfies the bounds before access.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    int a[] = {5, 8, 13};\n    int index = 2;\n    if (index >= 0 && index < 3) {\n        printf(\"%d\\n\", a[index]);\n    }\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Undefined behavior has no required numeric output to predict.",
+      "bn": "Undefined behavior হলে নির্দিষ্ট সংখ্যার আউটপুট ধরে নেওয়া যায় না।"
+    },
+    {
+      "en": "Check signed arithmetic bounds before evaluating the risky operation.",
+      "bn": "ঝুঁকিপূর্ণ হিসাব করার আগেই signed range-এর সীমা যাচাই করো।"
+    },
+    {
+      "en": "A one-past pointer is a boundary, not an element to dereference.",
+      "bn": "অ্যারেয়ের one-past পয়েন্টার সীমা বোঝায়; সেখানে element পড়বে না।"
+    },
+    {
+      "en": "Separate unsequenced updates into explicit full expressions.",
+      "bn": "একই মানের unsequenced update আলাদা statement-এ পরিষ্কার করে লেখো।"
+    },
+    {
+      "en": "Sanitizers find executed defects but do not prove all-path correctness.",
+      "bn": "Sanitizer চলা path-এর ভুল ধরতে পারে; সব path ঠিক থাকার প্রমাণ দেয় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Distinguish undefined, unspecified and implementation-defined behavior with one example each.",
+      "marks": 8,
+      "answerHtml": "<p>Undefined behavior imposes no standard requirements, as with signed overflow. Unspecified behavior allows a set of valid possibilities without requiring documentation of each selection, as with evaluating independent argument expressions in either order. Implementation-defined behavior requires documentation of a permitted choice, as with plain char signedness. State the category before claiming any output.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why checking a negative result after signed addition is not an overflow repair.",
+      "marks": 6,
+      "answerHtml": "<p>The overflowing addition has already invoked undefined behavior. A later test cannot restore a valid execution, and optimisation may rely on defined signed arithmetic not overflowing. Use representable precondition bounds or a suitable checked arithmetic facility before the operation. Unsigned wrap is defined but may still violate the application requirement.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain both the validity and limitation of an end pointer in an array loop.",
+      "marks": 6,
+      "answerHtml": "<p>Forming a pointer one past the final array element is permitted. It can act as the stop boundary while pointers advance within that array. It cannot be dereferenced. Going further or subtracting unrelated pointers lacks the same guarantee. Ensure the array remains alive throughout traversal.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Undefined behavior categories",
+      "url": "https://en.cppreference.com/w/c/language/behavior"
+    },
+    {
+      "title": "GCC instrumentation options",
+      "url": "https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

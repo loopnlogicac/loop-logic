@@ -1,0 +1,439 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-file-error-handling",
+  "module": "file-handling",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "File Error Handling",
+    "bn": "ফাইলের EOF, error ও cleanup"
+  },
+  "summary": {
+    "en": "Let I/O return values drive loops, separate matching failure from EOF and errors, and preserve useful diagnostics through cleanup.",
+    "bn": "I/O return value দেখে লুপ চালাও; matching failure, EOF ও error আলাদা করে cleanup-এর মধ্যেও দরকারি diagnostic রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 60,
+  "prerequisites": [
+    "c-file-positioning"
+  ],
+  "related": [
+    "c-error-handling"
+  ],
+  "keywords": [
+    "feof ferror",
+    "perror errno",
+    "clearerr",
+    "robust read loop",
+    "cleanup"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "perror uses errno; file-operation errno diagnostics follow the documented host implementation.",
+      "The missing-file example intentionally returns exit status 1 and sends its host-dependent diagnostic to stderr."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A return value is the first piece of evidence"
+    },
+    {
+      "id": "syntax",
+      "title": "Read results and stream indicators"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Classify the stop before choosing a response"
+    },
+    {
+      "id": "examples",
+      "title": "Four observable failure and recovery boundaries"
+    },
+    {
+      "id": "diagnostics",
+      "title": "Use errno without losing the original evidence"
+    },
+    {
+      "id": "cleanup",
+      "title": "Close every owned stream and retain the first failure"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Mistakes that disguise invalid input"
+    },
+    {
+      "id": "version-notes",
+      "title": "Portable contracts and host diagnostics"
+    },
+    {
+      "id": "summary",
+      "title": "Reliable stopping, reporting and cleanup"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Report a failed open before using its handle",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The requested directory does not exist in this run. NULL is the portable failure signal. On this host errno also supplies an operating-system diagnostic to stderr; its wording is not part of the normal result message.</p>",
+      "standard": "c17",
+      "exitCode": 1,
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Stop at a matching failure even when EOF is false",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The first integer is accepted, then bad prevents the next conversion. The loop stops without pretending that the old value is a new record. End-of-file is not required for this kind of failure.</p>",
+      "standard": "c17",
+      "workdirFiles": [
+        "examples/tokens.txt"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Clear an EOF flag without moving away from the end",
+      "level": "intermediate",
+      "file": "examples/ex-3.c",
+      "tryNow": false,
+      "explanationHtml": "<p>clearerr removes the indicator but does not move the stream position. The next read at the unchanged end reaches EOF again. Clearing state is not the same operation as rewinding.</p>",
+      "standard": "c17",
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Copy in blocks and preserve the first failure across cleanup",
+      "level": "advanced",
+      "file": "examples/ex-4.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The successful copy transfers six bytes in a full block and a short block. The helper borrows its streams. The caller attempts both closes and retains the earliest failing stage’s errno for the host diagnostic.</p>",
+      "standard": "c17",
+      "workdirFiles": [
+        "examples/source.txt"
+      ],
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Classify an integer-stream stopping reason",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read whitespace-separated signed numeric tokens of at most three digits from stdin until EOF or a nonnumeric token. At most 20 integers precede that stop. Print Tokens:, then Count:, Sum:, and End: clean or End: invalid. Do not count or reuse a value after a failed conversion.</p>",
+      "hints": [
+        "Use the conversion return as the loop condition.",
+        "A matching failure can occur before EOF."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Reject one overlong record without counting its chunks",
+      "difficulty": "hard",
+      "statementHtml": "<p>Read text lines from stdin until EOF. Accept a line of at most 15 characters before its newline; an empty line is allowed. A final fragment also counts as a line. Reject a longer line once and drain the rest of it. Print Lines:, then Accepted: and Rejected: counts. Input contains no embedded null characters.</p>",
+      "hints": [
+        "A full fgets buffer may stop before the newline.",
+        "Inspect the next character to distinguish a 15-character line from an overlong one."
+      ],
+      "solution": "practice/p-2.c",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Repair an end-predicting loop",
+      "difficulty": "easy",
+      "statementHtml": "<p>A loop uses while (!feof(in)), calls fscanf for one number, and immediately adds the variable to a total without checking the conversion. Explain failures on an empty file, a malformed word and a normal final number.</p>",
+      "hints": [
+        "EOF is recorded after an operation encounters it."
+      ],
+      "type": "written",
+      "answerHtml": "<p>An empty file can enter the loop before EOF has been observed and use an unassigned value. A malformed word can leave EOF false and the same input unread, causing repeated failure. After a final valid number, a later failed read can reuse the previous value. Put the conversion success test in the loop condition, then classify matching failure, clean EOF and ferror afterward.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Preserve the useful error while still closing resources",
+      "difficulty": "medium",
+      "statementHtml": "<p>A copy fails, then the caller closes two streams. Explain why errno should be captured before cleanup, why both close calls must still occur, and why zero errno alone is not a universal success test.</p>",
+      "hints": [
+        "Return values identify failures; errno is extra information when documented."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Later library calls can alter errno, so capture the value immediately after the documented failing operation. Store each cleanup outcome separately and attempt both owned closes. Restore the saved diagnostic value before perror if that is the host’s reporting policy. Success is determined by each operation’s return contract; functions need not reset errno on success, and not every failure uses errno.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why is while (!feof(file)) not a reliable integer-reading condition?",
+      "options": [
+        "feof always closes the file",
+        "Every file has exactly one extra integer",
+        "feof returns a pointer to the final line",
+        "EOF records a past read outcome rather than predicting the next conversion"
+      ],
+      "answer": 3,
+      "explanation": "Test fscanf success before using the destination. EOF and matching failures occur after attempting input."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which query distinguishes an I/O error after fgetc returns EOF?",
+      "options": [
+        "sizeof(FILE)",
+        "printf(file)",
+        "ferror(file)",
+        "strlen(file)"
+      ],
+      "answer": 2,
+      "explanation": "EOF is the return marker for both exhausted input and a read error; stream indicators explain the outcome."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A %d conversion stops at a word with no assignment. Which result can it return?",
+      "options": [
+        "A valid new zero",
+        "0",
+        "1",
+        "The old integer automatically"
+      ],
+      "answer": 1,
+      "explanation": "Matching failure before an assignment can return zero without setting the EOF indicator."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When should a useful errno value be copied for later reporting?",
+      "options": [
+        "Immediately after the documented failing operation",
+        "Before every successful loop iteration only",
+        "After unrelated cleanup calls",
+        "Only after printing the error twice"
+      ],
+      "answer": 0,
+      "explanation": "Cleanup can overwrite diagnostic state; retain the value while still performing resource release."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does perror use to choose its message?",
+      "options": [
+        "The last printf string automatically",
+        "The name of every open file",
+        "The destination buffer length",
+        "The current errno value"
+      ],
+      "answer": 3,
+      "explanation": "It emits a prefix and an implementation-provided message for current errno to stderr."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does clearerr change?",
+      "options": [
+        "Only the file name",
+        "The stream into a newly opened file",
+        "The EOF and error indicators, without moving position",
+        "The actual file bytes"
+      ],
+      "answer": 2,
+      "explanation": "It clears state; the same underlying problem or unchanged end can be encountered again."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which claim about errno after success is valid?",
+      "options": [
+        "errno is a complete replacement for return values",
+        "A success need not reset an earlier errno",
+        "Every success sets errno to zero",
+        "A nonzero errno always means the latest call failed"
+      ],
+      "answer": 1,
+      "explanation": "Use return values and documented errno behavior, rather than treating a stale value as a new failure."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why store two fclose outcomes rather than placing both calls in a short-circuit expression?",
+      "options": [
+        "A first failure must not skip the second close attempt",
+        "Two FILE pointers always share one resource",
+        "fclose never fails",
+        "Short-circuit evaluation always executes both operands"
+      ],
+      "answer": 0,
+      "explanation": "Both owned resources need cleanup even when one close reports failure."
+    },
+    {
+      "id": "q-9",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "A positive short fread returns three bytes of a four-byte record at clean EOF. What follows?",
+      "options": [
+        "The record becomes complete because EOF is clean",
+        "The fourth byte is always zero",
+        "ferror must be nonzero",
+        "The record is truncated even though there is no I/O error"
+      ],
+      "answer": 3,
+      "explanation": "A format can be invalid or incomplete without a device-level I/O failure."
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "When does EOF become visible around the one stored character?",
+      "options": [
+        "1 1 1",
+        "0 0 0",
+        "0 0 1",
+        "0 1 1"
+      ],
+      "answer": 2,
+      "explanation": "The first successful read does not set EOF. The later attempt beyond the stored character sets it.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    fputc('A', f);\n    rewind(f);\n    printf(\"%d \", feof(f) != 0);\n    fgetc(f);\n    printf(\"%d \", feof(f) != 0);\n    fgetc(f);\n    printf(\"%d\\n\", feof(f) != 0);\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-11",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which conversion and indicators follow a leading nonnumeric token?",
+      "options": [
+        "0 0 1",
+        "0 0 0",
+        "1 0 0",
+        "0 1 0"
+      ],
+      "answer": 1,
+      "explanation": "This is a matching failure, not EOF or an input-device error. No integer is assigned.",
+      "code": "#include <stdio.h>\n\nint main(void)\n{\n    FILE *f = tmpfile();\n    if (f == NULL) {\n        return 1;\n    }\n    fputs(\"bad 8\", f);\n    rewind(f);\n    int value = 7;\n    int n = fscanf(f, \"%d\", &value);\n    printf(\"%d %d %d\\n\", n, feof(f) != 0, ferror(f) != 0);\n    fclose(f);\n    return 0;\n}\n"
+    },
+    {
+      "id": "q-12",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What survives when current errno changes after a saved copy?",
+      "options": [
+        "1 1",
+        "0 1",
+        "1 0",
+        "0 0"
+      ],
+      "answer": 0,
+      "explanation": "saved is an ordinary integer copy and retains ERANGE even after the current diagnostic variable changes.",
+      "code": "#include <stdio.h>\n#include <errno.h>\n\nint main(void)\n{\n    errno = ERANGE;\n    int saved = errno;\n    errno = EDOM;\n    printf(\"%d %d\\n\", saved == ERANGE, errno == EDOM);\n    return 0;\n}\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "EOF is observed by reads rather than predicted by feof.",
+      "bn": "feof আগে থেকে পরের read-এর ফল জানায় না।"
+    },
+    {
+      "en": "Separate clean EOF, I/O failure and formatted matching failure.",
+      "bn": "Clean EOF, I/O error ও matching failure আলাদা করে দেখো।"
+    },
+    {
+      "en": "Preserve errno promptly when the failing interface documents it.",
+      "bn": "Failure-এ errno দরকার হলে অন্য কাজের আগেই সেটি save করো।"
+    },
+    {
+      "en": "clearerr removes indicators without repairing data or moving position.",
+      "bn": "clearerr flag সরায়; ডেটা সারায় না, position-ও বদলায় না।"
+    },
+    {
+      "en": "Attempt cleanup for every successfully acquired owned stream.",
+      "bn": "নিজের খোলা প্রতিটি stream সব path-এ একবার close করার চেষ্টা করো।"
+    },
+    {
+      "en": "Incomplete records remain invalid even at a clean end-of-file.",
+      "bn": "শেষে I/O error না থাকলেও অসম্পূর্ণ record বৈধ হয়ে যায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "Trace the failure of a while(!feof) loop on an empty file and a malformed token.",
+      "marks": 7,
+      "answerHtml": "<p>On an empty file, feof can be false before the first input attempt; using a destination without a successful read is invalid. A nonnumeric word can cause matching failure while EOF remains false and the same word remains unread. A conversion-driven loop processes only successful assignments, then checks ferror and the conversion result to classify the stop.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why an I/O-success claim must include close outcomes for a buffered copy.",
+      "marks": 6,
+      "answerHtml": "<p>Output may remain buffered after fwrite succeeds. fclose can discover delivery failure. Preserve the copy outcome, attempt both owned closes, and report failure if any required stage fails. A partial file can already exist; returning failure does not roll it back automatically.</p>"
+    },
+    {
+      "type": "design",
+      "question": "Design a test plan for a short-line importer with an explicit maximum length.",
+      "marks": 7,
+      "answerHtml": "<p>Test empty input, an empty line, one character, exactly the maximum with a newline, exactly the maximum ending at EOF, and an overlong record followed by a valid one. Verify one rejection per overlong physical line, no chunk misclassification and continued processing at the next boundary. Separately reason about injected or environment I/O failures and cleanup outcomes.</p>"
+    },
+    {
+      "type": "short",
+      "question": "Does perror after an unrelated successful library call necessarily explain an earlier file failure?",
+      "marks": 5,
+      "answerHtml": "<p>No. perror reads current errno, which may be stale or altered. Capture errno immediately when the failed interface documents it, perform required cleanup, restore that captured value for reporting, and identify the actual failing operation in the prefix. Return values remain the primary success or failure contract.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C input/output library reference",
+      "url": "https://en.cppreference.com/w/c/io"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}
