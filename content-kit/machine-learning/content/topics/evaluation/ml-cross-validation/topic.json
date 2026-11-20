@@ -1,0 +1,508 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-cross-validation",
+  "module": "evaluation",
+  "order": 4,
+  "kind": "lesson",
+  "title": {
+    "en": "Cross-Validation",
+    "bn": "ক্রস-ভ্যালিডেশন: পালা করে আলাদা ডেটায় যাচাই"
+  },
+  "summary": {
+    "en": "Refit across stratified folds, report mean and spread, and keep preprocessing and model selection inside development data.",
+    "bn": "Stratified fold-এ পালা করে নতুন fit করো, গড় ও spread জানাও এবং preprocessing ও মডেল choice development ডেটায় রাখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 65,
+  "prerequisites": [
+    "ml-roc-auc"
+  ],
+  "related": [],
+  "keywords": [
+    "cross validation",
+    "k fold",
+    "stratified",
+    "cross_val_score",
+    "leakage"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "One lucky split is a weak judge"
+    },
+    {
+      "id": "intuition",
+      "title": "Fold the cards into labelled envelopes"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Refit before each held-out score"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Give the difficult cards their own turns"
+    },
+    {
+      "id": "examples",
+      "title": "Match tiny folds and validate a real pipeline"
+    },
+    {
+      "id": "leakage",
+      "title": "A fitted transform can leak without reading labels"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep the repeated experiment intact"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: averaging dependent fits"
+    },
+    {
+      "id": "summary",
+      "title": "Several held-out turns, one careful report"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Refit one-neighbour voting for each reserved fold",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Ten cards contain five examples per class. Each class is assigned round-robin in input order, so five folds each hold one card from each class. Every held-out card is excluded from its own neighbour vote. The standard deviation uses population divisor five.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Match the five-card-pair folds with cross_val_score",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>On the equal-size ordered classes, scikit-learn assigns the same held-out pairs and reproduces the scores. The lab uses its explicitly stated round-robin stratifier; uneven class sizes can give different valid assignments from a library implementation.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Cross-validate a scaled iris pipeline within development data",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Each cloned pipeline fits its scaler only on that fold’s training rows. The final test was reserved before CV and is used after fitting the fixed workflow on development rows. Seeded shuffling makes the fold comparison reproducible.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Assign deterministic stratified folds",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read requested fold count 2–5, n 4–20 and n binary labels on one line. Require at least two examples of each class; otherwise print insufficient. Clamp fold count to the smaller class count. Within each class, assign input-order examples round-robin to folds one through the effective count. Print the effective count, then each row’s fold number. Malformed input prints invalid.</p>",
+      "hints": [
+        "Keep class groups separate during assignment.",
+        "Every row must appear in exactly one held-out fold."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Summarise fold scores without claiming a confidence interval",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read 2–5 finite accuracy values from zero through one on one line. Print their mean and population standard deviation to three decimals. Invalid input prints invalid. This spread describes the supplied fold results and is not a confidence interval.</p>",
+      "hints": [
+        "Use divisor equal to the number of folds.",
+        "Keep the individual scores when interpreting the mean."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Place preprocessing inside the fold",
+      "difficulty": "medium",
+      "statementHtml": "<p>Why is fitting a scaler on all development rows before cross-validation a leakage problem?</p>",
+      "hints": [
+        "A fit can learn without reading labels."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Each held-out fold would already influence the learned means and scales. Fit the transformation using only that turn’s training rows, usually with a pipeline cloned inside CV. The same rule applies to imputation, feature selection and text vocabulary learning.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Choose a split for grouped or future records",
+      "difficulty": "medium",
+      "statementHtml": "<p>When is ordinary random stratified CV a poor match for the intended prediction problem?</p>",
+      "hints": [
+        "Think about what must remain unseen."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Repeated records from one person, shared templates or time dependence can cross folds and make evaluation optimistic. Use grouped or time-respecting splits when those match future use. Stratification balances labels but does not remove those dependencies.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the fold table: which rows are held out together in fold one?",
+      "options": [
+        "Rows one and two",
+        "Rows five and ten",
+        "Every class-zero row",
+        "Rows one and six"
+      ],
+      "answer": 3,
+      "explanation": "Each class assigns its first input-order card to fold one, so the held-out pair has one example of each class.",
+      "figure": {
+        "caption": {
+          "en": "Input-order stratification of ten labelled cards.",
+          "bn": "ইনপুটের ক্রমে দশটি কার্ডের stratified fold দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 10,
+              "cols": 2,
+              "rowLabels": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10"
+              ],
+              "colLabels": [
+                "Label",
+                "Held-out fold"
+              ],
+              "cells": [
+                [
+                  0,
+                  1
+                ],
+                [
+                  0,
+                  2
+                ],
+                [
+                  0,
+                  3
+                ],
+                [
+                  0,
+                  4
+                ],
+                [
+                  0,
+                  5
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read all five scores: what mean should be reported?",
+      "options": [
+        "0.500",
+        "0.245",
+        "0.800",
+        "1.000"
+      ],
+      "answer": 2,
+      "explanation": "Scores are one, one-half, one, one and one-half. Their sum four divided by five is 0.8; choosing only the best fold is misleading.",
+      "figure": {
+        "caption": {
+          "en": "Actual held-out accuracies of the five one-neighbour fits.",
+          "bn": "পাঁচবার one-neighbour fit-এর সত্যিকারের held-out অ্যাকুরেসি দেখো।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Fold",
+            "yLabel": "Accuracy",
+            "series": [
+              {
+                "id": "s0",
+                "label": "Fold accuracy",
+                "type": "line",
+                "points": [
+                  [
+                    1,
+                    1.0
+                  ],
+                  [
+                    2,
+                    0.5
+                  ],
+                  [
+                    3,
+                    1.0
+                  ],
+                  [
+                    4,
+                    1.0
+                  ],
+                  [
+                    5,
+                    0.5
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How often is each row held out in ordinary k-fold CV?",
+      "options": [
+        "Only when it is misclassified",
+        "Exactly once per complete pass",
+        "Never",
+        "In every fold"
+      ],
+      "answer": 1,
+      "explanation": "The remaining turns may use it for training."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does stratification aim to preserve?",
+      "options": [
+        "Approximate class proportions in folds",
+        "Chronological order automatically",
+        "Group independence automatically",
+        "Perfect prediction"
+      ],
+      "answer": 0,
+      "explanation": "It does not solve dependence between related records."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where does a scaler fit during CV?",
+      "options": [
+        "On the whole dataset before splitting",
+        "On the held-out answers",
+        "Only after the test score is chosen",
+        "Inside each training fold"
+      ],
+      "answer": 3,
+      "explanation": "A pipeline keeps the learned transformation within the fit boundary."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Is fold-score standard deviation a confidence interval?",
+      "options": [
+        "Only for exactly five folds",
+        "Only for a tree",
+        "No",
+        "Yes automatically"
+      ],
+      "answer": 2,
+      "explanation": "Folds have overlapping training data and their scores are not independent repeated population samples."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is needed when CV scores choose hyperparameters?",
+      "options": [
+        "Tune on test answers too",
+        "A separate final evaluation or appropriate nested design",
+        "Reuse the largest CV score as guaranteed future accuracy",
+        "Delete low-scoring folds"
+      ],
+      "answer": 1,
+      "explanation": "Selection and final assessment answer different questions."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many training rows remain in one five-fold turn of ten equal-sized rows?",
+      "options": [
+        "8",
+        "2",
+        "5",
+        "10"
+      ],
+      "answer": 0,
+      "explanation": "The two held-out rows are excluded, leaving eight.",
+      "code": "def main():\n    total = 10\n    held_out = 2\n    print(total - held_out)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What is the mean of these five held-out scores?",
+      "options": [
+        "1.000",
+        "0.500",
+        "0.245",
+        "0.800"
+      ],
+      "answer": 3,
+      "explanation": "The sum four is divided by five.",
+      "code": "def main():\n    scores = [1, 0.5, 1, 1, 0.5]\n    print(f\"{sum(scores) / len(scores):.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which fold receives the sixth position in a round-robin group of five folds?",
+      "options": [
+        "6",
+        "2",
+        "1",
+        "5"
+      ],
+      "answer": 2,
+      "explanation": "Zero-based position five wraps to one-based fold one.",
+      "code": "def main():\n    position = 5\n    print(position % 5 + 1)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Refit the workflow separately for every held-out fold.",
+      "bn": "প্রতিটি held-out fold-এর জন্য workflow আলাদা করে fit করো।"
+    },
+    {
+      "en": "Stratification balances labels but does not remove group or time dependence.",
+      "bn": "Stratification লেবেল ভাগ করে; group বা সময়ের নির্ভরতা সরায় না।"
+    },
+    {
+      "en": "Learn preprocessing only from that turn’s training rows.",
+      "bn": "প্রতি পালায় শুধু তার ট্রেনিং row থেকে preprocessing শেখো।"
+    },
+    {
+      "en": "Report the fold mean and variation rather than only the best score.",
+      "bn": "শুধু সেরা score নয়, fold-এর গড় ও ফারাক জানাও।"
+    },
+    {
+      "en": "A fold spread is descriptive evidence rather than an automatic confidence interval.",
+      "bn": "Fold-এর spread ফলের বর্ণনা দেয়; নিজে থেকেই confidence interval হয় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Compute mean and population standard deviation for scores 1,0.5,1,1,0.5.",
+      "marks": 7,
+      "answerHtml": "<p>The mean is 4/5=0.8. Three deviations are 0.2 and two are −0.3. Mean squared deviation is (3×0.04+2×0.09)/5=0.06, so population standard deviation is sqrt(0.06)≈0.245. This describes fold spread, not a confidence interval.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain training-only preprocessing in a cross-validation pipeline.",
+      "marks": 6,
+      "answerHtml": "<p>Each turn fits the scaler, imputer or vectorizer only on that turn’s training rows, then transforms its held-out rows with those fitted parameters. Fitting once on all rows before CV leaks held-out information. Pipelines cloned by cross_val_score preserve the intended boundary.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare stratified random folds with grouped or temporal evaluation.",
+      "marks": 7,
+      "answerHtml": "<p>Stratification balances class proportions and can reduce unstable rare-class folds. It does not keep related records or future information apart. If deployment predicts unseen people, templates or later time periods, choose a grouped or temporal split matching that use. State which population the reported estimate represents.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "k-fold"
+  ]
+}

@@ -1,0 +1,38 @@
+<h2 id="introduction">Ask a useful question, then ask the next one</h2>
+<div class="callout story"><p class="lead">Nana lets Mina identify a hidden fruit using yes-or-no questions. She first asks whether its size score is at most three. Depending on the answer, she may ask about sweetness or stop. Tuktuk draws their choices as branches so it can repeat the same questions for another fruit.</p></div><p>A decision tree organises feature questions into paths. Each path begins at a root and ends at a leaf that supplies the prediction. Different answers can lead to different later questions. A tree does not have to ask every feature about every example.</p><p>You will follow a small fitted tree, connect its branches with rectangles on a plot and read a library drawing. The next lesson explains how to choose useful questions by measuring how mixed their groups remain.</p>
+
+<h2 id="intuition">A branch keeps the earlier answer</h2>
+<p>A <dfn>root</dfn> is the starting question. A <dfn>branch</dfn> is the route chosen by one answer. A <dfn>leaf</dfn> is a stopping point with a prediction. Think of a branching conversation whose later questions depend on what you already learned.</p><table><thead><tr><th>Size score</th><th>Sweetness score</th><th>Known label</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>Apple</td></tr><tr><td>1</td><td>4</td><td>Apple</td></tr><tr><td>2</td><td>2</td><td>Apple</td></tr><tr><td>2</td><td>5</td><td>Mango</td></tr><tr><td>4</td><td>1</td><td>Mango</td></tr><tr><td>4</td><td>4</td><td>Mango</td></tr><tr><td>5</td><td>2</td><td>Mango</td></tr><tr><td>5</td><td>5</td><td>Mango</td></tr></tbody></table><p>A size-three cut puts four cards on each side. The right group already contains only mangoes. The left group has three apples and one mango, so a sweetness question can separate the exception. The earlier size answer still applies when that child question is asked.</p>
+
+<h2 id="how-it-works">Follow the path and draw its region</h2>
+<p>The root asks size ≤ 3. A no answer goes directly to the mango leaf. A yes answer asks sweetness ≤ 4.5. Yes there gives apple; no gives mango. Query (2,5) therefore goes left and then right, reaching mango.</p><pre class="diagram">size &lt;= 3?
+├── no: Mango
+└── yes: sweetness &lt;= 4.5?
+         ├── yes: Apple
+         └── no: Mango</pre><p>On the plot, the root question is a vertical line. Its child question is horizontal, but only inside the left rectangle. Drawing the child cut across the whole plot would describe a different set of paths. Each leaf owns the intersection of the answers that led to it.</p><div data-lab="tree-of-questions"></div><p>The lab grows a deterministic two-feature binary tree on at most twenty cards. It tries feature midpoints and requires a positive impurity improvement, using feature order and then threshold order for equal gains. It shows each chosen question, the corresponding plot cut and the leaf rectangles. These are actual fitted decisions, not a separately drawn illustration.</p><p>Lowering maximum depth to one leaves the left group mixed. It predicts its apple majority and misses the valid mango at (2,5). A mixed leaf is an approximation, not proof that the minority example was incorrectly labelled. This gives seven training matches rather than eight.</p>
+
+<h2 id="try-it-yourself">Keep the parent condition attached</h2>
+<p>Predict the star's leaf before playing the first preset. Then set depth one and explain the changed answer for (2,5). Move the star to (5,1): why is the sweetness question unnecessary there?</p><div class="callout unplugged"><p>Write the root and child questions on separate cards. Let one classmate act as a query and carry its scores through the branches. Another classmate draws the allowed rectangle after each answer. Compare the final rectangle with the reached leaf.</p></div>
+
+<h2 id="examples">Read questions in code and in a fitted drawing</h2>
+<h3>Grow and follow a tiny two-question tree</h3>
+<p>The root asks x ≤ 3. Its left branch asks y ≤ 4.5, while its right branch is already pure class one. Query (2,5) goes left, then right, reaching class one. Five nodes include two questions and three leaves.</p>
+<div data-example="ex-1"></div>
+<h3>Verify the same path with DecisionTreeClassifier</h3>
+<p>The displayed data have decisive best cuts, so the library tree matches the scratch path, training matches and node count. The educational solver uses feature-order and midpoint-order ties; another tied dataset can legitimately produce a different tree.</p>
+<div data-example="ex-2"></div>
+<h3>Read a fitted iris tree drawn by scikit-learn</h3>
+<p>The reserved iris flowers are scored after fitting. plot_tree draws the actual learned questions and leaf class counts. Read each test from the root, following its true branch left and false branch right; a leaf stops the path.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="library-picture">Read the actual iris tree from its root</h2>
+<figure><img src="assets/iris-tree.png" alt="A fitted iris decision tree with numeric feature questions, class counts and coloured terminal leaves." width="1080" height="600"><figcaption>The fitted iris model from the third example. Start with the top feature test, go left for true and right for false, then stop at a terminal leaf.</figcaption></figure><p>The drawing includes class counts and impurity for each node. Those counts refer to training flowers, while the printed score uses reserved flowers. A leaf colour shows its predicted class; it does not make every future flower certain. Read the feature name and threshold before following an arrow.</p>
+
+<h2 id="common-mistakes">A tree is a path, not an unordered checklist</h2>
+<h3>Asking every child question globally</h3><p>A child applies only after its parent answer. Keep the earlier conditions while drawing its cut or tracing a query.</p><h3>Counting leaves as the only nodes</h3><p>Internal questions are nodes too. This tree has two internal questions and three leaves, giving five total nodes.</p><h3>Assuming deeper means better</h3><p>More questions can fit small training exceptions, including noise. Compare on suitable held-out data before concluding that an extra branch helps future examples.</p>
+
+<h2 id="going-deeper">Optional: rectangles from axis-aligned questions</h2>
+<div class="callout deeper"><p>A numeric test on one feature divides space parallel to an axis. Combining tests along a path intersects their allowed half-spaces. In two features this creates rectangular leaf regions; the union of several leaves can approximate a more complicated class boundary.</p><p>The educational solver has explicit stopping and tie rules. A library can choose differently when gains tie, so compare predictions and stated conventions rather than assuming every valid tree must have identical branches. The displayed eight-card example has decisive cuts and matches the library implementation.</p></div>
+
+<h2 id="summary">Questions, paths and regions agree</h2>
+<ul><li>A decision tree follows feature questions from root to leaf.</li><li>Each child test applies only inside its parent path region.</li><li>A leaf can predict a majority class even when its labels are mixed.</li><li>A two-feature numeric test creates an axis-aligned cut.</li><li>Depth controls complexity but does not guarantee unseen accuracy.</li></ul><p>Continue with <a href="topic:ml-gini-entropy">Gini impurity and entropy</a>.</p>

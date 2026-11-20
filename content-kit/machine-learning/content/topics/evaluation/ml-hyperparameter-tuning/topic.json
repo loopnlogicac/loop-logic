@@ -1,0 +1,560 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-hyperparameter-tuning",
+  "module": "evaluation",
+  "order": 6,
+  "kind": "lesson",
+  "title": {
+    "en": "Tuning Hyperparameters",
+    "bn": "হাইপারপ্যারামিটার যাচাই করে বেছে নেওয়া"
+  },
+  "summary": {
+    "en": "Compare validation curves, grid and seeded random search while fitting preprocessing inside folds and reserving the final test.",
+    "bn": "Validation curve, grid ও seeded random search মেলাও; fold-এর ভেতরে preprocessing fit করো এবং final টেস্ট আলাদা রাখো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 65,
+  "prerequisites": [
+    "ml-bias-variance"
+  ],
+  "related": [],
+  "keywords": [
+    "hyperparameter",
+    "validation curve",
+    "GridSearchCV",
+    "RandomizedSearchCV",
+    "pipeline"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Choose the settings without peeking at the final answers"
+    },
+    {
+      "id": "intuition",
+      "title": "A fitted value differs from a chosen setting"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Compare candidates under the same evidence rule"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Inspect the winner and a losing alternative"
+    },
+    {
+      "id": "examples",
+      "title": "Match a tiny curve, then search a full pipeline"
+    },
+    {
+      "id": "random-search",
+      "title": "Spend a search budget explicitly"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Selection can overfit without a training-call leak"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: a selected maximum is optimistic evidence"
+    },
+    {
+      "id": "summary",
+      "title": "A bounded search and a separate assessment"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Build an actual KNN validation curve",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The nine candidate scores come from real neighbour predictions. Validation cards never enter the stored training set. Requested k is clamped to available points, and equal validation scores choose smaller requested k.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Verify the same curve using fitted library neighbours",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The library model uses the same uniform weights and selected cards. Training accuracy can be perfect for a memorising one-neighbour rule, so the validation curve rather than that alone guides choice.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Search a pipeline grid before one reserved iris test",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Four k values and two weighting choices form eight candidates. Each fold refits the scaler inside the pipeline. refit=True fits the chosen workflow on all development rows; the test partition remains outside selection.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Sample a finite search space reproducibly",
+      "level": "basic",
+      "file": "examples/ex-4.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Four sampled combinations reduce the search budget compared with all twelve possibilities. The fixed seed makes the sample reproducible, not guaranteed optimal. Only development scores are printed for this alternative search demonstration.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Select a validation winner with a simple tie policy",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (1–20), then n k/accuracy pairs. k is a unique integer 1–100 and accuracy finite in 0–1. Choose highest validation accuracy, then smaller k. Print k and accuracy to three decimals. Invalid input prints invalid.</p>",
+      "hints": [
+        "Do not rank by training score when input is validation evidence.",
+        "Resolve equal scores explicitly."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Evaluate a small k-and-weight grid",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read training n (2–20) and validation m (1–10), then their n+m x y label lines in that order. Coordinates are finite 0–6 and labels binary. Try k=1,3,7 with uniform and distance weighting, clamping to available points. Exact-distance matches use only selected zero-distance votes. Rank by validation accuracy, then smaller k, then uniform weights. Print k weights accuracy. Invalid input prints invalid.</p>",
+      "hints": [
+        "Fit only the training portion.",
+        "Compare the entire product of candidate choices."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Compare grid and random search budgets",
+      "difficulty": "medium",
+      "statementHtml": "<p>When can seeded random search be a useful alternative to enumerating a large grid?</p>",
+      "hints": [
+        "Count combinations before choosing a budget."
+      ],
+      "type": "written",
+      "answerHtml": "<p>A grid grows as the product of choices across dimensions and can spend many trials on unimportant settings. A fixed random-search budget explores a sampled set reproducibly. It can miss a good combination, so report the space, budget and seed rather than promising an optimum.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Protect the final assessment",
+      "difficulty": "medium",
+      "statementHtml": "<p>A team repeatedly adjusts its grid after seeing the final test score. Why is the best final score no longer an independent estimate?</p>",
+      "hints": [
+        "A human choice can leak information too."
+      ],
+      "type": "written",
+      "answerHtml": "<p>The test answers have guided selection, even if no training call directly used them. Move adaptation into development validation, fix the workflow and obtain a separate final evaluation. A pipeline prevents preprocessing leakage but cannot prevent this decision-level reuse.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the validation curve: which candidate follows the stated smaller-k tie rule?",
+      "options": [
+        "Three",
+        "Seven",
+        "Nine",
+        "One"
+      ],
+      "answer": 3,
+      "explanation": "The highest validation score is one, attained by several small k values. The tie rule chooses one; the larger clamped values score only one-half.",
+      "figure": {
+        "caption": {
+          "en": "Actual training and validation accuracy across nine requested k values.",
+          "bn": "নয়টি requested k-তে সত্যিকারের ট্রেনিং ও validation অ্যাকুরেসি দেখো।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Requested k",
+            "yLabel": "Accuracy",
+            "series": [
+              {
+                "id": "s0",
+                "label": "Training",
+                "type": "line",
+                "points": [
+                  [
+                    1,
+                    1.0
+                  ],
+                  [
+                    2,
+                    1.0
+                  ],
+                  [
+                    3,
+                    1.0
+                  ],
+                  [
+                    4,
+                    1.0
+                  ],
+                  [
+                    5,
+                    1.0
+                  ],
+                  [
+                    6,
+                    0.5
+                  ],
+                  [
+                    7,
+                    0.5
+                  ],
+                  [
+                    8,
+                    0.5
+                  ],
+                  [
+                    9,
+                    0.5
+                  ]
+                ]
+              },
+              {
+                "id": "s1",
+                "label": "Validation",
+                "type": "line",
+                "points": [
+                  [
+                    1,
+                    1.0
+                  ],
+                  [
+                    2,
+                    1.0
+                  ],
+                  [
+                    3,
+                    1.0
+                  ],
+                  [
+                    4,
+                    1.0
+                  ],
+                  [
+                    5,
+                    1.0
+                  ],
+                  [
+                    6,
+                    0.5
+                  ],
+                  [
+                    7,
+                    0.5
+                  ],
+                  [
+                    8,
+                    0.5
+                  ],
+                  [
+                    9,
+                    0.5
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read k seven: which weighting preserves full validation accuracy here?",
+      "options": [
+        "Neither",
+        "Both always behave identically",
+        "Distance weighting",
+        "Uniform weighting"
+      ],
+      "answer": 2,
+      "explanation": "Requested seven uses all six cards. Uniform votes tie globally, while closer distance evidence still distinguishes these validation groups.",
+      "figure": {
+        "caption": {
+          "en": "A six-combination holdout grid on the tiny cards.",
+          "bn": "ছোট কার্ডে ছয়টি combination-এর holdout grid দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 6,
+              "cols": 3,
+              "rowLabels": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6"
+              ],
+              "colLabels": [
+                "k",
+                "Weights",
+                "Validation"
+              ],
+              "cells": [
+                [
+                  1,
+                  "uniform",
+                  1.0
+                ],
+                [
+                  1,
+                  "distance",
+                  1.0
+                ],
+                [
+                  3,
+                  "uniform",
+                  1.0
+                ],
+                [
+                  3,
+                  "distance",
+                  1.0
+                ],
+                [
+                  7,
+                  "uniform",
+                  0.5
+                ],
+                [
+                  7,
+                  "distance",
+                  1.0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which quantity is a hyperparameter rather than a fitted coefficient?",
+      "options": [
+        "A learned tree threshold",
+        "The chosen neighbour count k",
+        "A learned logistic weight",
+        "A fitted scaler mean"
+      ],
+      "answer": 1,
+      "explanation": "The workflow chooses k outside the ordinary fit of that candidate."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many candidates combine four k values with two weight choices?",
+      "options": [
+        "Eight",
+        "Six",
+        "Four",
+        "Two"
+      ],
+      "answer": 0,
+      "explanation": "The Cartesian product has four times two combinations."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does a fixed random-search seed provide?",
+      "options": [
+        "A guarantee of the global optimum",
+        "An unbiased final score automatically",
+        "Perfect class balance",
+        "Reproducibility of the sampled search"
+      ],
+      "answer": 3,
+      "explanation": "Budget and search space still affect what can be found."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where should learned preprocessing live during GridSearchCV?",
+      "options": [
+        "Outside every fold after seeing answers",
+        "Only in the final plot",
+        "Inside the searched pipeline",
+        "Fitted on all test data first"
+      ],
+      "answer": 2,
+      "explanation": "Each candidate fold must fit its own transformation on training rows."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does refit=True do after search?",
+      "options": [
+        "Guarantee no selection bias",
+        "Fit the selected workflow on all supplied development rows",
+        "Train on the untouched final test automatically",
+        "Average every test answer"
+      ],
+      "answer": 1,
+      "explanation": "The held-out final test remains separate unless the caller wrongly supplies it as development data."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many grid candidates come from three k values and two weights?",
+      "options": [
+        "6",
+        "3",
+        "5",
+        "9"
+      ],
+      "answer": 0,
+      "explanation": "The full product contains six combinations.",
+      "code": "def main():\n    k_values = [1, 3, 7]\n    weights = [\"uniform\", \"distance\"]\n    print(len(k_values) * len(weights))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which validation winner follows the smaller-k tie policy?",
+      "options": [
+        "3",
+        "7",
+        "0.9",
+        "1"
+      ],
+      "answer": 3,
+      "explanation": "Equal best scores keep the smaller requested k.",
+      "code": "def main():\n    rows = [(1, 0.9), (3, 0.9), (7, 0.5)]\n    print(max(rows, key=lambda row: (row[1], -row[0]))[0])\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many fits occur for eight candidates, five folds and one selected refit?",
+      "options": [
+        "13",
+        "8",
+        "41",
+        "40"
+      ],
+      "answer": 2,
+      "explanation": "There are forty candidate-fold fits and one final development refit.",
+      "code": "def main():\n    candidates, folds = 8, 5\n    print(candidates * folds + 1)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Hyperparameters define a candidate workflow outside its ordinary fit.",
+      "bn": "Hyperparameter দিয়ে সাধারণ fit-এর বাইরে candidate workflow-এর পছন্দ ঠিক হয়।"
+    },
+    {
+      "en": "A grid tests the product of its listed choices.",
+      "bn": "Grid তার তালিকার পছন্দগুলোর সব combination পরীক্ষা করে।"
+    },
+    {
+      "en": "Random search trades exhaustive coverage for a stated seeded budget.",
+      "bn": "Random search-এ সব combination-এর বদলে নির্দিষ্ট seed ও budget-এ sample নাও।"
+    },
+    {
+      "en": "Fit preprocessing inside each candidate training fold.",
+      "bn": "প্রতিটি candidate-এর ট্রেনিং fold-এর ভেতরে preprocessing fit করো।"
+    },
+    {
+      "en": "Use the final test after choosing and fixing the workflow.",
+      "bn": "Workflow বেছে স্থির করার পর final টেস্ট ব্যবহার করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Count the fitting budget of a four-by-two grid with five-fold CV and refit.",
+      "marks": 5,
+      "answerHtml": "<p>Four neighbour counts times two weighting choices give eight candidates. Five folds require forty candidate fits. refit=True adds one selected-workflow fit on all development rows, giving forty-one fits. This budget does not include unrelated exploratory runs.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Distinguish a parameter, hyperparameter and validation score.",
+      "marks": 6,
+      "answerHtml": "<p>A parameter such as a logistic weight is learned by fitting one candidate. A hyperparameter such as C, maximum depth or neighbour count defines that candidate’s setup. A validation score evaluates its held-out behavior and can guide candidate selection. The final test should not repeatedly guide those choices.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain how a searched pipeline prevents one leakage route but not all selection leakage.",
+      "marks": 7,
+      "answerHtml": "<p>Putting scaling or vectorisation inside the pipeline makes each fold learn transformations from its training rows only. However, repeatedly changing the search after reading final-test results still leaks evaluation information through the experimenter’s choices. Keep adaptive decisions within development data and retain an independent final assessment.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "validation-curve"
+  ]
+}

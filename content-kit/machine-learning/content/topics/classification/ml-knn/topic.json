@@ -1,0 +1,570 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-knn",
+  "module": "classification",
+  "order": 2,
+  "kind": "lesson",
+  "title": {
+    "en": "k-Nearest Neighbours",
+    "bn": "কে-নিয়ারেস্ট নেবার: কাছের ফলের ভোট"
+  },
+  "summary": {
+    "en": "Measure distances, select k neighbours, count votes and state deterministic tie rules before predicting a category.",
+    "bn": "দূরত্ব মেপে কাছের kটি উদাহরণ বেছে ভোট গুনো এবং সমান ভোটের নিয়ম মেনে লেবেল predict করো।"
+  },
+  "level": "beginner",
+  "estMinutes": 55,
+  "prerequisites": [
+    "ml-what-is-classification"
+  ],
+  "related": [],
+  "keywords": [
+    "KNN",
+    "nearest neighbours",
+    "Euclidean distance",
+    "voting",
+    "ties"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Ask the nearby cards before naming a new fruit"
+    },
+    {
+      "id": "intuition",
+      "title": "Nearby means close in the chosen features"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Measure first, select second, count third"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Move the query across the gap"
+    },
+    {
+      "id": "examples",
+      "title": "Match a direct vote with a library classifier"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not confuse the neighbourhood with the whole dataset"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: distance, voting and prediction cost"
+    },
+    {
+      "id": "summary",
+      "title": "A prediction built from selected examples"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Measure, rank and vote on six cards",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The closest three cards are mangoes. Squared distance ranking selects the same neighbours as Euclidean distance because square root preserves order. Exact distance ties keep input order; a class-vote tie chooses the smaller label zero.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Verify the same vote with KNeighborsClassifier",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>n_neighbors supplies k. Uniform weights give one vote per selected point. The six-card query has no ambiguous kth-distance tie, so both implementations select the same neighbours and print the same result.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Scale iris features inside a train-only pipeline",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The scaler learns its means and scales only from training flowers. Distances then compare standardised features rather than allowing a larger numeric unit to dominate. Reserved test flowers remain outside both fitting stages.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Predict from a supplied tiny point set",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (1–30), n lines x y label, then qx qy k. Coordinates are finite in 0–6, labels are 0/1 and k is an integer 1–9. Clamp k to n. Rank exact-distance ties by input order and vote ties by label zero. Print prediction, votes0, votes1 and effective k on separate labelled lines. Invalid input prints invalid.</p>",
+      "hints": [
+        "Keep ranking ties separate from vote ties.",
+        "Process only the selected neighbours."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Count votes without confusing labels with distances",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read one line containing 1–9 binary labels of already selected neighbours. Print the winning class and its vote count. A tie selects zero. Invalid or empty input prints invalid. The input is already the selected neighbourhood, not the entire training set.</p>",
+      "hints": [
+        "Count each class separately.",
+        "Do not sum coordinates."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        },
+        {
+          "stdin": "practice/p-2.t5.in",
+          "output": "practice/p-2.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Explain two different ties",
+      "difficulty": "medium",
+      "statementHtml": "<p>Describe a kth-distance tie and a class-vote tie. Does odd k remove every possible ambiguity?</p>",
+      "hints": [
+        "Separate selection from voting."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Several points can share the final selected distance, requiring a deterministic selection rule. Selected neighbours can also split their class votes. Odd k avoids a binary equal vote when exactly k uniform votes are used, but not multiclass vote ties or distance ties.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Change a measurement unit",
+      "difficulty": "medium",
+      "statementHtml": "<p>Size is measured in millimetres while sweetness is a small score. Why may raw KNN distances become misleading?</p>",
+      "hints": [
+        "Compare numeric ranges."
+      ],
+      "type": "written",
+      "answerHtml": "<p>A numeric scale can dominate squared distance without being more informative. Fit a suitable scaler using training data and apply the same transform to later points. Do not fit scaling on the final test set.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the star at (3.3,3.3): with k=3, which class wins?",
+      "options": [
+        "Apple, three votes",
+        "A tied vote",
+        "No neighbours exist",
+        "Mango, three votes"
+      ],
+      "answer": 3,
+      "explanation": "The mango at (4,4) is nearest; (4,5) and (5,4) are next. All three vote one.",
+      "figure": {
+        "caption": {
+          "en": "Six labelled cards and a new star.",
+          "bn": "ছয়টি লেবেল দেওয়া ফল ও একটি নতুন তারকা।"
+        },
+        "panels": {
+          "plot": {
+            "xRange": [
+              0,
+              6
+            ],
+            "yRange": [
+              0,
+              6
+            ],
+            "xLabel": "Size score",
+            "yLabel": "Sweetness score",
+            "classes": [
+              {
+                "id": 0,
+                "label": "Apple"
+              },
+              {
+                "id": 1,
+                "label": "Mango"
+              }
+            ],
+            "points": [
+              {
+                "id": "p1",
+                "x": 1,
+                "y": 1,
+                "cls": 0
+              },
+              {
+                "id": "p2",
+                "x": 1,
+                "y": 2,
+                "cls": 0
+              },
+              {
+                "id": "p3",
+                "x": 2,
+                "y": 1,
+                "cls": 0
+              },
+              {
+                "id": "p4",
+                "x": 4,
+                "y": 4,
+                "cls": 1
+              },
+              {
+                "id": "p5",
+                "x": 4,
+                "y": 5,
+                "cls": 1
+              },
+              {
+                "id": "p6",
+                "x": 5,
+                "y": 4,
+                "cls": 1
+              }
+            ],
+            "shapes": {
+              "query": {
+                "type": "marker",
+                "at": [
+                  3.3,
+                  3.3
+                ],
+                "symbol": "star",
+                "label": "?"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the first three table rows: what is the uniform vote?",
+      "options": [
+        "A 2–2 tie",
+        "Only p1 votes",
+        "Class one by 2–1",
+        "Class zero by 2–1"
+      ],
+      "answer": 2,
+      "explanation": "k=3 selects the first three rows. Their labels are zero, one and one.",
+      "figure": {
+        "caption": {
+          "en": "Sorted distances for one query.",
+          "bn": "একটি query-এর কাছের ফলের দূরত্ব দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 4,
+              "cols": 2,
+              "rowLabels": [
+                "p1",
+                "p2",
+                "p3",
+                "p4"
+              ],
+              "colLabels": [
+                "Distance",
+                "Label"
+              ],
+              "cells": [
+                [
+                  0.4,
+                  0
+                ],
+                [
+                  0.8,
+                  1
+                ],
+                [
+                  1.2,
+                  1
+                ],
+                [
+                  2.0,
+                  0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the two-card picture: with k=2 and the stated class-tie rule, which label wins?",
+      "options": [
+        "A random label",
+        "Zero",
+        "One",
+        "The larger x coordinate always"
+      ],
+      "answer": 1,
+      "explanation": "Each class receives one vote, so this lesson selects the smaller class label.",
+      "figure": {
+        "caption": {
+          "en": "Two equidistant cards around a query.",
+          "bn": "দুটি সমদূরত্বের ফলের মাঝখানে query আছে।"
+        },
+        "panels": {
+          "plot": {
+            "xRange": [
+              0,
+              6
+            ],
+            "yRange": [
+              0,
+              6
+            ],
+            "xLabel": "Size score",
+            "yLabel": "Sweetness score",
+            "classes": [
+              {
+                "id": 0,
+                "label": "Apple"
+              },
+              {
+                "id": 1,
+                "label": "Mango"
+              }
+            ],
+            "points": [
+              {
+                "id": "p1",
+                "x": 2,
+                "y": 3,
+                "cls": 0
+              },
+              {
+                "id": "p2",
+                "x": 4,
+                "y": 3,
+                "cls": 1
+              }
+            ],
+            "shapes": {
+              "q": {
+                "type": "marker",
+                "at": [
+                  3,
+                  3
+                ],
+                "symbol": "star"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does basic KNN fit mainly retain?",
+      "options": [
+        "The training examples and labels",
+        "Only a single separating line",
+        "Only the class names",
+        "No data"
+      ],
+      "answer": 0,
+      "explanation": "Prediction does the distance and voting work."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why clamp k when fewer points exist?",
+      "options": [
+        "To force class one",
+        "To change feature units",
+        "To erase ties",
+        "A neighbour must be an available example"
+      ],
+      "answer": 3,
+      "explanation": "The effective count cannot exceed the training set."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which step needs the true label of the new query?",
+      "options": [
+        "Sorting",
+        "Voting for the answer",
+        "None of the prediction steps",
+        "Distance calculation"
+      ],
+      "answer": 2,
+      "explanation": "The new label is what prediction is trying to estimate."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the cost of the simple sort-based predictor?",
+      "options": [
+        "No stored examples",
+        "O(n log n) ranking after n distances",
+        "O(1) for all datasets",
+        "O(log n) training only"
+      ],
+      "answer": 1,
+      "explanation": "This implementation sorts all measured distances."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which Euclidean distance follows a three-four offset?",
+      "options": [
+        "5.000",
+        "7.000",
+        "25.000",
+        "1.000"
+      ],
+      "answer": 0,
+      "explanation": "The squared offsets total 25 and the square root is five.",
+      "code": "def main():\n    from math import hypot\n    print(f\"{hypot(3, 4):.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many class-one votes occur among the selected labels?",
+      "options": [
+        "1",
+        "3",
+        "0",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "The first and third selected labels are one.",
+      "code": "def main():\n    labels = [1, 0, 1]\n    print(labels.count(1))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which class follows the stated deterministic equal-vote rule?",
+      "options": [
+        "2",
+        "4",
+        "0",
+        "1"
+      ],
+      "answer": 2,
+      "explanation": "A strict greater comparison is false at equality, so zero wins.",
+      "code": "def main():\n    votes = [2, 2]\n    print(int(votes[1] > votes[0]))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "KNN predicts from nearby stored examples.",
+      "bn": "KNN জমা রাখা কাছের উদাহরণ দেখে predict করে।"
+    },
+    {
+      "en": "Measure all candidate distances before selecting neighbours.",
+      "bn": "নেবার বাছার আগে সব প্রার্থীর দূরত্ব মাপো।"
+    },
+    {
+      "en": "Distance ties and vote ties need separate stated rules.",
+      "bn": "দূরত্ব সমান ও ভোট সমান—দুই ক্ষেত্রের নিয়ম আলাদা করে বলো।"
+    },
+    {
+      "en": "Odd k does not remove every multiclass or distance tie.",
+      "bn": "k বিজোড় হলেই সব multiclass বা দূরত্বের tie দূর হয় না।"
+    },
+    {
+      "en": "Feature scaling changes which points count as close.",
+      "bn": "ফিচারের scaling বদলালে কোন পয়েন্ট কাছে, সেটিও বদলে যায়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Compute distances from (3,3) to (1,1), (4,4) and (5,3).",
+      "marks": 6,
+      "answerHtml": "<p>The squared differences total 8, 2 and 4. Distances are sqrt(8) ≈ 2.828, sqrt(2) ≈ 1.414 and 2.000. The nearest is (4,4), followed by (5,3), then (1,1). Labels are needed for voting but not for these distances.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain KNN fit and prediction costs for the displayed implementation.",
+      "marks": 6,
+      "answerHtml": "<p>The method retains n labelled points. A query computes n distances and sorts them in O(n log n), then counts at most k votes. Storage is O(n) for the examples and ranking. Other search structures can change costs but do not remove the need for valid features and tie rules.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Trace a binary vote for labels 0,1,1,0 and explain a smaller-label tie policy.",
+      "marks": 5,
+      "answerHtml": "<p>There are two votes for each class. Under this lesson’s policy the winner is zero. This is a deterministic convention, not evidence that class zero is more likely. With odd effective k a binary uniform equal vote is impossible, but a clamped smaller set or a multiclass task can still tie.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "knn"
+  ]
+}

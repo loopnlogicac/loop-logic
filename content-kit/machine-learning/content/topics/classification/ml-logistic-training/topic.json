@@ -1,0 +1,522 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-logistic-training",
+  "module": "classification",
+  "order": 5,
+  "kind": "lesson",
+  "title": {
+    "en": "Training Logistic Regression",
+    "bn": "লজিস্টিক মডেলকে log loss দিয়ে train করা"
+  },
+  "summary": {
+    "en": "Compute batch gradients for regularised log loss, watch the boundary and objective together, and diagnose an oversized learning rate.",
+    "bn": "Regularised log loss-এর batch gradient বের করো; boundary ও objective মেলাও এবং বড় learning rate-এর সমস্যা চিনো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 65,
+  "prerequisites": [
+    "ml-logistic-regression"
+  ],
+  "related": [],
+  "keywords": [
+    "log loss",
+    "cross entropy",
+    "gradient descent",
+    "regularisation",
+    "learning rate"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Correct a confident mistake more strongly"
+    },
+    {
+      "id": "intuition",
+      "title": "Read the penalty before its formula"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Average each correction before changing parameters"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Compare a cautious update with an overshoot"
+    },
+    {
+      "id": "examples",
+      "title": "Match the objective before matching numbers"
+    },
+    {
+      "id": "loss-design",
+      "title": "Why squared probability error is awkward here"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not confuse numerical progress with model evidence"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: the score gradient and regularisation"
+    },
+    {
+      "id": "summary",
+      "title": "A matched loss and a controlled update"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Update all coefficients from one batch gradient",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>All gradient components use the same old coefficients before the update. Mean log loss plus an L2 penalty is the objective. Four hundred steps reach the same rounded optimum as the matched C=1 library fit; tiny displayed bias is normalised to zero.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Match the regularised objective with LogisticRegression",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>For these unweighted rows, C=1 matches penalty strength 1/n in the mean-loss objective. The intercept is not penalised. The library uses a different solver, yet its coefficients and objective agree to three decimals.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Train a scaled binary classifier on a bundled dataset",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The test log loss evaluates unpenalised predictive probabilities on reserved rows; it is not the training objective with its parameter penalty. The scaled fit converges without suppressing warnings.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Compute one stable binary log-loss term",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read a finite score z in -1000 through 1000 and label 0/1. Print max(z,0)-label*z+log1p(exp(-abs(z))) to three decimals. Invalid input prints invalid. This score-domain form avoids taking log of a rounded zero probability.</p>",
+      "hints": [
+        "Use the true label in the score term.",
+        "The stable expression remains finite for extreme allowed scores."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Take one batch gradient step on tiny centred points",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read rate in (0,1], then n from 1 to 20 and n lines x y label, with finite coordinates -3–3 and binary labels. Start weights and bias at zero, use mean log loss with no penalty, and take one simultaneous update. Print w1 w2 bias to three decimals. Invalid input prints invalid.</p>",
+      "hints": [
+        "At zero score each probability is one-half.",
+        "Compute all gradients before changing any coefficient."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Explain a saturated wrong prediction",
+      "difficulty": "medium",
+      "statementHtml": "<p>Why can squared probability error give a small gradient for a confidently wrong sigmoid output?</p>",
+      "hints": [
+        "Look at the derivative through the sigmoid."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Its derivative includes the sigmoid slope p(1−p), which is tiny near zero or one. Binary cross-entropy with a sigmoid simplifies the score derivative to p−y, retaining a strong correction when the prediction is confidently wrong. Log loss is the natural likelihood loss here; MSE is not mathematically forbidden.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Distinguish fitting from generalising",
+      "difficulty": "medium",
+      "statementHtml": "<p>A training objective falls steadily. What does that establish about unseen examples?</p>",
+      "hints": [
+        "Ask which rows supplied the loss."
+      ],
+      "type": "written",
+      "answerHtml": "<p>It shows progress on the chosen training objective, including any penalty. It does not prove representative sampling, calibrated probabilities or held-out performance. Keep validation and final-test measurements separate from optimisation progress.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the curve: what does its falling objective establish?",
+      "options": [
+        "Perfect future accuracy",
+        "No need for held-out data",
+        "That every probability is calibrated",
+        "Progress on the stated training objective"
+      ],
+      "answer": 3,
+      "explanation": "The curve measures training log loss plus penalty. Generalisation and calibration need separate evidence.",
+      "figure": {
+        "caption": {
+          "en": "Objective values from the actual batch-gradient run.",
+          "bn": "Batch gradient চালানোর সত্যিকারের objective দেখো।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Epoch",
+            "yLabel": "Objective",
+            "series": [
+              {
+                "id": "s0",
+                "label": "Rate 0.3",
+                "type": "line",
+                "points": [
+                  [
+                    1,
+                    0.4525618168929233
+                  ],
+                  [
+                    10,
+                    0.23903704431338946
+                  ],
+                  [
+                    50,
+                    0.22623824067898646
+                  ],
+                  [
+                    100,
+                    0.22581052208949792
+                  ],
+                  [
+                    200,
+                    0.2257877134025516
+                  ],
+                  [
+                    400,
+                    0.225787643980915
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the table: which prediction is penalised most?",
+      "options": [
+        "B, the uncertain prediction",
+        "All equally",
+        "C, the confident wrong prediction",
+        "A, the confident correct prediction"
+      ],
+      "answer": 2,
+      "explanation": "For true one, probability 0.01 gives loss about 4.605, larger than 0.693 or 0.010.",
+      "figure": {
+        "caption": {
+          "en": "One true class-one example under three probabilities.",
+          "bn": "আসল লেবেল এক হলে তিনটি probability-এর log loss দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 3,
+              "cols": 2,
+              "rowLabels": [
+                "A",
+                "B",
+                "C"
+              ],
+              "colLabels": [
+                "P(class one)",
+                "Log loss"
+              ],
+              "cells": [
+                [
+                  0.99,
+                  0.01
+                ],
+                [
+                  0.5,
+                  0.693
+                ],
+                [
+                  0.01,
+                  4.605
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the gradient table: what are the updated weights?",
+      "options": [
+        "Both stay zero",
+        "0.2 and 0.2",
+        "-0.2 and -0.2",
+        "0.3 and 0.3"
+      ],
+      "answer": 1,
+      "explanation": "Subtract rate times gradient: 0−0.3×(−2/3)=0.2. Bias remains zero.",
+      "figure": {
+        "caption": {
+          "en": "A zero-initialised batch step on symmetric cards.",
+          "bn": "সমান দুই দলের কার্ডে শূন্য থেকে batch step দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 3,
+              "cols": 3,
+              "rowLabels": [
+                "w1",
+                "w2",
+                "bias"
+              ],
+              "colLabels": [
+                "Old",
+                "Gradient",
+                "Rate"
+              ],
+              "cells": [
+                [
+                  0,
+                  -0.6666666666666666,
+                  0.3
+                ],
+                [
+                  0,
+                  -0.6666666666666666,
+                  0.3
+                ],
+                [
+                  0,
+                  0,
+                  0.3
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why use log loss for sigmoid classification?",
+      "options": [
+        "It gives the Bernoulli likelihood loss and score gradient p−y",
+        "It guarantees perfect calibration",
+        "It forbids regularisation",
+        "It never needs numerical care"
+      ],
+      "answer": 0,
+      "explanation": "The objective matches binary probability estimation and has a useful score derivative."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What must a batch update share across all gradient components?",
+      "options": [
+        "A new weight after each component",
+        "Only the final test labels",
+        "A random target",
+        "The same old parameter state"
+      ],
+      "answer": 3,
+      "explanation": "Sequentially mixing updated coefficients changes the intended gradient step."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What can an oversized learning rate do?",
+      "options": [
+        "Remove sampling bias",
+        "Make all labels correct",
+        "Oscillate or diverge",
+        "Always converge faster"
+      ],
+      "answer": 2,
+      "explanation": "A large step can overshoot the useful region repeatedly."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does L2 penalise in this matched objective?",
+      "options": [
+        "Every test prediction equally",
+        "The feature weights, not the intercept",
+        "Only the labels",
+        "Only the file size"
+      ],
+      "answer": 1,
+      "explanation": "The stated penalty is strength times squared weight norm divided by two."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which score derivative follows probability 0.2 and true label one?",
+      "options": [
+        "-0.8",
+        "0.8",
+        "0.2",
+        "1.2"
+      ],
+      "answer": 0,
+      "explanation": "The score derivative is p−y, which is minus 0.8.",
+      "code": "def main():\n    probability = 0.2\n    label = 1\n    print(f\"{probability - label:.1f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which weight follows a learning-rate update with negative gradient?",
+      "options": [
+        "-0.200",
+        "0.300",
+        "0.000",
+        "0.200"
+      ],
+      "answer": 3,
+      "explanation": "Subtracting the negative gradient increases the weight to 0.2.",
+      "code": "def main():\n    weight = 0.0\n    rate = 0.3\n    gradient = -2 / 3\n    print(f\"{weight - rate * gradient:.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How large is log loss for an uncertain correct-class probability?",
+      "options": [
+        "1.000",
+        "0.000",
+        "0.693",
+        "0.500"
+      ],
+      "answer": 2,
+      "explanation": "The negative natural log of one-half is about 0.693.",
+      "code": "def main():\n    import math\n    print(f\"{-math.log(0.5):.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Log loss penalises confident wrong probability estimates strongly.",
+      "bn": "আত্মবিশ্বাসী ভুল probability-তে log loss বেশি শাস্তি দেয়।"
+    },
+    {
+      "en": "Compute a batch gradient from one unchanged parameter state.",
+      "bn": "একই স্থির parameter-এর মান থেকে পুরো batch gradient হিসাব করো।"
+    },
+    {
+      "en": "A large learning rate can overshoot and diverge.",
+      "bn": "Learning rate বড় হলে দরকারি জায়গা পেরিয়ে বারবার দূরে যেতে পারে।"
+    },
+    {
+      "en": "Match loss averaging and regularisation before comparing solvers.",
+      "bn": "Solver মেলানোর আগে loss-এর গড় ও regularisation-এর নিয়ম মিলিয়ে নাও।"
+    },
+    {
+      "en": "Convergence on training data is different from held-out performance.",
+      "bn": "ট্রেনিংয়ে converge করা ও আলাদা ডেটায় ভালো ফল পাওয়া এক বিষয় নয়।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Compute one zero-initialised batch step on the six symmetric points at rate 0.3.",
+      "marks": 7,
+      "answerHtml": "<p>Every initial probability is 0.5. Each feature gradient averages to −4/6=−2/3, while the bias gradient is zero. L2 contributes zero at zero weights. New weights are 0−0.3×(−2/3)=0.2 each; bias stays zero. All components use the same initial state.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare log loss and squared probability error for a confidently wrong sigmoid.",
+      "marks": 7,
+      "answerHtml": "<p>Squared-error differentiation through the sigmoid includes p(1−p), which becomes small near extreme probabilities. Binary cross-entropy simplifies the score derivative to p−y, keeping a strong correction when y=1 and p is near zero. Log loss is the Bernoulli likelihood objective; MSE is possible but less suitable for this probability model.</p>"
+    },
+    {
+      "type": "long",
+      "question": "State the matched C=1 regularised objective and its evaluation limit.",
+      "marks": 7,
+      "answerHtml": "<p>For n unweighted rows, use mean binary log loss plus ||w||²/(2n), with an unpenalised intercept. Its gradient adds w/n to the mean feature gradient. Matching that scaling explains the comparison with the displayed library fit. A smaller training objective does not establish accuracy or calibration on unseen rows.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "logistic-training"
+  ]
+}

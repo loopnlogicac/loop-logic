@@ -1,3 +1,124 @@
+# Batch 6 — Classification and evaluation
+
+Package machine-learning-tutorial advances to 0.6.0: 61 of 97 topics and 13 new
+interactive labs. All 16 new topics remain draft. The prior 45 topics, datasets
+and their outputs are preserved unchanged.
+
+## Requested scope and dependency
+
+This PR builds on main, including round-5 ML PR #38 (now merged). No P1 platform
+branch is required. It delivers the first nine classification topics, through
+ml-decision-tree-building, and brings all seven evaluation topics forward to
+cover the explicitly requested evaluation metrics. Naive Bayes and Gini/entropy
+are the intervening supporting curriculum lessons. Perceptron/SVM, multiclass
+comparison and the classification worksheet remain in their later classification
+batch; the evaluation worksheet is included here. No curriculum IDs, order or
+checker rules are changed.
+
+## Delivered topics and labs
+
+| Topic | Lab | Main review focus |
+| --- | --- | --- |
+| ml-what-is-classification | — | Categories, binary/multiclass, probabilities, fit/predict/score and held-out evidence. |
+| ml-knn | knn | Actual distances, ranking, selected votes, independent distance/class ties and clamp policy. |
+| ml-knn-choosing-k | knn-boundary | Actual 24×24 region maps, k=1/3/7/15, excluded validation cards and distance weights. |
+| ml-logistic-regression | sigmoid-explorer | Fixed illustrative coefficients, sigmoid, odds, threshold and class-column order. |
+| ml-logistic-training | logistic-training | Real regularised batch gradients, matched library optimum, boundary/loss updates and explicit divergence. |
+| ml-naive-bayes | naive-bayes | Bilingual tokens, counts/priors, visible smoothing, joint log scores and full SMS pipeline. |
+| ml-decision-tree-idea | tree-of-questions | Root-to-leaf paths, parent-specific cuts, leaf regions and actual plot_tree image. |
+| ml-gini-entropy | best-split | Every midpoint candidate, both child impurities, size weighting and positive gain. |
+| ml-decision-tree-building | decision-tree | Recursive CART, depth/sample stops, overfitting, pruning and validation-only model choice. |
+| ml-confusion-matrix | confusion-matrix | Actual rows/predicted columns, two error types, thresholds and multiclass counts. |
+| ml-precision-recall | — | Asymmetric denominators, rare-class accuracy trap, F1, support and zero-denominator conventions. |
+| ml-roc-auc | roc-curve | Complete tied-score groups, actual ROC points, pair-ranking AUC and absent-class handling. |
+| ml-cross-validation | k-fold | Fresh fits, deterministic stratified assignment, all fold scores and training-only preprocessing. |
+| ml-bias-variance | bias-variance | Actual seeded resampled polynomial fits, errors/variation and measured learning curves. |
+| ml-hyperparameter-tuning | validation-curve | Actual candidate predictions, GridSearchCV/RandomizedSearchCV, pipelines and final-test boundary. |
+| ml-evaluation-practice-sheet | — | Six picture questions, numerical work, five code-reading questions, coding and fairness discussion. |
+
+New material contains 48 executed examples, 64 practice items with 128 executable
+input cases, 165 quiz questions (50 output questions and 46 picture questions),
+80 bilingual key points and 61 worked exam answers. English layered lessons
+start with concrete stories/pictures before formal formulas. Bangla titles,
+summaries, key points, figure captions and key trace notes follow BANGLA_STYLE.
+Common technical words use Bangla script; code, identifiers and literal training
+tokens remain unchanged. Full Bangla bodies are optional outside Module 1 and
+are not added here.
+
+Three worksheet SVG charts and the iris PNG are generated from real program
+results, with accessible alt text. Lab English titles are descriptive phrases.
+No unverified video links, external datasets or internet downloads are used.
+
+## Validation
+
+Actual versions: Python 3.12.14, numpy 2.3.5, pandas 2.2.3, scikit-learn 1.8.0,
+matplotlib 3.10.8; Node 24.22.1. Programs use Python 3.10-compatible syntax.
+Every output file came from execution, with displayed numeric values rounded.
+The programs use explicit seeds wherever shuffling, sampling or fitting accepts
+randomness. Plots use Agg and a writable MPLCONFIGDIR.
+
+From content-kit:
+
+```sh
+MPLCONFIGDIR=/tmp/loop-logic-mpl node tools/check.mjs machine-learning/content --require-packages --report machine-learning/content/CHECK_REPORT.txt
+node --test machine-learning/content/tests/*.test.mjs
+```
+
+The committed full report validates all 61 cumulative topics with required Python
+packages, examples, practice cases, output quizzes, figures and all lab presets,
+checks and deterministic fuzz inputs. The 22 new tests execute every lab's scratch
+and library example and require their output and complete first-preset variables
+to match. Additional independent tests cover bilingual corpus preservation,
+threshold equality, pair-ranking versus ROC integration across forty tied-score
+collections, edited logistic labels/divergence, CART rectangles/zero-gain stops,
+CV assignments, validation exclusion and seeded bootstrap reproducibility.
+
+Both rebuilds of shared/datasets/make_datasets.py produced the same six CSV
+SHA-256 hashes as the original files. No dataset change is committed. From the
+repository root, node --test "tests/*.test.ts" passes all 169 current platform
+tests. No application dependency, migration, route or secret is added.
+
+## Explicit simplifications and limits
+
+- KNN ranks distance ties by input order and class ties toward label zero.
+  Library ties can differ on another dataset; paired examples avoid ambiguous
+  selected-neighbour disagreements. Exact-distance weighted matches vote alone.
+- The sigmoid explorer scores supplied coefficients and does not claim they were
+  trained. Its library example matches hard labels, not those illustrative
+  probabilities. The training lesson separately matches the full regularised
+  objective and rounded coefficients to LogisticRegression C=1.
+- Logistic training averages log loss, uses L2 strength 1/(C×n), leaves bias
+  unpenalised, starts at documented coefficients and stops an oversized run once
+  a parameter exceeds one million. Finished means the epoch budget completed,
+  not that a separate convergence criterion passed. After ten epochs, every
+  tenth is displayed; adjacent boundary/chart steps name the same epoch.
+- The binary two-feature CART solver exhaustively checks midpoints, requires a
+  strictly positive gain and uses deterministic feature/threshold ties. It is
+  limited to twenty cards; the all-candidates table uses ten to fit its grid.
+  An XOR pattern requiring a zero-gain first split is explicitly left as a leaf.
+- CV uses class-wise input-order round-robin folds, clamped to the smaller class
+  size and requiring at least two cards per class. The balanced first preset
+  matches scikit-learn; uneven counts can produce different valid assignments.
+  Fold spread is descriptive, not an automatic confidence interval.
+- Bias/variance uses three seeded bootstrap samples, bounded polynomial degrees
+  one through five and ridge alpha 0.001 on every coefficient, including the
+  constant. JS solves the small regularised system; Python NumPy and Ridge
+  independently agree. These measurements illustrate finite-sample sensitivity,
+  not exact population bias/variance or irreducible-noise estimates.
+- ROC/AUC requires both actual classes and returns an explicit undefined status
+  otherwise. Tied pairs receive half credit. Metric zero-denominator reporting
+  uses a separately documented zero convention; unavailable evidence is not
+  described as an observed zero rate.
+- Course datasets are invented. Bundled datasets and random splits demonstrate
+  mechanics, not causal, clinical, fairness or deployment guarantees. Selection
+  uses development evidence, and examples reserve a final test where applicable.
+
+Human content review and publication approval remain pending. No requested
+algorithm or evaluation topic in the stated scope is deferred, and no additional
+curriculum change is proposed.
+
+---
+
 # Batch 5 — Predicting Numbers: Regression
 
 Package `machine-learning-tutorial` is now **0.5.0**, format 1.1. This delivery adds all ten `regression` topics, in curriculum order:

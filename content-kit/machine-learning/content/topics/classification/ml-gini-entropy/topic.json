@@ -1,0 +1,538 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-gini-entropy",
+  "module": "classification",
+  "order": 8,
+  "kind": "lesson",
+  "title": {
+    "en": "Choosing the Best Question: Gini and Entropy",
+    "bn": "Gini ও entropy দিয়ে সেরা প্রশ্ন বাছা"
+  },
+  "summary": {
+    "en": "Measure class mixing, weight child impurities by size and test every feature midpoint before selecting a positive-gain split.",
+    "bn": "লেবেল কত মিশ্র তা মাপো, child-এর আকার দিয়ে impurity weight করো এবং সব midpoint মেলিয়ে সেরা প্রশ্ন বেছে নাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 60,
+  "prerequisites": [
+    "ml-decision-tree-idea"
+  ],
+  "related": [],
+  "keywords": [
+    "Gini impurity",
+    "entropy",
+    "information gain",
+    "threshold search",
+    "weighted impurity"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Choose the question that leaves less confusion"
+    },
+    {
+      "id": "intuition",
+      "title": "Pure groups need no further sorting"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Work through the eight-card root"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Inspect a losing question as carefully as the winner"
+    },
+    {
+      "id": "examples",
+      "title": "Calculate and verify impurity-based questions"
+    },
+    {
+      "id": "entropy-detail",
+      "title": "Read information gain in its own units"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not let one clean child hide the rest"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: greedy improvement and its limits"
+    },
+    {
+      "id": "summary",
+      "title": "A complete comparison before a chosen question"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Search every two-feature midpoint explicitly",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The parent Gini is 0.46875. The size-three split leaves a mixed four-card left group and pure four-card right group. Weighted child Gini is 0.1875, giving gain 0.28125. Every distinct-value midpoint on both features is considered.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Verify the winning stump and impurity reduction",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The fitted one-level tree has the same decisive best feature and threshold. Compute its weighted child impurity from public tree arrays rather than assuming that an average of two impurity numbers is always correct.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Compare criteria on the same reserved iris split",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Both criteria receive the same train/test partition and depth limit. A score difference on one split does not establish a universal best criterion; compare choices with suitable validation before a final evaluation.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Compare pure, balanced and three-to-one groups",
+      "level": "basic",
+      "file": "examples/ex-4.py",
+      "tryNow": true,
+      "explanationHtml": "<p>A pure group has zero mixing under both measures. The balanced binary group has Gini one-half and entropy one bit. The three-to-one group lies between those extremes; the two scales are not interchangeable.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Compute impurity from a binary count row",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read two integer class counts from 0 through 100. If both are zero, print empty. Otherwise print Gini and base-two entropy to three decimals. Invalid input prints invalid. Skip zero-probability entropy terms rather than taking log2(0).</p>",
+      "hints": [
+        "Normalise counts by their total.",
+        "Gini subtracts squared proportions from one."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Find a one-feature Gini split",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n from 2 to 10 and n lines x label, finite x in 0–6 and binary label. Test midpoints between distinct sorted x values. Print threshold and positive gain to three decimals, or none when no positive gain exists. Equal gains choose the smaller threshold. Invalid input prints invalid.</p>",
+      "hints": [
+        "Keep duplicate feature values together.",
+        "Weight left and right by their counts."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Explain weighted child impurity",
+      "difficulty": "medium",
+      "statementHtml": "<p>A split makes groups of sizes two and eight, with impurities zero and 0.5. Compare a simple average with the correct weighted result.</p>",
+      "hints": [
+        "Every child example must receive equal weight."
+      ],
+      "type": "written",
+      "answerHtml": "<p>The simple average is 0.25, but it gives the tiny group equal influence. The weighted result is (2×0+8×0.5)/10=0.4. Subtract 0.4 from the parent impurity to obtain this split gain.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Compare Gini with entropy",
+      "difficulty": "medium",
+      "statementHtml": "<p>Why should you not compare a Gini gain directly with an entropy gain as if their numeric scales were identical?</p>",
+      "hints": [
+        "Check their balanced-group values."
+      ],
+      "type": "written",
+      "answerHtml": "<p>They measure mixing on different scales. A balanced binary node has Gini 0.5 and entropy one bit. Compare candidates within one criterion; use validation for the resulting models instead of picking whichever criterion prints a larger raw gain.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read all candidate rows: which Gini question wins?",
+      "options": [
+        "Sweetness y≤4.5",
+        "Size x≤1.5",
+        "Sweetness y≤1.5",
+        "Size x≤3"
+      ],
+      "answer": 3,
+      "explanation": "The x threshold three has gain 0.281, larger than every other candidate in this table.",
+      "figure": {
+        "caption": {
+          "en": "All midpoint candidates for the eight-card root.",
+          "bn": "আটটি কার্ডের root-এ সব midpoint candidate দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 6,
+              "cols": 3,
+              "rowLabels": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6"
+              ],
+              "colLabels": [
+                "Feature",
+                "Threshold",
+                "Gain"
+              ],
+              "cells": [
+                [
+                  "x",
+                  1.5,
+                  0.26
+                ],
+                [
+                  "x",
+                  3.0,
+                  0.281
+                ],
+                [
+                  "x",
+                  4.5,
+                  0.094
+                ],
+                [
+                  "y",
+                  1.5,
+                  0.01
+                ],
+                [
+                  "y",
+                  3.0,
+                  0.031
+                ],
+                [
+                  "y",
+                  4.5,
+                  0.094
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the child table: what is the weighted child Gini?",
+      "options": [
+        "0.75",
+        "0",
+        "0.1875",
+        "0.375"
+      ],
+      "answer": 2,
+      "explanation": "The two equally sized groups give (4×0.375+4×0)/8=0.1875.",
+      "figure": {
+        "caption": {
+          "en": "Two child groups after the chosen root question.",
+          "bn": "Root প্রশ্নের পরে দুই child-এর মিশ্রতা দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 2,
+              "cols": 2,
+              "rowLabels": [
+                "Left",
+                "Right"
+              ],
+              "colLabels": [
+                "Cards",
+                "Gini"
+              ],
+              "cells": [
+                [
+                  4,
+                  0.375
+                ],
+                [
+                  4,
+                  0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the table: which binary group is most mixed under both criteria?",
+      "options": [
+        "Every group equally",
+        "Balanced 2:2",
+        "Pure 4:0",
+        "Mixed 3:1"
+      ],
+      "answer": 1,
+      "explanation": "Equal proportions maximise these binary mixing measures. Their numeric scales differ: 0.5 Gini versus one bit entropy.",
+      "figure": {
+        "caption": {
+          "en": "Mixing measures for three four-card groups.",
+          "bn": "চার কার্ডের তিন ধরনের দলে mixing-এর মাপ দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 3,
+              "cols": 2,
+              "rowLabels": [
+                "Pure 4:0",
+                "Mixed 3:1",
+                "Balanced 2:2"
+              ],
+              "colLabels": [
+                "Gini",
+                "Entropy"
+              ],
+              "cells": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  0.375,
+                  0.811
+                ],
+                [
+                  0.5,
+                  1
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why try midpoints between distinct numeric values?",
+      "options": [
+        "They represent every different left/right partition on that feature",
+        "They create new training labels",
+        "They guarantee pure leaves",
+        "They avoid all comparisons"
+      ],
+      "answer": 0,
+      "explanation": "Moving a threshold between the same adjacent values does not change membership."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why weight child impurity by sample count?",
+      "options": [
+        "Small groups must always dominate",
+        "The two children must always be the same size",
+        "Weights make all gains one",
+        "Each training example should contribute equally"
+      ],
+      "answer": 3,
+      "explanation": "A two-card child should not have the same total influence as an eight-card child."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is entropy for a pure binary group?",
+      "options": [
+        "Two bits",
+        "Undefined because a zero term must be logged",
+        "Zero bits",
+        "One bit"
+      ],
+      "answer": 2,
+      "explanation": "Zero-probability terms contribute zero by their limiting value; skip them in code."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does one criterion always give better unseen accuracy?",
+      "options": [
+        "Yes, Gini always",
+        "No, compare models with validation",
+        "Yes, whichever prints a larger gain",
+        "Yes, entropy always"
+      ],
+      "answer": 1,
+      "explanation": "The gains use different scales and finite data can favour different choices."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which Gini value follows proportions three quarters and one quarter?",
+      "options": [
+        "0.375",
+        "0.500",
+        "0.750",
+        "0.250"
+      ],
+      "answer": 0,
+      "explanation": "One minus 0.5625 minus 0.0625 equals 0.375.",
+      "code": "def main():\n    p = [0.75, 0.25]\n    print(f\"{1 - sum(v * v for v in p):.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What weighted impurity follows children of sizes two and eight?",
+      "options": [
+        "0.250",
+        "0.500",
+        "0.100",
+        "0.400"
+      ],
+      "answer": 3,
+      "explanation": "The larger child supplies eight-tenths of the weight.",
+      "code": "def main():\n    weighted = (2 * 0 + 8 * 0.5) / 10\n    print(f\"{weighted:.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which midpoint lies between distinct values two and four?",
+      "options": [
+        "4.0",
+        "6.0",
+        "3.0",
+        "2.0"
+      ],
+      "answer": 2,
+      "explanation": "The midpoint is three and represents that partition.",
+      "code": "def main():\n    low, high = 2, 4\n    print(f\"{(low + high) / 2:.1f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Impurity measures the class mixture within one node.",
+      "bn": "একটি নোডে ক্লাস কত মিশ্র, impurity তা মাপে।"
+    },
+    {
+      "en": "Gini and entropy are different scales for related mixing ideas.",
+      "bn": "Gini ও entropy মিশ্রতা বোঝালেও তাদের সংখ্যার scale আলাদা।"
+    },
+    {
+      "en": "A split gain subtracts size-weighted child impurity from the parent.",
+      "bn": "Parent impurity থেকে আকার দিয়ে weight করা child impurity বাদ দিলে gain হয়।"
+    },
+    {
+      "en": "Try every distinct-value midpoint before choosing the best candidate.",
+      "bn": "সেরা candidate বাছার আগে আলাদা মানের মাঝের প্রতিটি midpoint পরীক্ষা করো।"
+    },
+    {
+      "en": "Tie rules and positive-gain stopping must be explicit.",
+      "bn": "Gain সমান হলে কী হবে এবং positive gain না থাকলে কোথায় থামবে, তা বলো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Compute Gini and entropy for three class-zero and one class-one cards.",
+      "marks": 6,
+      "answerHtml": "<p>Proportions are 3/4 and 1/4. Gini is 1−(3/4)²−(1/4)²=0.375. Entropy is −(3/4)log2(3/4)−(1/4)log2(1/4)≈0.811 bits. Both indicate a mixed group, on different scales.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Compute the root gain of the size-three split on the eight cards.",
+      "marks": 7,
+      "answerHtml": "<p>The parent contains three zeros and five ones, so Gini is 1−(3/8)²−(5/8)²=0.46875. Left has size four and Gini 0.375; right has size four and Gini zero. Weighted child impurity is 0.1875, giving gain 0.46875−0.1875=0.28125.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain a complete midpoint search and the constant-feature edge case.",
+      "marks": 7,
+      "answerHtml": "<p>For each feature, sort its distinct values and try midpoints of adjacent values. Partition using the stated ≤ rule, compute both child impurities and weight them by size. Keep the largest positive gain, with a deterministic tie rule. A constant feature has no distinct adjacent values and supplies no candidate; if all features fail to improve, keep a leaf.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "best-split"
+  ]
+}

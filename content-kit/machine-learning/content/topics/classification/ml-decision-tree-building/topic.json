@@ -1,0 +1,548 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-decision-tree-building",
+  "module": "classification",
+  "order": 9,
+  "kind": "lesson",
+  "title": {
+    "en": "Growing and Pruning a Decision Tree",
+    "bn": "ডিসিশন ট্রি বড় করা ও অপ্রয়োজনীয় branch কমানো"
+  },
+  "summary": {
+    "en": "Build CART recursively, control depth and sample limits, and compare pruning choices without using final test answers to tune.",
+    "bn": "Recursion দিয়ে CART বানাও, depth ও sample-এর সীমা দাও এবং final টেস্ট না দেখে pruning-এর পছন্দ যাচাই করো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 70,
+  "prerequisites": [
+    "ml-gini-entropy"
+  ],
+  "related": [],
+  "keywords": [
+    "CART",
+    "recursion",
+    "max_depth",
+    "min_samples_split",
+    "pruning"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A useful question tree should know when to stop"
+    },
+    {
+      "id": "intuition",
+      "title": "Children solve smaller versions of the same job"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Grow a node, then hand off its two subsets"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Change one stopping rule at a time"
+    },
+    {
+      "id": "examples",
+      "title": "Grow, validate and simplify actual fitted models"
+    },
+    {
+      "id": "pruning",
+      "title": "Reduce structure rather than rewriting evidence"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep every claim attached to its evidence"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: greedy CART and a complexity penalty"
+    },
+    {
+      "id": "summary",
+      "title": "Controlled growth with separate evaluation"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Recursively split only the rows reaching each node",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Each recursive call receives only its own subset. A pure node, depth limit, too few rows or absent positive gain produces a majority leaf. Feature-order and threshold-order ties make this educational solver deterministic.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Match the bounded CART result with a library model",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The decisive eight-card cuts give the same prediction, eight training matches and five nodes. min_samples_split checks the number arriving at a node; it is not a guarantee that every resulting leaf contains that many rows.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Choose depth on validation before one final iris test",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Only validation scores choose depth, with shallower ties preferred. Refit the selected workflow on development rows, then evaluate the untouched final test. Training accuracy alone would encourage an unnecessarily detailed tree.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    },
+    {
+      "id": "ex-4",
+      "title": "Inspect cost-complexity pruning on a training-only path",
+      "level": "basic",
+      "file": "examples/ex-4.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The pruning path is derived from training data, while reserved validation rows compare candidate models. Larger alpha penalises extra leaves more strongly. These rows are validation evidence, not a final test repeatedly used for selection.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-4.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Fit a bounded two-feature CART tree",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read depth min_split criterion, then n, n lines x y label, and one query qx qy. Depth is 1–4, min_split 2–10, criterion gini/entropy, n 1–20, finite coordinates 0–6 and labels 0/1. Require positive gain, ties by feature then midpoint order and majority ties to zero. Print prediction, correct training count and total nodes on labelled lines. Invalid input prints invalid.</p>",
+      "hints": [
+        "Each child recursively receives only its own rows.",
+        "Check stopping rules before attempting a split."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Select a simpler model when validation mistakes tie",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read validation_total and candidate_count, each 1–100, then one leaves mistakes pair per candidate. Leaves are 1–1000 and mistakes 0–validation_total. Choose the fewest mistakes, then fewer leaves, then earliest candidate. Print its one-based index and accuracy to three decimals. Invalid input prints invalid.</p>",
+      "hints": [
+        "All candidates are measured on the same validation set.",
+        "Complexity is the tie-break, not a replacement for error evidence."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Distinguish two stopping controls",
+      "difficulty": "medium",
+      "statementHtml": "<p>Compare maximum depth two with minimum split count five on the eight-card example.</p>",
+      "hints": [
+        "Count rows reaching the child."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Depth two allows the root and its child question. Minimum split five allows the eight-card root but stops its four-card left child, leaving a mixed majority leaf. Depth and sample limits constrain different properties; min_samples_leaf would be another distinct control.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Explain pruning rather than deleting inconvenient data",
+      "difficulty": "medium",
+      "statementHtml": "<p>A deep tree fits all training cards. What does pruning change, and what does it leave unchanged?</p>",
+      "hints": [
+        "Separate model simplification from data removal."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Pruning reduces model branches or leaves while retaining the training records. It trades training fit against complexity to seek better generalisation. It is not permission to remove valid minority examples because they complicate a tree. Choose pruning using suitable validation.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read validation evidence: which depth follows best score and shallower ties?",
+      "options": [
+        "Depth 2",
+        "Depth 3",
+        "Depth 5",
+        "Depth 8",
+        "Depth 1"
+      ],
+      "answer": 0,
+      "explanation": "Depth 2 attains the highest displayed validation score 1.000; the rule prefers a shallower equal score rather than maximum training fit.",
+      "figure": {
+        "caption": {
+          "en": "Depth comparison on the same iris development split.",
+          "bn": "একই iris development split-এ depth তুলনা করো।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Maximum depth",
+            "yLabel": "Accuracy",
+            "series": [
+              {
+                "id": "s0",
+                "label": "Training",
+                "type": "line",
+                "points": [
+                  [
+                    1,
+                    0.6666666666666666
+                  ],
+                  [
+                    2,
+                    0.9555555555555556
+                  ],
+                  [
+                    3,
+                    0.9555555555555556
+                  ],
+                  [
+                    5,
+                    1.0
+                  ],
+                  [
+                    8,
+                    1.0
+                  ]
+                ]
+              },
+              {
+                "id": "s1",
+                "label": "Validation",
+                "type": "line",
+                "points": [
+                  [
+                    1,
+                    0.6666666666666666
+                  ],
+                  [
+                    2,
+                    1.0
+                  ],
+                  [
+                    3,
+                    0.9666666666666667
+                  ],
+                  [
+                    5,
+                    1.0
+                  ],
+                  [
+                    8,
+                    1.0
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the table: which rule stops a four-card child despite allowing depth two?",
+      "options": [
+        "Minimum split two",
+        "No stopping control",
+        "Minimum split five",
+        "Maximum depth one only"
+      ],
+      "answer": 2,
+      "explanation": "Four rows are below the required five, so that child remains a leaf. The eight-card root can still split.",
+      "figure": {
+        "caption": {
+          "en": "Stopping controls on the eight-card training set.",
+          "bn": "আটটি ট্রেনিং কার্ডে থামার শর্তগুলোর ফল দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 3,
+              "cols": 2,
+              "rowLabels": [
+                "depth2/min2",
+                "depth1/min2",
+                "depth2/min5"
+              ],
+              "colLabels": [
+                "Nodes",
+                "Correct"
+              ],
+              "cells": [
+                [
+                  5,
+                  8
+                ],
+                [
+                  3,
+                  7
+                ],
+                [
+                  3,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the alpha 0.05 row: how many leaves remain?",
+      "options": [
+        "4",
+        "3",
+        "1",
+        "2"
+      ],
+      "answer": 1,
+      "explanation": "The table reports the fitted model after the stated penalty. Pruning reduces model structure; it does not delete the original training records.",
+      "figure": {
+        "caption": {
+          "en": "Actual cost-complexity models on one iris split.",
+          "bn": "একটি iris split-এ সত্যিকারের pruning-এর ফল দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 3,
+              "cols": 2,
+              "rowLabels": [
+                "alpha 0.00",
+                "alpha 0.02",
+                "alpha 0.05"
+              ],
+              "colLabels": [
+                "Leaves",
+                "Validation accuracy"
+              ],
+              "cells": [
+                [
+                  8,
+                  0.978
+                ],
+                [
+                  3,
+                  0.956
+                ],
+                [
+                  3,
+                  0.956
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does recursive CART pass to a child call?",
+      "options": [
+        "Only rows reaching that branch",
+        "The final test answers",
+        "A random unrelated subset",
+        "Only the current query"
+      ],
+      "answer": 0,
+      "explanation": "Each child chooses questions for its own region."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which control directly limits the number of questions along a path?",
+      "options": [
+        "The class-name spelling",
+        "The test-set filename",
+        "A larger display font",
+        "Maximum depth"
+      ],
+      "answer": 3,
+      "explanation": "The root is depth zero in this implementation."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does min_samples_split constrain?",
+      "options": [
+        "The number of final test rows",
+        "The number of features only",
+        "Rows required at a node before splitting",
+        "Minimum rows in every leaf automatically"
+      ],
+      "answer": 2,
+      "explanation": "Minimum leaf size is a separate parameter."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is pruning intended to trade off?",
+      "options": [
+        "Training data versus deleting all data",
+        "Fit and model complexity",
+        "File names and colours",
+        "Known labels and invented labels"
+      ],
+      "answer": 1,
+      "explanation": "Validate whether the simpler structure helps unseen examples."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Can a four-card node split when the minimum is five?",
+      "options": [
+        "0",
+        "1",
+        "4",
+        "5"
+      ],
+      "answer": 0,
+      "explanation": "The sample-count stopping rule prevents the split.",
+      "code": "def main():\n    count = 4\n    minimum = 5\n    print(int(count >= minimum))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many child calls does one binary internal node create?",
+      "options": [
+        "1",
+        "3",
+        "4",
+        "2"
+      ],
+      "answer": 3,
+      "explanation": "A binary split produces two nonempty subsets.",
+      "code": "def main():\n    children = [\"left subset\", \"right subset\"]\n    print(len(children))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which candidate wins equal validation mistakes with fewer leaves?",
+      "options": [
+        "3",
+        "4",
+        "2",
+        "1"
+      ],
+      "answer": 2,
+      "explanation": "The tuple order compares mistakes, then leaf count, then input index.",
+      "code": "def main():\n    rows = [(2, 8, 1), (2, 4, 2), (3, 2, 3)]\n    print(min(rows)[2])\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Each recursive node works only on its own arriving examples.",
+      "bn": "প্রতিটি recursive নোড শুধু তার কাছে আসা উদাহরণ নিয়ে কাজ করে।"
+    },
+    {
+      "en": "Depth and minimum-sample controls stop different kinds of growth.",
+      "bn": "Depth ও minimum sample-এর শর্ত ট্রি বাড়ার আলাদা দিক থামায়।"
+    },
+    {
+      "en": "A deeper training fit can capture noise rather than general patterns.",
+      "bn": "গভীর ট্রেনিং fit সাধারণ pattern-এর বদলে noise ধরে ফেলতে পারে।"
+    },
+    {
+      "en": "Pruning simplifies the model while retaining the original data.",
+      "bn": "Pruning মডেল ছোট করে; মূল ডেটা মুছে ফেলে না।"
+    },
+    {
+      "en": "Choose complexity on validation and reserve the final test.",
+      "bn": "Validation দেখে জটিলতা বাছো এবং final টেস্ট আলাদা রাখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "program",
+      "question": "Write the recursive stopping and splitting procedure for the displayed CART solver.",
+      "marks": 8,
+      "answerHtml": "<p>Create a majority leaf candidate. Stop for purity, maximum depth, too few rows or no positive-gain threshold. Otherwise choose the best midpoint, recursively fit left and right subsets and attach them to the current question. Use the stated deterministic ties and keep each child restricted to its parent region.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why min_samples_split five does not mean every leaf contains at least five rows.",
+      "marks": 6,
+      "answerHtml": "<p>The parameter checks whether a parent node has enough rows to attempt splitting. A permitted parent can divide into smaller children. Minimum leaf size is a separate requirement. In the eight-card example, the root can split but its four-card left child cannot split further under this setting.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare pre-pruning and post-pruning without using the final test for selection.",
+      "marks": 7,
+      "answerHtml": "<p>Depth/sample limits restrict growth while fitting. Cost-complexity pruning simplifies a grown tree using a penalty on leaves. Derive candidate structures from training data, compare them using validation or cross-validation within development data, fix the choice and then evaluate a separate final test. Training accuracy alone favours excessive detail.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "decision-tree"
+  ]
+}
