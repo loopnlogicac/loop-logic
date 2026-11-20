@@ -29,7 +29,7 @@ export async function chatPage(raw: unknown, lang: Lang, extras: VideoExtrasServ
   const kind = str(r.kind, 10);
 
   if (kind === 'tutorial' && tutorials) {
-    const c = tutorials.chatContext(str(r.track, 40), str(r.topic, 80), question);
+    const c = tutorials.chatContext(str(r.track, 40), str(r.topic, 80), question, lang);
     if (c) return { kind: 'tutorial', key: `tutorial:${str(r.track, 40)}:${str(r.topic, 80)}`, label: `Tutorial topic "${c.title}"`, subject: c.track === 'machine-learning' ? 'ml' : 'cs', evidence: c.evidence };
   }
 

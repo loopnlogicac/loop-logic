@@ -475,8 +475,14 @@ export class ReadingService {
     const top = used.find((e) => e.source.reviewed);
     const note = overBudget
       ? (lang === 'bn' ? 'আজকের এআই উত্তরের সীমা শেষ। সবচেয়ে কাছের পর্যালোচিত অংশ:' : 'You have used today’s AI answers. The closest reviewed material:')
-      : (lang === 'bn' ? 'পর্যালোচিত নোট বা অনুমোদিত সাইটে এর নিশ্চিত উত্তর পাইনি।' : 'I could not find a checked answer to this in the reviewed notes or approved websites.');
-    return { ...base, origin: top ? ('reviewed' as const) : ('none' as const), text: top ? `${note} ${firstSentence(top.text)}` : note, sources: used.slice(0, 3).map((e) => e.source), left: this.aiCallsLeft(learnerId) };
+      : !this.gateway.enabled && top
+        ? (lang === 'bn' ? 'তোমার প্রশ্নের সবচেয়ে কাছের পর্যালোচিত অংশ:' : 'The closest reviewed material for your question:')
+        : (lang === 'bn' ? 'পর্যালোচিত নোট বা অনুমোদিত সাইটে এর নিশ্চিত উত্তর পাইনি।' : 'I could not find a checked answer to this in the reviewed notes or approved websites.');
+    // Two best matches, plus one from another page (e.g. a related tutorial topic) when there is one.
+    const path = (e?: Ev) => e?.source.url?.split('#')[0] ?? e?.id;
+    const elsewhere = used.slice(2).find((e) => path(e) !== path(used[0]));
+    const shown = [...used.slice(0, 2), ...(elsewhere ? [elsewhere] : used.slice(2, 3))];
+    return { ...base, origin: top ? ('reviewed' as const) : ('none' as const), text: top ? `${note} ${firstSentence(top.text)}` : note, sources: shown.map((e) => e.source), left: this.aiCallsLeft(learnerId) };
   }
 
   async checkQuiz(learnerId: string, input: { lessonId: string; blockId: string; choice: number; lang: Lang }) {

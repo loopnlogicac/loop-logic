@@ -12,6 +12,7 @@ import type { Store } from '../store/store.ts';
 import { LANGUAGES } from './video-extras.ts';
 import { getVideo } from '../content/videos.ts';
 import { markdownToHtml } from './markdown.ts';
+import { TutorialIndex, type SectionInput, type Bi as SearchBi } from '../library/tutorial-search.ts';
 
 type Lang = 'en' | 'bn';
 type Bi = { en: string; bn: string };
@@ -86,6 +87,8 @@ export class TutorialService {
   private store: Store;
   private kitDir: string;
   private hidden = new Set<string>();
+  /** Search index for the AI Teacher; rebuilt after admin-written topics change. */
+  private index: TutorialIndex | null = null;
   private labCache = new Map<string, Json | null>();
 
   constructor(store: Store, kitDir: string) {
@@ -144,6 +147,7 @@ export class TutorialService {
 
   /** Replaces every admin-added track and topic with the given ones. */
   applyCustom(tracks: CustomTrackDef[], topics: CustomTopicDef[]) {
+    this.index = null;
     for (const [id, t] of [...this.tracks]) if (t.custom) { this.tracks.delete(id); delete TRACK_INFO[id]; }
     for (const t of this.tracks.values()) {
       for (const m of t.curriculum.modules ?? []) m.topics = (m.topics ?? []).filter((pt: Json) => !pt.custom);
@@ -470,17 +474,74 @@ export class TutorialService {
   }
 
   /** Context for the Ask AI chat on a topic page: the sections that best match the question. */
-  chatContext(trackId: string, topicId: string, question: string) {
+  /** Every section of every topic, English and Bangla side by side (sections line up by their h2 id). */
+  private searchIndex(): TutorialIndex {
+    if (this.index) return this.index;
+    const bi = (o: unknown): SearchBi => typeof o === 'string' ? { en: o, bn: null } : { en: String((o as Json)?.en ?? ''), bn: (o as Json)?.bn ? String((o as Json).bn) : null };
+    const split = (html: string | null) => {
+      const out = new Map<string, { title: string; text: string }>();
+      for (const h of (html ?? '').split(/(?=<h2\b)/)) {
+        const id = /<h2[^>]*id="([^"]+)"/.exec(h)?.[1] ?? 'intro';
+        const text = textOf(h.replace(/<h2[\s\S]*?<\/h2>/, ' '));
+        if (text.length > 40) out.set(id, { title: textOf(/<h2[^>]*>([\s\S]*?)<\/h2>/.exec(h)?.[1] ?? ''), text });
+      }
+      return out;
+    };
+    const docs: SectionInput[] = [];
+    for (const t of this.tracks.values()) {
+      for (const x of t.topics.values()) {
+        const topicTitle = bi(x.json.title), keywords = (x.json.keywords ?? []).map(String);
+        const en = split(x.bodyEn), bn = split(x.bodyBn);
+        for (const [id, sec] of en) {
+          const b = bn.get(id);
+          docs.push({ track: t.id, topic: x.id, section: id, topicTitle, keywords, sectionTitle: { en: sec.title, bn: b?.title ?? null }, text: { en: sec.text.slice(0, 2500), bn: b ? b.text.slice(0, 2500) : null } });
+        }
+        const points = (x.json.keyPoints ?? []).map(bi);
+        if (points.length) docs.push({ track: t.id, topic: x.id, section: '@key-points', topicTitle, keywords, sectionTitle: { en: 'Key points', bn: 'মূল কথা' }, text: { en: points.map((k: SearchBi) => k.en).join(' '), bn: points.some((k: SearchBi) => k.bn) ? points.map((k: SearchBi) => k.bn ?? k.en).join(' ') : null } });
+        const ex = (x.json.examples ?? []).map((e: Json) => ({ title: bi(e.title), why: bi(e.explanationHtml) }));
+        if (ex.length) docs.push({ track: t.id, topic: x.id, section: '@examples', topicTitle, keywords, sectionTitle: { en: 'Examples', bn: 'উদাহরণ' }, text: { en: ex.map((e: Json) => `${e.title.en}. ${textOf(e.why.en)}`).join(' ').slice(0, 2500), bn: ex.some((e: Json) => e.title.bn || e.why.bn) ? ex.map((e: Json) => `${e.title.bn ?? e.title.en}. ${textOf(e.why.bn ?? e.why.en)}`).join(' ').slice(0, 2500) : null } });
+      }
+    }
+    this.index = new TutorialIndex(docs);
+    return this.index;
+  }
+
+  /**
+   * Evidence for the AI Teacher on a tutorial page: the best-matching sections of
+   * this topic, plus up to two strongly matching sections from related or other
+   * topics. Text comes in the page language when a Bangla version exists.
+   */
+  chatContext(trackId: string, topicId: string, question: string, lang: Lang = 'en') {
     const x = this.tracks.get(trackId)?.topics.get(topicId);
-    if (!x) return null;
-    const sections = x.bodyEn.split(/(?=<h2\b)/).map((h) => ({ id: /<h2[^>]*id="([^"]+)"/.exec(h)?.[1] ?? 'intro', title: textOf(/<h2[^>]*>([\s\S]*?)<\/h2>/.exec(h)?.[1] ?? ''), text: textOf(h) })).filter((s) => s.text.length > 40);
-    const words = new Set(question.toLowerCase().split(/[^a-z0-9ঀ-৿]+/).filter((w) => w.length > 2));
-    const scored = sections.map((s, i) => ({ s, i, score: [...words].filter((w) => s.text.toLowerCase().includes(w)).length + (i === 0 ? 0.5 : 0) }));
-    const best = scored.sort((a, b) => b.score - a.score || a.i - b.i).slice(0, 3).sort((a, b) => a.i - b.i);
+    if (!x || this.hidden.has(trackId)) return null;
+    const index = this.searchIndex();
+    const own = index.search(question, { onlyTopic: topicId, limit: 3 });
+    if (own.length < 3) {
+      // Too few matches (or an empty question): fill with the topic's opening sections, in order.
+      for (const h of index.search(`${pick(x.json.title, 'en')} ${pick(x.json.title, 'bn')}`, { onlyTopic: topicId, limit: 12 }).filter((h) => !h.section.startsWith('@'))) {
+        if (own.length >= 3) break;
+        if (!own.some((o) => o.id === h.id)) own.push(h);
+      }
+    }
+    const best = Math.max(0, ...own.map((h) => h.score));
+    const others = index.search(question, { topic: topicId, related: (x.json.related ?? []).map(String), track: trackId, limit: 10 })
+      .filter((h) => h.topic !== topicId && !this.hidden.has(h.track) && h.score >= Math.max(2, 0.75 * best)).slice(0, 2);
     const title = pick(x.json.title, 'en');
+    const say = (b: SearchBi) => (lang === 'bn' && b.bn ? b.bn : b.en);
     return {
       title, track: x.track,
-      evidence: best.map(({ s }) => ({ id: `tutorial:${x.id}#${s.id}`, title: `${title}: ${s.title}`, location: `${TRACK_INFO[x.track]?.title.en ?? x.track} tutorial`, text: s.text.slice(0, 1500) })),
+      evidence: [...own, ...others].map((h) => ({
+        id: h.id,
+        title: `${say(h.topicTitle)}: ${say(h.sectionTitle)}`,
+        location: `${TRACK_INFO[h.track]?.title[lang] ?? h.track} ${lang === 'bn' ? 'টিউটোরিয়াল' : 'tutorial'}`,
+        url: `/learn.html?track=${encodeURIComponent(h.track)}&topic=${encodeURIComponent(h.topic)}${h.section.startsWith('@') ? '' : `#${encodeURIComponent(h.section)}`}`,
+        text: say(h.text).slice(0, 1500),
+      })),
     };
+  }
+
+  /** Site-wide section search (all reviewed tutorials), for tests and tools. */
+  searchSections(query: string, limit = 5) {
+    return this.searchIndex().search(query, { limit }).filter((h) => !this.hidden.has(h.track));
   }
 }
