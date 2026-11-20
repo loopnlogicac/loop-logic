@@ -408,6 +408,17 @@ function checkTopic(pkg, mod, topicId, ctx, opts) {
     const bnHtml = readFileSync(bnFile, 'utf8');
     const bn = checkHtml(bnHtml, rel(bnFile));
     if (!hasBangla(textOf(bnHtml))) err(rel(bnFile), 'body.bn.html must be written in Bangla');
+    // Natural Bangla (BANGLA_STYLE.md): English tech words are fine, but a lesson that is mostly English words
+    // in Bangla grammar, or written as clipped notes, reads like a rough translation, not like a teacher.
+    const bnProse = textOf(bnHtml.replace(/<(pre|code)\b[\s\S]*?<\/\1>/g, ' '));
+    const bnWords = bnProse.match(/[A-Za-z][A-Za-z'-]*|[\u0980-\u09ff]+/g) ?? [];
+    if (bnWords.length >= 150) {
+      const english = bnWords.filter((w) => /^[A-Za-z]/.test(w)).length / bnWords.length;
+      const sentences = bnProse.split(/[।?!]/).map((x) => x.trim().split(/\s+/).filter(Boolean).length).filter((n) => n > 0);
+      const perSentence = sentences.reduce((n, x) => n + x, 0) / Math.max(1, sentences.length);
+      if (english > 0.3) warn(rel(bnFile), `Bangla: ${Math.round(english * 100)}% of the words are in English letters — write common tech words in Bangla script (লুপ, অ্যারে, সর্ট) and keep English letters for code and rarer terms (BANGLA_STYLE.md)`);
+      if (perSentence < 8) warn(rel(bnFile), `Bangla: sentences average ${perSentence.toFixed(1)} words — write full sentences as a teacher would say them, not clipped notes`);
+    }
     if (JSON.stringify(bn.h2) !== JSON.stringify(body.h2)) err(rel(bnFile), 'Bangla body must have the same <h2> ids in the same order');
     if (JSON.stringify([...bn.placeholders].sort()) !== JSON.stringify([...body.placeholders].sort()) || JSON.stringify([...bn.labs].sort()) !== JSON.stringify([...body.labs].sort())) err(rel(bnFile), 'Bangla body must place the same examples and labs');
   }
