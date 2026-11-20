@@ -1,5 +1,5 @@
 // Top-bar links (pure, so it can be tested without a browser).
-// Everyone sees Home, Tutorials, Courses, Premium and Blog; My learning (the dashboard)
+// Everyone sees Home, Tutorials, Courses, Virtual Office, Premium and Blog; My learning (the dashboard)
 // appears only for a signed-in student, and never when the site has no sign-in at all.
 // Profile lives in the account menu.
 
@@ -7,6 +7,7 @@ const LINKS = [
   { id: 'home', href: '/', en: 'Home', bn: 'হোম' },
   { id: 'learn', href: '/learn.html', en: 'Tutorials', bn: 'টিউটোরিয়াল' },
   { id: 'courses', href: '/courses.html', en: 'Courses', bn: 'কোর্স' },
+  { id: 'office', href: '/office.html', en: 'Virtual Office', bn: 'ভার্চুয়াল অফিস' },
   { id: 'paid', href: '/paid-courses.html', en: 'Premium', bn: 'প্রিমিয়াম' },
   { id: 'blog', href: '/blog.html', en: 'Blog', bn: 'ব্লগ' },
   { id: 'dashboard', href: '/dashboard.html', en: 'My learning', bn: 'আমার শেখা', signedIn: true },

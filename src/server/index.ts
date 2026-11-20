@@ -26,6 +26,7 @@ import { AdminService } from '../app/admin.ts';
 import { NoticeService } from '../app/notices.ts';
 import { ClassService } from '../app/classes.ts';
 import { QuestionBankService } from '../app/question-bank.ts';
+import { OfficeService } from '../app/office.ts';
 import { OrderService } from '../app/orders.ts';
 import { ReportService } from '../app/reports.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
@@ -97,6 +98,7 @@ const server = createApp({
   admin,
   classes,
   questionBank: new QuestionBankService(store, tutorials),
+  office: new OfficeService(store),
   orders,
   reports: new ReportService(store, Object.entries(env).filter(([key]) => /KEY|SECRET|TOKEN|PASSWORD/.test(key)).map(([, value]) => value ?? '').filter((value) => value.length >= 8)),
   runner,

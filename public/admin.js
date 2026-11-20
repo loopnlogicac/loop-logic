@@ -346,7 +346,8 @@ async function coursePage(id) {
       c.access === 'paid' ? card('Step 3 · Price and access',
         row(field('Price (৳)', input(c.price, (v) => { c.price = v; drawPreview(); }, { type: 'number', min: '1' })), field('Access lasts', select(String(c.accessMonths ?? 6), [['6', 'One semester (6 months)'], ['12', 'One year'], ['0', 'For ever']], (v) => { c.accessMonths = Number(v); }))),
         check('Included for Pro members at no extra cost', c.includedInPro !== false, (on) => { c.includedInPro = on; }),
-        check('Coupon codes can be used', c.couponsAllowed !== false, (on) => { c.couponsAllowed = on; })) : null,
+        check('Coupon codes can be used', c.couponsAllowed !== false, (on) => { c.couponsAllowed = on; }),
+        check('Also unlocks the Virtual Office (all premium internship projects)', c.includesOffice === true, (on) => { c.includesOffice = on; })) : null,
       playlistBox());
     drawVideos();
     drawPreview();

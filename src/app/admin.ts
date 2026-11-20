@@ -234,6 +234,8 @@ export class AdminService {
   }
   /** A paid or free course added in the admin site (for checkout). */
   courseDoc(id: string) { return this.doc('course', id)?.data; }
+  /** Published premium courses that also unlock the Virtual Office (set in Admin → Courses). */
+  officeCourses() { return this.docs('course').filter((d) => d.data.access === 'paid' && d.data.published && d.data.includesOffice).map((d) => ({ id: d.id, price: Number(d.data.price) || null })); }
   couponDoc(code: string) { return this.doc('coupon', code.toUpperCase())?.data; }
   async useCoupon(code: string) {
     const d = this.doc('coupon', code.toUpperCase());
@@ -367,6 +369,7 @@ export class AdminService {
       tint: TINTS.includes(body.tint) ? body.tint : TINTS[1], playlistId: imported.playlistId, playlistTitle: imported.title, channel: imported.channel,
       videos, nightlySync: body.nightlySync !== false, price: access === 'paid' ? price : null, accessMonths: access === 'paid' ? int(body.accessMonths, 0, 120, 6) : null,
       includedInPro: access === 'paid' ? body.includedInPro !== false : null, couponsAllowed: access === 'paid' ? body.couponsAllowed !== false : null,
+      includesOffice: access === 'paid' && body.includesOffice === true,
       published: body.published === true, syncedAt: this.now().toISOString(), createdAt: prev?.data.createdAt ?? this.now().toISOString(),
     };
     await this.put('course', id, data);
