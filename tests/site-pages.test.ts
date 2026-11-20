@@ -12,15 +12,17 @@ import { pageMeta, injectHead, sitemapXml } from '../src/server/seo.ts';
 const root = join(import.meta.dirname, '..');
 const ids = (o: Parameters<typeof navLinks>[0]) => navLinks(o).map((l) => l.id);
 
-test('top bar: four links for everyone, Dashboard and Profile only for signed-in students', () => {
-  assert.deepEqual(ids({ signedIn: false, authMode: 'hybrid' }), ['home', 'courses', 'paid', 'blog']);
-  assert.deepEqual(ids({ signedIn: true, authMode: 'hybrid' }), ['home', 'courses', 'paid', 'blog', 'dashboard', 'profile']);
-  assert.deepEqual(ids({ signedIn: true, authMode: 'supabase' }), ['home', 'courses', 'paid', 'blog', 'dashboard', 'profile']);
-  assert.deepEqual(ids({ signedIn: true, authMode: 'anonymous' }), ['home', 'courses', 'paid', 'blog'], 'no sign-in on the site: no personal links');
-  assert.deepEqual(ids({ signedIn: true }), ['home', 'courses', 'paid', 'blog', 'dashboard', 'profile'], 'before the config arrives');
+test('top bar: five links for everyone, My learning only for signed-in students', () => {
+  const all = ['home', 'learn', 'courses', 'paid', 'blog'];
+  assert.deepEqual(ids({ signedIn: false, authMode: 'hybrid' }), all);
+  assert.deepEqual(ids({ signedIn: true, authMode: 'hybrid' }), [...all, 'dashboard']);
+  assert.deepEqual(ids({ signedIn: true, authMode: 'supabase' }), [...all, 'dashboard']);
+  assert.deepEqual(ids({ signedIn: true, authMode: 'anonymous' }), all, 'no sign-in on the site: no personal links');
+  assert.deepEqual(ids({ signedIn: true }), [...all, 'dashboard'], 'before the config arrives');
+  assert.deepEqual(navLinks({ signedIn: true, authMode: 'hybrid' }).map((l) => l.label), ['Home', 'Tutorials', 'Courses', 'Premium', 'Blog', 'My learning']);
   const bn = navLinks({ signedIn: true, authMode: 'hybrid', lang: 'bn' });
   assert.ok(bn.every((l) => /[ঀ-৿]/.test(l.label)), 'every label has Bangla');
-  assert.deepEqual(navLinks({ signedIn: false, authMode: 'hybrid' }).map((l) => l.href), ['/', '/courses.html', '/paid-courses.html', '/blog.html']);
+  assert.deepEqual(navLinks({ signedIn: false, authMode: 'hybrid' }).map((l) => l.href), ['/', '/learn.html', '/courses.html', '/paid-courses.html', '/blog.html']);
 });
 
 test('one paid-course rule: Free, the price, or PRO when a paid course has no price', () => {
@@ -35,13 +37,13 @@ test('one paid-course rule: Free, the price, or PRO when a paid course has no pr
   assert.deepEqual(paidCourses(undefined), []);
 });
 
-test('Paid courses page: own title, canonical, in the sitemap; dashboard and profile stay noindex', () => {
+test('Premium courses page: own title, canonical, in the sitemap; dashboard and profile stay noindex', () => {
   const tut = new TutorialService(new MemoryStore(), join(root, 'content-kit'));
   const deps = { tutorials: tut, search: new SearchService(tut, undefined, { ttlMs: 0 }) };
   const html = readFileSync(join(root, 'public', 'paid-courses.html'), 'utf8');
   assert.match(html, /src="\/paid-courses\.js"/);
   const out = injectHead(html, pageMeta('/paid-courses.html', new URLSearchParams(), 'https://x.test', deps));
-  assert.match(out, /<title>Paid courses · Loop &amp; Logic<\/title>/);
+  assert.match(out, /<title>Premium courses · Loop &amp; Logic<\/title>/);
   assert.match(out, /<link rel="canonical" href="https:\/\/x\.test\/paid-courses\.html">/);
   assert.match(sitemapXml('https://x.test', deps), /<loc>https:\/\/x\.test\/paid-courses\.html<\/loc>/);
   for (const page of ['/dashboard.html', '/profile.html']) assert.match(injectHead(html, pageMeta(page, new URLSearchParams(), 'https://x.test', deps)), /noindex, nofollow/);

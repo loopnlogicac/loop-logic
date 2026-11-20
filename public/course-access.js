@@ -1,5 +1,5 @@
 // One rule for "is this course paid, and what label does it get", shared by the
-// home hub, the Courses page and the Paid courses page (pure, tested).
+// home hub, the Courses page and the Premium courses page (pure, tested).
 
 /**
  * @param {{ access?: string, price?: string | null } | null | undefined} c a course from /api/courses

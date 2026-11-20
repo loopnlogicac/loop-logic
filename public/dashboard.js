@@ -214,7 +214,7 @@ function purchasesBox() {
 }
 
 async function load() {
-  if (await signInGate(main, getLang() === 'bn' ? 'তোমার ড্যাশবোর্ড দেখতে সাইন ইন করো' : 'Sign in to see your dashboard')) return;
+  if (await signInGate(main, getLang() === 'bn' ? '‘আমার শেখা’ দেখতে সাইন ইন করো' : 'Sign in to see My learning')) return;
   try { render(await api('GET', `/api/dashboard?lang=${getLang()}`)); } catch (e) { errorBox(main, e.message, load); }
 }
 window.addEventListener('ll-auth', () => load());

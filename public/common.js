@@ -162,7 +162,7 @@ async function mountAccount(actions, bn) {
   const initials = (user.name || user.email || '?').split(/[\s@.]+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const menu = el('div', { class: 'acct-menu', hidden: true },
     el('div', { class: 'acct-who' }, el('strong', { text: user.name || (bn ? 'সাইন ইন করা আছে' : 'Signed in') }), el('span', { text: user.email ?? '' })),
-    el('a', { href: '/dashboard.html', text: bn ? 'ড্যাশবোর্ড' : 'My dashboard' }),
+    el('a', { href: '/dashboard.html', text: bn ? 'আমার শেখা' : 'My learning' }),
     el('a', { href: '/profile.html', text: bn ? 'প্রোফাইল ও ডেটা' : 'Profile and data' }),
     el('a', { href: '/instructor.html', text: bn ? 'শিক্ষকের পাতা' : 'Instructor area' }),
     el('button', { type: 'button', text: bn ? 'সাইন আউট' : 'Sign out', onclick: () => signOut() }));

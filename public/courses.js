@@ -10,8 +10,8 @@ const T = {
     search: 'Search courses, e.g. “OS”, “MAT-101”, “ডেটা”', all: 'All', adaptiveOnly: 'With lessons and labs only',
     adaptive: 'Lessons + labs', videoOnly: 'Video course', videos: 'videos', lessonsLabs: (l, b) => `${l} lessons · ${b} labs`,
     none: 'No course matches that search.', clear: 'Clear filters', count: (n) => `${n} courses`,
-    access: 'Price', accessAll: 'All', free: 'Free', paid: 'Paid', buy: 'Buy', samples: 'Free samples',
-    noPaid: 'Paid courses are coming soon. Meanwhile, all our video courses and tutorials are free.',
+    access: 'Price', accessAll: 'All', free: 'Free', paid: 'Premium', buy: 'Buy', samples: 'Free samples',
+    noPaid: 'Premium courses are coming soon. Meanwhile, all our video courses and tutorials are free.',
   },
   bn: {
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
@@ -19,8 +19,8 @@ const T = {
     search: 'কোর্স খোঁজো, যেমন “OS”, “MAT-101”, “ডেটা”', all: 'সব', adaptiveOnly: 'শুধু পাঠ ও ল্যাবসহ',
     adaptive: 'পাঠ + ল্যাব', videoOnly: 'ভিডিও কোর্স', videos: 'ভিডিও', lessonsLabs: (l, b) => `${l}টি পাঠ · ${b}টি ল্যাব`,
     none: 'এই খোঁজে কোনো কোর্স মেলেনি।', clear: 'ফিল্টার মুছে দাও', count: (n) => `${n}টি কোর্স`,
-    access: 'দাম', accessAll: 'সব', free: 'ফ্রি', paid: 'পেইড', buy: 'কিনো', samples: 'ফ্রি নমুনা',
-    noPaid: 'পেইড কোর্স শিগগিরই আসছে। এর মধ্যে আমাদের সব ভিডিও কোর্স আর টিউটোরিয়াল ফ্রি।',
+    access: 'দাম', accessAll: 'সব', free: 'ফ্রি', paid: 'প্রিমিয়াম', buy: 'কিনো', samples: 'ফ্রি নমুনা',
+    noPaid: 'প্রিমিয়াম কোর্স শিগগিরই আসছে। এর মধ্যে আমাদের সব ভিডিও কোর্স আর টিউটোরিয়াল ফ্রি।',
   },
 };
 const t = () => T[getLang()];

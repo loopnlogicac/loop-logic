@@ -1,4 +1,4 @@
-// Paid courses (/paid-courses.html): only courses that are sold, with price,
+// Premium courses (/paid-courses.html): only courses that are sold, with price,
 // free samples and Buy. A student who already has a course sees "Owned · Continue",
 // and a payment waiting for the admin shows "Payment under review".
 import { api, getLang, applyI18n, mountNav, el, num, errorBox, currentUser } from './common.js';
@@ -7,21 +7,21 @@ import { courseAccess, paidCourses } from './course-access.js';
 const T = {
   en: {
     tagline: 'Learn with purpose', foot: 'Loop & Logic · answers come only from reviewed notes and approved websites',
-    title: 'Paid courses',
+    title: 'Premium courses',
     sub: 'Full video courses you buy once. Watch the free sample videos first, then pay with bKash or Nagad. An admin checks the payment and unlocks the course, usually within a day.',
     privacy: 'What we keep about payments',
     videos: (v, h) => `${v} videos · ${h} h`, samples: (n) => `${n} free sample videos`,
     watchSamples: 'Watch free samples', buy: 'Buy', owned: 'Owned · Continue', pending: 'Payment under review',
-    empty: 'Paid courses are coming soon. Meanwhile, all our video courses and tutorials are free.', browse: 'Browse all courses',
+    empty: 'Premium courses are coming soon. Meanwhile, all our video courses and tutorials are free.', browse: 'Browse all courses',
   },
   bn: {
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
-    title: 'পেইড কোর্স',
+    title: 'প্রিমিয়াম কোর্স',
     sub: 'একবার কিনলেই পুরো ভিডিও কোর্স। আগে ফ্রি নমুনা ভিডিওগুলো দেখো, তারপর bKash বা Nagad দিয়ে পেমেন্ট করো। একজন অ্যাডমিন পেমেন্ট মিলিয়ে কোর্সটা খুলে দেন, সাধারণত এক দিনের মধ্যে।',
     privacy: 'পেমেন্টের কোন তথ্য আমরা রাখি',
     videos: (v, h) => `${v}টি ভিডিও · ${h} ঘণ্টা`, samples: (n) => `${n}টি ফ্রি নমুনা ভিডিও`,
     watchSamples: 'ফ্রি নমুনা দেখো', buy: 'কিনো', owned: 'কেনা আছে · দেখা চালিয়ে যাও', pending: 'পেমেন্ট যাচাই চলছে',
-    empty: 'পেইড কোর্স শিগগিরই আসছে। এর মধ্যে আমাদের সব ভিডিও কোর্স আর টিউটোরিয়াল ফ্রি।', browse: 'সব কোর্স দেখো',
+    empty: 'প্রিমিয়াম কোর্স শিগগিরই আসছে। এর মধ্যে আমাদের সব ভিডিও কোর্স আর টিউটোরিয়াল ফ্রি।', browse: 'সব কোর্স দেখো',
   },
 };
 const t = () => T[getLang()];
