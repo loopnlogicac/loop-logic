@@ -23,6 +23,7 @@ import type { TutorialService } from '../app/tutorials.ts';
 import type { MasteryService } from '../app/mastery.ts';
 import type { AdminService } from '../app/admin.ts';
 import type { QuestionBankService } from '../app/question-bank.ts';
+import type { OfficeService, OfficeAccess } from '../app/office.ts';
 import type { ClassService, Staff } from '../app/classes.ts';
 import type { OrderService } from '../app/orders.ts';
 import type { ReportService } from '../app/reports.ts';
@@ -61,6 +62,7 @@ export interface AppDeps {
   admin?: AdminService;
   classes?: ClassService;
   questionBank?: QuestionBankService;
+  office?: OfficeService;
   orders?: OrderService;
   reports?: ReportService;
   runner?: RunnerService;
@@ -139,6 +141,16 @@ export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   const bank = () => { if (!d.questionBank) throw new AppError('unavailable', 503, 'Question bank is unavailable.'); return d.questionBank; };
+  const office = () => { if (!d.office) throw new AppError('unavailable', 503, 'The Virtual Office is unavailable.', undefined, 'ভার্চুয়াল অফিস এখন পাওয়া যাচ্ছে না।'); return d.office; };
+  /** Premium Virtual Office projects: open to staff, and to students who own a course that includes the office. */
+  const officeAccess = async (ctx: Ctx): Promise<OfficeAccess> => {
+    const isIn = Boolean(ctx.signedIn) || d.auth.mode === 'supabase';
+    const courses = d.admin?.officeCourses() ?? [];
+    const role = isIn && d.admin ? d.admin.roleOf(ctx.email) : 'learner';
+    let unlocked = role === 'admin' || role === 'instructor';
+    if (!unlocked && isIn && d.admin) for (const c of courses) if (await d.admin.hasAccess(ctx.learnerId, c.id)) { unlocked = true; break; }
+    return { unlocked, course: courses[0] ?? null };
+  };
   const search = d.search ?? (d.search = new SearchService(tutorials, d.admin));
   const mastery = () => {
     if (!d.mastery) throw new AppError('unavailable', 503, 'Mastery checks are unavailable.');
@@ -389,6 +401,10 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/classes/:id/leave', ({ params, learnerId }) => cls().leave(learnerId, params.id!)),
 
     // instructor dashboard (signed in, instructor or admin)
+    route('GET', '/api/office', async (ctx) => office().lobby(ctx.learnerId, lang(ctx.query.get('lang')), await officeAccess(ctx))),
+    route('GET', '/api/office/:id', async (ctx) => office().open(ctx.learnerId, ctx.params.id!, lang(ctx.query.get('lang')), await officeAccess(ctx))),
+    route('POST', '/api/office/:id/answer', async (ctx) => office().answer(ctx.learnerId, ctx.params.id!, ctx.body ?? {}, lang(ctx.body?.lang), await officeAccess(ctx))),
+    route('POST', '/api/office/:id/restart', async (ctx) => office().restart(ctx.learnerId, ctx.params.id!, lang(ctx.body?.lang), await officeAccess(ctx))),
     route('GET', '/api/instructor/question-bank', ({ staff }) => bank().list(staff!), 'staff'),
     route('POST', '/api/instructor/question-bank', ({ staff, body }) => bank().save(staff!, body), 'staff', 64 * 1024),
     route('PUT', '/api/instructor/question-bank/:id', ({ staff, params, body }) => bank().save(staff!, body, params.id!), 'staff', 64 * 1024),

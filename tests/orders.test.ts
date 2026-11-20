@@ -104,3 +104,29 @@ test('the Paid courses page sees only the signed-in student’s own access: owne
   await orders.decide('boss@example.com', o.id, true, null);
   assert.deepEqual(await orders.myAccess('s-1', true, ids), { owned: [course.id], pending: [] });
 });
+
+test('the Virtual Office unlocks for staff and for students who bought a course that includes it', async () => {
+  const { createApp } = await import('../src/server/app.ts');
+  const { OfficeService } = await import('../src/app/office.ts');
+  const { store, admin, orders } = await setup();
+  const pack = await admin.saveCourse('boss@example.com', { access: 'paid', title: { en: 'Virtual Office pack' }, price: 299, playlist: 'PLoffice00001', published: true, includesOffice: true });
+  assert.deepEqual(admin.officeCourses(), [{ id: pack.id, price: 299 }]);
+  await admin.setRole('boss@example.com', 'teacher@uni.edu.bd', 'instructor');
+  await admin.savePaymentSettings('boss@example.com', { bkash: { on: true, number: '01712345678' } });
+  const users: Record<string, [string, string]> = { stu: ['s-1', 'rafi@gmail.com'], teach: ['t-1', 'teacher@uni.edu.bd'] };
+  const auth = { mode: 'hybrid', async identify(req: any) { const u = users[String(req.headers.authorization ?? '').slice(7)]; return u ? { learnerId: u[0], email: u[1], signedIn: true } : { learnerId: 'anon', email: null }; } };
+  const app = createApp({ store, admin, orders, office: new OfficeService(store), auth, publicDir: join(import.meta.dirname, '..', 'public'), config: {} } as any);
+  await new Promise<void>((r) => app.listen(0, '127.0.0.1', () => r()));
+  const base = `http://127.0.0.1:${(app.address() as { port: number }).port}`;
+  const get = (path: string, who?: string) => fetch(base + path, { headers: who ? { authorization: `Bearer ${who}` } : {} });
+  try {
+    assert.equal((await get('/api/office/cgpa-portal')).status, 200, 'the free sample is open to guests');
+    assert.equal((await get('/api/office/sales-report', 'stu')).status, 403);
+    const lobby = await (await get('/api/office', 'stu')).json();
+    assert.equal(lobby.unlock.id, pack.id);
+    assert.equal((await get('/api/office/sales-report', 'teach')).status, 200, 'instructors can open every project');
+    const o = await orders.submit('s-1', 'rafi@gmail.com', true, pack.id, { method: 'bkash', trxId: 'OFFICE0001', senderLast4: '4321' });
+    await orders.decide('boss@example.com', o.id, true, null);
+    assert.equal((await get('/api/office/sales-report', 'stu')).status, 200, 'buying the pack unlocks the premium projects');
+  } finally { app.close(); }
+});
