@@ -85,6 +85,13 @@ export class TutorialIndex {
 
   get size() { return this.docs.length; }
 
+  /** Searchable sections per track (the public Trusted sources page). */
+  sectionsByTrack(): Map<string, number> {
+    const out = new Map<string, number>();
+    for (const d of this.docs) out.set(d.track, (out.get(d.track) ?? 0) + 1);
+    return out;
+  }
+
   /**
    * Best sections for a question. `topic` (the page the learner is on) and
    * `related` topics get a boost; `onlyTopic` restricts the search to one topic.

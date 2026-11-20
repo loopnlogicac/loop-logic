@@ -18,6 +18,8 @@ import type { WatchService } from '../app/watch.ts';
 import type { VideoExtrasService } from '../app/video-extras.ts';
 import { chatPage } from '../app/ask-context.ts';
 import type { AdaptiveQuizService } from '../app/adaptive-quiz.ts';
+import { tutorialSubject, type TutorialStyleService } from '../app/tutorial-style.ts';
+import { trustedSources } from '../app/sources.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
 import type { MasteryService } from '../app/mastery.ts';
@@ -63,6 +65,7 @@ export interface AppDeps {
   classes?: ClassService;
   questionBank?: QuestionBankService;
   office?: OfficeService;
+  tutorialStyle?: TutorialStyleService;
   orders?: OrderService;
   reports?: ReportService;
   runner?: RunnerService;
@@ -141,6 +144,7 @@ export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   const bank = () => { if (!d.questionBank) throw new AppError('unavailable', 503, 'Question bank is unavailable.'); return d.questionBank; };
+  const style = () => { if (!d.tutorialStyle) throw new AppError('unavailable', 503, 'Reading styles are unavailable.'); return d.tutorialStyle; };
   const office = () => { if (!d.office) throw new AppError('unavailable', 503, 'The Virtual Office is unavailable.', undefined, 'ভার্চুয়াল অফিস এখন পাওয়া যাচ্ছে না।'); return d.office; };
   /** Premium Virtual Office projects: open to staff, and to students who own a course that includes the office. */
   const officeAccess = async (ctx: Ctx): Promise<OfficeAccess> => {
@@ -263,7 +267,20 @@ export function buildRoutes(d: AppDeps): Route[] {
       if (!d.adaptiveQuiz) throw new AppError('unavailable', 503, 'Adaptive quizzes are unavailable.');
       return d.adaptiveQuiz.answer(learnerId, params.track!, params.topic!, body, lang(body?.lang));
     }, 'learner'),
-    route('POST', '/api/learn/:track/:topic/quiz', ({ params, body, learnerId }) => tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang), body.review === true)),
+    route('POST', '/api/learn/:track/:topic/quiz', async ({ params, body, learnerId }) => {
+      const r = await tutorials.gradeQuiz(params.track!, params.topic!, learnerId, body.answers, lang(body.lang), body.review === true);
+      // Tutorial quiz answers feed the reading profile, like quiz answers in lessons.
+      const results = Object.values(r.results ?? {}) as { correct: boolean }[];
+      if (results.length) await reading.addSignals(learnerId, results.map((x) => ({ kind: 'quiz' as const, subject: tutorialSubject(params.track!), correct: x.correct })));
+      return r;
+    }),
+    // reading style on tutorials, and the quick check before an explanation
+    route('GET', '/api/learn/:track/:topic/style', ({ params, query, learnerId }) => style().suggestion(learnerId, params.track!, lang(query.get('lang')))),
+    route('POST', '/api/learn/:track/:topic/simpler', ({ params, body, learnerId }) => style().simpler(learnerId, params.track!, params.topic!, String(body.section ?? '').slice(0, 120), lang(body.lang))),
+    route('GET', '/api/learn/:track/:topic/quick-check', ({ params, query, learnerId }) => style().quickCheck(learnerId, params.track!, params.topic!, lang(query.get('lang')))),
+    route('POST', '/api/learn/:track/:topic/quick-check', ({ params, body, learnerId }) => style().gradeQuickCheck(learnerId, params.track!, params.topic!, body ?? {}, lang(body?.lang))),
+    // the public list of what the AI Teacher answers from
+    route('GET', '/api/sources', ({ query }) => trustedSources(tutorials, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic/practice/:pid', ({ params, query }) => tutorials.solution(params.track!, params.topic!, params.pid!, lang(query.get('lang'))), 'none'),
     route('GET', '/api/learn/:track/:topic/labs/:lab', ({ params, query }) => tutorials.lab(params.track!, params.topic!, params.lab!, lang(query.get('lang'))), 'none'),
     route('POST', '/api/learn/:track/:topic/labs/:lab/run', ({ params, body }) => tutorials.runLab(params.track!, params.topic!, params.lab!, body.input, lang(body.lang)), 'none'),
@@ -309,7 +326,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     ),
     route('POST', '/api/quiz/check', ({ body, learnerId }) => reading.checkQuiz(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), choice: Number(body.choice), lang: lang(body.lang) })),
     route('POST', '/api/ask', async ({ body, learnerId }) =>
-      reading.chat(learnerId, { question: body.question, selection: body.selection, history: body.history, lang: lang(body.lang), page: await chatPage(body.page, lang(body.lang), extras, tutorials, typeof body.question === 'string' ? body.question : '') })),
+      reading.chat(learnerId, { question: body.question, selection: body.selection, history: body.history, style: body.style, lang: lang(body.lang), page: await chatPage(body.page, lang(body.lang), extras, tutorials, typeof body.question === 'string' ? body.question : '') })),
     route('GET', '/api/ask/limit', ({ learnerId }) => ({ left: reading.aiCallsLeft(learnerId) })),
     route('POST', '/api/selection-help/feedback', ({ body, learnerId }) => reading.feedback(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), value: String(body.value ?? ''), lang: lang(body.lang) })),
 

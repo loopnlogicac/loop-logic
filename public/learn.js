@@ -7,6 +7,7 @@ import { savedStrings, savedEditor } from './saved.js';
 import { mountLab, renderFigure } from './lab-player.js';
 import { codeRunner, runnerStatus } from './runner.js';
 import { adaptiveStrings, adaptiveQuiz } from './adaptive-quiz.js';
+import { readingStyleStrings, readingStyle } from './reading-style.js';
 
 let RUN = { enabled: false, languages: [] };
 
@@ -52,6 +53,8 @@ const t = () => T[getLang()];
 const main = document.getElementById('main');
 Object.assign(T.en, adaptiveStrings.en);
 Object.assign(T.bn, adaptiveStrings.bn);
+Object.assign(T.en, readingStyleStrings.en);
+Object.assign(T.bn, readingStyleStrings.bn);
 const q = new URLSearchParams(location.search);
 const trackId = q.get('track');
 const topicId = q.get('topic');
@@ -173,6 +176,7 @@ async function renderTopic() {
     d.labs.length ? el('span', { class: 'tb lab', text: `◆ ${d.labs.length} ${L.lab}` }) : null,
     d.topic.standards?.minimum ? el('span', { class: 'tb', text: String(d.topic.standards.minimum).toUpperCase() }) : null);
 
+  const rsSlot = el('div', { class: 'rs-slot' });
   const keyPts = d.keyPoints.length ? el('section', { class: 'tut-extra key' }, el('h2', { text: L.keyPoints }), el('ul', {}, ...d.keyPoints.map((k) => el('li', { text: k })))) : null;
   const videos = d.videos.length ? el('section', { class: 'tut-extra' }, el('h2', { text: L.videos }), el('ul', { class: 'tut-links' }, ...d.videos.map((v) => el('li', {}, el('a', { href: tr.course ? `/watch.html?course=${tr.course}&v=${v.videoId}` : `https://www.youtube.com/watch?v=${v.videoId}`, text: `▶ ${v.title}` }))))) : null;
   const refs = d.references.length ? el('section', { class: 'tut-extra' }, el('h2', { text: L.refs }), el('ul', { class: 'tut-links' }, ...d.references.map((r) => el('li', {}, el('a', { href: r.url, target: '_blank', rel: 'noopener', text: r.title }))))) : null;
@@ -188,9 +192,10 @@ async function renderTopic() {
           el('div', { class: 'tut-title-top' }, meta, el('div', { class: 'tut-mini-pager' },
             d.prev ? el('a', { class: 'btn ghost small', href: href(d.track.id, d.prev.id), title: d.prev.title, text: `← ${L.prev}` }) : null,
             d.next ? el('a', { class: 'btn primary small', href: href(d.track.id, d.next.id), title: d.next.title, text: `${L.next} →` }) : null)),
-          el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary })),
+          el('h1', { text: d.topic.title }), el('p', { class: 'lead', text: d.topic.summary }), rsSlot),
         checks.before, langNote, toc, el('div', { id: 'ad-side', class: 'ad-slot' }), body, el('div', { id: 'ad-inline', class: 'ad-slot' }), keyPts, checks.after, quiz, practice, exam, videos, refs, studyPlan(L, { track: d.track.id, topic: d.topic.id }), pager)));
   fillAdSlots();
+  readingStyle({ body, track: d.track.id, topic: d.topic.id, keyPoints: d.keyPoints, L }).then((bar) => rsSlot.replaceWith(bar)).catch(() => rsSlot.remove());
   api('POST', '/api/learn-activity', { kind: 'view', track: d.track.id, topic: d.topic.id }).catch(() => {});
   main.querySelector('.tut-title').after(savedEditor(`tutorial:${d.track.id}:${d.topic.id}`, L));
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();

@@ -76,6 +76,17 @@ const readJsonFile = (f: string): Json | null => { try { return JSON.parse(readF
 const pick = <T extends Json>(o: T | undefined, lang: Lang): string => (o ? (o[lang] || o.en || '') : '');
 const TRY_NOW: Record<string, string> = { c: LANGUAGES.c.url, python: LANGUAGES.python.url, java: LANGUAGES.java.url };
 /** Languages the in-page runner accepts. SQL needs a MySQL setup and package-using Python needs numpy etc., so those keep "Try now". */
+/** A topic body split at its <h2> headings: section id → heading and plain text (sections under 40 characters are skipped). */
+export function splitSections(html: string | null): Map<string, { title: string; text: string }> {
+  const out = new Map<string, { title: string; text: string }>();
+  for (const h of (html ?? '').split(/(?=<h2\b)/)) {
+    const id = /<h2[^>]*id="([^"]+)"/.exec(h)?.[1] ?? 'intro';
+    const text = textOf(h.replace(/<h2[\s\S]*?<\/h2>/, ' '));
+    if (text.length > 40) out.set(id, { title: textOf(/<h2[^>]*>([\s\S]*?)<\/h2>/.exec(h)?.[1] ?? ''), text });
+  }
+  return out;
+}
+
 export const RUN_LANGS = new Set(['c', 'cpp', 'java', 'python']);
 const canRun = (language: string, e: Json) => RUN_LANGS.has(language) && !(Array.isArray(e.requires) && e.requires.length) && e.runMode !== 'compile-only' && !e.setup;
 
@@ -478,15 +489,7 @@ export class TutorialService {
   private searchIndex(): TutorialIndex {
     if (this.index) return this.index;
     const bi = (o: unknown): SearchBi => typeof o === 'string' ? { en: o, bn: null } : { en: String((o as Json)?.en ?? ''), bn: (o as Json)?.bn ? String((o as Json).bn) : null };
-    const split = (html: string | null) => {
-      const out = new Map<string, { title: string; text: string }>();
-      for (const h of (html ?? '').split(/(?=<h2\b)/)) {
-        const id = /<h2[^>]*id="([^"]+)"/.exec(h)?.[1] ?? 'intro';
-        const text = textOf(h.replace(/<h2[\s\S]*?<\/h2>/, ' '));
-        if (text.length > 40) out.set(id, { title: textOf(/<h2[^>]*>([\s\S]*?)<\/h2>/.exec(h)?.[1] ?? ''), text });
-      }
-      return out;
-    };
+    const split = splitSections;
     const docs: SectionInput[] = [];
     for (const t of this.tracks.values()) {
       for (const x of t.topics.values()) {
@@ -538,6 +541,42 @@ export class TutorialService {
         text: say(h.text).slice(0, 1500),
       })),
     };
+  }
+
+  /** What the AI Teacher reads, per visible track (the public Trusted sources page). */
+  sourceStats(lang: Lang) {
+    const per = this.searchIndex().sectionsByTrack();
+    const tracks = [...this.tracks.values()].filter((t) => !this.hidden.has(t.id))
+      .sort((a, b) => (TRACK_INFO[a.id]?.order ?? 99) - (TRACK_INFO[b.id]?.order ?? 99))
+      .map((t) => ({ id: t.id, title: TRACK_INFO[t.id]?.title[lang] ?? t.id, topics: t.topics.size, bangla: [...t.topics.values()].filter((x) => x.bodyBn).length, sections: per.get(t.id) ?? 0 }));
+    const sum = (k: 'topics' | 'bangla' | 'sections') => tracks.reduce((n, t) => n + t[k], 0);
+    return { tracks, topics: sum('topics'), bangla: sum('bangla'), sections: sum('sections') };
+  }
+
+  /**
+   * One section of a topic as plain text, in the page language when a Bangla
+   * version exists (English otherwise). Null when the section does not exist.
+   */
+  sectionText(trackId: string, topicId: string, sectionId: string, lang: Lang): { title: string; text: string; textEn: string; sourceLang: Lang; topicTitle: string } | null {
+    const x = this.hidden.has(trackId) ? undefined : this.tracks.get(trackId)?.topics.get(topicId);
+    if (!x) return null;
+    const en = splitSections(x.bodyEn).get(sectionId);
+    if (!en) return null;
+    const bn = lang === 'bn' ? splitSections(x.bodyBn).get(sectionId) : undefined;
+    return { title: bn?.title ?? en.title, text: (bn?.text ?? en.text).slice(0, 3000), textEn: en.text.slice(0, 3000), sourceLang: bn ? 'bn' : 'en', topicTitle: pick(x.json.title, lang) };
+  }
+
+  /** One quiz question of a topic, without its answer (the quick check before an explanation). */
+  checkQuestion(trackId: string, topicId: string, lang: Lang, seed = '') {
+    const x = this.hidden.has(trackId) ? undefined : this.tracks.get(trackId)?.topics.get(topicId);
+    const qs = ((x?.json.quiz ?? []) as Json[]).filter((q) => q.type !== 'code' && Array.isArray(q.options) && q.options.length >= 2 && !q.figure);
+    if (!x || !qs.length) return null;
+    // Prefer an easy or medium question; the seed picks one so the same learner sees the same one.
+    const pool = qs.filter((q) => q.difficulty !== 'hard').length ? qs.filter((q) => q.difficulty !== 'hard') : qs;
+    let h = 0;
+    for (const ch of `${seed}:${topicId}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const q = pool[h % pool.length]!;
+    return { id: String(q.id), prompt: String(q.prompt), options: (q.options as unknown[]).map(String), code: q.code ? String(q.code) : null };
   }
 
   /** Site-wide section search (all reviewed tutorials), for tests and tools. */

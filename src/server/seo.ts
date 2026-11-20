@@ -23,6 +23,7 @@ const STATIC: Record<string, { title: string; description: string }> = {
   '/courses.html': { title: `Video courses · ${SITE}`, description: 'Free video courses from the Loop & Logic YouTube channel, organised by subject, plus paid courses with free samples.' },
   '/paid-courses.html': { title: `Premium courses · ${SITE}`, description: 'Premium Loop & Logic video courses you can buy with bKash or Nagad, with free sample videos to watch first.' },
   '/office.html': { title: `Virtual Office · ${SITE}`, description: 'Internship practice in a simulated software company: role-based messages, incomplete and conflicting instructions, and an AI assistant that is sometimes wrong. Learn to ask the right questions and check the work.' },
+  '/sources.html': { title: `Trusted sources · ${SITE}`, description: 'Everything the Loop & Logic AI Teacher may answer from: reviewed tutorials, reviewed notes and a short list of approved websites, and how every answer is checked.' },
   '/pricing.html': { title: `Pricing · ${SITE}`, description: 'What is free on Loop & Logic and what the paid plans add.' },
   '/blog.html': { title: `Blog · ${SITE}`, description: 'News, study guides and announcements from Loop & Logic.' },
   '/privacy.html': { title: `Privacy policy · ${SITE}`, description: 'What Loop & Logic collects, why, and the choices you have.' },
