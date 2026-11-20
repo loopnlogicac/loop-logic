@@ -1,0 +1,60 @@
+<h2 id="introduction">একই গঠনের উত্তর মেলাও</h2>
+<p class="lead">দুই office বিভাগ ID-এর list দিল, একটি শিক্ষার্থী থেকে, অন্যটি শিক্ষক থেকে। সব occurrence, প্রতিটি ID একবার, শুধু common ID বা দ্বিতীয়টিতে নেই এমন ID চাইতে পারো। একই ইনপুটে চার আলাদা প্রশ্ন।</p>
+<p><dfn>Set operation</dfn> একই অবস্থানের কলাম মিলিয়ে পুরো ফল মেলায়। জয়েন-এর মতো related রেকর্ড পাশাপাশি নয়; একই shape-এর রো যোগ, common অংশ বা বিয়োগ করে। আগে compatible list একটির নিচে আরেকটি রাখো, তারপর repetition-এর নীতি ভাবো।</p>
+<p>SQL ফল-এ সাধারণত রো repeat চলে; একে bag বা multiset বলে। Mathematical set এক মান একবার রাখে। মানুষ গোনা, attendance মেলানো বা financial activity-তে এই পার্থক্য জরুরি।</p>
+<p>আট শিক্ষার্থী ও চার শিক্ষক বারো বিভাগ occurrence দেয়। Distinct বিভাগ শুধু তিন। রেকর্ড নাকি পরিচয় গুনছ বললে বারো ও তিন দুটোই অর্থপূর্ণ।</p>
+<h2 id="syntax">অপারেটর-এর আগে কলাম মেলাও</h2>
+<p>দুই কোয়েরির কলাম সংখ্যা সমান ও position-প্রতি type compatible চাই। নাম matching ঠিক করে না। প্রথমটি student_id,section_id দিলে দ্বিতীয়টিতেও ওই অর্থ ওই ক্রমে চাই।</p>
+<p>আউটপুট নাম প্রথম কোয়েরি block থেকে আসে। সেখানেই useful alias দাও; শেষে ORDER BY-তে নাও। শেষ সর্ট পুরো combined ফল-এর; ইনপুট block সর্ট final অর্ডার-এর প্রতিশ্রুতি নয়।</p>
+<p>ALL না বললে UNION DISTINCT। দুই ইনপুটের duplicate complete রো সরায়। UNION ALL সব occurrence রাখে। Student-এ এক বিভাগ চারবার, শিক্ষক-এ দুবার হলে UNION এক, ALL ছয় রাখে।</p>
+<p>INTERSECT দুই পাশেই থাকা রো, EXCEPT left-এ আছে right-এ নেই এমন রো রাখে। ডিফল্ট DISTINCT। ALL form সংখ্যা rule অনুযায়ী multiplicity রাখে, arbitrary duplicate copy নয়।</p>
+<p>মিশ্র অপারেটর-এ parentheses দাও। MySQL-এ INTERSECT-এর precedence UNION ও EXCEPT থেকে বেশি। গুরুত্বপূর্ণ eligibility বুঝতে reader-কে precedence মুখস্থ করতে হবে না। অন্য SQL পণ্য-এ নিতেও গ্রুপিং সাহায্য করে।</p>
+<pre><code class="language-sql">(&lt;left_query&gt;)
+INTERSECT
+(&lt;right_query&gt;)
+ORDER BY &lt;combined_columns&gt;;</code></pre>
+<h2 id="how-it-works">পুরো রো ও occurrence গোনো</h2>
+<p>INTERSECT DISTINCT-এ দুই ইনপুটের common complete রো একবার। ফল থাকা registered শিক্ষার্থী দুই ID-list-এ থাকে। অনেক ফল থাকলেও intersection-এর পরে ID একবার।</p>
+<p>EXCEPT DISTINCT-এ distinct left candidate থেকে right member সরাও। Enrolled minus ফল-এ Sadia 107। Fahim enrollment-এই নেই, তাই এই subtraction-এর candidate নয়। Students minus enrollments অন্য প্রশ্নে Fahim পায়।</p>
+<p>INTERSECT ALL ছোট occurrence সংখ্যা রাখে। Department 1 শিক্ষার্থী-এ চার, শিক্ষক-এ দুই—দুই টেকে। Department 2,3-এ দুই বনাম এক—এক করে টেকে। মোট চার রো।</p>
+<p>EXCEPT ALL left সংখ্যা থেকে right সংখ্যা বিয়োগ, সর্বনিম্ন zero। তিন CSE থেকে দুই গেলে এক; উল্টোতে zero। Difference directional; compatible ইনপুট-এ union-intersection membership symmetric।</p>
+<p>Set duplicate comparison-এ দুই NULL সমান ধরা হয়। সাধারণ predicate-এর <code>NULL = NULL</code> তবু unknown। Hometown উদাহরণে shared NULL একবার intersection-এ টেকে।</p>
+<p>সব projected কলাম মেলানো হয়। department_id-এর সঙ্গে student_name দিলে deduplicated পরিচয় বদলায়। CSE-র দুই আলাদা নাম আলাদা complete রো। আগে projection, পরে operation। Wide রো-তে DISTINCT নিজে narrow পরিচয়-এর উত্তর নয়।</p>
+<table class="ref">
+<caption>দুইপাশের বিভাগ occurrence</caption>
+<thead><tr><th scope="col">Department</th><th scope="col">Student</th><th scope="col">শিক্ষক</th><th scope="col">INTERSECT ALL</th><th scope="col">EXCEPT ALL</th></tr></thead>
+<tbody>
+<tr><td>CSE</td><td>4</td><td>2</td><td>2</td><td>2</td></tr>
+<tr><td>MAT</td><td>2</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>EEE</td><td>2</td><td>1</td><td>1</td><td>1</td></tr>
+</tbody>
+</table>
+<h2 id="examples">Native ও সমতুল্য rewrite তুলনা করো</h2>
+<p>Department union আগে directory, পরে contribution list হিসেবে পড়ো। Native সিনট্যাক্স-এর পাশে EXISTS বিকল্প আছে। নাম মেলে বলে population সমান ভেবো না; actual ID তুলনা করো।</p>
+<p>Native ও rewritten enrollment রিপোর্ট-এ ইচ্ছা করে one-কলাম projection। Nullable multi-কলাম-এ faithful rewrite-এর প্রতিটি কলাম null-safe মিলবে। Rewrite থেকে DISTINCT বাদ দিলে left repetition থাকে, ডিফল্ট native অপারেটর-এর সমান নয়।</p>
+<h3>Distinct আর repeated membership</h3>
+<p>UNION তিন বিভাগ দেয়। UNION ALL বারো, কারণ আট শিক্ষার্থী ও চার শিক্ষক আলাদা contribution।</p>
+<div data-example="ex-1"></div>
+<h3>Enrollment-ফল দুটোই আছে</h3>
+<p>দুই ভার্সন-এ 101 থেকে 106। পুরোনো EXISTS ভার্সন-এর DISTINCT repeated enrollment সরায়।</p>
+<div data-example="ex-2"></div>
+<h3>Recorded mark-ধারী বাদ</h3>
+<p>Sadia 107 ভর্তি, ফল নেই। Fahim left ইনপুট-এই নেই, তাই এই difference-এ আসবে না।</p>
+<div data-example="ex-3"></div>
+<h3>NULL match আর multiplicity</h3>
+<p>প্রথম intersection-এ NULL ও Dhaka। INTERSECT ALL-এ দুই CSE, MAT ও EEE একটি করে।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">Membership ও matching pair মেশাবে না</h2>
+<h3>Pair সংখ্যা আর set সংখ্যা আলাদা</h3>
+<p>সঠিক projection ও duplicate policy-তে inner জয়েন distinct intersection নকল করতে পারে। কিন্তু repeated value-তে সব pair হয়: তিন left ও দুই right-এ ছয়, INTERSECT ALL রাখত দুই। Multiplicity-এর প্রশ্ন আলাদা।</p>
+<p>Matched-side কী non-NULL হলে anti-জয়েন distinct difference নকল করতে পারে। Nullable projection-এ NOT EXISTS সহজ। NULL-NULL match চাইলে MySQL-এর <code>&lt;=&gt;</code> নাও। Ordinary equality কিছু rewrite-এ ভুল করে missing value রেখে দেয়।</p>
+<h3>Duplicate removal অর্থের পছন্দ</h3>
+<p>বড় আউটপুট ছোট করতে UNION ALL-এর বদলে UNION দেবে না। একই displayed ফিল্ড-এর দুটি সত্য ট্রানজ্যাকশন-ও রাখতে হতে পারে। উল্টোভাবে town directory-তে ALL ভুল। Deduplication cost-এর আগে অর্থ বাছো।</p>
+<p>Type মেলে বলেই সম্পর্কহীন মান মেশাবে না। Marks ও পণ্য stock মিশিয়ে compatible number list হলেও কাজের অর্থ নেই। Compatibility technical requirement, useful রিপোর্ট-এর প্রমাণ নয়।</p>
+<h2 id="best-practices">Population ও repetition-এর নীতি বলো</h2>
+<p>প্রতিটি ইনপুটের ফিল্টার ও projection এক বাক্যে বলো। Repetition দরকার কি না বলো। Eligibility-তে membership, event accounting-এ প্রতিটি occurrence সাধারণত জরুরি। লম্বা ফলের আগেই এতে ভুল ধরা পড়ে।</p>
+<p>Mixed operation parentheses-এ রাখো; পুরো expression-এর পরে এক final ORDER BY। Displayed রো আলাদা করতে যথেষ্ট কলাম দাও। Identical duplicate-এ বাড়তি tie-breaker লাগে না; বদলালেও দেখা যায় না।</p>
+<h2 id="version-notes">Native সিনট্যাক্স-এর minimum ভার্সন জানো</h2>
+<p>UNION ও ALL পুরোনো MySQL-এও আছে। Native INTERSECT,EXCEPT ও ALL form MySQL 8.0.31 থেকে। তাই native উদাহরণে সেটি লাগে। আগের 8.0-তে দেখানো DISTINCT+EXISTS/NOT EXISTS এবং যথাযথ NULL matching নাও।</p>
+<h2 id="summary">মেলানোর আগে পরিচয় ঠিক করো</h2>
+<p>Set অপারেটর complete projected রো তুলনা করে; ALL occurrence সংখ্যা মেলানো বদলায়। বিশেষ করে directional difference-এ candidate population মনে রাখো। এরপর <a href="topic:db-views">ভিউ</a>-তে reusable কোয়েরি interface ও আপডেট-access-এর আলাদা প্রশ্ন দেখো।</p>

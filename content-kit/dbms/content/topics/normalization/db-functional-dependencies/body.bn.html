@@ -1,0 +1,40 @@
+<h2 id="introduction">এক মান থেকে কী নির্ধারিত হয়?</h2>
+<p class="lead">একই বিভাগ number-এর দুই শিক্ষার্থী ধরো। ওই number একটি বিভাগ বোঝালে দুই রো-তে বিভাগ নাম একই হতে হবে। <dfn>Functional dependency</dfn> বা FD এই প্রতিশ্রুতি বলে। বড় টেবিল ভাঙার আগে কোন তথ্য একসঙ্গে থাকবে তা ঠিক করতে এটি লাগে।</p>
+<p>X → Y মানে X সমান হলে Y-ও সমান চাই। X ও Y attribute-এর set। আনুষ্ঠানিকভাবে X-এর প্রতিটি attribute-এ মেলা দুই tuple-কে Y-এর প্রতিটিতেও মিলতে হবে। ভিন্ন X-এ একই Y হতে পারে। Student number নাম ঠিক করে, কিন্তু নাম এক শিক্ষার্থী চেনাবে এমন নয়।</p>
+<p>Dependency requirement থেকে আসে। আটজনের আলাদা hometown দেখে hometown → student_id প্রমাণ হয় না; কাল আরেকজন Dhaka থেকে আসতে পারে। দুটি conflicting রো প্রস্তাবিত FD ভুল দেখাতে পারে, কিন্তু sample ভবিষ্যতের সব ডেটার নিয়ম প্রমাণ করে না। Registrar-এর কাছে জিজ্ঞেস করো সবসময় কী সত্য থাকবে।</p>
+<p>Classical FD-তে ordinary value ও set semantics-এর relation নেওয়া হয়। SQL-এ NULL ও duplicate থাকতে পারে, তাই mapping সাবধানে করো। নিয়ম অনুযায়ী primary কী, NOT NULL, uniqueness ও foreign কী দাও। Nullable UNIQUE কলাম নিজে classical candidate কী নয়।</p>
+
+<h2 id="how-it-works">Armstrong axiom দিয়ে implication বোঝো</h2>
+<p>তিনটি basic inference rule sound: মূল প্রতিশ্রুতি ভাঙে এমন dependency তৈরি করে না। FD-এর জন্য complete-ও: বারবার প্রয়োগে সব implied FD পাওয়া যায়। সব implication লিখতে হয় না। Attribute closure একই যুক্তিকে ছোট গণনায় আনে।</p>
+<table class="ref"><thead><tr><th scope="col">Rule</th><th scope="col">দেওয়া</th><th scope="col">পাবে</th><th scope="col">অর্থ</th></tr></thead><tbody><tr><td>Reflexivity</td><td>Y ⊆ X</td><td>X → Y</td><td>Set জানলে তার অংশ জানা</td></tr><tr><td>Augmentation</td><td>X → Y</td><td>XZ → YZ</td><td>দুইপাশে একই extra attribute</td></tr><tr><td>Transitivity</td><td>X → Y আর Y → Z</td><td>X → Z</td><td>Determination chain ধরো</td></tr></tbody></table>
+<p>Union ও decomposition উপকারী derived rule। X → Y ও X → Z থেকে X → YZ; আবার যৌথ ডান পাশ থেকে আলাদা অংশ পাওয়া যায়। Pseudotransitivity-তে X → Y ও YW → Z থেকে XW → Z। W সঙ্গে রাখতে হবে; শুধু X থেকে তা নাও আসতে পারে।</p>
+<p>X+ বের করতে X দিয়ে শুরু করো। FD ঘুরে দেখো; বাম পাশ current set-এ থাকলে ডান পাশ যোগ করো। নতুন attribute আগের rule চালু করতে পারে বলে আবার scan করো। আর কিছু না বাড়লে থামো। তখন Y পুরো X+-এ থাকলেই X → Y আসে।</p>
+
+<h2 id="worked-examples">কী খোঁজো, cover সহজ করো</h2>
+<h3>Registration কী ধাপে ধাপে</h3>
+<p>R(S,C,N,T,D,H)-তে শিক্ষার্থী, কোর্স, শিক্ষার্থী নাম, কোর্স title, বিভাগ ও বিভাগ নাম ধরো। F = {S → ND, D → H, C → T}। এই মডেলে শিক্ষার্থী-কোর্স জোড়ায় সর্বোচ্চ একটি registration। ডান পাশে S বা C নেই, তাই অন্য attribute থেকে কোনোটিই পাওয়া যায় না। সব candidate কী-তে দুটোই চাই।</p>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">জানা attribute</th><th scope="col">কারণ</th></tr></thead><tbody><tr><td>0</td><td>S,C</td><td>SC দিয়ে শুরু</td></tr><tr><td>1</td><td>S,C,N,D</td><td>S → ND</td></tr><tr><td>2</td><td>S,C,N,D,H</td><td>D → H</td></tr><tr><td>3</td><td>S,C,N,D,H,T</td><td>C → T</td></tr></tbody></table>
+<p>তাই SC superkey। S+ = SNDH-এ C,T নেই; C+ = CT-তে S,N,D,H নেই। একটি বাদ দিলেই ব্যর্থ, তাই SC minimal এবং একমাত্র candidate কী। SCN superkey হলেও candidate কী নয়; বাড়তি নাম পরিচয়ে সাহায্য করে না।</p>
+<h3>কী-র size আলাদা হতে পারে</h3>
+<p>R(A,B,C)-তে A → BC ও BC → A হলে A+ এবং BC+ দুটোই ABC। B+ ও C+ নিজে বাড়ে না। Candidate কী A ও BC। শুধু সবচেয়ে কম কলামের কী খুঁজবে না; minimal মানে কোনো proper subset superkey নয়, সবার চেয়ে ছোট মাপ নয়।</p>
+<h3>Canonical cover কমাও</h3>
+<p>F = {A → BC, B → C, A → B, AB → D, D → E} নাও। ডান পাশ ভাঙলে A → B, A → C, B → C, A → B, AB → D, D → E। Duplicate A → B সরাও। AB → D-তে B বাড়তি কি না current FD-তে A+ করো: A থেকে B, তারপর AB থেকে D। তাই A → D করা যায়। A বাদ দেওয়া যায় না; B+ থেকে D আসে না।</p>
+<p>এবার A → C সরিয়ে redundancy পরীক্ষা করো। A থেকে এখনও B, B থেকে C পাওয়া যায়; তাই rule বাড়তি। Singleton cover G = {A → B, B → C, A → D, D → E}। G-এর সব rule F থেকে আসে। উল্টোভাবে union ও augmentation-এ G থেকে A → BC ও AB → D আসে; তাই equivalent।</p>
+<p>প্রতিটি বাকি rule সরিয়ে তার বাম closure দেখো। A → B ছাড়া A থেকে D,E আসে, B নয়। B → C ছাড়া B থেকে C আসে না। A → D ছাড়া A থেকে B,C, কিন্তু D নয়। D → E ছাড়া D থেকে E আসে না। সব বাম পাশ nonempty singleton, তাই আর ছোট নয়। এটি minimal cover। কোনো বই A-এর rule মিলিয়ে A → BD-কে canonical cover বলে; নিজের convention বলো।</p>
+<h3>Cover থেকে decomposition</h3>
+<p>G থেকে AB, BC, AD, DE করো। G-এর অধীনে A+ = ABCDE, তাই A কী এবং AB-তে আছে। প্রতিটি FD একটি component-এ পরীক্ষা করা যায়। B থেকে BC নির্ধারিত বলে AB ও BC জয়েন lossless। তারপর A-তে AD ও D-তে DE জয়েন-ও lossless। সম্পূর্ণ preservation যুক্তি <a href="topic:db-decomposition">decomposition</a>-এ আছে।</p>
+<p>সরল করার ক্রম বদলালে অন্য minimal cover হতে পারে। Printed list-এর সঙ্গে হুবহু মিলের চেয়ে equivalence জরুরি। Closure তুলনা করো এবং সংক্ষিপ্ত অক্ষরের পাশে ব্যবসার অর্থ রাখো। ব্যাখ্যাহীন A → B বাস্তব registration-এর ভুল অনুমান লুকাতে পারে।</p>
+
+<h3>Optional attribute নিয়ম করে খোঁজো</h3>
+<p>কোনো ডান পাশে নেই এমন attribute দিয়ে কী খোঁজা শুরু করো। সেগুলো mandatory; বাকি attribute-এর combination যোগ করে closure করো। কী পেলে তার superset বাদ দাও, কারণ minimal হবে না। এতে সব কী একই মাপ ধরে না নিয়েও search কমে।</p>
+<p>R(A,B,C,D)-তে A → B, C → D হলে A,C mandatory। AC+ সঙ্গে সঙ্গে ABCD, তাই AC একমাত্র candidate কী। B বা D mandatory attribute-এর বদলি নয়; AC-তে যোগ করলে শুধু বড় superkey হয়।</p>
+<h2 id="common-mistakes">উদাহরণ ও স্থায়ী নিয়ম আলাদা করো</h2>
+<h3>Arrow উল্টানো</h3>
+<p>দেওয়া নীতিতে বিভাগ number বিভাগ নাম ঠিক করে। নাম unique না হলে উল্টোটি সত্য নয়। একই নাম ও আলাদা number-এর দুই রো দিয়ে উল্টো দাবিটি পরীক্ষা করো।</p>
+<h3>Closure scan আগে থামা</h3>
+<p>FD list-এ S → D-এর আগে D → H থাকলে প্রথম scan-এ সেটি বাদ পড়তে পারে। D যোগের পরে আবার scan করো। লেখা rule-এর ক্রম mathematical closure বদলাতে পারে না।</p>
+<h3>নিজের proof-এ rule রাখা</h3>
+<p>Redundant FD পরীক্ষা করতে closure-এর আগে সেটি সরাও, নইলে নিজেকে নিজেই প্রমাণ করে। বাম attribute বাড়তি কি না দেখতে standard reduced-left closure test নাও, তারপর পুরোনো-নতুন cover পরস্পর imply করে দেখো। দুটি আলাদা প্রশ্ন।</p>
+
+<h2 id="summary">ডিজাইনে প্রতিশ্রুতি ধরে রাখো</h2>
+<p>এখন uniqueness-এর কথা নির্দিষ্ট arrow-তে বলা, closure করা, minimal কী খোঁজা ও dependency সরল করা যায়। প্রতি সমাধানে পুরো heading ও FD set রাখো। এরপর <a href="topic:db-normalization">1NF, 2NF ও 3NF</a>-এ নিয়মগুলো প্রয়োগ করো।</p>

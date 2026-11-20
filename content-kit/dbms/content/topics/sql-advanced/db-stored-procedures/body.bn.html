@@ -1,0 +1,74 @@
+<h2 id="introduction">বারবারের ডেটাবেস কাজের interface দাও</h2>
+<p class="lead">অনেক রিপোর্ট-এ একই registration সংখ্যা বা pass লেবেল লাগে। প্রতিটি caller-এ logic copy করলে পরিবর্তন সমন্বয় কঠিন। Stored routine ডেটাবেসে ওই কাজের নাম দেয়, parameter-এ মান নেয়।</p>
+<p><dfn>Stored procedure</dfn> CALL দিয়ে চলে; অনেক স্টেটমেন্ট, ফল set ও parameter-এ ফেরত মান দিতে পারে। <code>Stored function</code> ঘোষিত একটি scalar ফেরায়, expression-এ বসে। ছোট সিনট্যাক্স নয়, দরকারি interface দেখে বাছো।</p>
+<p>ডেটাবেসে logic রাখলেই দ্রুত বা নিরাপদ নয়। Privilege,ট্রানজ্যাকশন boundary ও এরর handling স্পষ্ট চাই। App ফাংশনের মতো জটিল routine-ও expensive কোয়েরি লুকাতে পারে।</p>
+<p>Registration সংখ্যা, ফল লেবেল ও bounded arithmetic loop দেখব। সংখ্যা shared enrollment নেয়, লেবেল পরিচিত pass boundary মানে। ছোট loop control flow আলাদা করে; টেবিল সারাংশ-তে রো-by-রো-ই সেরা এমন দাবি নয়।</p>
+<h2 id="syntax">ক্লায়েন্ট দিয়ে পুরো definition পাঠাও</h2>
+<p>BEGIN-END-এর ভেতর অনেক semicolon স্টেটমেন্ট থাকে। Mysql ক্লায়েন্ট সাধারণত semicolon-এ submission শেষ করে। DELIMITER বদলে পুরো definition একসঙ্গে পাঠানো যায়।</p>
+<p>DELIMITER সার্ভার SQL নয়। DELIMITER //-এ ক্লায়েন্ট // পর্যন্ত অপেক্ষা করে; ভেতরের semicolon স্বাভাবিক separator। END//-এর পরে DELIMITER ; আগের আচরণ ফেরায়। অনেক driver পুরো definition সরাসরি পাঠায়, DELIMITER কমান্ড বোঝে না।</p>
+<p>CREATE PROCEDURE নাম ও parameter বলে। IN মান দেয়, OUT ফেরায়, INOUT দুটোই। OUT/INOUT-এর writable receiver হিসেবে @registrations-এর মতো session variable নেওয়া হয়।</p>
+<p>CREATE FUNCTION-এ RETURNS type-ও লাগে; RETURN compatible মান দেবে। Procedure-এর মতো OUT list নয়, expression-এ scalar ফেরে। তাই pass_label SELECT-এ marks-এর পাশে মানায়।</p>
+<p>SQL SECURITY INVOKER-এ owner-এর ক্ষমতা ধার না দিয়ে caller privilege লাগে। EXECUTE এবং invoker-এর দরকারি underlying right দুটোই চাই। Interface ও effective security context review করো।</p>
+<pre><code class="language-sql">DELIMITER //
+CREATE PROCEDURE &lt;name&gt;(IN &lt;input_name&gt; INT, OUT &lt;output_name&gt; INT)
+SQL SECURITY INVOKER
+BEGIN
+    DECLARE &lt;local_name&gt; INT DEFAULT 0;
+    &lt;statements_using_parameters_and_locals&gt;;
+END//
+DELIMITER ;</code></pre>
+<h2 id="how-it-works">Parameter ও local state অনুসরণ করো</h2>
+<p>101 দিয়ে count_registrations ডাকলে p_student_id-তে 101 যায়। COUNT(*) তিন হিসাব করে OUT-এ রাখে। CALL শেষে @registrations মান পায়। আলাদা SELECT দেখায়; procedure-কে নিজে ফল set দিতে হয় না।</p>
+<p>108-এর enrollment নেই। GROUP BY ছাড়া COUNT একটি zero রো দেয়, তাই OUT zero। সাধারণ SELECT INTO-তে রো না এলে আগের variable মান থেকে যেতে পারে, আলাদা handling চাই। Aggregate shape contract সহজ করে।</p>
+<p><code>Local variable</code> নিজের BEGIN-END block-এ থাকে। Executable স্টেটমেন্ট-এর আগে DECLARE; DEFAULT শুরু করে, SET বদলায়। v_count local, @session_variable কানেকশন-এর; routine শেষেও থাকতে পারে।</p>
+<p>p_student_id ইনপুট, v_count local, student_id কলাম—আলাদা prefix ambiguity কমায়। নইলে student_id = student_id ভুল object মেলিয়ে সবাইকে গুনতে পারে। কলাম alias-সহ লেখো।</p>
+<p>IF ক্রমে শর্ত দেখে। result_status আগে recorded ফল গোনে; zero-তে no results, নইলে recorded। এটি presence, academic success নয়। Fail grade-ও recorded, pending নয়।</p>
+<p>ফাংশন 40-এর সঙ্গে তুলনার আগে NULL দেখে। NULL comparison unknown বলে explicit pending branch দরকার। জানা mark-এ অন্তত 40 pass, নিচে fail। এটি লেবেল, টেবিল কনস্ট্রেইন্ট দিয়ে mark validation-এর বিকল্প নয়।</p>
+<p>WHILE-এ v_step এক, p_total zero। প্রতি ধাপে current step যোগ, তারপর increment। Limit চার হলে মোট 1,3,6,10। Zero-তে প্রথম শর্ত false, কোনো iteration নেই।</p>
+<p>শুরুর আগেই NULL,negative বা 100-এর বেশি limit প্রত্যাখ্যান করে। এতে কাজ ও integer ফল বাঁধা। SQLSTATE 45000-সহ SIGNAL app-defined failure দেয়। Timeout পর্যন্ত অযৌক্তিক loop চালানোর চেয়ে স্পষ্ট validation ভালো।</p>
+<table class="ref">
+<caption>Limit চার দিয়ে sum_steps trace</caption>
+<thead><tr><th scope="col">ধাপ</th><th scope="col">ব্যবহৃত v_step</th><th scope="col">পরের p_total</th></tr></thead>
+<tbody>
+<tr><td>শুরু</td><td>এখনও যোগ হয়নি</td><td>0</td></tr>
+<tr><td>প্রথম</td><td>1</td><td>1</td></tr>
+<tr><td>দ্বিতীয়</td><td>2</td><td>3</td></tr>
+<tr><td>তৃতীয়</td><td>3</td><td>6</td></tr>
+<tr><td>চতুর্থ</td><td>4</td><td>10</td></tr>
+<tr><td>পরের শর্ত</td><td>5 limit পেরোয়</td><td>10-এ শেষ</td></tr>
+</tbody>
+</table>
+<h2 id="examples">সাধারণ ও সীমার call দেখো</h2>
+<p>সংখ্যা routine-এ বহু enrollment ও zero enrollment দুটো call আছে। IF উদাহরণ recorded ও pending আলাদা করে। Source টেবিল আলাদা; এক অস্পষ্ট status-এ মিশিও না।</p>
+<p>Loop local state ও progress, scalar ফাংশন expression ও NULL boundary দেখায়। INOUT caller-এর মান নিয়ে বদলে ফেরায়। শুরুর-শেষের মান পড়ে direction বোঝো।</p>
+<p>SQL ডেটা work-এ set-based স্টেটমেন্ট পরিষ্কার হলে সেটি নাও। রো ধরে procedural loop-এর চেয়ে SUM সাধারণত ভালো। Control flow decision ও workflow-তে লাগে; loop শিখলেই ডিফল্ট রিপোর্ট tool নয়।</p>
+<h3>OUT-এ সংখ্যা</h3>
+<p>Ayesha-র OUT 3, Fahim-এর 0। CALL-এর পরে session variable পায়।</p>
+<div data-example="ex-1"></div>
+<h3>IF আর local variable</h3>
+<p>Sadia-র local সংখ্যা zero, তাই no results। Pending mark-কে zero বানায় না।</p>
+<div data-example="ex-2"></div>
+<h3>WHILE-এ bounded হিসাব</h3>
+<p>1+2+3+4 = 10। Validation কাজ বাঁধে; increment এগোতে দেয়।</p>
+<div data-example="ex-3"></div>
+<h3>ফাংশন থেকে scalar</h3>
+<p>MAT 101-এর 72,90 pass; 39 fail। আলাদা NULL call pending, fail নয়।</p>
+<div data-example="ex-4"></div>
+<h3>INOUT-এ adjust</h3>
+<p>20.00 ইনপুট 35.00 হয়ে ফেরে। INOUT পুরোনো মান পড়ে নতুন মান পাঠায়।</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">Routine ও ট্রানজ্যাকশন boundary আলাদা</h2>
+<h3>CALL atomicity ঠিক করে না</h3>
+<p>CALL সাধারণ procedure-এর সব স্টেটমেন্ট নিজে এক ট্রানজ্যাকশন করে না। Autocommit ও explicit ট্রানজ্যাকশন না থাকলে আপডেট আলাদা commit হতে পারে। এক unit চাইলে caller-routine contract স্পষ্ট করো।</p>
+<p>Caller-এর ট্রানজ্যাকশন হঠাৎ procedure COMMIT করবে না। উল্টোভাবে caller জানে ধরে নিও না routine boundary শুরু/শেষ করে। দায় লিখে দাও। ফাংশন ও trigger-এর বাড়তি restriction আছে; procedure-এর মতো সাধারণ ট্রানজ্যাকশন control নয়।</p>
+<h3>Progress আর declaration promise</h3>
+<p>শর্ত variable না বদলালে loop অনন্ত হতে পারে। শর্ত,body,আপডেট আলাদা আঁকো। প্রতিটি path progress বা deliberate exit-এ যাবে। Validation সাহায্য করে, missing increment সারায় না।</p>
+<p>DETERMINISTIC একই ইনপুট-এ একই ফল-এর দাবি। MySQL সব execution দেখে প্রমাণ করে না। Pass-লেবেল শুধু parameter-নির্ভর, টেবিল পড়ে না বলে NO SQL ঠিক। Changing রো পড়া ফাংশন-এ অন্ধভাবে copy করবে না।</p>
+<p>Binary logging চালুতে ফাংশন creation-এ extra privilege বা সেটিং লাগতে পারে। Failure administrative policy, মিথ্যা behavior declaration-এর অনুমতি নয়। Actual access ও determinism বলে DBA-র সঙ্গে authority মেটাও।</p>
+<h2 id="best-practices">ছোট ও স্পষ্ট চুক্তি রাখো</h2>
+<p>Domain-মেলা parameter type নাও, unsupported ইনপুট আগে reject করো। Empty case-সহ লেবেল/সংখ্যা-এর অর্থ বলো। Routine ও আউটপুট নাম নির্দিষ্ট রাখো, যেন body না পড়েও caller বোঝে।</p>
+<p>সব app কোড সার্ভার-এ সরিয়ে নয়, কয়েকটি purposeful routine নাও। টেবিল বা পারমিশন বদলালে dependency review করো। Definition stored থাকলেও পুরোনো assumption ভুল হতে পারে; versioned schema change-এ routine-ও ধরো।</p>
+<h2 id="version-notes">ক্লায়েন্ট সিনট্যাক্স ও সার্ভার ফিচার আলাদা</h2>
+<p>এই ফিচার MySQL 8.0/8.4-এ আছে। DELIMITER mysql ক্লায়েন্ট-এর; অন্য tool-এ submission মানাও। Shared CHECK 8.0.16 চায়। ফাংশন creation পারমিশন binary-log সেটিং-এও নির্ভর করে।</p>
+<h2 id="summary">Interface বেছে প্রতিটি মান বোঝো</h2>
+<p>Callable multi-step কাজে procedure, scalar expression-এ ফাংশন নাও। Local ও session state আলাদা, loop bounded ও ট্রানজ্যাকশন owner স্পষ্ট রাখো। রো change-এ automatic আচরণের জন্য <a href="topic:db-triggers">trigger</a> দেখো।</p>

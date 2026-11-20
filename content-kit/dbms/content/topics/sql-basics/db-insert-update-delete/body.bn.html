@@ -1,0 +1,59 @@
+<h2 id="introduction">যে রেকর্ড বদলাতে চাও সেটিই বদলাও</h2>
+<p class="lead">দোকানে তিনটি desk lamp এসেছে; একটি stock বাড়াতে হবে। সব পণ্য বদলে দিলে বড় ভুল। SQL রো change-এ পরিষ্কার target ও ফল যাচাইয়ের উপায় চাই।</p>
+<p>INSERT নতুন রো যোগ করে, UPDATE আগের রো বদলায়, DELETE matching রো সরায়। টেবিলের স্ট্রাকচার-এর ভেতর কাজ হয়। কনস্ট্রেইন্ট চালু থাকে, তাই নিয়ম ভাঙা ইনসার্ট বা আপডেট প্রত্যাখ্যাত হতে পারে।</p>
+<p>Shop রেকর্ড-এ customer, catalogue পণ্য, অর্ডার, item line ও পেমেন্ট আলাদা করো। কোন তথ্য বদলাবে তা টেবিল ঠিক করে। পরে catalogue price বদলালেই পুরোনো অর্ডার-এর সম্মত দাম বদলাবে না।</p>
+<h2 id="syntax">কলাম আর target স্পষ্ট করে লেখো</h2>
+<pre><code class="language-sql">INSERT INTO table_name (column_a, column_b)
+VALUES (value_a, value_b);
+
+UPDATE table_name
+SET column_b = replacement
+WHERE key_column = wanted_key;
+
+DELETE FROM table_name
+WHERE key_column = wanted_key;</code></pre>
+<p>কলাম list মানের অর্থ মিলিয়ে দেয়। UPDATE assignment-এ SET নেয়। DELETE পুরো রো সরায় বলে কলাম list নেই। WHERE সাজানোর জিনিস নয়; কোন আগের রো বদলানোর প্রার্থী তা ঠিক করে।</p>
+<p>একাধিক রো-তে VALUES-এর পরে একাধিক parenthesized গ্রুপ দাও; প্রতিটি কলাম list মেলাবে। IGNORE ছাড়া সাধারণ InnoDB INSERT-এ কনস্ট্রেইন্ট failure হলে ওই স্টেটমেন্ট ব্যর্থ হয়, শুধু বৈধ নতুন রো commit হয় না। আগের স্টেটমেন্ট-এর জন্য এখনও explicit rollback লাগতে পারে।</p>
+<h2 id="how-it-works">আগে দেখো, বদলাও, আবার যাচাই</h2>
+<h3>স্থির পরিচয় দিয়ে target ধরো</h3>
+<p>পণ্য 4 desk lamp। “Study products”-এর মতো একাধিক রো মেলানো বর্ণনার চেয়ে identifier ভালো target। আগে একই শর্তে পরিচয় ও stock পড়ো। তারপর stored value-তে পাওয়া quantity যোগের মতো arithmetic করো।</p>
+<p>মনে রাখা মোট বসালে অন্যের বৈধ adjustment মুছে যেতে পারে। Arithmetic আপডেট ওই stale-value ভুল এড়ায়, যদিও পুরো inventory-তে concurrency rule চাই। Preview উপকারী, কিন্তু lock নয়; অন্য session বদলাবে না তার প্রমাণও নয়।</p>
+<h3>Rollback কোথায় কাজ করে বোঝো</h3>
+<p>START TRANSACTION পরিবর্তনের দল শুরু করে; COMMIT স্থায়ী করে; ROLLBACK uncommitted InnoDB change বাতিল করে। Correction-এ আগে target দেখো, ট্রানজ্যাকশন-এর ভেতর বদলাও, ফল দেখে তারপর commit করো।</p>
+<p>Autocommit সাধারণত চালু। ট্রানজ্যাকশন না খুললে সফল standalone change সঙ্গে সঙ্গে commit হতে পারে। পরে rollback তা ফেরায় না। Correction-এর মাঝে স্ট্রাকচার কমান্ড দেবে না; অনেক DDL implicit commit করে।</p>
+<h3>না থাকা target আর নির্ভরশীল রেকর্ড</h3>
+<p>অনুপস্থিত customer ডিলিট করা বৈধ, শূন্য রো সরে। অনুপস্থিত পণ্য আপডেট-ও শূন্য বদলায়। স্টেটমেন্ট সফল মানেই চাওয়া object পেয়েছে নয়। Target আবার পড়ো এবং ক্লায়েন্ট দিলে affected-রো তথ্য দেখো।</p>
+<p>Foreign কী ডিলিট আটকাতে বা dependent change ঘটাতে পারে। Shop-এ অর্ডার ডিলিট হলে order_items cascade; পেমেন্ট history রক্ষায় অর্ডার deletion restrict। তাই cancel প্রায়ই status change ও নির্দিষ্ট refund process, physical ডিলিট নয়।</p>
+<h3>Safe-আপডেট mode একটি সহায়ক রক্ষাকবচ</h3>
+<p>MySQL SQL_SAFE_UPDATES উপযুক্ত কী restriction বা limit ছাড়া broad UPDATE/DELETE আটকাতে পারে। শেখার সময় কাজে লাগে, তোমার উদ্দেশ্য বিচার করতে পারে না। ভুল পণ্য-এ ঠিক কী দিয়ে আপডেট হলেও guard পার হয়।</p>
+<p>স্টেটমেন্ট ব্যর্থ হলেই safe mode বন্ধ করবে না। আগে কী শর্ত ও প্ল্যান দেখো। Limit-ও কোন business object বদলাবে তা চেনে না; শুধু সংখ্যা বাঁধে। Targeting শুরু object পরিচয় থেকে।</p>
+<table class="ref"><caption>ঘটনাটির অর্থ ঠিক করো</caption><thead><tr><th>ঘটনা</th><th>সম্ভাব্য পরিবর্তন</th><th>Commit-এর আগে দেখো</th></tr></thead><tbody>
+<tr><td>নতুন customer</td><td>INSERT Customer</td><td>নতুন পরিচয়, ফিল্ড ঠিক জায়গায়</td></tr>
+<tr><td>Lamp stock এসেছে</td><td>UPDATE পণ্য stock</td><td>পণ্য কী আর quantity ঠিক</td></tr>
+<tr><td>Cancelled item সরানো</td><td>DELETE OrderItem</td><td>Composite কী-র দুই অংশ মেলে</td></tr>
+<tr><td>পেমেন্টের পরে অর্ডার cancel</td><td>নিয়ন্ত্রিত status আর refund</td><td>আর্থিক ইতিহাস ব্যাখ্যা করা যায়</td></tr>
+</tbody></table>
+<h2 id="examples">ছোট দৃশ্যমান পরিবর্তন করো</h2>
+<h3>এক customer, তারপর দুইজন যোগ</h3>
+<p>দুই ধরনের ইনসার্ট-এই explicit কলাম আছে। Optional phone বাদ দিলে NULL হয়।</p>
+<div data-example="ex-1"></div>
+<h3>খাতার দাম দেখে বদলাও</h3>
+<p>শুধু পণ্য 1-এর দাম 60.00 থেকে 65.00 টাকা হয়। পরীক্ষা স্থায়ী price decision না করতে শেষে rollback।</p>
+<div data-example="ex-2"></div>
+<h3>Composite-কী item line সরাও</h3>
+<p>Cancelled অর্ডার-এর line order_id ও product_id জোড়ায় চেনা হয়। Restore-এর আগের সংখ্যা কোন dependent তথ্য সরে গেছে দেখায়।</p>
+<div data-example="ex-3"></div>
+<h3>Safe mode-এ primary-কী আপডেট</h3>
+<p>শেষ উদাহরণে session guard চালিয়ে lamp stock এক বাড়ানো হয়। কী শর্ত সরাসরি পণ্য চেনে।</p>
+<div data-example="ex-4"></div>
+<h2 id="common-mistakes">সহজে ভুল বোঝা পরিবর্তন</h2>
+<h3>UPDATE-এ WHERE বাদ</h3>
+<p>শর্ত ছাড়া প্রতিটি রো প্রার্থী। একটি পণ্য চাইলে চালানোর আগে থেমে কী দাও। একই শর্তের preview অতিরিক্ত category বা spelling comparison-এর ভুল ধরতে সাহায্য করে।</p>
+<h3>ছোট DELETE ভেবে TRUNCATE</h3>
+<p>TRUNCATE হলো DDL: টেবিল খালি, generated numbering reset ও implicit commit হয়। WHERE নেই; পরে সাধারণ rollback ফেরায় না। নির্বাচিত transactional রো সরাতে DELETE নাও। Reference কনস্ট্রেইন্ট আরও সীমা দিতে পারে।</p>
+<h3>বাদ দেওয়া কলামের ডিফল্ট না জানা</h3>
+<p>Nullable phone বাদ দিলে NULL হওয়া ঠিক হতে পারে। Amount-এ zero ডিফল্ট missing business information লুকাতে পারে। নির্ভর করার আগে ডিফল্ট বোঝো। সিনট্যাক্স ঠিক ইনসার্ট-ও ভুল ঘটনা বলতে পারে।</p>
+<h2 id="version-notes">ট্রানজ্যাকশন আচরণ engine-নির্ভর</h2>
+<div class="callout version"><p>Shared টেবিল MySQL 8.0.16 বা নতুনে InnoDB। Rollback উদাহরণ InnoDB ট্রানজ্যাকশন-এর ওপর নির্ভর করে। Nontransactional engine বা implicit-commit স্ট্রাকচার কমান্ড-এ একই আচরণ ধরে নিও না।</p></div>
+<h2 id="summary">বদলানোর সময় উদ্দেশ্য দৃশ্যমান</h2>
+<p>Explicit কলাম addition পরিষ্কার করে, কী শর্ত change চেনে, ট্রানজ্যাকশন যাচাইয়ের সীমা দেয়। Dependent history রেখো, DELETE ও TRUNCATE আলাদা করো। এরপর <a href="topic:db-select-basics">SELECT-এর শুরু</a>-তে নির্ভুল পড়া শেখো।</p>

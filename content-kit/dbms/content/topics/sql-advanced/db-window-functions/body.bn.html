@@ -1,0 +1,68 @@
+<h2 id="introduction">প্রতি রো রেখেই পাশেরগুলোর হিসাব করো</h2>
+<p class="lead">Marksheet-এ প্রতিটি শিক্ষার্থী-এর mark ও সেকশন position চাই। শুধু GROUP BY পারে না, কারণ অনেক ফল এক সারাংশ-তে মিশে যায়। Window ফাংশন related রো-এ হিসাব করে প্রতিটি mark দৃশ্যমান রাখে।</p>
+<p><dfn>Window ফাংশন</dfn> নির্ধারিত related রো-এর collection দিয়ে current রো-এর মান হিসাব করে। ওই collection window। Section ভাগ করে marks-এ অর্ডার ও প্রতি ফল-এ rank দিতে পারো। ইনপুট ফল-প্রতি আউটপুট রো থাকে।</p>
+<p>Leaderboard, running পেমেন্ট ও nearby রেকর্ড তুলনায় এটি কাজে লাগে। “Related রো” কী তা বাছাই আসল বিষয়। Partition,সর্ট,frame হিসাবের আলাদা অংশ। এক মনে করলে বিশ্বাসযোগ্য কিন্তু ভুল সংখ্যা আসে।</p>
+<p>Seed-এ সেকশন-এর ভেতর equal mark নেই, তাই tie উদাহরণে local একটি mark বদলানো। Tie না থাকলে ROW_NUMBER,RANK,DENSE_RANK এক দেখাতে পারে। যে অবস্থায় rule আলাদা হয় তা দেখাতে হবে।</p>
+<h2 id="syntax">OVER-এর তিন অংশ বোঝো</h2>
+<p>OVER বলে ফাংশন ইনপুট কীভাবে দেখবে। PARTITION BY স্বাধীন গ্রুপ, ভেতরের ORDER BY sequence বা peer ঠিক করে। SUM,AVG-এর মতো ফাংশন-এ optional frame relevant subset নেয়।</p>
+<p>Section position-এ <code>PARTITION BY section_id</code>; প্রতি সেকশন নতুন শুরু। Overall leaderboard-এ বাদ দাও। Display পরে সেকশন-এ সাজালেও comparison population বদলে গেছে।</p>
+<p>Window ORDER BY হিসাব, final কোয়েরি ORDER BY display ঠিক করে। Descending mark-এ position করে শিক্ষার্থী ID-তে print করা যায়, তবে trace কঠিন। শেখানোর রিপোর্ট-এ দুটো মেলাও।</p>
+<p><code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code> প্রথম ordered রো থেকে current পর্যন্ত নিয়ে cumulative aggregate করে। ROWS ordered position, mark/তারিখ-এর numeric দূরত্ব নয়।</p>
+<p>সত্যিই partition-অর্ডার এক হলে named window repetition কমায়। কিন্তু marks-এ rank ও marks+ID-তে numbering-এর peer rule আলাদা। শুধু ছোট করতে এক definition নিলে ranking বদলাতে পারে।</p>
+<pre><code class="language-sql">&lt;function&gt;() OVER (
+    PARTITION BY &lt;group_columns&gt;
+    ORDER BY &lt;calculation_order&gt;
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+)</code></pre>
+<h2 id="how-it-works">Tie-এর অর্থ বাছো</h2>
+<p>ROW_NUMBER টানা 1,2,3 দেয়। Tie-তে student_id-এর মতো unique tie-breaker repeatable choice দেয়। না থাকলে tied রো-এর ভেতরের অর্ডার যেকোনোটি। পরে display সর্ট অস্পষ্ট numbering সারায় না।</p>
+<p>RANK peer-কে একই rank দিয়ে পরে gap রাখে। 80,80,60-এ 1,1,3। দুই রো প্রথম competitive position দখল করায় পরেরটি তৃতীয়। Current mark-এর আগে রো গুনলে মানায়।</p>
+<p>DENSE_RANK tie রেখেও gap দেয় না: 1,1,2। এটি distinct mark level গোনে। সেরা দুই আলাদা level-এর prize হলে dense rank ≤2-তে তিনজনই আসবে।</p>
+<p>সমান mark tie রাখতে RANK অর্ডার-এ student_id দেবে না। Peer-কে সব ordering expression-এ সমান চাই। Unique ID-তে সবাই আলাদা হয়ে rank পৃথক position হবে। Identifier final display অর্ডার-এ রাখো।</p>
+<p>Running পেমেন্ট-এ partition ও chronology দুটো বলো। order_id partition-এ অর্ডার-প্রতি balance; বাদ দিলে সব পেমেন্ট একসঙ্গে। একই তারিখ-এ paid_on ও payment_id নির্দিষ্ট sequence দেয়।</p>
+<p>Explicit ROWS একবারে এক রো এগোয়। 180-এর সঙ্গে 1000-এ 1180, তারপর 380-এ 1560, শেষে 20-এ 1580 টাকা। Original amount পাশে থাকে, প্রতিটি ধাপ দেখা যায়।</p>
+<p>Ordered aggregate-এ frame না বললে ডিফল্ট RANGE current peer গ্রুপ পর্যন্ত নেয়। একই paid_on-এর দুই পেমেন্ট-ই দুটির মোট দেখাতে পারে। Current তারিখ পর্যন্ত মোট হিসেবে সঠিক, পেমেন্ট-প্রতি ledger থেকে আলাদা।</p>
+<p><code>ROWS BETWEEN 1 PRECEDING AND CURRENT ROW</code> সর্বোচ্চ দুই রো-এর moving frame। প্রথমে predecessor নেই, নিজেকে নেয়। নতুন partition-এ আবার শুরু; আগের সেকশন ছোঁয় না।</p>
+<table class="ref">
+<caption>বদলানো সেকশন 33-এর tie</caption>
+<thead><tr><th scope="col">Student</th><th scope="col">Mark</th><th scope="col">ROW_NUMBER</th><th scope="col">RANK</th><th scope="col">DENSE_RANK</th></tr></thead>
+<tbody>
+<tr><td>101</td><td>80</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>102</td><td>80</td><td>2</td><td>1</td><td>1</td></tr>
+<tr><td>103</td><td>60</td><td>3</td><td>3</td><td>2</td></tr>
+</tbody>
+</table>
+<p>Tie টেবিল দ্বিতীয় উদাহরণের modified mark নেয়। Numbering-এ ID থাকায় 101 আগে; দুই rank শুধু marks দেখে। এতে repeatable numbering হয়, Ayesha Tanvir-এর চেয়ে বেশি পেয়েছে এমন ভান নয়।</p>
+<h2 id="examples">Position, rank ও running মোট তুলনা করো</h2>
+<p>আগে সেকশন-প্রতি number দাও। তারপর সেকশন 33-এ tie এনে তিন ফাংশন পাশাপাশি দেখো। দুই leader competition rank এক, শুধু ROW_NUMBER পৃথক position দেয়।</p>
+<p>পেমেন্ট উদাহরণ explicit ROWS ও ডিফল্ট peer-aware RANGE তুলনা করে। তারিখ change ওই isolated উদাহরণের; অন্য পাঠের shared shop বদলায় না।</p>
+<p>Leader রিপোর্ট derived টেবিলে window হিসাব করে, বাইরে place = 1 ছাঁকে। একই block-এর WHERE window-এর আগে চলে বলে দুই ধাপ লাগে। CTE-ও একই separation দিতে পারে।</p>
+<h3>Section-পিছু ফল number</h3>
+<p>প্রতি সেকশন একে শুরু। Student কী tie ভাঙে, সেকশন membership নয়।</p>
+<div data-example="ex-1"></div>
+<h3>Tie দৃশ্যমান করো</h3>
+<p>101,102 দুজন 80; rank 1,1। 60-এর rank 3, dense rank 2।</p>
+<div data-example="ex-2"></div>
+<h3>স্থির ক্রমে পেমেন্ট জমাও</h3>
+<p>মোট 180.00,1180.00,1560.00,1580.00। পেমেন্ট ID ক্রম অস্পষ্ট হতে দেয় না।</p>
+<div data-example="ex-3"></div>
+<h3>Derived টেবিলে tied leader রাখো</h3>
+<p>Original ডেটা-তে পাঁচ সেকশন-এর ফল, তাই পাঁচ leader। Section 36 ফল দেয় না।</p>
+<div data-example="ex-4"></div>
+<h3>RANGE আর ROWS</h3>
+<p>February 2-এর দুই পেমেন্টের peer_total 1560.00। row_total আগে 1180.00, পরে 1560.00।</p>
+<div data-example="ex-5"></div>
+<h2 id="common-mistakes">ভুলে tie মুছো না</h2>
+<h3>Ranking-এর আগে prize rule</h3>
+<p>“Top three” ঠিক তিন রো, তিন competition place বা তিন distinct mark level হতে পারে। যথাক্রমে ROW_NUMBER,RANK,DENSE_RANK। আগে রিপোর্ট-এর rule জিজ্ঞেস করো। Arbitrary LIMIT tied boundary-এর policy নয়।</p>
+<p>Window আগের FROM,WHERE,গ্রুপিং পেরোনো রো দেখে। আগে low mark সরালে filtered population-এ rank হয়। সবাইকে rank করে পরে position বাছা আলাদা। Broad population রাখতে outer কোয়েরি নাও।</p>
+<h3>মাঝের ledger balance-ও দেখো</h3>
+<p>Window missing category বানায় না। Results-only কোয়েরি-তে সেকশন 36-এর partition নেই। সবাই চাইলে sections থেকে optional ফল জয়েন করো। Rank-এর আগে NULL ফল রো কীভাবে অংশ নেবে বলো।</p>
+<p>শেষ মোট SUM-এর সঙ্গে মিললেও running মোট ভুল হতে পারে। Equal তারিখ-এর অর্ডার বদলালে মাঝের balance ভিন্ন পেমেন্ট-এ যায়। শুধু grand মোট নয়, sequence ও intermediate step দেখো। Financial রিপোর্ট-এ amount-এর সঙ্গে event পরিচয় চাই।</p>
+<h2 id="best-practices">Population, peer ও frame বলো</h2>
+<p>আগে তিনটি পছন্দ লেখো: কারা এক হিসাব ভাগ করে, কী peer ঠিক করে, aggregate-এ কোন frame লাগে। Leaderboard-এ marks peer, ledger-এ unique event sequence। একই কোয়েরি-তেও ভিন্ন OVER লাগতে পারে।</p>
+<p>Review-তে raw ও computed মান পাশাপাশি রাখো। Section,student_id,marks ranking ভুল দেখায়; তারিখ,ID,amount cumulative trace দেয়। ইনপুট থেকে হিসাব বোঝার পর diagnostic কলাম সরাও।</p>
+<h2 id="version-notes">MySQL window support জানো</h2>
+<p>MySQL 8.0/8.4-এ এই window ফাংশন আছে। Shared CHECK 8.0.16 চায়। Same-block WHERE-এ window expression চলে না; derived টেবিল বা CTE দিয়ে computed ফল ফিল্টার করো।</p>
+<h2 id="summary">প্রতি হিসাবে সঠিক window নাও</h2>
+<p>Partition population, ordering position-peer, frame aggregate contribution ঠিক করে। Tie rule ভেবে নাও; rank বাইরে ফিল্টার করো। এরপর <a href="topic:db-cte">common টেবিল expression</a>-এ রিপোর্ট stage ও নিয়ন্ত্রিত recursive traversal নাম দাও।</p>

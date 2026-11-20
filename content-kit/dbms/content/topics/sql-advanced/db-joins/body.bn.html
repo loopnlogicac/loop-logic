@@ -1,0 +1,69 @@
+<h2 id="introduction">শুধু টেবিল নয়, সম্পর্ক জোড়ো</h2>
+<p class="lead">Department noticeboard-এর পাশে শিক্ষার্থী register ভাবো। একটিতে বিভাগ কোড, অন্যটিতে শিক্ষার্থী-এর বিভাগ identifier। জয়েন করে প্রতি শিক্ষার্থী রো-তে নাম নকল না রেখেই একসঙ্গে পড়া যায়। কোন pair মিলবে এবং match না হলে কী হবে তুমি ঠিক করবে।</p>
+<p><dfn>জয়েন</dfn> শর্ত অনুযায়ী রো মেলায়। পরিচিত শর্ত foreign কী ও তার referenced কী তুলনা করে; শিক্ষার্থী সঠিক বিভাগ পায়। অন্য কলাম-ও তুলনা করা যায়। নাম কাছাকাছি হলেই SQL নিজে সম্পর্ক বাছে না।</p>
+<p>আগে একটি আউটপুট রো-এর অর্থ বলো: শিক্ষার্থী, enrollment নাকি পেমেন্ট। এটিই ফল-এর grain। সিনট্যাক্স ঠিক থেকেও হঠাৎ grain বদলালে রিপোর্ট ভুল প্রশ্নের উত্তর দিতে পারে।</p>
+<p>University ডেটা-তে আট শিক্ষার্থী ও বারো enrollment। Fahim 108-এর enrollment নেই। Sadia 107 ভর্তি, কিন্তু ফল নেই। মানুষ রাখা ও recorded activity রাখার পার্থক্য এরা দেখায়।</p>
+<h2 id="syntax">কোন pair মিলবে ও কোন পাশ থাকবে বাছো</h2>
+<p><code>INNER JOIN</code> ON সত্য এমন pair দেয়। <code>LEFT JOIN</code> partner না-পাওয়া প্রতিটি left রো-ও রাখে; right কলাম তখন NULL। <code>RIGHT JOIN</code> right ইনপুট-কে একই সুরক্ষা দেয়।</p>
+<p><code>students AS s LEFT JOIN enrollments AS e ON e.student_id = s.student_id</code> বাম থেকে পড়ো। Students রাখার প্রতিশ্রুত population, enrollments optional match দেয়। ON বর্তমান শিক্ষার্থী-এর registration চেনে। ছোট alias-এ দীর্ঘ নাম না লিখেও কলামের মালিক বোঝা যায়।</p>
+<p><code>CROSS JOIN</code> সব possible pair করে। আট শিক্ষার্থী ও ছয় সেকশন-এ 48 choice, না-ঘটা registration-ও আছে। <code>Self join</code> এক টেবিল দুই alias-এ পড়ে; alias আলাদা role, যেমন প্রথম ও দ্বিতীয় classmate।</p>
+<p>MySQL-এ native FULL OUTER JOIN নেই। Left জয়েন-এর সঙ্গে শুধু unmatched right রো-এর branch মেলাও। বৈধ duplicate রাখতে UNION ALL নাও। দ্বিতীয় branch-এ left-এর non-null কী দেখো; optional description দেখলে matched রো-ও missing ভাবতে পারে।</p>
+<pre><code class="language-sql">SELECT &lt;columns&gt;
+FROM &lt;left_table&gt; AS l
+LEFT JOIN &lt;right_table&gt; AS r ON &lt;matching_condition&gt;
+WHERE &lt;result_filter&gt;
+ORDER BY &lt;display_keys&gt;;</code></pre>
+<h2 id="how-it-works">গোনার আগে pair অনুসরণ করো</h2>
+<p>Ayesha 101 তিন enrollment মেলায়, তাই তিন pair। Tanvir-ও তিন, Nabila দুই, 104 থেকে 107 একজন করে। Inner জয়েন মোট বারো রো দিয়ে থামে।</p>
+<p>Fahim-এর match list খালি। Left জয়েন NULL enrollment-সহ একটি padded রো দেয়। মোট তেরো রো: আট distinct শিক্ষার্থী, তেরো শিক্ষার্থী-enrollment রো। রিপোর্ট-এর দরকারি সংখ্যা কোনটি নিজে ঠিক হয় না।</p>
+<p>Student-এ গ্রুপ করলে <code>COUNT(e.section_id)</code> actual registration গোনে, কারণ প্রকৃত enrollment-এ section_id NULL নয়। <code>COUNT(*)</code> padded রো-ও গোনে। Fahim-এর জন্য যথাক্রমে শূন্য ও এক। কোন জিনিস গুনছ তার সঙ্গে aggregate মেলাও।</p>
+<p>Enrollment-ফল সম্পর্কে দুই কলাম লাগে। Student 101-এর একাধিক ফল, সেকশন 31-এ একাধিক শিক্ষার্থী। শুধু student_id-তে সেকশন মিশে যায়; শুধু section_id-তে শিক্ষার্থী। Composite পরিচয় রাখতে দুটোই তুলনা করো।</p>
+<p>তিন-টেবিল জয়েন chain ধরে। Enrollment সেকশন চেনে, সেকশন কোর্স চেনে। Department membership এই পথের বদলি নয়। CSE শিক্ষার্থী MAT 101 নিতে পারে; বিভাগ মিলালে আসল registration হারাবে, ভুলগুলো আসবে।</p>
+<p>Self জয়েন-এ pair direction দরকার কি না ঠিক করো। Ayesha-Tanvir একটি unordered pair হলে প্রথম identifier ছোট চাই। Equality নিজের সঙ্গে মেলায়; শুধু inequality দুই দিকই রাখে।</p>
+<table class="ref">
+<caption>কয়েক শিক্ষার্থী-এর registration pair</caption>
+<thead><tr><th scope="col">Student</th><th scope="col">Actual enrollment</th><th scope="col">INNER রো</th><th scope="col">LEFT রো</th></tr></thead>
+<tbody>
+<tr><td>101 Ayesha</td><td>3</td><td>3</td><td>3</td></tr>
+<tr><td>107 Sadia</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>108 Fahim</td><td>0</td><td>0</td><td>1 padded রো</td></tr>
+</tbody>
+</table>
+<h2 id="examples">রাখা রো ও আসল match দেখো</h2>
+<p>Department উদাহরণ guaranteed parent match দিয়ে শুরু। পরে absent enrollment ও missing ফল ইচ্ছা করে রাখা হয়েছে। NULL হওয়া কলাম ও preserved ইনপুটের কলাম তুলনা করো।</p>
+<p>Full-জয়েন উদাহরণ আসল enrollment-ফল সম্পর্ক নেয়। Foreign কী orphan ফল আটকায় বলে right-only branch খালি। কোয়েরি semantics এমন রো মানতে পারে, বর্তমান schema ওই state আটকায়—পার্থক্যটি খালি branch-ও শেখায়।</p>
+<h3>Department কোড-সহ শিক্ষার্থী</h3>
+<p>আটজনেরই বিভাগ match আছে। Foreign কী coverage বোঝায়; জয়েন নতুন বিভাগ বানায় না।</p>
+<div data-example="ex-1"></div>
+<h3>Enrollment নেই তাকেও রাখো</h3>
+<p>Fahim 108 zero enrollment-সহ থাকে। COUNT(*) তার padded রো এক গুনত।</p>
+<div data-example="ex-2"></div>
+<h3>RIGHT JOIN-এ একই রিপোর্ট</h3>
+<p>Right side students। Sadia-র সেকশন 35; Fahim-এর match নেই বলে NULL সেকশন।</p>
+<div data-example="ex-3"></div>
+<h3>Pair আর classmate তুলনা</h3>
+<p>Self জয়েন MAT pair 104 ও 108 একবার দেয়। Cross জয়েন দুটি planning combination বানায়, কোর্স ownership দাবি করে না।</p>
+<div data-example="ex-4"></div>
+<h3>Enrollment-ফল full outer জয়েন</h3>
+<p>প্রতি ফল enrollment reference করায় anti-match branch খালি। 107-এর pending enrollment NULL marks-সহ থাকে।</p>
+<div data-example="ex-5"></div>
+<h3>Section হয়ে কোর্স ধরো</h3>
+<p>Ayesha CSE 212,CSE 213,MAT 101 নেয়। Section পরিচয় enrollment-কে সঠিক কোর্স-এ মেলায়।</p>
+<div data-example="ex-6"></div>
+<h3>Match ফিল্টার আর ফল ফিল্টার</h3>
+<p>ON-এ শর্ত থাকলে 106,107,108 NULL marks-সহ থাকে। WHERE-এ নিলে তিনজনই সরে।</p>
+<div data-example="ex-7"></div>
+<h2 id="common-mistakes">সঠিক ধাপে ফিল্টার রাখো</h2>
+<h3>Outer ফিল্টার preserved রো বাদ দেয়</h3>
+<p>ON pair match করবে কি না বলে। WHERE পরে joined রো ছাঁকে। Inner জয়েন-এ সাধারণ ফিল্টার দুই জায়গায় প্রায়ই সমান; outer জয়েন-এ রাখার প্রতিশ্রুত রো-ই হারাতে পারে।</p>
+<p>সবার নামের পাশে থাকলে অন্তত 80 নম্বর দেখাতে চাইলে শর্ত ON-এ দাও। এমন ফল না থাকলে NULL আসে। WHERE-এ <code>r.marks &gt;= 80</code> দিলে padded রো-এর comparison unknown, তাই বাদ। তখন শুধু বেশি নম্বর পাওয়া শিক্ষার্থী থাকে।</p>
+<h3>দুই child list টাকার হিসাব গুণ করে</h3>
+<p>আরেক ভুলে টাকা গুণ হয়। অর্ডার 202-এ দুই item ও দুই পেমেন্ট; সরাসরি জয়েন-এ চার combination। Item ও পেমেন্ট amount দুবার আসে। আলাদা জয়েন শর্ত ঠিক থেকেও মোট দ্বিগুণ।</p>
+<p>প্রতিটি child আগে অর্ডার-প্রতি এক রো-তে সারাংশ করে তারপর জয়েন করো। SUM(DISTINCT amount) সাধারণ সমাধান নয়; দুটি প্রকৃত পেমেন্টের amount সমান হতে পারে। সমস্যা repeated পরিচয়, শুধু repeated number নয়।</p>
+<h2 id="best-practices">সম্পর্কের শর্ত স্পষ্ট লেখো</h2>
+<p>স্পষ্ট ON লেখো, shared কলাম qualify করো। NATURAL JOIN schema বদলে চুপচাপ নতুন matching কলাম নিতে পারে; সাধারণ JOIN ভালো। চাওয়া কলাম বাছলে reader grain পরীক্ষা করতে পারে।</p>
+<p>জটিল রিপোর্ট চালানোর আগে expected সংখ্যা ভাবো। নতুন সম্পর্ক one-to-one, one-to-many নাকি optional? টেবিল যোগে সংখ্যা অপ্রত্যাশিত বাড়লে DISTINCT-এর আগে match দেখো। Deduplication ভুল ঢেকে দিতে পারে।</p>
+<h2 id="version-notes">MySQL-এর outer জয়েন সীমা জানো</h2>
+<p>জয়েন MySQL 8.0 ও 8.4-এ চলে; FULL OUTER JOIN এখনও emulate করতে হয়। Shared CHECK-এর জন্য 8.0.16 লাগে। Complete ফল-এর ORDER BY display ঠিক করে; ইনডেক্স বা branch অর্ডার বিকল্প নয়।</p>
+<h2 id="summary">রিপোর্টে কাদের রাখবে স্পষ্ট করো</h2>
+<p>কোন population রাখবে বাছো, matching কী বলো, রো-প্রতি partner সংখ্যা দেখো। Missing ডেটা ও repeated মোট বোঝা সহজ হবে। প্রতিটি pair নয়, comparison, membership বা existence চাইলে <a href="topic:db-subqueries">subquery</a> নাও।</p>
