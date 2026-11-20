@@ -236,6 +236,18 @@ export class ReadingService {
     return b.count < this.dailyAiLimit;
   }
 
+  /** Spend one of today's AI answers if any are left (other services that call the AI share this budget). */
+  useAi(learnerId: string): boolean {
+    if (!this.withinBudget(learnerId)) return false;
+    this.spend(learnerId);
+    return true;
+  }
+
+  /** Reading evidence from other pages (tutorial quizzes, quick checks) updates the same profile. */
+  async addSignals(learnerId: string, signals: ReadingSignal[]): Promise<ReadingProfile> {
+    return this.signal(learnerId, signals);
+  }
+
   private spend(learnerId: string) {
     const b = this.budget.get(learnerId);
     if (b) b.count += 1;
@@ -405,7 +417,7 @@ export class ReadingService {
     return !b || b.day !== day ? this.dailyAiLimit : Math.max(0, this.dailyAiLimit - b.count);
   }
 
-  async chat(learnerId: string, input: { question?: unknown; selection?: unknown; history?: unknown; lang: Lang; page: ChatPage }) {
+  async chat(learnerId: string, input: { question?: unknown; selection?: unknown; history?: unknown; lang: Lang; page: ChatPage; style?: unknown }) {
     const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
     const lang: Lang = input.lang === 'bn' ? 'bn' : 'en';
     const question = clean(input.question, 500);
@@ -417,7 +429,10 @@ export class ReadingService {
       .filter((h) => (h.role === 'user' || h.role === 'assistant') && typeof h.text === 'string')
       .map((h) => ({ role: h.role as string, text: String(h.text).slice(0, 400) }));
     const page = input.page;
+    const style = input.style === 'simpler' || input.style === 'concise' ? input.style : 'standard';
     await this.store.addReadingEvents([{ id: randomUUID(), learnerId, lessonId: page.key, blockId: null, type: 'ask', payload: { chars: question.length, selection: selection.length > 0, page: page.kind }, at: new Date().toISOString() }]);
+    // Asking about selected text on a tutorial counts like looking up a term in a lesson.
+    if (page.kind === 'tutorial' && selection) await this.signal(learnerId, [{ kind: 'term_selected', subject: page.subject }]);
 
     // Evidence: what the page itself provides (instructor materials, lesson
     // passages), then the reviewed library, then approved websites if needed.
@@ -440,16 +455,20 @@ export class ReadingService {
     const used = evidence.slice(0, 6);
     const base = { sources: [] as SourceRef[], liveUsed, left: this.aiCallsLeft(learnerId) };
 
-    const cacheKey = ['chat', page.key, lang, normalizeQ(selection), normalizeQ(question)].join('|');
+    const cacheKey = ['chat', page.key, lang, style, normalizeQ(selection), normalizeQ(question)].join('|');
     const cached = history.length ? undefined : this.answerCache.get(cacheKey);
     if (cached) return { ...base, origin: 'ai_checked' as const, text: cached.text, sources: cached.sources, cached: true };
 
-    const maxWords = 140;
+    const maxWords = style === 'concise' ? 70 : 140;
+    const styleLine = style === 'simpler'
+      ? 'The learner is new to this: use very simple everyday words, short sentences, and one small step at a time.'
+      : style === 'concise' ? 'The learner already knows the basics: be brief and precise, and use technical terms.' : '';
     if (this.gateway.enabled && used.length && this.withinBudget(learnerId)) {
       const languageName = lang === 'bn' ? 'Bangla (English technical terms in brackets are fine)' : 'English';
       const user = [
         `A learner on a ${page.kind} page asks a question. Page: ${page.label}.`,
         `Answer in at most ${maxWords} words in ${languageName}, clearly and step by step if useful. Short code is allowed only if it is in the evidence.`,
+        styleLine,
         history.length ? `<learner_text>Earlier in this chat: ${JSON.stringify(history)}</learner_text>` : '',
         selection ? `<learner_text>Selected text: ${selection}</learner_text>` : '',
         `<learner_text>Question: ${question || 'Explain the selected text.'}</learner_text>`,
