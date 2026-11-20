@@ -1,5 +1,5 @@
 // Profile & settings: preferences, what the system learned (with reasons), data controls.
-import { api, getConfig, getLang, setLang, applyI18n, mountNav, el, num, errorBox, ensureSignedIn, toast, store } from './common.js';
+import { api, getConfig, getLang, setLang, applyI18n, mountNav, el, num, errorBox, ensureSignedIn, toast, store, signInGate } from './common.js';
 
 const T = {
   en: {
@@ -128,12 +128,14 @@ async function reset(scope, done) {
 }
 
 async function load() {
+  if (await signInGate(main, getLang() === 'bn' ? 'তোমার প্রোফাইল দেখতে সাইন ইন করো' : 'Sign in to see your profile')) return;
   try {
     [cfg, me] = await Promise.all([getConfig(), api('GET', '/api/me')]);
     render(await api('GET', `/api/profile?lang=${getLang()}`));
   } catch (e) { errorBox(main, e.message, load); }
 }
 
+window.addEventListener('ll-auth', () => load());
 await ensureSignedIn();
 mountNav('profile', load);
 applyI18n(t());

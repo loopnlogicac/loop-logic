@@ -3,6 +3,7 @@
 // list their items A–Z on the left and preview the chosen one on the right.
 // Labs are chosen course by course. The top bar is the shared sticky header.
 import { api, getLang, applyI18n, mountNav, el, num, getSite, fillAdSlots } from './common.js';
+import { courseAccess } from './course-access.js';
 
 const T = {
   en: {
@@ -96,7 +97,7 @@ function items(tab, L) {
       meta: tab === 'labs' ? (x.labs ? L.labsN(num(x.labs)) : L.noLabs) : x.delivered >= x.planned ? L.complete(num(x.delivered)) : `${L.ofTopics(num(x.delivered), num(x.planned))}${x.labs ? ` · ${L.labsN(num(x.labs))}` : ''}`,
     }));
   }
-  if (tab === 'courses') return (catalog?.courses ?? []).map((c, i) => ({ key: c.id, label: c.title, mark: shortOf(c.title), meta: L.vh(num(c.videos), num(c.hours)), pro: c.access === 'paid', i }));
+  if (tab === 'courses') return (catalog?.courses ?? []).map((c, i) => ({ key: c.id, label: c.title, mark: shortOf(c.title), meta: L.vh(num(c.videos), num(c.hours)), pro: courseAccess(c).paid, i }));
   return EXAM.map((e) => ({ key: e.key, label: (bn ? e.bn : e.en)[0], mark: '★', meta: L.examTag, pro: true }));
 }
 
@@ -166,17 +167,18 @@ async function coursePreview(L, key) {
   const v = await once(`videos:${c.id}:${getLang()}`, () => api('GET', `/api/courses/${c.id}/videos?lang=${getLang()}`));
   const first = (v.sections ?? []).flatMap((s) => s.items).filter((it) => !it.repeat).slice(0, 4);
   const tut = learn.tracks.find((tr) => tr.course === c.id && tr.available);
-  const paid = c.access === 'paid';
+  const acc = courseAccess(c, getLang());
+  const paid = acc.paid;
   return [
     el('div', { class: 'hp-course' },
       el('div', { class: 'hp-tile', style: `background:${c.tint ?? TINTS[i % TINTS.length]}` }, el('span', { text: shortOf(c.title) }), svg('hp-play', PLAY)),
       el('div', { class: 'hp-course-text' }, el('span', { class: 'hp-sub', text: c.subjectName }), el('h3', { text: c.title }),
-        el('span', { class: 'hp-course-meta' }, L.videos(num(c.videos), num(c.hours)), ' · ', el('strong', { class: paid ? 'hp-price' : 'hp-free-text', text: paid ? c.price ?? 'PRO' : L.free })),
+        el('span', { class: 'hp-course-meta' }, L.videos(num(c.videos), num(c.hours)), ' · ', el('strong', { class: paid ? 'hp-price' : 'hp-free-text', text: paid ? acc.label : L.free })),
         paid && c.samples ? el('span', { class: 'hp-sub', text: L.samples(num(c.samples)) }) : null)),
     el('div', { class: 'hp-videos' }, el('strong', { class: 'hp-sub', text: L.playlist }),
       ...first.map((it, k) => el('div', { class: `hp-video${it.locked ? ' locked' : ''}` }, el('span', { class: 'hp-n', text: num(k + 1) }), el('span', { class: 'hp-video-title', text: it.title }),
         it.locked ? svg('hp-lock', LOCK) : it.sample ? el('span', { class: 'hp-tag on', text: L.sample }) : svg('hp-play-s', PLAY)))),
-    el('div', { class: 'hp-actions' }, btn(`/watch.html?course=${encodeURIComponent(c.id)}`, paid ? L.watchSamples : L.startWatching), paid ? btn(`/buy.html?course=${encodeURIComponent(c.id)}`, `${L.buy} · ${c.price ?? ''}`, 'pro') : null, tut ? btn(`/learn.html?track=${tut.id}`, L.readTut(tut.title), 'ghost') : null),
+    el('div', { class: 'hp-actions' }, btn(`/watch.html?course=${encodeURIComponent(c.id)}`, paid ? L.watchSamples : L.startWatching), paid ? btn(`/buy.html?course=${encodeURIComponent(c.id)}`, acc.price ? `${L.buy} · ${acc.price}` : L.buy, 'pro') : null, tut ? btn(`/learn.html?track=${tut.id}`, L.readTut(tut.title), 'ghost') : null),
   ];
 }
 

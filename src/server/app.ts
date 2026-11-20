@@ -374,6 +374,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/buy/:course/quote', ({ params, body, learnerId, email }) => ord().quote(learnerId, email, params.course!, body.coupon)),
     route('POST', '/api/buy/:course', ({ params, body, learnerId, email, signedIn }) => ord().submit(learnerId, email, Boolean(signedIn) || d.auth.mode === 'supabase', params.course!, body)),
     route('GET', '/api/my-orders', ({ learnerId }) => ord().mine(learnerId)),
+    route('GET', '/api/my-course-access', ({ learnerId, signedIn }) => ord().myAccess(learnerId, Boolean(signedIn) || d.auth.mode === 'supabase', allCourses().filter((c) => c.access === 'paid').map((c) => c.id))),
     route('POST', '/api/orders/:id/cancel', ({ params, learnerId }) => ord().cancel(learnerId, params.id!)),
     route('GET', '/api/admin/orders', ({ query }) => ord().adminList(String(query.get('status') ?? 'pending')), 'admin'),
     route('POST', '/api/admin/orders/:id/approve', ({ params, email }) => ord().decide(email!, params.id!, true, null), 'admin'),

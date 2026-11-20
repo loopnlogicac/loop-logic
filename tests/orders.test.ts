@@ -92,3 +92,15 @@ test('coupons: discount, per-person limit, and a full discount unlocks at once',
   assert.equal(free.status, 'approved');
   assert.equal((await watch.view(course.id, 's-2', 'en')).course.owned, true);
 });
+
+test('the Paid courses page sees only the signed-in student’s own access: owned and under review', async () => {
+  const { admin, orders, course } = await setup();
+  await admin.savePaymentSettings('boss@example.com', { bkash: { on: true, number: '01712345678' } });
+  const ids = [course.id];
+  assert.deepEqual(await orders.myAccess('s-1', false, ids), { owned: [], pending: [] }, 'guests get nothing');
+  const o = await orders.submit('s-1', 'rafi@gmail.com', true, course.id, { method: 'bkash', trxId: 'PAIDPAGE01', senderLast4: '4321' });
+  assert.deepEqual(await orders.myAccess('s-1', true, ids), { owned: [], pending: [course.id] });
+  assert.deepEqual(await orders.myAccess('s-2', true, ids), { owned: [], pending: [] }, 'another student sees none of it');
+  await orders.decide('boss@example.com', o.id, true, null);
+  assert.deepEqual(await orders.myAccess('s-1', true, ids), { owned: [course.id], pending: [] });
+});
