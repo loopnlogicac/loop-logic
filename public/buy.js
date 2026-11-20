@@ -128,5 +128,5 @@ async function load() {
     main.replaceChildren(el('div', { class: 'card empty' }, el('h2', { text: e.message }), el('a', { class: 'btn secondary', href: '/courses.html', text: 'Courses' })));
   }
 }
-mountNav('', load);
+mountNav('paid', load);
 load();

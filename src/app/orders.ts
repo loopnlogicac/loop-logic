@@ -138,6 +138,18 @@ export class OrderService {
     return { orders: (await this.orders((o) => o.learnerId === learnerId)).map((o) => this.publicOrder(o)) };
   }
 
+  /**
+   * The signed-in learner's own course access, for the Paid courses page: courses they can watch
+   * (approved order or a manual grant) and courses with a payment under review. Nobody else's.
+   */
+  async myAccess(learnerId: string, signedIn: boolean, courseIds: string[]) {
+    if (!signedIn) return { owned: [] as string[], pending: [] as string[] };
+    const owned: string[] = [];
+    for (const id of courseIds) if (await this.admin.hasAccess(learnerId, id)) owned.push(id);
+    const pending = [...new Set((await this.orders((o) => o.learnerId === learnerId && o.status === 'pending')).map((o) => String(o.courseId)))].filter((id) => !owned.includes(id));
+    return { owned, pending };
+  }
+
   // ── admin ──
   async adminList(status?: string) {
     const all = await this.orders();

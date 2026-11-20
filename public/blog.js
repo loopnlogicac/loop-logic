@@ -2,8 +2,8 @@
 import { getLang, applyI18n, mountNav, el, fillAdSlots } from './common.js';
 
 const T = {
-  en: { tagline: 'Learn with purpose', title: 'Blog and news', sub: 'Updates, study guides and exam notices from the Loop & Logic team.', none: 'No posts yet.', back: '← All posts', notFound: 'This post could not be found.', types: { blog: 'Blog', news: 'News', changelog: 'What is new', 'exam-notice': 'Exam notice' } },
-  bn: { tagline: 'উদ্দেশ্য নিয়ে শেখা', title: 'ব্লগ ও খবর', sub: 'Loop & Logic টিমের আপডেট, পড়ার গাইড আর পরীক্ষার নোটিশ।', none: 'এখনো কোনো লেখা নেই।', back: '← সব লেখা', notFound: 'এই লেখাটি পাওয়া যায়নি।', types: { blog: 'ব্লগ', news: 'খবর', changelog: 'নতুন কী', 'exam-notice': 'পরীক্ষার নোটিশ' } },
+  en: { tagline: 'Learn with purpose', title: 'Blog and news', sub: 'Updates, study guides and exam notices from the Loop & Logic team.', none: 'No posts yet. Check back soon.', back: '← All posts', notFound: 'This post could not be found.', types: { blog: 'Blog', news: 'News', changelog: 'What is new', 'exam-notice': 'Exam notice' } },
+  bn: { tagline: 'উদ্দেশ্য নিয়ে শেখা', title: 'ব্লগ ও খবর', sub: 'Loop & Logic টিমের আপডেট, পড়ার গাইড আর পরীক্ষার নোটিশ।', none: 'এখনো কোনো পোস্ট নেই। শিগগিরই আবার দেখো।', back: '← সব লেখা', notFound: 'এই লেখাটি পাওয়া যায়নি।', types: { blog: 'ব্লগ', news: 'খবর', changelog: 'নতুন কী', 'exam-notice': 'পরীক্ষার নোটিশ' } },
 };
 const t = () => T[getLang()];
 const main = document.getElementById('main');

@@ -21,6 +21,7 @@ const STATIC: Record<string, { title: string; description: string }> = {
   '/': { title: `${SITE} · Programming and CSE tutorials in Bangla and English`, description: DEFAULT_DESC },
   '/learn.html': { title: `Tutorials · ${SITE}`, description: 'Written tutorials for C, Data Structures, Algorithms, Java OOP, Python, DBMS, Compiler Design and Machine Learning, with examples you can run, quizzes and visual labs.' },
   '/courses.html': { title: `Video courses · ${SITE}`, description: 'Free video courses from the Loop & Logic YouTube channel, organised by subject, plus paid courses with free samples.' },
+  '/paid-courses.html': { title: `Premium courses · ${SITE}`, description: 'Premium Loop & Logic video courses you can buy with bKash or Nagad, with free sample videos to watch first.' },
   '/pricing.html': { title: `Pricing · ${SITE}`, description: 'What is free on Loop & Logic and what the paid plans add.' },
   '/blog.html': { title: `Blog · ${SITE}`, description: 'News, study guides and announcements from Loop & Logic.' },
   '/privacy.html': { title: `Privacy policy · ${SITE}`, description: 'What Loop & Logic collects, why, and the choices you have.' },

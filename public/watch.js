@@ -50,7 +50,7 @@ function render() {
   const bn = getLang() === 'bn';
   if (course.access === 'paid' && !course.owned) {
     left.append(el('div', { class: 'card paid-note' },
-      el('strong', { text: bn ? `এটি একটি পেইড কোর্স · ${course.price ?? ''}` : `This is a paid course · ${course.price ?? ''}` }),
+      el('strong', { text: bn ? `এটি একটি প্রিমিয়াম কোর্স · ${course.price ?? ''}` : `This is a premium course · ${course.price ?? ''}` }),
       el('p', { class: 'muted', text: bn ? `${num(course.samples ?? 0)}টি নমুনা ভিডিও ফ্রি দেখা যাবে। বাকি ${num(course.locked)}টি কোর্স কিনলে খুলবে।` : `${num(course.samples ?? 0)} sample videos are free to watch. The other ${num(course.locked)} open when you buy the course.` }),
       el('a', { class: 'btn primary small', href: `/buy.html?course=${encodeURIComponent(course.id)}`, text: bn ? `কিনে নাও · ${course.price ?? ''}` : `Buy the course · ${course.price ?? ''}` })));
   }

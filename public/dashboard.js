@@ -1,7 +1,7 @@
 import { studyPlanStrings, studyPlan } from './study-plan.js';
 import { masteryStrings, masteryDashboard } from './mastery.js';
 // Learner dashboard: continue reading, progress, practice, focus areas, receipts.
-import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn, currentUser, showSignIn, toast } from './common.js';
+import { api, getLang, applyI18n, mountNav, el, num, ago, errorBox, ensureSignedIn, currentUser, showSignIn, toast, signInGate } from './common.js';
 import { savedStrings, savedList } from './saved.js';
 
 const T = {
@@ -214,8 +214,10 @@ function purchasesBox() {
 }
 
 async function load() {
+  if (await signInGate(main, getLang() === 'bn' ? '‘আমার শেখা’ দেখতে সাইন ইন করো' : 'Sign in to see My learning')) return;
   try { render(await api('GET', `/api/dashboard?lang=${getLang()}`)); } catch (e) { errorBox(main, e.message, load); }
 }
+window.addEventListener('ll-auth', () => load());
 
 await ensureSignedIn();
 mountNav('dashboard', load);

@@ -1,4 +1,5 @@
 // Shared page helpers: config, sign-in (Supabase mode), API calls, language.
+import { navLinks } from './nav-links.js';
 
 const store = {
   get(k, area = 'local') { try { return (area === 'session' ? sessionStorage : localStorage).getItem(k); } catch { return null; } },
@@ -21,7 +22,13 @@ export const setLang = (l) => store.set('ll_lang', l);
 // (1 hour) is refreshed with the refresh token shortly before it expires.
 const AUTH_KEY = 'll_auth';
 function readAuth() { try { return JSON.parse(store.get(AUTH_KEY) ?? 'null'); } catch { return null; } }
-function writeAuth(a) { if (a) store.set(AUTH_KEY, JSON.stringify(a)); else store.del(AUTH_KEY); store.del('ll_token', 'session'); }
+function writeAuth(a) {
+  const was = Boolean(readAuth()?.access_token);
+  if (a) store.set(AUTH_KEY, JSON.stringify(a)); else store.del(AUTH_KEY);
+  store.del('ll_token', 'session');
+  // Tell the top bar when someone signs in or out, so Dashboard and Profile appear or go without a reload.
+  if (was !== Boolean(a?.access_token) && typeof window !== 'undefined') window.dispatchEvent(new Event('ll-auth'));
+}
 function jwtClaims(token) { try { return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return {}; } }
 export function currentUser() {
   const a = readAuth();
@@ -69,7 +76,8 @@ export async function signOut() {
   const token = readAuth()?.access_token;
   if (token && cfg.supabaseUrl) await fetch(`${cfg.supabaseUrl}/auth/v1/logout`, { method: 'POST', headers: { apikey: cfg.supabaseAnonKey, authorization: `Bearer ${token}` } }).catch(() => {});
   writeAuth(null);
-  location.reload();
+  // Pages with private data start over; public pages just update the top bar.
+  if (/\/(dashboard|profile|instructor|admin|buy|custom-quiz)\.html$/.test(location.pathname)) location.reload();
 }
 
 export class ApiError extends Error {
@@ -145,6 +153,7 @@ export async function showSignIn(message) {
 async function mountAccount(actions, bn) {
   const cfg = await getConfig().catch(() => ({}));
   actions.querySelector('.acct')?.remove();
+  if (!currentUser()) actions.querySelector('.notice-menu')?.remove(); // signed out: no bell
   if (!cfg.supabaseUrl || cfg.authMode === 'anonymous') return;
   const user = currentUser();
   if (!user) { actions.insertBefore(el('button', { type: 'button', class: 'btn-signin acct', text: bn ? 'সাইন ইন' : 'Sign in', onclick: () => showSignIn() }), actions.querySelector('.btn-pro')); return; }
@@ -153,7 +162,7 @@ async function mountAccount(actions, bn) {
   const initials = (user.name || user.email || '?').split(/[\s@.]+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const menu = el('div', { class: 'acct-menu', hidden: true },
     el('div', { class: 'acct-who' }, el('strong', { text: user.name || (bn ? 'সাইন ইন করা আছে' : 'Signed in') }), el('span', { text: user.email ?? '' })),
-    el('a', { href: '/dashboard.html', text: bn ? 'ড্যাশবোর্ড' : 'My dashboard' }),
+    el('a', { href: '/dashboard.html', text: bn ? 'আমার শেখা' : 'My learning' }),
     el('a', { href: '/profile.html', text: bn ? 'প্রোফাইল ও ডেটা' : 'Profile and data' }),
     el('a', { href: '/instructor.html', text: bn ? 'শিক্ষকের পাতা' : 'Instructor area' }),
     el('button', { type: 'button', text: bn ? 'সাইন আউট' : 'Sign out', onclick: () => signOut() }));
@@ -182,18 +191,64 @@ export function el(tag, attrs = {}, ...children) {
   return node;
 }
 
+/**
+ * Dashboard and Profile opened while signed out (an old link or a bookmark): show a clear sign-in card
+ * instead of an empty page. Returns true when the card was shown. Sites without sign-in are left alone.
+ */
+export async function signInGate(container, title) {
+  const cfg = await getConfig().catch(() => ({}));
+  if (!cfg.supabaseUrl || cfg.authMode === 'anonymous' || currentUser()) return false;
+  const bn = getLang() === 'bn';
+  document.title = `${title} · Loop & Logic`;
+  container.replaceChildren(el('section', { class: 'card signin-gate' },
+    el('h1', { text: title }),
+    el('p', { class: 'muted', text: bn ? 'তোমার অগ্রগতি, কুইজের নম্বর, ক্লাস আর কেনা কোর্স তোমার অ্যাকাউন্টে জমা থাকে।' : 'Your progress, quiz scores, classes and purchases are saved to your account.' }),
+    el('button', { type: 'button', class: 'btn primary', text: bn ? 'সাইন ইন করো' : 'Sign in', onclick: () => showSignIn() })));
+  return true;
+}
+
 /** Shared app nav: marks the current page and wires the language button. */
+let navActive = '';
+let navAuthMode;
+let navWired = false;
+function drawNavLinks() {
+  const nav = document.getElementById('nav');
+  if (!nav) return;
+  const bn = getLang() === 'bn';
+  nav.setAttribute('aria-label', bn ? 'প্রধান মেনু' : 'Main');
+  nav.replaceChildren(...navLinks({ signedIn: Boolean(currentUser()), authMode: navAuthMode, lang: bn ? 'bn' : 'en' }).map(({ id, href, label }) =>
+    el('a', { href, class: id === navActive ? 'active' : '', 'aria-current': id === navActive ? 'page' : null, text: label })));
+  const toggle = document.querySelector('.top .nav-toggle');
+  if (toggle) toggle.setAttribute('aria-label', bn ? 'মেনু' : 'Menu');
+}
+function wireNavMenu(nav) {
+  const top = nav.closest('.top');
+  if (!top || top.querySelector('.nav-toggle')) return;
+  const toggle = el('button', { type: 'button', class: 'nav-toggle', 'aria-controls': 'nav', 'aria-expanded': 'false', 'aria-label': 'Menu', text: '☰' });
+  const setOpen = (open) => { top.classList.toggle('nav-open', open); toggle.setAttribute('aria-expanded', String(open)); };
+  toggle.onclick = () => setOpen(!top.classList.contains('nav-open'));
+  nav.addEventListener('click', (e) => { if (e.target.closest('a')) setOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && top.classList.contains('nav-open')) { setOpen(false); toggle.focus(); } });
+  nav.before(toggle);
+}
 export function mountNav(active, onLang) {
   const nav = document.getElementById('nav');
   const bn = getLang() === 'bn';
+  navActive = active;
   if (nav) {
-    // Tutorials, video courses, labs and exam prep live in the homepage hub; the top bar keeps three links.
-    const links = [
-      ['dashboard', '/dashboard.html', bn ? 'ড্যাশবোর্ড' : 'Dashboard'],
-      ['pricing', '/pricing.html', bn ? 'মূল্য' : 'Pricing'],
-      ['profile', '/profile.html', bn ? 'প্রোফাইল' : 'Profile'],
-    ];
-    nav.replaceChildren(...links.map(([id, href, label]) => el('a', { href, class: id === active ? 'active' : '', 'aria-current': id === active ? 'page' : null, text: label })));
+    wireNavMenu(nav);
+    drawNavLinks();
+    if (navAuthMode === undefined) getConfig().then((cfg) => { navAuthMode = cfg.authMode ?? 'hybrid'; drawNavLinks(); }).catch(() => {});
+  }
+  if (!navWired) {
+    navWired = true;
+    const refresh = () => {
+      drawNavLinks();
+      const actions = document.querySelector('.top .top-actions');
+      if (actions) mountAccount(actions, getLang() === 'bn');
+    };
+    window.addEventListener('ll-auth', refresh);
+    window.addEventListener('storage', (e) => { if (e.key === AUTH_KEY) refresh(); }); // signed in or out in another tab
   }
   const brand = document.querySelector('.top .brand');
   if (brand && brand.tagName !== 'A') {

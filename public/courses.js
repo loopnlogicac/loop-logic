@@ -1,6 +1,7 @@
 // Course catalog: search and filter the Loop & Logic courses.
 import { getLang, applyI18n, mountNav, el, num, errorBox } from './common.js';
 import { courseCard } from './ui.js';
+import { courseAccess } from './course-access.js';
 
 const T = {
   en: {
@@ -9,6 +10,8 @@ const T = {
     search: 'Search courses, e.g. “OS”, “MAT-101”, “ডেটা”', all: 'All', adaptiveOnly: 'With lessons and labs only',
     adaptive: 'Lessons + labs', videoOnly: 'Video course', videos: 'videos', lessonsLabs: (l, b) => `${l} lessons · ${b} labs`,
     none: 'No course matches that search.', clear: 'Clear filters', count: (n) => `${n} courses`,
+    access: 'Price', accessAll: 'All', free: 'Free', paid: 'Premium', buy: 'Buy', samples: 'Free samples',
+    noPaid: 'Premium courses are coming soon. Meanwhile, all our video courses and tutorials are free.',
   },
   bn: {
     tagline: 'উদ্দেশ্য নিয়ে শেখা', foot: 'লুপ অ্যান্ড লজিক · উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে',
@@ -16,16 +19,27 @@ const T = {
     search: 'কোর্স খোঁজো, যেমন “OS”, “MAT-101”, “ডেটা”', all: 'সব', adaptiveOnly: 'শুধু পাঠ ও ল্যাবসহ',
     adaptive: 'পাঠ + ল্যাব', videoOnly: 'ভিডিও কোর্স', videos: 'ভিডিও', lessonsLabs: (l, b) => `${l}টি পাঠ · ${b}টি ল্যাব`,
     none: 'এই খোঁজে কোনো কোর্স মেলেনি।', clear: 'ফিল্টার মুছে দাও', count: (n) => `${n}টি কোর্স`,
+    access: 'দাম', accessAll: 'সব', free: 'ফ্রি', paid: 'প্রিমিয়াম', buy: 'কিনো', samples: 'ফ্রি নমুনা',
+    noPaid: 'প্রিমিয়াম কোর্স শিগগিরই আসছে। এর মধ্যে আমাদের সব ভিডিও কোর্স আর টিউটোরিয়াল ফ্রি।',
   },
 };
 const t = () => T[getLang()];
-const state = { q: new URLSearchParams(location.search).get('q') ?? '', subject: 'all', adaptiveOnly: false };
+const params = new URLSearchParams(location.search);
+const state = { q: params.get('q') ?? '', subject: 'all', adaptiveOnly: false, access: ['free', 'paid'].includes(params.get('access')) ? params.get('access') : 'all' };
+
+/** Keep the Free / Paid choice in the address, so it can be shared. */
+function syncUrl() {
+  const u = new URL(location.href);
+  if (state.access === 'all') u.searchParams.delete('access'); else u.searchParams.set('access', state.access);
+  history.replaceState(null, '', u.pathname + u.search + u.hash);
+}
 let data = null;
 const main = document.getElementById('main');
 
 function matches(c) {
   if (state.subject !== 'all' && c.subject !== state.subject) return false;
   if (state.adaptiveOnly && !c.adaptive) return false;
+  if (state.access !== 'all' && (state.access === 'paid') !== courseAccess(c).paid) return false;
   const q = state.q.trim().toLowerCase();
   if (!q) return true;
   return [c.title, c.blurb, c.code ?? '', c.subjectName, c.id.replace(/-/g, ' ')].join(' ').toLowerCase().includes(q);
@@ -43,10 +57,12 @@ function render() {
   const only = el('label', { class: 'toggle' }, el('input', { type: 'checkbox', checked: state.adaptiveOnly || null, onchange: (e) => { state.adaptiveOnly = e.target.checked; drawGrid(); } }), L.adaptiveOnly);
   const grid = el('div', { class: 'grid', id: 'grid' });
   const count = el('p', { class: 'muted small', id: 'count' });
+  const accessChips = el('div', { class: 'fchips', role: 'group', 'aria-label': L.access },
+    ...[['all', L.accessAll], ['free', L.free], ['paid', L.paid]].map(([id, name]) => el('button', { type: 'button', 'aria-pressed': String(state.access === id), text: name, onclick: () => { state.access = id; syncUrl(); render(); } })));
   main.replaceChildren(
     el('div', { class: 'page-head' }, el('h1', { text: L.title }), el('p', { text: L.sub(num(data.courses.length), num(totalVideos)) })),
     el('div', { class: 'filters' }, el('div', { class: 'search' }, input), only),
-    chips, count, grid);
+    accessChips, chips, count, grid);
   drawGrid();
 }
 
@@ -56,8 +72,9 @@ function drawGrid() {
   document.getElementById('count').textContent = L.count(num(list.length));
   const grid = document.getElementById('grid');
   if (!list.length) {
-    grid.replaceChildren(el('div', { class: 'card empty', style: 'grid-column: 1 / -1' }, el('p', { text: L.none }),
-      el('button', { type: 'button', class: 'btn secondary', text: L.clear, onclick: () => { Object.assign(state, { q: '', subject: 'all', adaptiveOnly: false }); render(); } })));
+    const noPaidYet = state.access === 'paid' && !data.courses.some((c) => courseAccess(c).paid);
+    grid.replaceChildren(el('div', { class: 'card empty', style: 'grid-column: 1 / -1' }, el('p', { text: noPaidYet ? L.noPaid : L.none }),
+      el('button', { type: 'button', class: 'btn secondary', text: L.clear, onclick: () => { Object.assign(state, { q: '', subject: 'all', adaptiveOnly: false, access: 'all' }); syncUrl(); render(); } })));
     return;
   }
   grid.replaceChildren(...list.map((c) => courseCard(c, L)));

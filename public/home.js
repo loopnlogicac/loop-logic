@@ -3,6 +3,7 @@
 // list their items A–Z on the left and preview the chosen one on the right.
 // Labs are chosen course by course. The top bar is the shared sticky header.
 import { api, getLang, applyI18n, mountNav, el, num, getSite, fillAdSlots } from './common.js';
+import { courseAccess } from './course-access.js';
 
 const T = {
   en: {
@@ -23,7 +24,7 @@ const T = {
     examTag: 'Exam prep · Pro', comingSoon: 'COMING SOON', includes: ['Solved past papers', 'Timed mock tests', 'Class materials', 'Certificate'], price: 'Price announced soon', join: 'Join the waitlist', stayFree: 'Videos and tutorials stay free.',
     play: 'Play', stepOf: 'Step 1 of many',
     faqH: 'Questions students ask',
-    faq: [['Is everything free?', 'Tutorials, labs, quizzes and every free video course are free. Pro adds exam-prep packs and some paid courses.'], ['Can I learn in Bangla?', 'Yes. Switch with EN · বাংলা at the top. Videos are in Bangla, and more tutorials get full Bangla text every week.'], ['Do I need an account?', 'No. Sign in with Google only if you want your progress on every device.']],
+    faq: [['Is everything free?', 'Tutorials, labs, quizzes and every free video course are free. Premium courses are bought one by one, and Pro will add exam-prep packs.'], ['Can I learn in Bangla?', 'Yes. Switch with EN · বাংলা at the top. Videos are in Bangla, and more tutorials get full Bangla text every week.'], ['Do I need an account?', 'No. Sign in with Google only if you want your progress on every device.']],
     footP: 'Answers come only from reviewed notes and approved websites.',
     foot: [['/learn.html', 'Tutorials'], ['/courses.html', 'Video courses'], ['/blog.html', 'Blog'], ['/practice.html', 'Practice'], ['/pricing.html', 'Pricing'], ['/instructor.html', 'For instructors'], ['/privacy.html', 'Privacy'], ['/terms.html', 'Terms']],
   },
@@ -45,7 +46,7 @@ const T = {
     examTag: 'পরীক্ষার প্রস্তুতি · প্রো', comingSoon: 'শিগগিরই', includes: ['পুরোনো প্রশ্নের সমাধান', 'সময় ধরে মক টেস্ট', 'ক্লাসের ম্যাটেরিয়াল', 'সার্টিফিকেট'], price: 'দাম শিগগিরই জানানো হবে', join: 'ওয়েটলিস্টে যোগ দাও', stayFree: 'ভিডিও আর টিউটোরিয়াল ফ্রিই থাকবে।',
     play: 'চালাও', stepOf: 'প্রথম ধাপ',
     faqH: 'শিক্ষার্থীরা যা জানতে চায়',
-    faq: [['সব কি ফ্রি?', 'টিউটোরিয়াল, ল্যাব, কুইজ আর সব ফ্রি ভিডিও কোর্স ফ্রি। প্রো-তে থাকবে পরীক্ষার প্রস্তুতির প্যাক আর কিছু পেইড কোর্স।'], ['বাংলায় কি শেখা যায়?', 'হ্যাঁ। উপরের EN · বাংলা দিয়ে বদলাও। ভিডিও বাংলায়, আর প্রতি সপ্তাহে আরও টিউটোরিয়াল পুরো বাংলায় আসছে।'], ['অ্যাকাউন্ট কি লাগবে?', 'না। সব ডিভাইসে অগ্রগতি রাখতে চাইলে Google দিয়ে সাইন ইন করো।']],
+    faq: [['সব কি ফ্রি?', 'টিউটোরিয়াল, ল্যাব, কুইজ আর সব ফ্রি ভিডিও কোর্স ফ্রি। প্রিমিয়াম কোর্স আলাদা আলাদা কেনা যায়, আর প্রো-তে আসবে পরীক্ষার প্রস্তুতির প্যাক।'], ['বাংলায় কি শেখা যায়?', 'হ্যাঁ। উপরের EN · বাংলা দিয়ে বদলাও। ভিডিও বাংলায়, আর প্রতি সপ্তাহে আরও টিউটোরিয়াল পুরো বাংলায় আসছে।'], ['অ্যাকাউন্ট কি লাগবে?', 'না। সব ডিভাইসে অগ্রগতি রাখতে চাইলে Google দিয়ে সাইন ইন করো।']],
     footP: 'উত্তর আসে শুধু পর্যালোচিত নোট আর অনুমোদিত ওয়েবসাইট থেকে।',
     foot: [['/learn.html', 'টিউটোরিয়াল'], ['/courses.html', 'ভিডিও কোর্স'], ['/blog.html', 'ব্লগ'], ['/practice.html', 'অনুশীলন'], ['/pricing.html', 'মূল্য'], ['/instructor.html', 'শিক্ষকদের জন্য'], ['/privacy.html', 'গোপনীয়তা'], ['/terms.html', 'শর্তাবলি']],
   },
@@ -96,7 +97,7 @@ function items(tab, L) {
       meta: tab === 'labs' ? (x.labs ? L.labsN(num(x.labs)) : L.noLabs) : x.delivered >= x.planned ? L.complete(num(x.delivered)) : `${L.ofTopics(num(x.delivered), num(x.planned))}${x.labs ? ` · ${L.labsN(num(x.labs))}` : ''}`,
     }));
   }
-  if (tab === 'courses') return (catalog?.courses ?? []).map((c, i) => ({ key: c.id, label: c.title, mark: shortOf(c.title), meta: L.vh(num(c.videos), num(c.hours)), pro: c.access === 'paid', i }));
+  if (tab === 'courses') return (catalog?.courses ?? []).map((c, i) => ({ key: c.id, label: c.title, mark: shortOf(c.title), meta: L.vh(num(c.videos), num(c.hours)), pro: courseAccess(c).paid, i }));
   return EXAM.map((e) => ({ key: e.key, label: (bn ? e.bn : e.en)[0], mark: '★', meta: L.examTag, pro: true }));
 }
 
@@ -166,17 +167,18 @@ async function coursePreview(L, key) {
   const v = await once(`videos:${c.id}:${getLang()}`, () => api('GET', `/api/courses/${c.id}/videos?lang=${getLang()}`));
   const first = (v.sections ?? []).flatMap((s) => s.items).filter((it) => !it.repeat).slice(0, 4);
   const tut = learn.tracks.find((tr) => tr.course === c.id && tr.available);
-  const paid = c.access === 'paid';
+  const acc = courseAccess(c, getLang());
+  const paid = acc.paid;
   return [
     el('div', { class: 'hp-course' },
       el('div', { class: 'hp-tile', style: `background:${c.tint ?? TINTS[i % TINTS.length]}` }, el('span', { text: shortOf(c.title) }), svg('hp-play', PLAY)),
       el('div', { class: 'hp-course-text' }, el('span', { class: 'hp-sub', text: c.subjectName }), el('h3', { text: c.title }),
-        el('span', { class: 'hp-course-meta' }, L.videos(num(c.videos), num(c.hours)), ' · ', el('strong', { class: paid ? 'hp-price' : 'hp-free-text', text: paid ? c.price ?? 'PRO' : L.free })),
+        el('span', { class: 'hp-course-meta' }, L.videos(num(c.videos), num(c.hours)), ' · ', el('strong', { class: paid ? 'hp-price' : 'hp-free-text', text: paid ? acc.label : L.free })),
         paid && c.samples ? el('span', { class: 'hp-sub', text: L.samples(num(c.samples)) }) : null)),
     el('div', { class: 'hp-videos' }, el('strong', { class: 'hp-sub', text: L.playlist }),
       ...first.map((it, k) => el('div', { class: `hp-video${it.locked ? ' locked' : ''}` }, el('span', { class: 'hp-n', text: num(k + 1) }), el('span', { class: 'hp-video-title', text: it.title }),
         it.locked ? svg('hp-lock', LOCK) : it.sample ? el('span', { class: 'hp-tag on', text: L.sample }) : svg('hp-play-s', PLAY)))),
-    el('div', { class: 'hp-actions' }, btn(`/watch.html?course=${encodeURIComponent(c.id)}`, paid ? L.watchSamples : L.startWatching), paid ? btn(`/buy.html?course=${encodeURIComponent(c.id)}`, `${L.buy} · ${c.price ?? ''}`, 'pro') : null, tut ? btn(`/learn.html?track=${tut.id}`, L.readTut(tut.title), 'ghost') : null),
+    el('div', { class: 'hp-actions' }, btn(`/watch.html?course=${encodeURIComponent(c.id)}`, paid ? L.watchSamples : L.startWatching), paid ? btn(`/buy.html?course=${encodeURIComponent(c.id)}`, acc.price ? `${L.buy} · ${acc.price}` : L.buy, 'pro') : null, tut ? btn(`/learn.html?track=${tut.id}`, L.readTut(tut.title), 'ghost') : null),
   ];
 }
 
