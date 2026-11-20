@@ -1,0 +1,529 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-roc-auc",
+  "module": "evaluation",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "ROC Curves and AUC",
+    "bn": "ROC curve ও AUC দিয়ে score-এর ranking দেখা"
+  },
+  "summary": {
+    "en": "Sweep distinct tied-score thresholds, compute true/false positive rates and connect trapezoidal AUC with positive-negative ranking.",
+    "bn": "সমান score একসঙ্গে নিয়ে threshold নামাও, true/false positive rate মাপো এবং AUC-এর ranking অর্থ বোঝো।"
+  },
+  "level": "intermediate",
+  "estMinutes": 65,
+  "prerequisites": [
+    "ml-precision-recall"
+  ],
+  "related": [],
+  "keywords": [
+    "ROC",
+    "AUC",
+    "true positive rate",
+    "false positive rate",
+    "ranking",
+    "ties"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Compare rankings before choosing one cutoff"
+    },
+    {
+      "id": "intuition",
+      "title": "Two rates use two different actual groups"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Lower the threshold through each distinct score"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Keep the ranking fixed while moving the marker"
+    },
+    {
+      "id": "examples",
+      "title": "Verify the curve area and a selected point"
+    },
+    {
+      "id": "area-ranking",
+      "title": "AUC compares positive-negative pairs"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Do not ask area to answer every evaluation question"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: ranking and deployment answer different questions"
+    },
+    {
+      "id": "summary",
+      "title": "A ranking curve and a separate decision"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Sweep complete score groups and integrate the curve",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The six fixed scores have three positives and three negatives. Eight of nine positive-negative pairs are correctly ranked, giving AUC 0.889. The selected threshold 0.5 has FPR one-third and TPR two-thirds.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Verify the same ROC area and selected operating point",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>roc_curve groups tied scores under its threshold convention. roc_auc_score agrees with trapezoidal integration. The selected point is reconstructed from the same inclusive hard decisions, separate from the whole-curve ranking summary.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Evaluate malignant-positive ranking on reserved records",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The target is explicitly recoded so one means malignant. Use that class score rather than hard labels when measuring ranking. This held-out example evaluates the chosen educational workflow and does not establish a clinical deployment claim.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Compute AUC by positive-negative pairs",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read n (2–30), then n finite score/binary-label pairs with scores 0–1. Give one credit when a positive outranks a negative, half for a tie and zero otherwise. Divide by the number of positive-negative pairs. Print AUC to three decimals, undefined if one actual class is absent, or invalid for malformed input.</p>",
+      "hints": [
+        "Do not invent AUC without both classes.",
+        "Pair ties receive half credit."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Print ROC points after complete tie groups",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read the same n score/label format. Print FPR TPR to three decimals, starting at 0.000 0.000 and then after each distinct descending score group enters. Equal scores enter together. If either actual class is absent, print undefined. Invalid input prints invalid.</p>",
+      "hints": [
+        "No within-tie order should change the curve area.",
+        "Use actual negatives for the FPR denominator."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Separate rank quality from a threshold choice",
+      "difficulty": "medium",
+      "statementHtml": "<p>Why can AUC remain unchanged when a different threshold changes the confusion matrix?</p>",
+      "hints": [
+        "Keep scores fixed while moving the cutoff."
+      ],
+      "type": "written",
+      "answerHtml": "<p>AUC compares the score ranking across thresholds. The chosen matrix is one operating point on that ranking. Changing only the decision cutoff leaves score order unchanged, so it does not change AUC. Choose an operating point using validation and error costs.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Explain what AUC does not measure",
+      "difficulty": "medium",
+      "statementHtml": "<p>A model has high AUC. Does that guarantee calibrated probabilities or high positive precision in a rare-event population?</p>",
+      "hints": [
+        "Name the question asked by each measure."
+      ],
+      "type": "written",
+      "answerHtml": "<p>No. AUC measures ranking, not probability calibration. Precision also depends on class prevalence and the operating threshold. Evaluate those questions explicitly; a large ROC area is not a complete decision report.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the curve: what is the smallest observed FPR at TPR one?",
+      "options": [
+        "Zero",
+        "Two-thirds",
+        "One",
+        "One-third"
+      ],
+      "answer": 3,
+      "explanation": "All three positives enter by score 0.45. At that threshold, the negative score 0.6 has already entered, giving one false positive out of three negatives.",
+      "figure": {
+        "caption": {
+          "en": "ROC points from the six fixed scores.",
+          "bn": "স্থির ছয়টি score থেকে পাওয়া ROC point দেখো।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "False positive rate",
+            "yLabel": "True positive rate",
+            "series": [
+              {
+                "id": "s0",
+                "label": "ROC",
+                "type": "line",
+                "points": [
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.3333333333333333
+                  ],
+                  [
+                    0.0,
+                    0.6666666666666666
+                  ],
+                  [
+                    0.3333333333333333,
+                    0.6666666666666666
+                  ],
+                  [
+                    0.3333333333333333,
+                    1.0
+                  ],
+                  [
+                    0.6666666666666666,
+                    1.0
+                  ],
+                  [
+                    1.0,
+                    1.0
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the tied pair: how much ranking credit belongs to its AUC?",
+      "options": [
+        "Zero",
+        "Two",
+        "One-half",
+        "One"
+      ],
+      "answer": 2,
+      "explanation": "Neither class outranks the other. The complete tie group gives a diagonal ROC segment and half-credit pair contribution.",
+      "figure": {
+        "caption": {
+          "en": "One positive and one negative with equal score.",
+          "bn": "একটি positive ও একটি negative-এর score সমান।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 2,
+              "cols": 2,
+              "rowLabels": [
+                "A",
+                "B"
+              ],
+              "colLabels": [
+                "Score",
+                "Actual label"
+              ],
+              "cells": [
+                [
+                  0.5,
+                  0
+                ],
+                [
+                  0.5,
+                  1
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the ranking: how many negatives does positive score 0.45 outrank?",
+      "options": [
+        "Three",
+        "Two",
+        "Zero",
+        "One"
+      ],
+      "answer": 1,
+      "explanation": "It exceeds negative scores 0.1 and 0.3, but not negative score 0.6. The other two positives outrank all three negatives.",
+      "figure": {
+        "caption": {
+          "en": "Scores sorted from smallest to largest.",
+          "bn": "ছোট থেকে বড় ক্রমে score ও আসল লেবেল দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 6,
+              "cols": 2,
+              "rowLabels": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6"
+              ],
+              "colLabels": [
+                "Score",
+                "Label"
+              ],
+              "cells": [
+                [
+                  0.1,
+                  0
+                ],
+                [
+                  0.3,
+                  0
+                ],
+                [
+                  0.45,
+                  1
+                ],
+                [
+                  0.6,
+                  0
+                ],
+                [
+                  0.8,
+                  1
+                ],
+                [
+                  0.9,
+                  1
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is the false-positive-rate denominator?",
+      "options": [
+        "All actual negatives",
+        "All predicted positives",
+        "All actual positives",
+        "Only true positives"
+      ],
+      "answer": 0,
+      "explanation": "FPR is FP/(FP+TN), distinct from one minus precision."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is required for an ordinary binary ROC AUC?",
+      "options": [
+        "Only positive scores",
+        "Only hard labels",
+        "A calibrated probability guarantee",
+        "Both actual classes"
+      ],
+      "answer": 3,
+      "explanation": "One absent class removes a rate denominator."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why use continuous scores rather than only hard labels for ROC?",
+      "options": [
+        "Scores make labels unnecessary",
+        "Scores guarantee no ties",
+        "Hard labels discard most ranking information",
+        "Hard labels create more thresholds"
+      ],
+      "answer": 2,
+      "explanation": "ROC evaluates how the ranking behaves as the decision cutoff changes."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does high AUC alone imply calibrated probabilities?",
+      "options": [
+        "Only on training data",
+        "No",
+        "Yes for every classifier",
+        "Only if scores are positive"
+      ],
+      "answer": 1,
+      "explanation": "Ranking and calibration are different questions."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which TPR follows two found positives out of three actual positives?",
+      "options": [
+        "0.667",
+        "0.333",
+        "0.500",
+        "1.000"
+      ],
+      "answer": 0,
+      "explanation": "TPR equals recall, here two-thirds.",
+      "code": "def main():\n    tp, fn = 2, 1\n    print(f\"{tp / (tp + fn):.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which FPR follows one false positive among three actual negatives?",
+      "options": [
+        "0.667",
+        "0.500",
+        "1.000",
+        "0.333"
+      ],
+      "answer": 3,
+      "explanation": "The denominator is three actual negatives.",
+      "code": "def main():\n    fp, tn = 1, 2\n    print(f\"{fp / (fp + tn):.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "What area lies under a single diagonal tie segment?",
+      "options": [
+        "1.000",
+        "2.000",
+        "0.500",
+        "0.000"
+      ],
+      "answer": 2,
+      "explanation": "The trapezoid is a triangle of width and height one, giving one-half.",
+      "code": "def main():\n    left = (0.0, 0.0)\n    right = (1.0, 1.0)\n    area = (right[0] - left[0]) * (right[1] + left[1]) / 2\n    print(f\"{area:.3f}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "ROC plots true-positive rate against false-positive rate.",
+      "bn": "ROC-তে true-positive rate-কে false-positive rate-এর সঙ্গে দেখানো হয়।"
+    },
+    {
+      "en": "Sweep all equal-score examples together at a threshold.",
+      "bn": "এক threshold-এ সমান score-এর সব উদাহরণ একসঙ্গে নাও।"
+    },
+    {
+      "en": "AUC is a ranking summary with half credit for tied pairs.",
+      "bn": "AUC ranking-এর সারাংশ; সমান score-এর pair অর্ধেক credit পায়।"
+    },
+    {
+      "en": "Both actual classes are needed for defined binary ROC rates.",
+      "bn": "Binary ROC rate নির্দিষ্ট করতে দুই আসল ক্লাস-ই দরকার।"
+    },
+    {
+      "en": "Ranking quality does not choose an operating threshold or prove calibration.",
+      "bn": "Ranking ভালো হলেই operating threshold বাছা বা calibration প্রমাণ হয়ে যায় না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Compute pair-ranking AUC for the six displayed scores.",
+      "marks": 7,
+      "answerHtml": "<p>There are three positive and three negative scores, giving nine pairs. Positive 0.45 outranks two negatives, while 0.8 and 0.9 each outrank all three. Credit is 2+3+3=8, so AUC is 8/9≈0.889. A tied pair would contribute one-half instead of one or zero.</p>"
+    },
+    {
+      "type": "numerical",
+      "question": "Give the ROC point at threshold 0.5 and distinguish it from precision.",
+      "marks": 6,
+      "answerHtml": "<p>TP=2, FN=1, FP=1 and TN=2. TPR is 2/3 and FPR is 1/3. The ROC point is (1/3,2/3). Precision is TP/(TP+FP)=2/3 here, coincidentally the same as TPR; its denominator is predicted positives rather than actual positives.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain score ties, absent classes and calibration limits.",
+      "marks": 7,
+      "answerHtml": "<p>Process a tied-score group together so an arbitrary within-tie ordering cannot inflate area. If either actual class is absent, one rate denominator is missing and binary AUC is undefined. AUC measures ordering, so it does not establish calibrated probabilities or a suitable operating threshold.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "roc-curve"
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "schemaVersion": "1.1",
+  "id": "roc-curve",
+  "kind": "ml",
+  "title": {
+    "en": "Sweeping score thresholds to draw ROC",
+    "bn": "Score-এর threshold নামিয়ে ROC আঁকা"
+  },
+  "summary": {
+    "en": "Sweep complete tied-score groups and add actual ROC points; compute trapezoidal AUC and show a separate selected threshold. Missing classes yield undefined.",
+    "bn": "সমান score-এর দল একসঙ্গে নিয়ে ROC point আঁকো, AUC হিসাব করো এবং আলাদা threshold দেখো; ক্লাস না থাকলে ফল undefined।"
+  },
+  "codeExample": "ex-1",
+  "pseudocode": [
+    "require both classes and start above all scores",
+    "lower threshold to the next distinct score",
+    "include every tied-score example together",
+    "compute rates from actual-class totals",
+    "append one ROC point for the whole group",
+    "mark the selected operating threshold",
+    "integrate trapezoids and return the AUC",
+    "keep ranking separate from decision policy"
+  ],
+  "inputs": [
+    {
+      "name": "threshold",
+      "label": "Selected score threshold",
+      "type": "number",
+      "min": 0,
+      "max": 1,
+      "step": 0.05
+    },
+    {
+      "name": "points",
+      "label": "Score x and known class",
+      "type": "points",
+      "minLength": 2,
+      "maxLength": 30,
+      "classes": 2,
+      "xRange": [
+        0,
+        1
+      ],
+      "yRange": [
+        0,
+        1
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Six ranked cards",
+      "input": {
+        "threshold": 0.5,
+        "points": [
+          {
+            "x": 0.1,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.3,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.45,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 0.6,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.8,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 0.9,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "A tied score group",
+      "input": {
+        "threshold": 0.5,
+        "points": [
+          {
+            "x": 0.2,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.5,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.5,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 0.8,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "input": {
+        "threshold": 0.5,
+        "points": [
+          {
+            "x": 0.1,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.3,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.45,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 0.6,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.8,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 0.9,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      },
+      "expect": {
+        "vars": {
+          "status": "defined",
+          "auc": 0.889,
+          "selectedFPR": 0.333,
+          "selectedTPR": 0.667
+        }
+      }
+    },
+    {
+      "input": {
+        "threshold": 0.5,
+        "points": [
+          {
+            "x": 0.2,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.5,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.5,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 0.8,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      },
+      "expect": {
+        "vars": {
+          "status": "defined",
+          "auc": 0.875,
+          "selectedFPR": 0.5,
+          "selectedTPR": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "threshold": 0.5,
+        "points": [
+          {
+            "x": 0.5,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0.5,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      },
+      "expect": {
+        "vars": {
+          "status": "defined",
+          "auc": 0.5,
+          "selectedFPR": 1,
+          "selectedTPR": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "threshold": 0.5,
+        "points": [
+          {
+            "x": 0.2,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 0.8,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      },
+      "expect": {
+        "vars": {
+          "status": "undefined",
+          "auc": null,
+          "selectedFPR": null,
+          "selectedTPR": null
+        }
+      }
+    }
+  ],
+  "complexity": {
+    "time": "O(n²) exhaustive distinct-threshold counting in this small lab",
+    "space": "O(n) score groups and curve points"
+  }
+}

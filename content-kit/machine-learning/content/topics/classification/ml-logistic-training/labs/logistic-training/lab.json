@@ -1,0 +1,273 @@
+{
+  "schemaVersion": "1.1",
+  "id": "logistic-training",
+  "kind": "ml",
+  "title": {
+    "en": "Moving a logistic boundary with batch gradients",
+    "bn": "Batch gradient দিয়ে লজিস্টিক boundary বদলানো"
+  },
+  "summary": {
+    "en": "Minimise mean log loss plus L2 using real batch gradients; show adjacent boundary/loss updates per displayed epoch and stop oversized divergent steps explicitly.",
+    "bn": "সত্যিকারের batch gradient-এ mean log loss ও L2 কমাও; একই epoch-এর boundary/loss দেখো, diverge করলে স্পষ্টভাবে থামো।"
+  },
+  "codeExample": "ex-1",
+  "pseudocode": [
+    "initialise weights, bias and penalty strength",
+    "compute probabilities from the old model",
+    "average the batch gradients",
+    "update all parameters and draw the boundary",
+    "record that same epoch objective",
+    "stop explicitly if parameter magnitude diverges",
+    "predict the region map with the final model",
+    "return status and rounded parameters"
+  ],
+  "inputs": [
+    {
+      "name": "rate",
+      "label": "Learning rate",
+      "type": "number",
+      "min": 0.05,
+      "max": 20,
+      "step": 0.05
+    },
+    {
+      "name": "epochs",
+      "label": "Training epochs",
+      "type": "int",
+      "min": 20,
+      "max": 400
+    },
+    {
+      "name": "c",
+      "label": "Inverse regularisation C",
+      "type": "number",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1
+    },
+    {
+      "name": "points",
+      "label": "Centred labelled cards",
+      "type": "points",
+      "minLength": 1,
+      "maxLength": 30,
+      "classes": 2,
+      "xRange": [
+        -3,
+        3
+      ],
+      "yRange": [
+        -3,
+        3
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Controlled learning",
+      "input": {
+        "rate": 0.3,
+        "epochs": 400,
+        "c": 1,
+        "points": [
+          {
+            "x": -2,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -2,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": 1,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 1,
+            "y": 2,
+            "cls": 1
+          },
+          {
+            "x": 2,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "A divergent oversized step",
+      "input": {
+        "rate": 20,
+        "epochs": 400,
+        "c": 1,
+        "points": [
+          {
+            "x": -2,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -2,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": 1,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 1,
+            "y": 2,
+            "cls": 1
+          },
+          {
+            "x": 2,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "input": {
+        "rate": 0.3,
+        "epochs": 400,
+        "c": 1,
+        "points": [
+          {
+            "x": -2,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -2,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": 1,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 1,
+            "y": 2,
+            "cls": 1
+          },
+          {
+            "x": 2,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      },
+      "expect": {
+        "vars": {
+          "w1": 0.812,
+          "w2": 0.812,
+          "bias": 0,
+          "loss": 0.226,
+          "status": "finished"
+        }
+      }
+    },
+    {
+      "input": {
+        "rate": 20,
+        "epochs": 400,
+        "c": 1,
+        "points": [
+          {
+            "x": -2,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -2,
+            "cls": 0
+          },
+          {
+            "x": -1,
+            "y": -1,
+            "cls": 0
+          },
+          {
+            "x": 1,
+            "y": 1,
+            "cls": 1
+          },
+          {
+            "x": 1,
+            "y": 2,
+            "cls": 1
+          },
+          {
+            "x": 2,
+            "y": 1,
+            "cls": 1
+          }
+        ]
+      },
+      "expect": {
+        "vars": {
+          "status": "diverged"
+        }
+      }
+    },
+    {
+      "input": {
+        "rate": 0.3,
+        "epochs": 400,
+        "c": 1,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+            "cls": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "cls": 1
+          }
+        ]
+      },
+      "expect": {
+        "vars": {
+          "w1": 0,
+          "w2": 0,
+          "bias": 0,
+          "loss": 0.693,
+          "status": "finished"
+        }
+      }
+    }
+  ],
+  "complexity": {
+    "time": "O(epochs × n) batch training plus 576 final predictions",
+    "space": "O(n + displayed epochs + grid)"
+  }
+}

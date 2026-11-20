@@ -23,7 +23,7 @@ function trace(input) {
     steps.push({ op: 'point-mark', targets: [p.id], tone: 'current', line: 2,
       note: note(`Inspect ${p.id}: compare both feature differences.`, `${p.id}-এর দুই ফিচারের ফারাক দেখো।`) });
     steps.push({ op: 'shape', id: 'distance-' + p.id, type: 'segment', from: query, to: [p.x, p.y], line: 2,
-      vars: { distance: round(distance) }, note: note(
+      note: note(
         `sqrt(${round(dx)}² + ${round(dy)}²) gives distance ${round(distance)}.`,
         `দুই ফারাকের বর্গ যোগ করে মূল নিলে দূরত্ব ${round(distance)}।`) });
     steps.push({ op: 'point-unmark', targets: [p.id], line: 2,

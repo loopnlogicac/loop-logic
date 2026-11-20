@@ -47,7 +47,7 @@ function trace(input) {
     results.push({ k, accuracy });
     steps.push({ op: 'series-add', id: 'validation', x: k, y: accuracy, line: 4,
       note: note(`${correct}/${input.validation.length} validation cards agree: accuracy ${round(accuracy)}.`,
-        `${input.validation.length}টির মধ্যে ${correct}টি ঠিক; accuracy ${round(accuracy)}।`) });
+        `${input.validation.length}টির মধ্যে ${correct}টি ঠিক; অ্যাকুরেসি ${round(accuracy)}।`) });
   }
   const best = results.reduce((a, b) => b.accuracy > a.accuracy ? b : a);
   const correct = input.validation.reduce((n, p) => n + Number(predict(p.x, p.y, input.k) === p.cls), 0);
@@ -57,6 +57,6 @@ function trace(input) {
     vars: { selectedK: input.k, accuracy: round(correct / input.validation.length), bestK: best.k, bestAccuracy: round(best.accuracy) },
     note: note(`The final map shows your slider k=${input.k}, which can differ from the best tested candidate.`,
       `শেষ মানচিত্রে slider-এর k=${input.k}; এটি সেরা candidate থেকে আলাদা হতে পারে।`) });
-  steps.push({ op: 'done', line: 7, note: note('Compare boundaries and held-out errors, then keep a separate final test set.', 'Boundary ও আলাদা যাচাইয়ের ভুল মেলাও; final test আলাদা রাখো।') });
+  steps.push({ op: 'done', line: 7, note: note('Compare boundaries and held-out errors, then keep a separate final test set.', 'Boundary ও আলাদা যাচাইয়ের ভুল মেলাও; final টেস্ট আলাদা রাখো।') });
   return { init, steps };
 }
