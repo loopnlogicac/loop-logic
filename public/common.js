@@ -94,7 +94,7 @@ export async function api(method, path, body, extraHeaders = {}, format = 'json'
     await showSignIn(data.error?.message);
     throw new ApiError('unauthenticated', data.error?.message ?? 'Sign in to continue.', 401);
   }
-  if (!res.ok) throw new ApiError(data.error?.code ?? 'error', data.error?.message ?? res.statusText, res.status);
+  if (!res.ok) throw new ApiError(data.error?.code ?? 'error', (getLang() === 'bn' && data.error?.bn) || data.error?.message || res.statusText, res.status);
   return data;
 }
 

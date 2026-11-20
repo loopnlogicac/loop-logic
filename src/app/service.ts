@@ -20,11 +20,14 @@ export class AppError extends Error {
   readonly code: string;
   readonly status: number;
   readonly details?: unknown;
-  constructor(code: string, status: number, message: string, details?: unknown) {
+  /** Optional Bangla version of the message; the browser shows it when the page is in Bangla. */
+  readonly bn?: string;
+  constructor(code: string, status: number, message: string, details?: unknown, bn?: string) {
     super(message);
     this.code = code;
     this.status = status;
     this.details = details;
+    this.bn = bn;
   }
 }
 

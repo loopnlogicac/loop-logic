@@ -129,6 +129,8 @@ test('instructor endpoints need the instructor or admin role', async () => {
     assert.equal((await call('GET', '/api/instructor/classes', 'pupil')).status, 403);
     const made = await call('POST', '/api/instructor/classes', 'teach', { name: 'DS A', track: 'data-structures' });
     assert.equal(made.status, 200);
+    const unnamed = await (await call('POST', '/api/instructor/classes', 'teach', { name: '' })).json();
+    assert.match(unnamed.error.message, /Name the class/); assert.match(unnamed.error.bn, /[\u0980-\u09ff]/, 'errors carry a Bangla message for Bangla pages');
     const { code } = await made.json();
     assert.equal((await call('POST', '/api/classes/join', 'pupil', { code })).status, 200);
     assert.equal((await (await call('GET', '/api/my-classes', 'pupil')).json()).classes.length, 1);
