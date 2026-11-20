@@ -46,7 +46,7 @@ test('approved and rejected payments notify only the payer and retries do not re
 test('notice endpoints reject guests and ignore caller-supplied learner IDs', async () => {
   const store = new MemoryStore(), notices = new NoticeService(store), tutorials = new TutorialService(store, join(root, 'content-kit'));
   await notices.emit('alice', 'announcement', 'one', { title: 'PRIVATE' });
-  const app = createApp({ store, notices, tutorials, publicDir: join(root, 'public'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null, signedIn: Boolean(req.headers.authorization) }) } } as any);
+  const app = createApp({ store, notices, tutorials, publicDir: join(root, 'web'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null, signedIn: Boolean(req.headers.authorization) }) } } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', r)); const base = `http://127.0.0.1:${(app.address() as any).port}`;
   try {
     assert.equal((await fetch(base + '/api/my-notices')).status, 401); assert.equal((await fetch(base + '/api/my-notices/read-all', { method: 'POST' })).status, 401);

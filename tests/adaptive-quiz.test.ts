@@ -51,7 +51,7 @@ test('adaptive state survives a service restart and recovers a lost event-write 
 
 test('adaptive HTTP endpoints bind the run to the authenticated learner', async () => {
   const { store, tutorials, adaptive } = setup();
-  const app = createApp({ store, tutorials, adaptiveQuiz: adaptive, publicDir: join(root, 'public'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null }) } } as any);
+  const app = createApp({ store, tutorials, adaptiveQuiz: adaptive, publicDir: join(root, 'web'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null }) } } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', r)); const base = `http://127.0.0.1:${(app.address() as any).port}/api/learn/${track}/${topic}/adaptive`;
   const call = (suffix: string, who: string, body: any) => fetch(base + suffix, { method: 'POST', headers: { authorization: who, 'content-type': 'application/json' }, body: JSON.stringify(body) });
   try { const r = await (await call('', 'alice', {})).json(); assert.equal((await call('/answer', 'bob', { runId: r.runId, questionId: r.question.id, choice: 0 })).status, 404); assert.equal((await call('/answer', 'alice', { runId: r.runId, questionId: r.question.id, choice: 0, correct: false, difficulty: 'easy' })).status, 200); }

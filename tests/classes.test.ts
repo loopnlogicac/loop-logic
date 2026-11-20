@@ -120,7 +120,7 @@ test('instructor endpoints need the instructor or admin role', async () => {
       return u ? { learnerId: u[0], email: u[1], signedIn: true } : { learnerId: 'anon', email: null };
     },
   };
-  const app = createApp({ tutorials, watch, extras, admin, classes, store, auth, labModelFile: join(kit, 'tools', 'lab-model.mjs'), publicDir: join(import.meta.dirname, '..', 'public'), config: { supabaseUrl: null, supabaseAnonKey: null, aiDescription: 't', liveSearch: false, storeKind: 'memory', instructorKey: 'secret', editLocked: true, allowSeed: false } } as any);
+  const app = createApp({ tutorials, watch, extras, admin, classes, store, auth, labModelFile: join(kit, 'tools', 'lab-model.mjs'), publicDir: join(import.meta.dirname, '..', 'web'), config: { supabaseUrl: null, supabaseAnonKey: null, aiDescription: 't', liveSearch: false, storeKind: 'memory', instructorKey: 'secret', editLocked: true, allowSeed: false } } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', () => r()));
   const port = (app.address() as { port: number }).port;
   const call = (method: string, path: string, who?: string, body?: unknown) => fetch(`http://127.0.0.1:${port}${path}`, { method, headers: { 'content-type': 'application/json', ...(who ? { authorization: `Bearer ${who}` } : {}) }, body: body ? JSON.stringify(body) : undefined });
