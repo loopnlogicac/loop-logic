@@ -42,7 +42,7 @@ test('private saved state: CRUD, validation and catalog links', async () => {
 
 test('saved-item HTTP routes reject guests and isolate signed-in accounts', async () => {
   const { store, tutorials, notes, key } = setup();
-  const app = createApp({ store, tutorials, notes, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null, signedIn: Boolean(req.headers.authorization) }) }, publicDir: join(root, 'public'), config: {} } as any);
+  const app = createApp({ store, tutorials, notes, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null, signedIn: Boolean(req.headers.authorization) }) }, publicDir: join(root, 'web'), config: {} } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${(app.address() as any).port}`;
   const call = (method: string, path: string, who?: string, data?: unknown) => fetch(base + path, { method, headers: { 'content-type': 'application/json', ...(who ? { authorization: who } : {}) }, body: data ? JSON.stringify(data) : undefined });

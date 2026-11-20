@@ -50,7 +50,7 @@ Pages (all in English and Bangla, desktop and mobile):
 | `/profile.html` | Settings, everything the platform learned (with reasons), data download and reset |
 | `/instructor.html` | Class view (press **Add labelled demo learners** for data) |
 
-Course data lives in `src/content/courses.ts` (channel numbers checked 15 Nov 2026 — update them before each submission). **Prices on the landing page are drafts**: change them in `public/index.html` and `public/landing.js`.
+Course data lives in `src/content/courses.ts` (channel numbers checked 15 Nov 2026 — update them before each submission). **Prices on the landing page are drafts**: change them in `web/index.html` and `web/landing.js`.
 
 ### Two-minute demo script
 
@@ -140,7 +140,7 @@ tested with fake servers; they have **not** yet been run against the live servic
 | AI gateway (Gemini → Groq, timeout, retry, logging), validator, practice tutor | `src/ai/` |
 | Stores: memory and Supabase (REST + `ll_commit` RPC) | `src/store/` |
 | HTTP server, routes, sign-in, CSP | `src/server/` |
-| Pages (vanilla JS, no build step) | `public/` |
+| Pages (vanilla JS, no build step) | `web/` (served by the Node server, not as a static folder, so every deploy shows at once) |
 | Database schema with row-level security | `db/migrations/001_core.sql`, `002_video_extras.sql` |
 
 ## API

@@ -240,7 +240,7 @@ test('admin endpoints need a signed-in admin', async () => {
       return { learnerId: 'anon-1', email: null };
     },
   };
-  const app = createApp({ tutorials, watch, admin, auth, labModelFile: join(kit, 'tools', 'lab-model.mjs'), publicDir: join(import.meta.dirname, '..', 'public'), config: { supabaseUrl: null, supabaseAnonKey: null, aiDescription: 'test', liveSearch: false, storeKind: 'memory', instructorKey: null, editLocked: false, allowSeed: false } } as any);
+  const app = createApp({ tutorials, watch, admin, auth, labModelFile: join(kit, 'tools', 'lab-model.mjs'), publicDir: join(import.meta.dirname, '..', 'web'), config: { supabaseUrl: null, supabaseAnonKey: null, aiDescription: 'test', liveSearch: false, storeKind: 'memory', instructorKey: null, editLocked: false, allowSeed: false } } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', () => r()));
   const port = (app.address() as { port: number }).port;
   const call = (path: string, who?: string) => fetch(`http://127.0.0.1:${port}${path}`, { headers: who ? { authorization: `Bearer ${who}` } : {} });

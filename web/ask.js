@@ -28,7 +28,7 @@ const T = {
 const t = () => T[getLang()];
 
 // stylesheet for the widget (CSP allows same-origin styles)
-document.head.append(el('link', { rel: 'stylesheet', href: '/ask.css' }));
+document.head.append(el('link', { rel: 'stylesheet', href: new URL('./ask.css', import.meta.url).href }));
 
 function pageContext() {
   const q = new URLSearchParams(location.search);

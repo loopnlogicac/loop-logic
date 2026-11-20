@@ -58,7 +58,7 @@ test('CSV endpoint sends an authenticated attachment and refuses learners, other
   const admin = new AdminService(store, tutorials, watch, { adminEmails: ['admin@example.com'], youtubeKey: null, timers: false }); await admin.init();
   await admin.setRole('admin@example.com', teacher.email, 'instructor'); await admin.setRole('admin@example.com', 'other@example.com', 'instructor');
   const c = await classes.saveClass(teacher, { name: 'DS' }); await classes.join('s', 'student@example.com', true, c.code);
-  const app = createApp({ store, tutorials, extras, watch, classes, admin, publicDir: join(root, 'public'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => { const who = req.headers.authorization || 'guest'; return { learnerId: who, email: `${who}@example.com`, signedIn: who !== 'guest' }; } } } as any);
+  const app = createApp({ store, tutorials, extras, watch, classes, admin, publicDir: join(root, 'web'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => { const who = req.headers.authorization || 'guest'; return { learnerId: who, email: `${who}@example.com`, signedIn: who !== 'guest' }; } } } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${(app.address() as any).port}/api/instructor/classes/${c.id}/gradebook.csv`;
   const call = (who?: string) => fetch(url, { headers: who ? { authorization: who } : {} });

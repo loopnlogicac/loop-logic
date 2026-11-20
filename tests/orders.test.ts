@@ -115,7 +115,7 @@ test('the Virtual Office unlocks for staff and for students who bought a course 
   await admin.savePaymentSettings('boss@example.com', { bkash: { on: true, number: '01712345678' } });
   const users: Record<string, [string, string]> = { stu: ['s-1', 'rafi@gmail.com'], teach: ['t-1', 'teacher@uni.edu.bd'] };
   const auth = { mode: 'hybrid', async identify(req: any) { const u = users[String(req.headers.authorization ?? '').slice(7)]; return u ? { learnerId: u[0], email: u[1], signedIn: true } : { learnerId: 'anon', email: null }; } };
-  const app = createApp({ store, admin, orders, office: new OfficeService(store), auth, publicDir: join(import.meta.dirname, '..', 'public'), config: {} } as any);
+  const app = createApp({ store, admin, orders, office: new OfficeService(store), auth, publicDir: join(import.meta.dirname, '..', 'web'), config: {} } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', () => r()));
   const base = `http://127.0.0.1:${(app.address() as { port: number }).port}`;
   const get = (path: string, who?: string) => fetch(base + path, { headers: who ? { authorization: `Bearer ${who}` } : {} });

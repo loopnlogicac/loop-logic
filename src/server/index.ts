@@ -110,7 +110,7 @@ const server = createApp({
   notices,
   auth,
   labModelFile: join(here, '../../content-kit/tools/lab-model.mjs'),
-  publicDir: join(here, '../../public'),
+  publicDir: join(here, '../../web'),
   config: {
     supabaseUrl: env.SUPABASE_URL ?? null,
     supabaseAnonKey: publicKey ?? null,

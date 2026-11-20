@@ -82,7 +82,7 @@ test('admin export/revenue routes reject guests, learners and instructors and re
   const { store, reports } = await revenueFixture();
   const tutorials = new TutorialService(store, join(root, 'content-kit')); const watch = new WatchService(store);
   const admin = new AdminService(store, tutorials, watch, { adminEmails: ['admin@example.com'], youtubeKey: null, timers: false }); await admin.init(); await admin.setRole('admin@example.com', 'teacher@example.com', 'instructor');
-  const app = createApp({ store, tutorials, watch, admin, reports, publicDir: join(root, 'public'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => { const who = req.headers.authorization || 'guest'; return { learnerId: who, email: `${who}@example.com`, signedIn: who !== 'guest' }; } } } as any);
+  const app = createApp({ store, tutorials, watch, admin, reports, publicDir: join(root, 'web'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => { const who = req.headers.authorization || 'guest'; return { learnerId: who, email: `${who}@example.com`, signedIn: who !== 'guest' }; } } } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${(app.address() as any).port}`;
   const call = (path: string, who?: string) => fetch(base + path, { headers: who ? { authorization: who } : {} });

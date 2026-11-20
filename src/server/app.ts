@@ -77,6 +77,8 @@ export interface AppDeps {
   /** content-kit/tools/lab-model.mjs, served to the browser as /lab-model.js */
   labModelFile: string;
   publicDir: string;
+  /** Changes on every deploy; scripts and styles are served under /v/<build>/ so browsers and CDNs never keep an old copy. */
+  build?: string;
   config: {
     supabaseUrl: string | null;
     supabaseAnonKey: string | null;
@@ -458,13 +460,26 @@ export function buildRoutes(d: AppDeps): Route[] {
   ];
 }
 
+/**
+ * Points a page's own scripts and stylesheets at /v/<build>/…, so a new deploy is
+ * picked up at once. Their relative imports ('./common.js') resolve under the same
+ * prefix, so every module of a page comes from the same build.
+ */
+export function versionAssets(html: string, build: string): string {
+  return html.replace(/(<(?:script|link)\b[^>]*?\s(?:src|href)=")\/(?!\/|v\/)([\w./-]+\.(?:js|css))"/g, `$1/v/${build}/$2"`);
+}
+
 export function createApp(d: AppDeps) {
   const routes = buildRoutes(d);
   const publicDir = resolve(d.publicDir);
+  const build = d.build ?? Date.now().toString(36);
   const connect = ["'self'", d.config.supabaseUrl && d.auth.mode !== 'anonymous' ? new URL(d.config.supabaseUrl).origin : ''].filter(Boolean).join(' ');
   const csp = `default-src 'self'; img-src 'self' data: https://i.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src ${connect}; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`;
 
   async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string, query: URLSearchParams) {
+    // /v/<build>/x.js is x.js from this build: the address changes on every deploy, so it can be cached for good.
+    const versioned = /^\/v\/[a-z0-9]+(\/.+)$/.exec(pathname);
+    if (versioned) pathname = versioned[1]!;
     const base = siteBase(req.headers, d.config.siteUrl);
     const seo = { tutorials: d.tutorials, admin: d.admin, search: d.search! };
     if (pathname === '/robots.txt' || pathname === '/sitemap.xml') {
@@ -485,10 +500,10 @@ export function createApp(d: AppDeps) {
       const info = await stat(file);
       if (!info.isFile()) throw new Error('not a file');
       let data: Buffer | string = await readFile(file);
-      if (extname(file) === '.html') data = injectHead(data.toString('utf8'), pageMeta(pathname, query, base, seo));
+      if (extname(file) === '.html') data = versionAssets(injectHead(data.toString('utf8'), pageMeta(pathname, query, base, seo)), build);
       res.writeHead(200, {
         'content-type': (pathname === '/lab-model.js' ? MIME['.js'] : MIME[extname(file)]) ?? 'application/octet-stream',
-        'cache-control': 'no-cache',
+        'cache-control': versioned ? 'public, max-age=31536000, immutable' : 'no-cache',
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'same-origin',
         'content-security-policy': csp,

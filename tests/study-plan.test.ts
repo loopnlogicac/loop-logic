@@ -37,7 +37,7 @@ test('later correct answers remove review questions; checks influence score reas
 test('study-plan HTTP route ignores supplied learner IDs and validates topic context', async () => {
   const { store, tutorials, plan } = setup(); const first = tutorials.allTopics('en').find((t) => t.track === 'data-structures')!; const q = tutorials.topic(first.track, first.topic, 'en').quiz[0]!;
   await store.addReadingEvents([row('alice', first.topic, 'quiz', { score: 0, total: 1, correct: { [q.id]: false } })]);
-  const app = createApp({ tutorials, studyPlan: plan, store, publicDir: join(root, 'public'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null, signedIn: Boolean(req.headers.authorization) }) } } as any);
+  const app = createApp({ tutorials, studyPlan: plan, store, publicDir: join(root, 'web'), config: {}, auth: { mode: 'hybrid', identify: async (req: any) => ({ learnerId: req.headers.authorization || 'guest', email: null, signedIn: Boolean(req.headers.authorization) }) } } as any);
   await new Promise<void>((r) => app.listen(0, '127.0.0.1', r)); const base = `http://127.0.0.1:${(app.address() as any).port}`;
   try {
     const bob = await fetch(`${base}/api/study-plan?learnerId=alice`, { headers: { authorization: 'bob' } }); assert.equal(bob.status, 200); assert.equal((await bob.json()).review.length, 0);
