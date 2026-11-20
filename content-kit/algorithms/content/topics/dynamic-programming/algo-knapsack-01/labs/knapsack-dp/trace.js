@@ -2,7 +2,7 @@ function trace(input) {
     const sets=[[[2,4],[3,5],[4,7]],[[2,3]],[[1,5],[1,5]],[]];
     const items=sets[input.items],n=items.length,capacity=input.capacity;
     const dp=Array.from({length:n+1},()=>Array(capacity+1).fill(0)),steps=[];
-    for(let c=0;c<=capacity;c++) steps.push({op:'set',r:0,c,value:0,line:1,note:{en:'No items can earn value, regardless of available capacity.'}});
+    for(let c=0;c<=capacity;c++) steps.push({op:'set',r:0,c,value:0,line:1,note:{en:'No items can earn value, regardless of available capacity.', bn: "কোনো item না থাকলে capacity যতই হোক value zero।"}});
     for(let i=1;i<=n;i++) {
         const [weight,value]=items[i-1];
         for(let c=0;c<=capacity;c++) {
@@ -10,12 +10,12 @@ function trace(input) {
             let take=false;
             if(weight<=c&&value+dp[i-1][c-weight]>dp[i][c]) {dp[i][c]=value+dp[i-1][c-weight];take=true;}
             steps.push({op:'set',r:i,c,value:dp[i][c],line:6,vars:{i,c},note:{en:take?`Taking item ${i-1} improves value to ${dp[i][c]}.`:`Skipping item ${i-1} is at least as good.`,bn:take?'এই জিনিসটি নিলে মোট মূল্য বাড়ে।':'এই জিনিসটি বাদ দিলেও মান কমে না।'}});
-            steps.push({op:'pointer',name:'source',target:[i-1,take?c-weight:c],line:6,note:{en:take?'Take reads the previous row at capacity reduced by this item weight.':'Up means reuse the same capacity without this item.'}});
+            steps.push({op:'pointer',name:'source',target:[i-1,take?c-weight:c],line:6,note:{en:take?'Take reads the previous row at capacity reduced by this item weight.':'Up means reuse the same capacity without this item.',bn:take?'এই item-এর weight কমিয়ে previous row-এর capacity পড়ো।':'এই item বাদ দিয়ে previous row-তে একই capacity নাও।'}});
         }
     }
     let c=capacity;const chosen=[];
     for(let i=n;i>0;i--) {
-        steps.push({op:'mark',targets:[[i,c]],tone:'path',line:7,note:{en:'Compare this value with the previous item row to recover a choice.'}});
+        steps.push({op:'mark',targets:[[i,c]],tone:'path',line:7,note:{en:'Compare this value with the previous item row to recover a choice.', bn: "Choice ফেরাতে এই মান previous item row-এর সঙ্গে মেলাও।"}});
         if(dp[i][c]!==dp[i-1][c]) {chosen.push(i-1);c-=items[i-1][0];}
     }
     chosen.reverse();

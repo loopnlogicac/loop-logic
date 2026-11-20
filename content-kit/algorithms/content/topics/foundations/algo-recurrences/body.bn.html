@@ -1,0 +1,61 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">রিকার্সিভ অ্যালগরিদম ছোট একই সমস্যায় কাজ ভাগ করে। উত্তরপত্রের স্ট্যাক দুই ছোট স্ট্যাকে ভাগ ভাবো। Helper একই নিয়মে একটিতে না-পৌঁছানো পর্যন্ত ভাগ করে। <dfn>Recurrence</dfn> ছোট কাজের cost দিয়ে মোট cost বলে।</p>
+<p>সঠিক সমীকরণ লেখাই প্রায়ই কঠিন। দুই রিকার্সিভ call মানেই exponential নয়; তাদের সাইজ ও আগের-পরের কাজ জরুরি। কখন expansion থামবে বোঝাতে base case পাশে রাখো।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">if n &lt;= 1: return one leaf
+left = floor(n / 2)
+right = n - left
+return leaves(left) + leaves(right)</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>কোড থেকে cost লেখো</h3>
+<p>n ভ্যালু scan করে দুই half-এ call হলে T(n) = T(floor(n/2)) + T(ceil(n/2)) + Θ(n)। Power of two-তে 2T(n/2)+Θ(n)। Parent scan একবার charge; প্রতিটি child-এর পুরো cost, শুধু call overhead নয়।</p>
+<p>এক half ও কনস্ট্যান্ট local কাজে T(n)=T(n/2)+Θ(1)। সাইজ n-1-এ গেলে T(n)=T(n-1)+Θ(1)। প্রথম logarithmic, দ্বিতীয় linear। দুটোতেই এক call, তাই call site গোনা যথেষ্ট নয়।</p>
+<p>সাইজ one থামলে T(1)=Θ(1), zero হলে T(0)=Θ(1)। Standard balanced split-এ floor-ceiling বাদে growth সাধারণত একই, কিন্তু runnable কোড-এ লাগে। n=7-এ 3, 4 দুই child সব সাত element রাখে।</p>
+<h3>Substitution-এ আন্দাজ করে প্রমাণ করো</h3>
+<p><dfn>Substitution method</dfn> আন্দাজের bound induction-এ প্রমাণ করে। T(n)=T(n-1)+1, T(0)=1-এ guess n+1। Base 1=0+1। T(n-1)=n ধরলে T(n)=n+1। Exact expression প্রমাণ হলো।</p>
+<p>Power of two-তে T(n)=2T(n/2)+n, T(1)=1-এর exact guess n log2 n+n। Child বসাও: 2[(n/2)log2(n/2)+n/2]+n। log2(n/2)=log2 n-1 দিয়ে আগের expression ফেরে; base-ও মেলে।</p>
+<p>Inequality proof-এ substitution টিকবে এমন hypothesis চাই। দ্বিতীয় recurrence-এ T(n)≤cn ধরলে cn+n আসে, cn ছাড়ায়। Linear guess ছোট। cn log n বা lower-order term-সহ শক্ত expression নিয়ে valid starting range দেখো।</p>
+<h3>রিকার্শন ট্রিতে পুরো লেভেল গোনো</h3>
+<p><dfn>রিকার্শন ট্রি</dfn>-তে task-প্রতি node। 2T(n/2)+n-এ লেভেল zero local n, লেভেল one-এ দুই n/2, মোট n। লেভেল k-তে 2^k task, প্রতিটির n/2^k। পুরো internal লেভেল-এ n।</p>
+<p>log2 n division-এ সাইজ one। n leaf-এর কনস্ট্যান্ট কাজ। n-cost-এর log2 n internal লেভেল ও n leaf যোগে Θ(n log n)। Total node দিয়ে n গুণ করবে না; সাইজ কমলে কাজ কমে। Leaf-ও বাদ নয়, অন্য recurrence-এ dominate করতে পারে।</p>
+<p>2T(n/2)+1-এ লেভেল cost 1, 2, 4, …, geometric sum Θ(n), n leaf-ও একই order। T(n/2)+n-এ প্রতি লেভেল এক task, cost n, n/2, …; ডেপথ logarithmic হলেও total Θ(n)।</p>
+<h3>Master theorem-এ local কাজ তুলনা করো</h3>
+<p>Standard master theorem T(n)=aT(n/b)+f(n)-এ লাগে; fixed a≥1, b&gt;1। কনস্ট্যান্ট-সাইজ base positive cost ও nonnegative regular কাজ ধরো। p=log_b a; n^p leaf কাউন্ট-এর scale। Nonrecursive f(n)-কে এর সঙ্গে তুলনা করো।</p>
+<p>Case 1-এ fixed ε&gt;0-এর জন্য f(n)=O(n^(p-ε)), polynomial gap নিচে চাই। তখন Θ(n^p)। 8T(n/2)+n²-এ p=3, ε=1, তাই Θ(n³); নিচের লেভেল dominate।</p>
+<p>Basic case 2-এ f(n)=Θ(n^p), তাই Θ(n^p log n)। 2T(n/2)+n-এ p=1, প্রতি লেভেল একই order, Θ(n log n)। প্রচলিত extension-এ fixed k≥0-এর log^k n থাকলে আরেক log যোগে Θ(n^p log^(k+1) n)।</p>
+<p>Case 3-এ f(n)=Ω(n^(p+ε)), fixed positive ε; সঙ্গে a f(n/b)≤c f(n), fixed c&lt;1 regularity চাই। তখন Θ(f(n))। 2T(n/2)+n²-এ ratio 1/2, তাই Θ(n²)।</p>
+<p>Case নেওয়ার আগে shape দেখো। T(n-1)+n fixed factor-এ ভাগ নয়; T(n/3)+T(2n/3)+n unequal split-ও এই version-এর বাইরে। p=1-এর বিপরীতে n/log n-এ polynomial gap নেই, basic case 2-ও নয়। উপযুক্ত base threshold-এ রিকার্শন ট্রি Θ(n log log n) দেয়।</p>
+<h3>সম্পূর্ণ পরীক্ষার সমাধান লেখো</h3>
+<p>3T(n/3)+n-এ a=3, b=3, p=1। f(n)=n leaf scale-এর সমান, case 2-এ Θ(n log n)। Base কনস্ট্যান্ট বলো; standard balanced rounding growth বদলায় না উল্লেখ করো।</p>
+<p>4T(n/2)+n-এ p=2, local n factor ছোট; case 1-এ Θ(n²), n log n নয়। T(n/2)+n²-এ p=0, child-এর local work quarter, regularity ratio 1/4; case 3-এ Θ(n²)।</p>
+<p>মোট call ও সর্বোচ্চ active ডেপথ আলাদা। Balanced binary split Θ(n) call করেও একসঙ্গে Θ(log n) ফ্রেম রাখে। Time-এ দুই child যোগ; পরপর call-এর peak স্ট্যাকে maximum ডেপথ। মেশালে মেমরি bound ভুল।</p>
+<h3>Local কনস্ট্যান্ট ও leaf scale আলাদা</h3><p>A(n)=2A(n/2)+1 এবং B(n)=2B(n/2)+n-এ branching ও leaf scale n এক। Local cost আলাদা। প্রথমে leaf-এর দিকে geometric cost-এ Θ(n); দ্বিতীয়ে প্রতি internal লেভেল n, তাই Θ(n log n)। শুধু দুই ভাগ বললে বদলানো term হারায়।</p><p>C(n)=C(n/2)+n-এ local cost n, n/2, n/4, …; sum 2n-এর নিচে, root-ই n। দুই bound-এ Θ(n)। Logarithmic ডেপথ মানেই logarithmic time নয়; প্রতি ডেপথ-এর local কাজ যোগ করো।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Balanced split-এর leaf গোনো</h3>
+<p>সাইজ seven 3, 4 হয়। শেষে সাইজ-one task-প্রতি একটি leaf, মোট সাত।</p>
+<div data-example="ex-1"></div>
+<h3>Binary split-এর সব call গোনো</h3>
+<p>সাইজ eight binary split-এ আট leaf ও সাত internal task, পনেরো call। Power of two-তে C(n)=2C(n/2)+1।</p>
+<div data-example="ex-2"></div>
+<h3>Branch ছাড়া এক half ধরো</h3>
+<p>Final সাইজ-one-সহ ছয় সাইজ। এটি call কাউন্ট; পাঁচ শুধু reduction গোনে।</p>
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>সাইজ 7</td><td>3 ও 4</td><td>দুই সাইজ-এর যোগ 7।</td></tr><tr><td>সাইজ 3</td><td>1 ও 2</td><td>একটি leaf সঙ্গে সঙ্গে আসে।</td></tr><tr><td>সাইজ 4</td><td>2 ও 2</td><td>দুই পাশ আরেকবার ভাগ হয়।</td></tr><tr><td>সব leaf</td><td>সাইজ one-এর সাত task</td><td>প্রতি মূল item একটি leaf-এ থাকে।</td></tr></tbody></table>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Positive n-এ strong induction-এ leaves(n)=n দেখাও। n=1-এ one। বড় n-এ দুই child positive ও ছোট; hypothesis-এ তাদের কাউন্ট সাইজ-এর সমান। যোগ floor(n/2)+ceil(n/2)=n।</p>
+<p>প্রতি path positive সাইজ কমিয়ে one-এ যায়, তাই থামে। এই proof answer-এর। Call কাউন্ট আলাদা C(n)=C(floor(n/2))+C(ceil(n/2))+1। প্রতি internal node-এ দুই child বলে n leaf-এ n-1 internal, মোট 2n-1 call।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Leaf-কাউন্ট প্রোগ্রামে কনস্ট্যান্ট local cost-এ Θ(n) call; active ডেপথ Θ(log n)। Explicit-স্ট্যাক উদাহরণ সাইজ eight-এ পনেরো task; pending sibling রাখে, সব node একসঙ্গে নয়। One-child chain 32 থেকে 1-এ ছয় সাইজ দেখে logarithmic কাজ দেখায়।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>n - 1-এ master theorem লাগানো</h3>
+<p>এক বিয়োগ fixed factor-এ ভাগ নয়। জোর করে a, b না বসিয়ে chain expand বা substitution করো।</p>
+<h3>Case 3-এর regularity বাদ</h3>
+<p>Polynomial dominance একা case 3-এর পুরো শর্ত নয়। a f(n/b)-এর regularity inequality যাচাই করো।</p>
+<h3>রিকার্শন ডেপথ-কে total time ধরা</h3>
+<p>Branch আলাদা সময়ে চললেও দুটোই কাজ দেয়। ফ্রেম একসঙ্গে না থাকলেও time cost যোগ হয়।</p>
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>C = 17 রিকার্শন দেয়, নির্দিষ্ট maximum ডেপথ guarantee নয়। এখানে arithmetic ও active call ছোট রাখতে সাইজ সীমিত।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>রিকার্সিভ কোড থেকে সমীকরণ লিখে substitution, রিকার্শন ট্রি, master theorem-এ সমাধান করো।</p>
+<p>এরপর <a href="topic:algo-space-complexity">space complexity</a>-তে peak মেমরি হিসাব করো।</p>

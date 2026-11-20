@@ -1,0 +1,84 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">Coin 1, 3, 4-এ exact 6 কীভাবে দেবে? Fewest-এ3+3। Different payment কাউন্ট-এ sixone, 3+1+1+1, 4+1+1-ও। একই ইনপুট-এ DP state ও combine operation আলাদা।</p>
+
+<p>Coin unlimited, distinct positive ইন্টিজার denomination এক type। Target exact;6 চাইলে কমcoin হলেও7 নয়। Targetzero-তে একটি empty payment, minimumzero coin।</p>
+
+<p>Largest-first 6-এ4 ও দুইone নেয়, ব্যর্থ। DP local commitment নয়, সব final coin তুলনা করে। Stored smaller answer-এ efficient। আগে state কী গোনে বলো।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">dp[0] = 0; take[0] = 0
+for amount a = 1 to target
+    dp[a] = infinity; take[a] = 0
+    for each distinct coin in increasing order
+        if coin &lt;= a and dp[a-coin]+1 &lt; dp[a]
+            dp[a] = dp[a-coin]+1; take[a] = coin
+if reachable: repeatedly take take[a] and subtract it
+return minimum and recovered coins</code></pre>
+<p>ধাপ1:dp[a] exact a-এর minimum coin। ধাপ2:reachable a-coin-এ coin≤a-এর মধ্যে1+minimum dp[a-coin]। Base dp[0]=0। কোনো candidate না পেলে unreachable, ordinary বড় valid কাউন্ট নয়।</p>
+
+<p>C sentinel 21, কারণ target≤20, coin positive;reachable কাউন্ট≤20। Unreachable predecessor+1=22 sentinel improve করে না। Lab display-তে -1, ভেতরে একই sentinel convention।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>ধাপ3:a1 থেকে target বাড়াও। Positive coin-এ a-coin ছোট, তাই completed state পড়ে। Coin increasing, শুধু strict improvement-এ update;tied minimum-এর witness নির্দিষ্ট হয়।</p>
+
+<p>Amount 4-এ coin 1→dp[3]+1=2, coin 3→dp[1]+1=2, coin 4→dp[0]+1=1। Amount 6-এ1 দেয়3 coin, 3 দেয়2, 4 দেয়3। তাই take[6]=3।</p>
+
+<p>ধাপ4:take[a]-তে final denomination রাখো। Target থেকে emit, তারপর a-=take[a], zero পর্যন্ত।6→3→0-এ দুই3। আগে reachable দেখো;unreachable-এর zero predecessor অনন্ত লুপ দিতে পারে।</p>
+
+<div data-lab="coin-change-dp"></div>
+<p>Grid-এ minimum ও take row, column amount। Unavailable preset coin 4, 6, target 5। Zero target-এ শুধু দুই base cell, empty recovered payment।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">Minimum coin ও witness</h3>
+<p>Amount 6-এ3 নিয়ে3 বাকি, সেখানেও3।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Unordered combination গোনো</h3>
+<p>চার combination:sixone, 3+1+1+1, 3+3, 4+1+1।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Unreachable amount</h3>
+<p>4, 6 দিয়ে exact 5 হয় না;-1, predecessor follow নয়।</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">Amount</th><th scope="col">Minimum</th><th scope="col">নেওয়া coin</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td><td>1</td></tr><tr><td>2</td><td>2</td><td>1</td></tr><tr><td>3</td><td>1</td><td>3</td></tr><tr><td>4</td><td>1</td><td>4</td></tr><tr><td>5</td><td>2</td><td>1</td></tr><tr><td>6</td><td>2</td><td>3</td></tr></tbody></table>
+
+<p>Reconstruction sorted order বাধ্যতামূলক নয়, saved final choice উল্টো ধরে। Multiset sum target। Exercise tie rule sequence predictable করে, অনেক equal-short payment থাকলেও।</p>
+
+<h2 id="counting">দ্বিতীয় state-এ combination গোনো</h2>
+<p>Unordered কাউন্ট-এ ways[a]=এতক্ষণ processed denomination-এর combination। ways[0]=1, positivezero। Outer coin, inner amount coin থেকে upward;ways[a]+=ways[a-coin]। Upward-এ current coin বারবার চলে।</p>
+
+<p>Coin outer অপরিহার্য। আগে শুধু আগের type। Update হয় new coin ছাড়া payment রাখে, নয় এটি যোগ করে এমন payment-এ যাতে আগেই এটি থাকতে পারে। প্রতিটি multiset শেষ-largest-processed denomination-এ একবার গোনা।</p>
+
+<p>Amount outer, coin inner-এ ordered sequence গোনা হয়। Coin 1, 3, target 4-এ1+3 ও3+1 আলাদা। Order matter করলেই ঠিক। Ways না বলে দুটোকে coin change বললে পার্থক্য লুকায়।</p>
+
+<p>Combination-এ denomination distinct চাই। আরেক type হিসেবে3 repeat-এ একই payment বাড়ে। User ইনপুট সর্ট-deduplicate করা যায়। Minimum lab-ও duplicate normalize করে, type-এর একই অর্থ।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Minimum nonempty payment a-এ কোনো final coin আছে। সরালে exact a-coin। Remainder minimum না হলে ছোটটি বসিয়ে original improve, তাই optimal remainder চাই।</p>
+
+<p>সব final denomination দেখে বলে better বাদ যায় না। Reachable smaller থেকে candidate বৈধ payment বানায়। dp[0] থেকে amount induction-এ minimum ঠিক। কোনো reachable না থাকলে exact payment নেই।</p>
+
+<p>Take save-এর সময় dp[a]=dp[a-take[a]]+1। Emit-এ optimal কাউন্ট relation থাকে, amount কমে। Zero-তে coin sum target, countminimum। Scalar ও witness দুটো proof।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>k denomination, targetA-তে দুই DP O(kA), spaceO(A)। Take row আরওO(A), sameorder। Recovery coin-প্রতি এক ধাপ, positive ইন্টিজার-এ maxA।</p>
+
+<p>এটি pseudo-polynomial:A numeric ভ্যালু, binary লিখতে log bit। A-তে linear compact বড় ইনপুট-এও huge হতে পারে। Table allocate বা fast promise-এর আগে numeric constraint দেখো।</p>
+
+<p>Combination কাউন্ট minimum-এর চেয়ে দ্রুত বাড়ে। তিন ছোট fixed denomination, target≤20-এ int যথেষ্ট। বড় কাউন্ট-এ wider, arbitrary precision বা আউটপুট modulus। Unreachable marker ও বড় valid কাউন্ট আলাদা।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>সব minimumzero করলে সবamount coinছাড়া সম্ভব দাবি। শুধুzero-তে ঠিক। Wayszero-তে empty payment 1;সেখানেzero দিলে কিছুই বাড়ে না। Amount row একই হলেও base অর্থ আলাদা।</p>
+
+<p>Unlimited counting-এ decreasing amount current coin reuse আটকায়, bounded-use হয়ে যায়। এখানে upward সঠিক, compact 0/1-এ ভুল। Direction মুখস্থ নয়, state কেন থাকে বোঝো।</p>
+
+<p>-1 বলার পরে take follow নয়। Zero take মানে savedcoin নেই, freecoin নয়। Nonpositive reject:zero self-dependency, negative smaller-order ভাঙে। Positive contract correctness-stop দুটো দেয়।</p>
+
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<p>Target 0..20-তে21 entry, sentinel 21 bound-derived, universal infinity নয়। Exact ইন্টিজার arithmetic। Sequence decimal;zero target ইচ্ছা করে empty coins:line দেয়।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>Minimum finalcoin বেছে predecessor রাখে। Unordered counting outertype, inner increasingamount। Base-অর্থ আলাদা। পরের0/1-এ item-prefix dimension প্রতিটি whole item একবার করে।</p>
+<p>এবার <a href="topic:algo-knapsack-01">0/1 knapsack</a> পড়ো।</p>

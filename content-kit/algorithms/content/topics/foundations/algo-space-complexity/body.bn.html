@@ -1,0 +1,59 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">ছোট টেবিলে নম্বর দেওয়া card উল্টাতে হবে। একটি খালি জায়গায় দুই প্রান্ত সোয়াপ করতে পারো, অথবা সব card আরেক row-তে copy করতে পারো। দুটোই উল্টায়, দ্বিতীয়টিতে অনেক বেশি জায়গা লাগে।</p>
+<p><dfn>Space complexity</dfn> ইনপুট সাইজ-এর সঙ্গে মেমরি কীভাবে বাড়ে বলে। সাধারণত peak মেমরি জরুরি: একই সময়ে কত স্টোরেজ চাই? সারাজীবনে অনেক temporary object allocate-free করেও একসঙ্গে অল্প কয়েকটি থাকতে পারে।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">left = 0; right = n - 1
+while left &lt; right
+    saved = a[left]
+    a[left] = a[right]; a[right] = saved
+    left++; right--</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>Auxiliary ও total space আলাদা</h3>
+<p>ইনপুট অ্যারে n cell। <dfn>Auxiliary space</dfn> ইনপুটের বাইরে বাড়তি কাজের স্টোরেজ; আউটপুট গোনার convention বলতে হবে। <dfn>Total space</dfn>-এ ইনপুট-ও আছে। Returned অ্যারে-কে কিছু বই আলাদা ধরে, তাই নিজের হিসাব স্পষ্ট করো।</p>
+<p>Iterative sum-এ sum, i ও অল্প bookkeeping, তাই Θ(1) auxiliary; ইনপুট-সহ Θ(n)। Copied reverse-এ দ্বিতীয় n-element row, আউটপুট ধরলে Θ(n) extra। Return করলেই cell অদৃশ্য হয় না।</p>
+<p>Byte-এর আগে cell বা word-এ growth মাপো। int চার byte হলে n-element অ্যারের element 4n byte। Exact কাউন্ট platform-নির্ভর; cell চার বা আট byte হলেও Θ(n)। C-তে local সাইজ দরকার হলে sizeof নাও।</p>
+<h3>দুই boundary রেখে উল্টাও</h3>
+<p>এখানকার strict অর্থে <dfn>in-place অ্যালগরিদম</dfn> ইনপুট-এই বদলায়, কনস্ট্যান্ট extra কাজের জায়গা নেয়। Reversal-এ left, right ও saved ভ্যালু। a[left], a[right] সোয়াপ করে দুই boundary ভেতরে নাও। দ্বিতীয় growing row নেই।</p>
+<p>[7, 3, 5, 3, 1]-এ প্রথম সোয়াপ [1, 3, 5, 3, 7]। দ্বিতীয়তে সমান 3 বদলালেও ছবি এক। মাঝের 5 সরাতে হয় না। Even length-এ left right পার হলে stop। Empty-তে right=-1, অ্যারে access নেই।</p>
+<p>Saved ভেরিয়েবল সোয়াপ-এ মান হারানো আটকায়। পুরোনো right বাঁচানোর আগে left সরাসরি right-এ লিখলে তথ্য overwrite। মেমরি বাঁচানো required multiset নষ্ট করার ছাড় নয়। Final order ও সব মূল মান আছে কি না দেখো।</p>
+<h3>রিকার্শন ফ্রেম বাঁচিয়ে রাখে</h3>
+<p>ফাংশন call ফেরার জন্য local ভেরিয়েবল ও return location-এর মতো তথ্য রাখে। এই context <dfn>স্ট্যাক ফ্রেম</dfn>। রিকার্সিভ call caller ফ্রেম বাঁচিয়ে রাখে। ফ্রেম-প্রতি অল্প ভেরিয়েবল হলেও দীর্ঘ chain কনস্ট্যান্ট space নয়।</p>
+<p>n-1 করে zero পর্যন্ত গেলে n+1 ফ্রেম একসঙ্গে থাকতে পারে: Θ(n)। এক floor(n/2) call-এ ডেপথ Θ(log n)। ডেপথ প্রোগ্রাম 8, 4, 2, 1-এ চার live লেভেল বলে; base ফ্রেম-ও গোনে।</p>
+<p>পরপর দুই রিকার্সিভ call peak স্ট্যাক দ্বিগুণ করবেই নয়। Balanced split-এ left ফিরে তারপর right শুরু। Root-to-leaf এক path-এর Θ(log n) ফ্রেম, local ডেটা কনস্ট্যান্ট। Total call Θ(n) হতে পারে। Time branch যোগ করে, peak space একসঙ্গে জীবিত ডেটা দেখে।</p>
+<h3>Temporary অ্যারে ও allocation lifetime</h3>
+<p>Merge সর্ট একটি shared n-cell temporary অ্যারে সব call-এ reuse করতে পারে। Workspace Θ(n); logarithmic স্ট্যাক এই order বদলায় না। প্রতি call নিজ অ্যারে নিলে কখন free হয় দেখো। Halving path-এর অ্যারে geometric sum, কিন্তু সব finished লেভেল-এর অ্যারে রেখে দিলে বেশি লাগতে পারে।</p>
+<p>Dynamic allocation হিপ-এ স্টোরেজ নেয়, হিসাব থেকে সরায় না। C-তে হিপ object-এর lifetime তুমি চালাও। শেষ ব্যবহার হলে owned allocation free করো। Local automatic অ্যারের পয়েন্টার return অবৈধ, lifetime শেষ হয়ে যায়।</p>
+<p>ছোট fixed capacity-তে অ্যালগরিদমে মন দেওয়া সহজ। নির্দিষ্ট int temp[64] fixed। কিন্তু যেকোনো n সামলানো merge-এ capacity বাড়বে, তাই linear workspace। Fixed demo নাকি scalable method বিশ্লেষণ করছ বলো।</p>
+<h3>মেমরির সমঝোতা দেখে পদ্ধতি নাও</h3>
+<p>Copy-তে original রাখা সহজ। In-place মেমরি বাঁচালেও caller-এর দরকারি order নষ্ট করতে পারে। Contract দেখে নাও। Original ও reversal দুটো চাইলে অন্য আউটপুট representation বা পরে restore লাগবে।</p>
+<p>পাশাপাশি duplicate compact-এ sorted অ্যারেতে read ও write পজিশন রাখো। Write read-এর সামনে যায় না, তাই রাখা ভ্যালু লিখলে ভবিষ্যতের unread মান নষ্ট হয় না। Returned length পর্যন্ত prefix-ই result।</p>
+<p>In-place ও stable এক নয়। Stable equal-কী রেকর্ডের আগের relative order রাখে। In-place workspace বলে। Selection সর্ট কনস্ট্যান্ট space-এ distant সোয়াপ করে equal রেকর্ড উল্টাতে পারে। আলাদা প্রশ্ন, আলাদা প্রমাণ চাই।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>একটি temporary মানে reverse করো</h3>
+<p>প্রতি round দুই outer পজিশন সোয়াপ। Middle থাকে, দ্বিতীয় অ্যারে লাগে না।</p>
+<div data-example="ex-1"></div>
+<h3>Copy উল্টিয়ে original রাখো</h3>
+<p>প্রথম line original রাখে। আলাদা আউটপুট অ্যারেতে এটি সম্ভব, কিন্তু ভ্যালু-প্রতি বাড়তি cell লাগে।</p>
+<div data-example="ex-2"></div>
+<h3>Live রিকার্সিভ ডেপথ মাপো</h3>
+<p>Return-এর আগে 8, 4, 2, 1 সাইজ একসঙ্গে থাকে। চার live ফ্রেম ও branching রিকার্শন-এর মোট কাজ আলাদা।</p>
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>শুরু</td><td>[7, 3, 5, 3, 1]</td><td>পুরো interval এখনও বাকি।</td></tr><tr><td>বাইরের সোয়াপ</td><td>[1, 3, 5, 3, 7]</td><td>দুই endpoint এখন final।</td></tr><tr><td>ভেতরের সোয়াপ</td><td>[1, 3, 5, 3, 7]</td><td>সমান 3 বদলালেও সংখ্যা এক থাকে।</td></tr><tr><td>মাঝে মিলবে</td><td>left = right = 2</td><td>মাঝের item নিজের জায়গাতেই থাকবে।</td></tr></tbody></table>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>প্রতি reversal iteration-এর আগে [left, right]-এর বাইরের পজিশন final reversed মানে আছে। বাকি interval-এ উল্টানো বাকি মান। দুই endpoint সোয়াপ-এ দুটো final, interval ছোটে invariant থাকে। সর্বোচ্চ একটি বাকি হলে সব ঠিক।</p>
+<p>অসমাপ্ত interval দুই করে কমে, তাই stop। Compaction-এর invariant আলাদা: a[0..used)-এ processed prefix-এর প্রতি distinct ভ্যালু একবার; পরের read-এর আগে used≤i। দ্বিতীয় শর্ত reuse নিরাপদ বোঝায়।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Reversal floor(n/2) সোয়াপ ও তিন ইন্টিজার-এ Θ(n) time, Θ(1) auxiliary। Copied reversal-ও Θ(n) time, এখানে আউটপুট ধরায় Θ(n) space। Exact ফ্রেম byte লাগে না; কম্পাইলার, optimization, calling convention-এ বদলায়। Growth simultaneous ফ্রেম-এ নির্ভর করে।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>রিকার্শন-কে বিনা মেমরির ভাবা</h3>
+<p>Explicit অ্যারে না থাকলেও ফ্রেম জমে। Maximum active call ডেপথ auxiliary cost-এ ধরো।</p>
+<h3>সবসময়ের allocation একসঙ্গে যোগ</h3>
+<p>Peak overlapping lifetime দেখে। পরের phase-এর আগে free স্টোরেজ reuse হয়, তাই sequential peak সাধারণত maximum দিয়ে মেলে।</p>
+<h3>Fixed capacity-কে general bound ধরা</h3>
+<p>64-cell demo fixed। General কনস্ট্যান্ট workspace বলার আগে capacity কীভাবে scale হবে বলো।</p>
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>C = 17 automatic অ্যারে ও active ফ্রেম দুটোই আসল স্টোরেজ। Exact ফ্রেম সাইজ implementation-নির্ভর, তাই fixed byte ধরে নয়, growth মাপি।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>In-place বিচার করার আগে ইনপুট, আউটপুট, auxiliary মেমরি ও active ফ্রেম আলাদা করো।</p>
+<p>এবার <a href="topic:algo-linear-search">linear search</a>-এ এই হিসাব ব্যবহার করো।</p>

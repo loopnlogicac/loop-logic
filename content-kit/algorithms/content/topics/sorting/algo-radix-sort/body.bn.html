@@ -1,0 +1,67 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">তিন-ডিজিট student কোড আগে শেষ, পরে মাঝের, শেষে প্রথম ডিজিট-এ সাজাতে পারো। কিন্তু নতুন ডিজিট tie হলে আগের order রাখতে হবে। <dfn>LSD radix সর্ট</dfn> এভাবেই ডিজিট pass মেলায়।</p>
+<p>LSD মানে least significant ডিজিট first:units, tens, hundreds। Later stable pass আগের lower-ডিজিট order না ভেঙে আরও ভালো order বানায়।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">for place in 1, 10, 100
+    count[0..9] = 0
+    count digit ((a[i] + 99) / place) mod 10 for all i
+    accumulate count into prefix ends
+    scan i from n - 1 down to 0; place whole a[i] stably
+    copy output back into a</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>একবারে একটি ডিজিট নাও</h3>
+<p>Nonnegative কী-তে digit=(কী/place)%10। 472-এ place 1→2, 10→7, 100→4। ইন্টিজার division lower ডিজিট বাদ দেয়, remainder 10 পরেরটি নেয়। Missing leading ডিজিট zero।</p>
+<p>Bounded C-তে original -99..99। প্রত্যেক কী-তে99 যোগে order-preserving 0..198। Encoded কী থেকে ডিজিট, কিন্তু original ভ্যালু move। একই কনস্ট্যান্ট যোগ ইন্টিজার order রাখে।</p>
+<p>198 পর্যন্ত তিন decimal pass যথেষ্ট। Fixed bound-এ place multiply করে overflow ঝুঁকি নেই। General maximum নিলে place*base range ছাড়ানোর আগেই stop চাই। Exact ইন্টিজার ডিজিট-এ floating power নয়।</p>
+<h3>প্রতি ডিজিট-এ stable counting</h3>
+<p>ডিজিট 0..9, তাই দশ কাউন্টার। প্রতি রেকর্ডের current ডিজিট কাউন্ট, prefix end, তারপর right-to-left বাফার placement। পরের ডিজিট-এর আগে whole রেকর্ড copy back।</p>
+<p>Counting সর্ট-এর একই stable rule, পুরো কী নয় এক ডিজিট-এ। আউটপুট n, কাউন্ট base b-তে b cell। Units থেকে tens-এ frequency বদলাতে পারে, তাই প্রতি pass reset।</p>
+<p>শুধু ডিজিট নয়, পুরো কী/রেকর্ড move। ডিজিট অ্যারে বানালে পরের pass-এর তথ্য হারায়। Student-এর associated field-ও সঙ্গে যাবে, identity সব pass-এ থাকবে।</p>
+<h3>Stability lower ডিজিট বাঁচায় কেন</h3>
+<p>Units pass-এর পরে last ডিজিট ordered। Tens pass ছোট tens আগে নেয়;এক tens group-এ stable হওয়ায় units order থাকে। তাই last-two-ডিজিট number-এর মতো order।</p>
+<p>Unshifted [21, 13, 12]-এ stable units [21, 12, 13], tens [12, 13, 21]। Tens tie reverse হলে12, 13 ভুল হতে পারে। আগের tie order না রাখলে আলাদা ডিজিট সর্ট যথেষ্ট নয়।</p>
+<p>Induction-এ d place-এর পরে d low ডিজিট-এ sorted। সব ডিজিট শেষে tuple পুরো কী নির্ধারণ করে। এটিই LSD correctness-এর মূল।</p>
+<h3>Encoded পাঁচ-ভ্যালু trace</h3>
+<p>[7, 3, 5, 3, 1]-এর encoding [106, 102, 104, 102, 100]। Units 6, 2, 4, 2, 0-তে original [1, 3, 3, 5, 7]। Stable placement-এ দুই original 3-এর order থাকে।</p>
+<p>এখানে tens সবzero, hundreds সবone। দুই pass আগের order অপরিবর্তিত রাখবে। কিছু না-করা pass-ও stability টেস্ট। ডিজিট boundary পেরোনো দ্বিতীয় example-এ আরও পরিবর্তন দেখো।</p>
+<p>[-99, -98, 0, 99]→[0, 1, 99, 198]। Leading zero কম্পারিজন মডেল-এর অংশ। একই তিন pass-এ negative branch লাগে না। স্পষ্ট bounded range-offset-এর জন্যই encoding উপযুক্ত।</p>
+<h3>Parameter-সহ cost বের করো</h3>
+<p>d ডিজিট pass, b base, n রেকর্ড। প্রতি stable counting pass-এ কাউন্ট initialize b, scan n, prefix b, place n, copy n:Θ(n+b)। d বার Θ(d(n+b))।</p>
+<p>আউটপুট প্রতি pass reuse, workspace Θ(n+b), Θ(dn) নয়। C-তে pass scope-এর আগের বাফার পরে বাঁচে না। Peak simultaneous স্টোরেজ জরুরি। কাউন্ট-ও reset করে reuse।</p>
+<p>Fixed ডিজিট কাউন্ট ও base-এ n-এ linear হতে পারে। Unbounded ইন্টিজার-এ magnitude-এ d বাড়ে;সবসময় O(n) বললে parameter লুকায়। খুব বড় base-এ কম pass হলেও কাউন্ট initialize-মেমরি dominate করতে পারে।</p>
+<p>কম্পারিজন সর্ট arbitrary comparable কী নেয়। Radix-এ positional encoding-এর ডিজিট order intended full order মানতে হবে। ভেরিয়েবল string, signed machine ইন্টিজার, locale text-এ আলাদা rule চাই। ছোট signed range-এর offset সব type-এর universal recipe নয়।</p>
+<h3>ভেবে LSD বাছো</h3>
+<p>Most-significant-ডিজিট strategy উল্টো প্রান্ত থেকে group করে পরে recurse। Control আলাদা, কিছু ভেরিয়েবল-length কী-তে স্বাভাবিক। Iterative LSD proof-এর সঙ্গে তার grouping মেশাবে না।</p>
+<p>ছোট bounded কী-তে LSD trace সহজ। Tiny n-এ setup insertion বা library সর্ট-এর লাভ ছাড়াতে পারে। Domain ও মেমরি limit দেখে নাও। সুবিধা d, b-এর উপকারী সীমার শর্তে।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>106, 102, 104, 102, 100 তিন pass-এ ordered;original 1 3 3 5 7।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা সর্ট করো</h3>
+<p>99 যোগে -2-ও nonnegative encoding। Stable pass সব original signed মান রাখে।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>শেষে equal score পাশাপাশি, distinct scan তিন বলে।</p>
+<div data-example="ex-3"></div>
+<h3>Decimal boundary পার হওয়া দেখো</h3>
+<p>Encoding 0, 1, 99, 198, 100 পেরোয়। শুধু units final নয়;tens-hundreds স্থির করে।</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>Encoding</td><td>[106, 102, 104, 102, 100]</td><td>শুধু ডিজিট নিতে99 যোগ।</td></tr><tr><td>Units pass</td><td>[1, 3, 3, 5, 7]</td><td>ডিজিট 0, 2, 2, 4, 6 রেকর্ড order দেয়।</td></tr><tr><td>Tens pass</td><td>[1, 3, 3, 5, 7]</td><td>সমান tens-এ units order থাকে।</td></tr><tr><td>Hundreds pass</td><td>[1, 3, 3, 5, 7]</td><td>সমান leading ডিজিট final order রাখে।</td></tr></tbody></table>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>r low ডিজিট-এ sorted ধরো। ডিজিট r+1-এর stable pass নতুন ডিজিট-এ order দেয়;equal group-এ আগের r-ডিজিট order থাকে। তাই combined r+1 low ডিজিট sorted। Zero pass-এর base vacuous;সবশেষে full encoded order।</p>
+<p>Allowed range-এ +99 strictly increasing, তাই encoded ও original order একই। বাফারে প্রতিটি pass whole রেকর্ড রাখে। Fixed তিন pass unbounded power হিসাব ছাড়াই থামে।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Demo b = 10, d = 3, তাই Θ(3(n+10)), peak Θ(n+10)। Width-base ভেরিয়েবল হলে general Θ(d(n+b)) রাখো। Counting pass থেকে stability, linear বাফার বলে strict in-place নয়।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>Unstable ডিজিট সর্ট নেওয়া</h3>
+<p>Later equal-ডিজিট group আগের low-ডিজিট order হারাতে পারে। প্রতিটি pass stable চাই।</p>
+<h3>Negative কী-তে সরাসরি remainder</h3>
+<p>Negative remainder কাউন্ট ইনডেক্স নয়। ডিজিট নেওয়ার আগে order-preserving encoding বলো।</p>
+<h3>Range guard ছাড়া place multiply</h3>
+<p>General লুপ-এ ইন্টিজার place overflow হতে পারে। Pass bound বা multiplication guard দাও।</p>
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>এখানে C = 17 division nonnegative encoding-এ। Fixed place-এ repeated multiplication overflow নেই।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Explicit encoding ও ডিজিট bound-এ পুরো রেকর্ড stable low-to-high pass-এ সাজাও।</p>
+<p>বিভিন্ন guarantee মিলিয়ে বাছতে <a href="topic:algo-sorting-comparison">সর্টিং কম্পারিজন</a> পড়ো।</p>

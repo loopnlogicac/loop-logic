@@ -1,0 +1,91 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">Message-এ কোনো symbol বেশি আসে। সবার সমান bit না দিয়ে frequent-এর ছোট, rare-এর বড় কোড দিলে সুযোগ মেলে। Positive symbol frequency থেকে Huffman ভেরিয়েবল-length binary কোড বানায়।</p>
+
+<p>Length ভিন্ন হলে symbol কোথায় শেষ বোঝা চাই। Prefix কোড-এ কোনো complete কোড অন্যটির prefix নয়। Binary ট্রিতে bit ধরে leaf পেলেই symbol চেনা যায়;separator bit লাগে না।</p>
+
+<p>Objective সব frequency×কোড length-এর যোগ, total message bit। Leaf ডেপথ-ই length বলে weighted external path length। Decoder-এ ট্রি/codebook-ও পৌঁছাতে হবে। Huffman ডেটা-bit minimize করে, codebook free বলে না।</p>
+
+<p>ছয় symbol fixed-length-এ three bit। Total 100 occurrence-এ300 bit;Huffman 224। Unequal frequency ও shared codebook-এ লাভ। খুব ছোট message codebook পাঠানোর খরচ নাও তুলতে পারে।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">create a leaf for each positive frequency; push its ID
+while heap size &gt; 1
+    left = pop minimum; right = pop minimum
+    create parent with weight[left] + weight[right]
+    attach left and right; push parent
+root = final minimum; assign 0 left and 1 right
+return codes and weighted bit count</code></pre>
+<p>Leaf-এ symbol frequency, internal-এ descendant sum। কিউ-তে available ট্রি root। দুই smallest তুলে parent বানিয়ে আবার ঢোকাও, এক root পর্যন্ত। Single-symbol forest এক full prefix ট্রি হয়।</p>
+
+<p>C-তে Node অ্যারে ও node-ID binary min-হিপ। কমweight আগে, tie-তে কমID। Leaf 0..n-1 হলোA onward, internal IDn থেকে বাড়ে। First minimum left bit 0, second right bit 1।</p>
+
+<p>Tie rule codebook repeatable। অন্য tie-তেও আলাদা equally optimal কোড। Left-right সব উল্টালেও length এক। Decoder actual chosen book নেবে;optimal মানে unique bit string নয়।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>5, 9, 12, 13, 16, 45-এ5+9=14, 12+13=25। কিউ 14, 16, 25, 45।14+16=30, 25+30=55, 45+55=100root।</p>
+
+<p>Push নতুন node lighter হলে ওপরে;pop minimum বাদে last entry নামিয়ে lighter child ধরে। Operation হিপ height-এ log। কিউ থেকে ID বেরোলেও Node অ্যারেতে subtree থাকে;কোড ট্রি deletion নয়।</p>
+
+<div data-lab="huffman-tree"></div>
+<p>Lab-এ প্রথমে সব আলাদা leaf, no selected root। Merge internal node বানিয়ে দুই ট্রি জোড়ে। Side হিপ list remaining candidate root দেখায়। Final root সব leaf পায়, codebook branch থেকে।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">Binary min-হিপ-এ কোড বানাও</h3>
+<p>ছোট available node আগে merge;ID rule-এA কোড 1100।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">চার equal-frequency symbol</h3>
+<p>চার equal frequency-তেID tie-break, সব কোড two-bit।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">এক-symbol alphabet</h3>
+<p>Single leaf convention কোড 0;message explicit symbol কাউন্ট দিতে পারে।</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">FACE encode করে একই bit decode</h3>
+<p>FACE→01100100111;ট্রি decode-এFACE, শেষ symbol boundary-ও পরীক্ষা।</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">তোলা weight</th><th scope="col">নতুন weight</th><th scope="col">Insert-এর পরে কিউ weight</th></tr></thead><tbody><tr><td>5, 9</td><td>14</td><td>12, 13, 14, 16, 45</td></tr><tr><td>12, 13</td><td>25</td><td>14, 16, 25, 45</td></tr><tr><td>14, 16</td><td>30</td><td>25, 30, 45</td></tr><tr><td>25, 30</td><td>55</td><td>45, 55</td></tr><tr><td>45, 55</td><td>100</td><td>100</td></tr></tbody></table>
+
+<p>Merge weight 14+25+30+55+100=224। Merge descendant-এর depthone বাড়ায়, subtree frequency bit cost যোগ। প্রতিটি leaf frequency final path-এর প্রতি edge-এ একবার গোনা। Message bit না বানিয়েও length মাপা যায়।</p>
+
+<h2 id="encoding">একই ট্রিতে encode ও decode</h2>
+<p>Encode-এ root-to-leaf path বা saved table নাও, message order-এ concatenate। এখানেF(0), C = 100, D = 101, A = 1100, B = 1101, E = 111। FACE = 01100100111।</p>
+
+<p>Decode root থেকেzero-left, one-right। Leaf-এ symbol emit, আবারroot।0→F, 1100→A, 100→C, 111→E। প্রতি symbol-এর পরে root reset জরুরি।</p>
+
+<p>Complete stream শেষ leaf emit-এর পর root-এ থাকে। Internal path-এর মাঝে শেষ হলে truncated। Nonbinary ও impossible child path reject। Valid stream unambiguous, prefix নিজে সব transmission error ধরতে পারে না।</p>
+
+<p>এক symbol-এর mathematical ট্রি message length আলাদা দিলে empty কোড নিতে পারে। এখানে0 convention;zero-প্রতি symbol, one reject। তাই single-symbol cost merge-sumzero formula থেকে আলাদা, বলতে হবে।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Full prefix ট্রি-র greatest-ডেপথ sibling leaf pair নাও;deepest internal-এর দুই child leaf হবেই। Least weight x, y-কে সেখানে নিলে weighted cost বাড়ে না। ছোট weight নিচে, বড় ওপরে সোয়াপ-এ change nonpositive।</p>
+
+<p>তাই x, y deepest sibling এমন optimum আছে। Combined x+y leaf-এ contract করলে অন্য ডেপথ এক, x, y one edge কম। Original cost=reduced cost+x+y। Reduced optimum না হলে betterটি বসিয়ে original আরও ভালো হতো, বিরোধ।</p>
+
+<p>দুটি property-ই প্রমাণ:least-two safe greedy choice, contracted alphabet একই form-এর optimal subproblem। বারবার contract করে উল্টোয় optimal ট্রি। Single-symbol depthzero convention আলাদা।</p>
+
+<p>Single-child internal redundant হলে remove-এ নিচের leaf ছোটে, objective বাড়ে না। Positive frequency-তে optimum full ধরা যায়। তাই arbitrary ট্রি shape ধরে নয়, full sibling proof বৈধ।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>n symbol-এ n-1 merge;দুই pop, একpush, প্রতি O(log n)। Initial পৃথক insert-ও O(n log n), build shown O(n log n)। Bottom-up হিপ শুধু initial preparation O(n) করতে পারে।</p>
+
+<p>Full tree2n-1 node, হিপ≤nID, spaceO(n)। সব কোড print combined length-অনুপাতে, skew ট্রিতে O(n²) হতে পারে। Node traversal O(n) হলেও প্রতি leaf-এর ancestor bit print extra আউটপুট।</p>
+
+<p>Table তৈরি হলে B encoded bit emit O(B), decode edge-প্রতি O(B)। Huffman worst ডেপথ n-1। কোড length বা total book আউটপুট সবসময় log নয়। হিপ height ও কোড-ট্রি height আলাদা।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>Pop-ID-এর node delete করলে পরে subtree হারায়। Book দরকার পর্যন্ত Node রাখো। Bounded অ্যারে-এ dynamic ownership নেই। Dynamic হলে শেষে প্রতিটি node ঠিক একবার free।</p>
+
+<p>Max-হিপ rule উল্টে frequent deeper নিতে পারে। শুধু original least leaf দেখে নতুন internal weight বাদও ভুল। প্রতিটি subtree আবার কিউ-তে compete;তার weight পরের merge-এ bit বাড়া সব occurrence বোঝায়।</p>
+
+<p>Tie-তে fixed bit আশা করলে বৈধ alternative reject হতে পারে। Spec tie না বললে weighted cost ও prefix validity মেলাও। Fixed bit কাউন্ট ধরে decode নয়;ভেরিয়েবল length-এই compression।</p>
+
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<p>Max 16 symbol, frequency≤99।31 node সর্বোচ্চ full ট্রি, 32 char path null terminator-সহ যথেষ্ট। Sum int-এ, A onward ছোট teaching alphabet-এ থাকে।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>দুই smallest available ট্রি বারবার merge। Sibling exchange-contraction optimality দেয়;prefix leaf separator ছাড়া decode করে। পরের job sequencing profit ও slot দিয়ে future সুযোগ রাখে।</p>
+<p>এবার <a href="topic:algo-job-sequencing">deadline-সহ job sequencing</a> দেখো।</p>

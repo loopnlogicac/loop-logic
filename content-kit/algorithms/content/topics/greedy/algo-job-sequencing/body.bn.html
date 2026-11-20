@@ -1,0 +1,81 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">ল্যাবের এক machine, অনেক one-slot job। Deadline-এর মধ্যে শেষ হলেই profit। Job optional, slot-এ একটিই, maximum total profit চাই। এটি unit-processing-time deadline sequencing।</p>
+
+<p>Slot 1, 2, …completion time-ই number। Deadline 2-তে slot 1/2, zero-তে কোনো positive slot নয়। C-তে slot t ইনডেক্স t-1;গণিতের numbering ও ইনডেক্স আলাদা।</p>
+
+<p>প্রতিটি ঠিক এক slot। Two-slot job-এ resource আলাদা, এই টেস্ট ভাঙে। সবাই slot 1-এর আগে available, precedence নেই। অ্যালগরিদম-এর assumption, উপেক্ষণীয় detail নয়।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">sort jobs by decreasing profit; tie by id
+mark slots 1 through n free; total = 0
+for each job with positive profit
+    search slots backward from min(deadline, n)
+    if a free slot exists: put job there; add its profit
+return total and slots</code></pre>
+<p>Decreasing profit, tie-তে original ID সর্ট। Positive-profit job-এ min(deadline, n) থেকে backward free slot খোঁজো। Latest allowed-এ বসাও, না পেলে reject। Optional nonpositive নেওয়ায় লাভ নেই।</p>
+
+<p>n job-এ n slot যথেষ্ট, deadline বড় হলেও। Feasible set maxn job, left shift করে প্রথমn-এ শেষ হয়। Deadline cap feasibility রাখে, বড় অ্যারে বাঁচায়।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>(Deadline, profit):(2, 100), (1, 19), (2, 27), (1, 25), (3, 15)। Profit ID0, 2, 3, 1, 4।0 slot 2-এ, 1-এ নয়।2 slot 1 নেয়;3, 1 দুটোইslot1 চাই, পারে না।</p>
+
+<p>শেষ4 slot 3। Total 100+27+15=142।0 আগেslot 1 নিলে free 2 tighter deadline 1-কে সাহায্য করে না। Latest placement আগের flexible resource বাঁচায়।</p>
+
+<p>Reject বলতে সব allowed slot দেখতে হবে। Deadline slot occupied দেখেই নয়। Deadline 3-এর job 1/2-ও নিতে পারে;deadline-এর পর empty slot লাভ নেই।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">আগের slot খালি রাখো</h3>
+<p>0 slot 2-এ রেখে2-এর জন্য1 বাঁচায়;4 slot 3, profit 142।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">সবার deadline slotone</h3>
+<p>Common deadline-এ শুধু সর্বোচ্চ profitable job ধরে।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Unprofitable optional job বাদ</h3>
+<p>Optional negative job নিলে objective কমে।</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">Profit-order ID</th><th scope="col">Profit</th><th scope="col">নির্বাচিত slot</th><th scope="col">কারণ</th></tr></thead><tbody><tr><td>0</td><td>100</td><td>2</td><td>2 পর্যন্ত latest free</td></tr><tr><td>2</td><td>27</td><td>1</td><td>Slot 2 occupied</td></tr><tr><td>3</td><td>25</td><td>বাদ</td><td>Slot 1 occupied</td></tr><tr><td>1</td><td>19</td><td>বাদ</td><td>Slot 1 occupied</td></tr><tr><td>4</td><td>15</td><td>3</td><td>3 পর্যন্ত latest free</td></tr></tbody></table>
+
+<p>Final ID অ্যারে 2, 0, 4, -1, -1 time order, consideration order নয়। -1 idle capacity। Exam-এ profit order ও final slot দুটো দেখাও।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Unit-job set feasible iff প্রতি t-তে deadline≤t job সংখ্যা≤t। Necessity:প্রথমt slot-এ সবাই শেষ চাই। Sufficiency:deadline-সর্ট-এ kth job deadline≥k, ক্রমে বসে।</p>
+
+<p>Feasible A, B-তে|A|&lt;|B| হলে B\A-এর কোনো job A-তে যোগ করা যায়। A-এর tight deadline prefix দেখো:t early job t slot ভরে। সব বাইরে job tight prefix-এ blocked হলে বৃহত্তম ওই prefix সব outside ধরে, B-এর feasibility ও বেশি সাইজ-এর বিরোধ।</p>
+
+<p>Exchange property profit order safe করে। Accepted choice মানা optimum রাখো। পরের accepted greedy job না থাকলে feasibility রেখে conflicting later-considered job-এর বদলি। বাদটির profit বেশি নয়। তাই ভ্যালু না হারিয়ে optimum আরও এক choice মানে।</p>
+
+<p>Latest-slot টেস্ট accepted set-এর feasibility ঠিক বলে। নতুন deadline পর্যন্ত সব full হলে earlier-deadline occupant পরে যেতে পারে না;flexible occupant নিজের সময় latest-এ বসেছে। Blocking chain-এ saturated deadline prefix মেলে;নতুনটি capacity ছাড়াবে, তাই reject দরকার।</p>
+
+<p>আলাদাভাবে প্রতিটি insertion-এর পরে deadline-prefix condition দিয়ে টেস্ট করা যায়;ছোট reference হিসেবে ভালো। Proof unit duration চায়, তবেই job count=slot কাউন্ট।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>উপযুক্ত সর্ট O(n log n)। প্রতি n job-এ n slot দেখা placement worst O(n²), সর্ট-কে dominate। শুরুতে সর্ট দেখলেই whole O(n log n) নয়।</p>
+
+<p>Slot arrayn, ইনপুট order সর্ট-এ বদলায়। অ্যারে বাদে placement ভেরিয়েবল Θ(1)। Advanced disjoint-set latest slot দ্রুত দিতে পারে। Structure বদলালেও profit order ও proof থাকে।</p>
+
+<p>Zero-negative skip objective না-বাড়ানো কাজ দিয়ে slot নষ্ট এড়ায়। সবাই run বাধ্যতামূলক বা missing penalty হলে অন্য objective। Optional variant unprofitable কাজ রেখেও idle হতে পারে।</p>
+
+<h2 id="edge-cases">প্রতি deadline-এর অর্থ দেখো</h2>
+<p>সব deadlineone-এ greatest positiveprofit;সব≥n-এ সবpositive ধরে। Deadlinezero hugeprofit-ও বাদ। Profit, slot bound, feasibility আলাদা টেস্ট।</p>
+
+<p>Tied profit-এ অনেক optimum। ID repeatable answer, optimality proof-এর অংশ নয়। Slots-এ original ID রাখো, sorted পজিশন নয়।</p>
+
+<p>Deadline release time নয়। Deadline 4 আগে run করা যায়, ঠিক4-এ start চাইলে অন্য সমস্যা। Profit এক completion-এ একবার, available slot সংখ্যা দিয়ে গুণ নয়।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>Forward earliest slot tight-deadline job আটকায়। Deadline থেকে backward যাও। Deadline পেরিয়ে বসালে সুন্দর total হলেও late job profit পায় না।</p>
+
+<p>সব slot -1 initialize। Uninitialized-এ occupied বা real ID মনে হতে পারে। Zero valid ID বলে free marker নয়;negative স্পষ্ট।</p>
+
+<p>Arbitrary duration-এ লাগাবে না। Long high-profit বনাম বেশি মোট-profit short job-এ profit-only ভুল হতে পারে। Unit duration-ই prefix exchange ও one-slot insertion সমর্থন করে।</p>
+
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<p>Max 16 job, deadline≤100, profit-99..999। n cap fixed অ্যারে safe, total int-এ ধরে। Qsort whole রেকর্ড relational কম্পারিজন-এ নেয়;standard internal complexity বলে না।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>Profit বেশি optional unit job আগে, deadline-এর latest slot-এ বসাও। Prefix exchange rule সমর্থন করে। Linear backward search worst quadratic। পরে DP-তে local alternative তুলনার জন্য রেখে দিতে দেখবে।</p>
+<p>এবার <a href="topic:algo-dp-introduction">dynamic programming-এর শুরু</a> পড়ো।</p>

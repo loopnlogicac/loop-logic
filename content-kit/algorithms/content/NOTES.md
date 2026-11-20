@@ -1,3 +1,23 @@
+# Algorithms – Bangla edition, part 1 (R6-F)
+
+Package **0.4.1**, schema 1.1. This edition adds the first **28/56 Bangla bodies in curriculum order**, through `algo-knapsack-01`: foundations (5), searching (2), sorting (9), divide-conquer (4), greedy (5), and the first three dynamic-programming topics. The remaining 28 English bodies stay available as the fallback; languages remain `en` and `bn-partial`.
+
+The branch originally included open round-5 PR #37 (`codex/algorithms-batch-4`). That prerequisite has since landed, and current main at 2c1616a is included. This item changes only `content-kit/algorithms/content/`.
+
+Every paragraph is translated, including worked loop/recurrence proofs, lower-bound reasoning, tie rules, arithmetic bounds, greedy exchange proofs, DP state/order/reconstruction and edge cases. Heading IDs, links, example/lab slots and code blocks are preserved. English bodies, examples, practice solutions and `.out` files are unchanged; existing bilingual topic metadata is retained. All review statuses remain draft.
+
+All **15 labs in this half** receive descriptive Bangla titles and summaries. Missing Bangla narration was filled at 46 source sites across their traces. Four English lab titles were made explicitly descriptive (Fibonacci, coin change, 0/1 knapsack and Lomuto quick sort) to meet the round-6 lab-title requirement; lab behavior is unchanged. Existing titles for the other labs already describe the operation. Labs in the second half are unchanged.
+
+Validation:
+- Complete checker with `--sanitize`: 56 topics and 32 labs, 0 errors, 0 warnings; see `CHECK_REPORT.txt`.
+- `node --test "tests/*.test.ts"`: all 169 current platform tests pass.
+- `node --test content-kit/algorithms/content/tests/bangla-edition.test.mjs`: two edition checks pass, covering all 28 bodies and every narrated step sampled across the 15 labs.
+- Independent comparison with pre-translation traces on 517 inputs and 13,521 steps: every non-Bangla trace field is identical, and every English note has a Bangla note. Inputs include presets, declared checks and deterministic generated cases.
+
+Reviewer focus: read the Bangla explanations with the English math nearby, especially half-open search bounds, Lomuto versus Hoare recursion, stable record placement, the closest-pair strip argument, unit-duration scheduling assumptions, unordered coin combinations, and descending 0/1 updates. Numeric examples retain their stated C overflow bounds. No application dependencies, migrations or platform files are added.
+
+---
+
 # Algorithms – Batch 4
 
 Package version: **0.4.0**, schema **1.1**, track **algorithms**.

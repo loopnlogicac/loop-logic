@@ -1,0 +1,83 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">3-এর13 ঘাত repeated multiplication-এ13 factor update। Square reuse-এ কম:3², 3⁴, 3⁸ বানাও। 13=8+4+1 বলে3⁸×3⁴×3। এটি exponentiation by squaring বা binary exponentiation।</p>
+
+<p>Exponent nonnegative ইন্টিজার। Zero-তে multiplicative identity 1। এখানে power(0, 0)-ও1 ধরা। Negative-এ reciprocal ও অন্য numeric মডেল চাই, এই contract-এর বাইরে। ব্যবহারে সীমাটি বলো।</p>
+
+<p>বড় power দ্রুত C type ছাড়ায়। Modular exponentiation positive modulus দিয়ে remainder চায়। Product reduce-এ residue ঠিক ও stored মান ছোট থাকে। কিন্তু % করার আগের multiplication overflow নিজে আটকায় না;modulus bound জরুরি।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">result = 1
+while exponent &gt; 0
+    if exponent is odd: result = result * base
+    exponent = exponent / 2
+    if exponent &gt; 0: base = base * base
+return result</code></pre>
+<p>রিকার্সিভ identity:half-power square, exponent odd হলে extra base। ইন্টিজার division শেষ odd bit বাদ দেয়। Half একবার ভেরিয়েবল-এ রেখে দুইবার ব্যবহার করো। একই রিকার্সিভ call দুবারে recurrence logarithmic থেকে linear কাজ হয়।</p>
+
+<p>Iterative-এ result, base, exponent। Binary ডিজিট ডান থেকে নেয়। Odd হলে current squared base result-এ লাগবে। Exponent half-এ next bit, base square-এ ওই bit-এর power তৈরি।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>Result 1, base 3, e = 13। Odd বলে result×3। Half e = 6, square করা base = 9। Even 6-এ result এক। পরে e = 3, base 81;বাকি সিদ্ধান্তে81 তারপর6561 নেয়।</p>
+
+<p>Exponent zero হলে final unused square এড়ানো। Type limit-এ answer fit করলেও অপ্রয়োজনীয় square ছাড়াতে পারে। Exercise base 0..10, e = 0..18-এ answer-forming multiplication unsigned long long-এ ধরে।</p>
+
+<p>Modular-এ product-এর পরে remainder;শুরুর base-ও reduce। Result=1%modulus-এ modulusone ঠিক। Zero modulus invalid, C remainder-by-zero undefined। Call-এর আগেই reject।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">Iterative squaring</h3>
+<p>Bit-এ3, 81, 6561 নেওয়া, product 1594323।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">এক রিকার্সিভ half-power</h3>
+<p>এক রিকার্সিভ call-এ2⁵=32, তারপর square 1024।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Product modulo 13 করো</h3>
+<p>Residue 13-এর নিচে থাকে, শেষ3।</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">Modulusone-সহ zero exponent</h3>
+<p>Identity modulo 11-এ1, modulo 1-এ0।</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">Iteration-এর আগে</th><th scope="col">ফল</th><th scope="col">Base</th><th scope="col">Exponent</th><th scope="col">সিদ্ধান্ত</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>3</td><td>13</td><td>ফলে3 গুণ</td></tr><tr><td>2</td><td>3</td><td>9</td><td>6</td><td>Factor 9 বাদ</td></tr><tr><td>3</td><td>3</td><td>81</td><td>3</td><td>ফলে81 গুণ</td></tr><tr><td>4</td><td>243</td><td>6561</td><td>1</td><td>ফলে6561 গুণ</td></tr></tbody></table>
+
+<p>3×81×6561=1594323। 9 প্রস্তুত হলেও13-এর দ্বিতীয় bitzero বলে বাদ। Selection কাউন্ট one-bit সংখ্যা, iteration total bit length দেখে।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Invariant:result×base^exponent original power-এর সমান। শুরু result 1। Odd 2q+1-এ result×base, base², e=q-তে product একই। Even 2q-তে শুধু square-half।</p>
+
+<p>Exponentzero-তে base^0=1, তাই result original answer। Positive e প্রতিবার ছোট e/2 বলে stop। আর positive e নেই বলে plain routine শেষ square বাদ দিতে পারে।</p>
+
+<p>রিকার্সিভ base e = 0। Half correct ধরে square even power, extra base odd। Induction exponent সাইজ-এ, অ্যারে length নয়। দুই half একই গণনা বলে এক child যথেষ্ট।</p>
+
+<p>Congruence product rule-এ factor আগে-পরে reduce করলে residue এক। Positive modulus-এ invariant প্রয়োগ করো। Full power নয়, শুধু residue মেলা চাই। তবে % এর আগে C product exact হতে হবে।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Positive e-তে floor(log₂e)+1 bit। প্রতি iteration এক bit বাদ, fixed multiplication। Fixed-width মডেল-এ Θ(log(e+1)) time, iterative Θ(1) extra। রিকার্সিভ T(e)=T(floor(e/2))+Θ(1), স্ট্যাক Θ(log(e+1))।</p>
+
+<p>এগুলো machine arithmetic কাউন্ট। Arbitrarily বড় exact ইন্টিজার-এ ডিজিট বাড়লে multiplication cost বাড়ে। Log multiplication কাউন্ট দরকারি, কিন্তু huge power-এর পূর্ণ bit-complexity নয়।</p>
+
+<p>e = 0-তে কনস্ট্যান্ট কাজ। Basezero, e positive-এ answerzero, তবু সাধারণ লুপ bit দেখে। Special return যোগ করা যায়;সব base-এর worst bound বদলায় না।</p>
+
+<h2 id="edge-cases">Remainder-এর আগেই overflow হতে পারে</h2>
+<p>Exercise modulus≤1000000000। Factor তার নিচে, product 10¹⁸-এর নিচে;unsigned long long-এর C minimum range-এ ধরে। এই bound-এ multiply-% নিরাপদ। Arbitrary 64-bit modulus-এ অন্য multiplication বা wider type লাগে।</p>
+
+<p>Unsigned overflow defined wrap, কিন্তু arbitrary modulus-এর সঠিক residue সাধারণত নয়। Wrapped product-এর পরে % হারানো high bit ফেরায় না। Signed UB এড়ালেও numeric bound লাগে।</p>
+
+<p>Identity-সহ associative operation-এও কৌশল চলে, যেমন matrix power। Scalar না হলেও order consistent চাই। পরে fast Fibonacci-র যোগসূত্র;এখানে ইন্টিজার factor।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>recursive_power(base, e/2) দুবার লিখলে duplicate কাজ। একবার half-এ রাখো। Half করার পরে oddness দেখলে next bit পড়ে ফেলবে। আগে current e দেখে select, তারপর next state।</p>
+
+<p>Resultzero শুরুতে সব positive powerzero। Identityone, modulusone-এ সেটিওzero। শেষে অজানা special case না দিয়ে initialization আলাদা বোঝো।</p>
+
+<p>Negative ইনপুট unsigned-এ পড়লে huge ভ্যালু হতে পারে। Exercise নির্দিষ্ট nonnegative range নেয়। General UI-তে malformed/negative text conversion-এর আগে validate। Log লুপ ভুল request অর্থপূর্ণ করে না।</p>
+
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<p>C = 17 unsigned long long অন্তত64 ভ্যালু bit, এই power-product ধরে;%llu matching। Exponent unsigned int, ইন্টিজার division-এ half। Floating pow নেই, তাই double conversion rounding নেই।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>এক half reuse করে কাজ বাঁচাও;invariant odd-bit choice বোঝায়। Modular reduction-এ multiplication-ও safe চাই। পরের geometric combine সব point pair না দেখে কাজ বাঁচাবে।</p>
+<p>চলো <a href="topic:algo-closest-pair">closest pair of points</a> দেখি।</p>

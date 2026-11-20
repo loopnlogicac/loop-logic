@@ -6,9 +6,9 @@ function trace(input) {
     let result = -1;
     while (low < high) {
         const mid = low + Math.floor((high - low) / 2);
-        steps.push({op: 'clear-ranges', line: 3, note: {en: 'Replace the previous candidate interval.'}});
+        steps.push({op: 'clear-ranges', line: 3, note: {en: 'Replace the previous candidate interval.', bn: "আগের candidate interval সরিয়ে নতুনটি দেখাও।"}});
         steps.push({op: 'range', from: low, to: high - 1, tone: 'active', line: 3,
-            note: {en: `Only [${low}, ${high}) can still contain the target.`}, vars: {low, high, mid}});
+            note: {en: `Only [${low}, ${high}) can still contain the target.`, bn: `শুধু [${low}, ${high})-তে target থাকতে পারে।`}, vars: {low, high, mid}});
         steps.push({op: 'pointer', name: 'mid', target: mid, line: 4,
             note: {en: `The middle value ${a[mid]} decides which half can survive.`, bn: 'মাঝের মান দেখে ঠিক করো কোন অর্ধেক থাকবে।'}});
         if (a[mid] === input.target) {
@@ -19,10 +19,10 @@ function trace(input) {
         }
         if (a[mid] < input.target) {
             low = mid + 1;
-            steps.push({op: 'note', line: 6, vars: {low}, note: {en: 'The middle and everything smaller cannot match; move low past mid.'}});
+            steps.push({op: 'note', line: 6, vars: {low}, note: {en: 'The middle and everything smaller cannot match; move low past mid.', bn: "Mid ও তার ছোটগুলো match নয়; low-কে mid-এর পরে নাও।"}});
         } else {
             high = mid;
-            steps.push({op: 'note', line: 7, vars: {high}, note: {en: 'The middle is too large; high becomes mid, excluding it.'}});
+            steps.push({op: 'note', line: 7, vars: {high}, note: {en: 'The middle is too large; high becomes mid, excluding it.', bn: "Mid বড়; high=mid করে সেটি বাদ দাও।"}});
         }
     }
     steps.push({op: 'done', line: result < 0 ? 8 : 5, vars: {result, low, high},

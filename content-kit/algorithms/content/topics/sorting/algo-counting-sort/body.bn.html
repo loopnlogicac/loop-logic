@@ -1,0 +1,65 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">Class mark ছোট জানা range-এর ইন্টিজার। বারবার দুই mark তুলনা না করে কোনটি কতজন পেয়েছে গুনতে পারো। <dfn>Counting সর্ট</dfn> frequency থেকে সরাসরি আউটপুট পজিশন ঠিক করে।</p>
+<p>এটি কম্পারিজন-এর বাইরের তথ্য নেয়:offset-এর পরে কী অ্যারে ইনডেক্স হয়। Speed রেকর্ড কাউন্ট ও কী range দুটোর ওপর। একশ সম্ভাব্য score-তে হাজার mark ভালো;বিলিয়ন দূরের দুই কী নয়।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">count[0..198] = 0; allocate output[0..n)
+for i = 0 to n - 1: count[a[i] + 99]++
+for key = 1 to 198: count[key] += count[key - 1]
+for i = n - 1 down to 0: output[--count[a[i] + 99]] = a[i]
+copy output into a</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>কী থেকে কাউন্ট slot</h3>
+<p>Minimum L, maximum U inclusive হলে k=U-L+1। count[0..k) zero করো। কী x-এর slot x-L। Negative কী থাকলেও offset slot nonnegative রাখে।</p>
+<p>C version -99..99 নেয়, k = 199, slot a[i]+99। -99→0, zero→99, 99→198। ইনডেক্স করার আগেই range validate। বাইরের মানে মেমরি corrupt হতে পারে।</p>
+<p>এক ইনপুট scan-এ প্রতি কীর slot বাড়াও। শেষে count[s] ওই কীর রেকর্ড সংখ্যা। Empty ইনপুট-এ সবzero। Duplicate একই slot বাড়ায়, নতুন কাউন্ট পজিশন নয়।</p>
+<h3>Prefix total-এ boundary বানাও</h3>
+<p><dfn>Prefix sum</dfn> আগের entry-সহ running total। s = 1 থেকে k-1-এ count[s]+=count[s-1]। পরে count[s] ওই slot-এর কী পর্যন্ত ইনপুট কাউন্ট।</p>
+<p>[7, 3, 5, 3, 1]-এ1:1, 3:2, 5:1, 7:1 frequency;prefix 1, 3, 4, 5। তাই3 আউটপুট ইনডেক্স 1, 2 নেয়। Cumulative 3 group-এর excluded upper end, first ইনডেক্স নয়।</p>
+<p>Zero-frequency slot-ও prefix-এ অংশ নেয়। কী 4 নেই, তবু prefix 3। Display-তে খালি slot লুকাতে পারো;অ্যালগরিদম-এ পুরো range-এর অর্থ ঠিক চাই।</p>
+<h3>ডান থেকে বাঁয়ে আউটপুট ভরো</h3>
+<p>n-রেকর্ড আউটপুট নাও। ইনপুট শেষ থেকে প্রথমে scan। Slot-এর cumulative কাউন্ট আগে কমিয়ে নতুন মান পজিশন করো। End boundary 3 হলে last valid 2, তাই pre-decrement জরুরি।</p>
+<p>পেছন থেকে কেন? ইনপুট 3A, 3B হলে আগে3B group-এর last slot পায়, পরে3A ঠিক তার আগে। Tie order থাকে। Prefix boundary ও reverse traversal মিলে stability দেয়।</p>
+<p>একই decreasing-end rule-এ forward scan tie উল্টায়। Forward চাইলে increasing start-offset design নাও। Incompatible placement রেখে direction বদলাবে না।</p>
+<p>Caller ইনপুট-এ ফল চাইলে completed আউটপুট copy back। Counting-placement থেকে আলাদা phase। আউটপুট আগেই ordered;copy শুধু স্টোরেজ location বদলায়।</p>
+<h3>ডেটা-নির্ভর প্রতিটি সিদ্ধান্ত দেখো</h3>
+<p>Animation-এ ইনপুট-প্রতি occupied frequency, পরে prefix end, তারপর খালি আউটপুট-এ ডান ইনপুট থেকে এক slot ভরা দেখায়। Placement পুরো শেষেই copy back।</p>
+<p>Default-এ ইনপুট 1 আউটপুট 0, পরের3 পজিশন 2, 5 পজিশন 3, আগের3 পজিশন 1, 7 পজিশন 4। Visit reverse হলেও final কী ascending, tie original order।</p>
+<p>ইন্টিজার ফল বলে না কোন3 আগে। Labelled example-এ কী-এর সঙ্গে ID আছে। পুরো রেকর্ড copy করো। শুধু কী গুনে ভ্যালু rebuild করলে student-এর associated ডেটা হারায়।</p>
+<h3>n ও কী range k তুলনা</h3>
+<p>কাউন্ট initialize-prefix Θ(k);কাউন্ট, place, copy প্রতিটি Θ(n)। মোট Θ(n+k), stable buffered auxiliary-ও Θ(n+k)। শেষে ইনপুট replace করলেও আউটপুট কনস্ট্যান্ট space নয়।</p>
+<p>k=O(n) হলে n-এ linear, কম্পারিজন সর্ট-কে asymptotically হারাতে পারে। k≫n log n হলে খালি range scan waste। নির্দিষ্ট domain-এ simplify-এর আগে bound-এ k বলো।</p>
+<p>কম্পারিজন-সর্ট lower bound ভাঙে না। সেটি arbitrary কী-এর কম্পারিজন দিয়ে তথ্য শেখা ধরে। এখানে finite domain-এ direct address, আরও structured problem ও শক্ত ইনপুট assumption।</p>
+<p>Offset negative সমর্থন করে, arbitrary real mark নিজে slot নয়। Bounded exact encoding বা অন্য method চাই। Decimal scale-এ rounding-range সমস্যা;চুপচাপ truncate নয়, representation বলো।</p>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>কী slot 100, 102, 104, 106-এ যায়। Prefix ও reverse placement-এ1 3 3 5 7।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা সর্ট করো</h3>
+<p>Domain check -99..99 মানে। Offset 99-এ দুই -2 একই nonnegative slot।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>Stable counting duplicate পাশাপাশি রাখে। তিন occupied group তিন distinct mark।</p>
+<div data-example="ex-3"></div>
+<h3>Equal mark-এর সঙ্গে ID রাখো</h3>
+<p>2A, 2C একই order-এ বেরোয়। আলাদা ID ইন্টিজার-এ লুকানো stability দেখায়।</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>Frequency</td><td>1:1, 3:2, 5:1, 7:1</td><td>প্রতি original কী একবার গোনো।</td></tr><tr><td>Prefix total</td><td>1:1, 3:3, 5:4, 7:5</td><td>Total group-এর excluded end দেয়।</td></tr><tr><td>উল্টো দিকের placement</td><td>1→0; পরের 3→2; 5→3</td><td>প্রতি decrement unused slot নেয়।</td></tr><tr><td>সম্পূর্ণ</td><td>[1, 3, 3, 5, 7]</td><td>আগের 3 পজিশন 1, পরে7 পজিশন 4 নেয়।</td></tr></tbody></table>
+<div data-lab="counting-sort"></div>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Frequency শেষে count[s] ওই কীর সংখ্যা;prefix শেষে ওই কী পর্যন্ত সংখ্যা। তাই প্রতি কী consecutive block পায়, দৈর্ঘ্য frequency। Block overlap নেই, ascending order।</p>
+<p>Reverse placement-এ end কমিয়ে unused slot নেয়। Frequency সংখ্যক রেকর্ড ঠিক block পূর্ণ করে;কিছু হারায় বা duplicate নয়। Later equal পরে বসে বলে stable। Copy completed order রাখে।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Fixed demo-তে k = 199 কনস্ট্যান্ট ধরলে n-এ linear। General Θ(n+k) রাখতে হবে;domain বড়ে কাজ ও স্টোরেজ বাড়ে। Bare কী frequency reconstruction-এ n-রেকর্ড বাফার বাঁচতে পারে, কিন্তু একই stable রেকর্ড-placement নয়। এখানে stable buffered form।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>Negative কী সরাসরি ইনডেক্স</h3>
+<p>Minimum অনুযায়ী offset দাও। প্রথম indexing-এর আগেই পুরো allowed range যাচাই করো।</p>
+<h3>Decrement ছাড়া cumulative ইনডেক্স</h3>
+<p>Total n excluded end;output[n] বাইরে। আগে কমাও।</p>
+<h3>রেকর্ড নিতে stability বাদ</h3>
+<p>প্রতি placement-এ পুরো রেকর্ড copy। শুধু কী rebuild associated field রাখে না।</p>
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>C = 17 slot int কাউন্টার, সব zero initialized। Fixed 199 কী ও max 64 রেকর্ড-এ prefix-offset arithmetic range-এ থাকে।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Bounded ইন্টিজার কী frequency, prefix boundary ও stable reverse placement-এ সাজাও।</p>
+<p>এক ডিজিট করে এই ধারণা নিতে <a href="topic:algo-radix-sort">radix সর্ট</a> দেখো।</p>

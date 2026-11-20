@@ -1,0 +1,80 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">ব্যাগের weight capacity সীমিত, material ভাগ করা যায়। প্রতি lot-এর weight ও total ভ্যালু আছে। যেকোনো fraction নিলে একই অনুপাতে ভ্যালু। Capacity-র মধ্যে maximum ভ্যালু fractional knapsack।</p>
+
+<p>20 kg grain 100 টাকা হলে অর্ধেক10kg50। Proportional-ভ্যালু শর্ত অপরিহার্য। Device ভেঙে সমান কাজের fraction পাওয়া যায় না;পরে0/1 knapsack-এ অন্য method।</p>
+
+<p>Weight positive, ভ্যালু nonnegative, capacity খালি রাখা চলে। প্রতি lot-এর সীমিত weight;শেষের পর copy নেওয়া নয়। Zero-ভ্যালু fit হলেও objective বাড়ে না।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">sort items by decreasing value / weight; tie by id
+total = 0
+for each item while capacity &gt; 0
+    take = min(weight, capacity)
+    total = total + take * value / weight
+    capacity = capacity - take
+return total</code></pre>
+<p>ভ্যালু/weight হলো density, এক weight-এর ভ্যালু। Decreasing ratio-তে সর্ট। Take=min(weight, remaining), ভ্যালু-এ take×ভ্যালু/weight যোগ, capacity থেকেtake কমাও। শেষ lot partial হতে পারে;capacityzero-তে আর দরকার নেই।</p>
+
+<p>Comparator ইন্টিজার division নয়, cross product:valueA×weightB বনাম valueB×weightA। Positive weight-এ direction ঠিক। Bound মেনে long long product। Equal ratio-তে original ID repeatable choice, optimal ভ্যালু একই।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>Lot(10, 60), (20, 100), (30, 120)-এর ratio 6, 5, 4। Capacity 50-এ প্রথম10, দ্বিতীয়20, শেষে বাকি20 অর্থাৎthird-এর2/3। ভ্যালু 60+100+80=240।</p>
+
+<p>Ratio order-এর plan-এ সর্বোচ্চ একটি partial lot;আগের positive-density full, শেষটি capacity ভরে, পরে absent। Equal density অনেকভাবে ভাগ হলেও unit ভ্যালু এক।</p>
+
+<p>সব ধরলে total ভ্যালু;available total weight ছাড়িয়ে capacity বাড়ালে লাভ নেই। Zero capacity-তে zero। Positive remaining condition-এই case সামলায়।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">শেষ lot-এর কিছু অংশ</h3>
+<p>Density 6, 5, 4-এ প্রথম দুই full, শেষটি2/3।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">সব lot ধরার capacity</h3>
+<p>সব তিন lot ধরে, unused capacity-র আর ভ্যালু নেই।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Equal ratio-তে বিশেষ choice লাগে না</h3>
+<p>প্রতি unit 2, তাই weight 15-এর যেকোনো feasible mix 30।</p>
+
+<div data-example="ex-3"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">Lot ID</th><th scope="col">Density</th><th scope="col">নেওয়া weight</th><th scope="col">পাওয়া ভ্যালু</th><th scope="col">বাকি capacity</th></tr></thead><tbody><tr><td>0</td><td>6</td><td>10</td><td>60</td><td>40</td></tr><tr><td>1</td><td>5</td><td>20</td><td>100</td><td>20</td></tr><tr><td>2</td><td>4</td><td>20</td><td>80</td><td>0</td></tr></tbody></table>
+
+<p>Exercise-এ extra capacity unit-এর লাভ। Capacity 50-তে next material density 4, তাই4। সব60 weight ধরার পরে extra লাভzero। Next unconsumed material থেকে marginal ভ্যালু আসে।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>Feasible plan-এ lower density নেওয়া অথচ higher material বাকি ধরো। Equal অল্প weight exchange করো। Capacity এক, উচ্চ density-তে ভ্যালু বাড়ে;আগেরটি optimal হতে পারে না।</p>
+
+<p>Higher lot full বা lower সরানো পর্যন্ত repeat। তাই strictly lower-এর আগে highest full করা optimum আছে। Equal density exchange-এ ভ্যালু এক। এরপর remainder-এ একই যুক্তি।</p>
+
+<p>Proof arbitrary fraction চায়। Whole item-এ equal-weight exchange নাও সম্ভব। একই capacity 50-তে whole item 1, 2-এর ভ্যালু 220;ratio-first প্রথম দুই নিয়ে160, third ধরে না। Fractional 20 unit নিতে পেরে240।</p>
+
+<p>Invariant:processed material density-order-এ নেওয়া, এ choice মানা optimum আছে। Exchange next choice প্রতিষ্ঠা করে। Capacity/material শেষ হলে ওই optimum বাড়ানোর positive feasible extension নেই।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>n lot সর্ট উপযুক্ত sorter-এ O(n log n), fill worst Θ(n)। Capacity আগে ভরলে scan আগে থামে, সর্ট হয়ে গেছে। বহু capacity query-তে ratio order reuse করা যায়।</p>
+
+<p>Routine ইনপুট রেকর্ড rearrange করে, double total ও ইন্টিজার capacity রাখে;scan auxiliary Θ(1)। সব taken fraction লিখলে আউটপুট O(n)। Library সর্ট-এর space implementation-নির্ভর;qsort standard cost বলে না।</p>
+
+<p>Proof exact proportion-এর। C fractional contribution-এ double, two-decimal display। Ordering exact cross product-এ বলে rounding তা ঠিক করে না। Exact accounting চাইলে rational numerator-denominator বা স্পষ্ট rounding policy।</p>
+
+<h2 id="comparison">Whole-item ও zero-weight variant</h2>
+<p>Fractional optimum একই0/1 optimum-এর upper bound;প্রতিটি whole plan fractional-এও বৈধ। Feasible set বড়ে maximum ছোট নয়। কিন্তু fractional round করলেই whole optimum হয় না।</p>
+
+<p>উদাহরণzero-weight reject করে। Positive-ভ্যালু zero-weight free contribution আলাদা, ordinary ratio undefined। Negative ভ্যালু-তে mechanical fill নয়, skip rule চাই। Contract-এ proof ও লুপ মিলিয়ে রাখো।</p>
+
+<p>কখনো unit price সরাসরি দেয়, তখন সেটি compare। Total ভ্যালু বড় হলেও heavy lot-এর unit ভ্যালু কম হতে পারে। Number কী মাপে দেখে কী বাছো।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>ইন্টিজার take/weight proper fractionzero করে। Division-এর আগে convert:(double)take*ভ্যালু/weight। সমস্যায় না বললে প্রতিটি contribution ইন্টিজার round করবে না।</p>
+
+<p>শুধু total ভ্যালু-তে heavy low-density আগে, শুধু small weight-এ কমমূল্যের material আগে যেতে পারে। Proof density-র, দুটি shortcut তার premise ভাঙে। দুই-lot counterexample দিয়ে পরীক্ষা করো।</p>
+
+<p>Cross product-ও range চায়। Int multiply-এর পরে cast দেরি। আগে operand long long করো। Weight, ভ্যালু≤1000-এ product সহজে ধরে।</p>
+
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<p>C = 17 struct ও qsort comparator। এখানে partial-ও ইন্টিজার consumed weight-এ বলা যায়, তাই weight-capacity ইন্টিজার। Earned ভ্যালু double, %.2f display। এটি stated precision-এর teaching calculation, অঘোষিত financial rounding নয়।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>সেরা ভ্যালু-per-weight আগে। Equal-weight exchange বলে higher বাকি রেখে lower নেওয়া optimal নয়। Whole item-এ স্বাধীনতা নেই। Huffman-এ দুই least frequency deepest sibling হতে পারে—অন্য greedy fact দেখবে।</p>
+<p>এবার <a href="topic:algo-huffman-coding">Huffman coding</a> পড়ো।</p>

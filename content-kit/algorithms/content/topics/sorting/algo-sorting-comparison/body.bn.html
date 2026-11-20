@@ -1,0 +1,65 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">এক খাতা ও হাজার খাতা একইভাবে বহন করবে না। সর্ট-ও কাজভেদে বাছতে হয়। Nearly ordered ছোট অ্যারে, কম মেমরি, bounded mark range, tie order—প্রতিটি অন্য পছন্দে নিতে পারে।</p>
+<p>Contract-এর সঙ্গে guarantee মেলাও। রেকর্ড কাউন্ট, কী representation, workspace, stability আগে বলো;তারপর time। “Fastest সর্ট” স্লোগান উপযোগিতার শর্ত ঢাকে।</p>
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">compare(left, right): read keys x and y
+return (x &gt; y) - (x &lt; y)
+qsort(a, n, sizeof a[0], compare)
+verify adjacent keys are nondecreasing</code></pre>
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<h3>কম্পারিজন table শর্তসহ পড়ো</h3>
+<p>Best, average, worst আলাদা ইনপুট/probability assumption। Bubble-এর linear best-এ early flag, insertion-এ ascending ইনপুট। Selection order যাই হোক suffix scan। এখানে merge সবসময় divide-merge, no boundary skip।</p>
+<p>Quick-এর expected n log n distinct কী-তে random pivot rank ধরে। Final deterministic pivot ascending-এ quadratic। হিপ worst n log n upper guarantee দেয়। Name দিয়ে pivot, duplicate বা রিকার্শন variation জানা যায় না।</p>
+<p>Space ইনপুটের বাইরের auxiliary। Merge-counting বাফার, iterative হিপ অল্প ভেরিয়েবল। Simple রিকার্সিভ quick worst linear স্ট্যাক, যদিও partition কনস্ট্যান্ট। Strict convention-এ সেই রিকার্সিভ version guaranteed in-place নয়।</p>
+<h3>রেকর্ড movement-এ stability</h3>
+<p>আগে roll, পরে mark সর্ট ধরো। Stable mark সর্ট equal mark-এ increasing roll রাখে। Unstable সেটি গুলাতে পারে। শুধু ascending mark চাইলে দুই ফলই ঠিক;tiebreak roll চাইলে stable আচরণ যথেষ্ট।</p>
+<p>দুই3-এর ইন্টিজার আউটপুট arrival দেখায় না। লেবেল বা দ্বিতীয় field নাও। Bubble-insertion strict movement, merge left-equality tie রাখে। Standard selection, quick, হিপ distant সোয়াপ-এ equal রেকর্ড পার করে।</p>
+<p>Mark-এর পরে original পজিশন compare করে total order করা যায়। Unstable underlying সর্ট-এও deterministic tie হয়। কিন্তু extra field ও rule representation-এর অংশ;library অ্যালগরিদম stable হয়ে গেছে বলবে না।</p>
+<h3>Worst কম্পারিজন n log n লাগে কেন</h3>
+<p>n distinct কী-তে n! ইনপুট order। কম্পারিজন-only সর্ট-কে সেগুলো আলাদা করার তথ্য শিখতে হয়। দুই-outcome decision binary ট্রিতে leaf এক ordering outcome চেনে।</p>
+<p>Height h-এ সর্বোচ্চ2^h leaf;তাই2^h≥n!, h≥log2(n!)। যথেষ্ট বড় n-এ factorial-এর অন্তত অর্ধেক factor≥n/2, তাই log2(n!)≥(n/2)log2(n/2)। Worst কম্পারিজন Ω(n log n) প্রমাণ।</p>
+<p>Bound arbitrary distinct permutation ও কম্পারিজন-only তথ্যের। প্রতিটি ইনপুট n log n চায় নয়;adaptive method sorted ইনপুট linear-এ দেখে। Structured domain সরাসরি নেওয়া counting-radix-ও এর বাইরে।</p>
+<p>Decision ট্রি worst path বলে, processor-এর measured second নয়। Long string বা বহু-field কম্পারিজন নিজে expensive হতে পারে। Cost nonconstant হলে ধরো, এক machine instruction ভাববে না।</p>
+<h3>C qsort contract নাও</h3>
+<p>stdlib.h-তে qsort। Base address, element কাউন্ট, সাইজ, comparator দাও। Comparator দুই const void পয়েন্টার পায়। সঠিক element-পয়েন্টার type-এ cast করে read করো, কোনোটিই বদলাবে না।</p>
+<p>প্রথমটি আগে হলে negative, equal zero, পরে positive। Safe ইন্টিজার pattern (x&gt;y)-(x&lt;y)। x-y extreme signed কী-তে overflow, undefined behavior বা ভুল sign দিতে পারে।</p>
+<p>Calling scope-এ actual অ্যারে হলে sizeof a[0] নাও, পয়েন্টার সাইজ নয়। Struct হলে সঠিক type ও field compare। সব কম্পারিজন এক consistent order মানবে;মতবদল comparator contract ভাঙে।</p>
+<p>C standard qsort-এ quick সর্ট implementation, stability বা universal asymptotic cost বাধ্যতামূলক করে না। নাম ঐতিহাসিক;library অন্য method নিতে পারে। Strict resource/stability চাইলে documented guarantee-মেলা implementation নাও।</p>
+<h3>Constraint থেকে পছন্দ করো</h3>
+<p>ত্রিশ nearly ordered mark-এ insertion স্বচ্ছ পছন্দ:inversion-ভিত্তিক কাজ, কনস্ট্যান্ট extra। বড় arbitrary অ্যারে ও strict কনস্ট্যান্ট workspace-এ iterative হিপ worst bound দেয়। Fashion নয়, requirement অনুযায়ী।</p>
+<p>Equal mark-এর roll order চাইলে linear বাফার থাকলে stable merge মানায়। ছোট ইন্টিজার range-এ n+k ও n log n তুলনা। ছোট কী width ও well-defined ডিজিট-এ radix-ও হতে পারে।</p>
+<p>বিশেষ guarantee না লাগা app-এ library সর্ট implementation ভুল কমায়। Comparator তোমার দায়;equal ও extreme কী টেস্ট করো। Reliable API inconsistent বা overflowing comparator সারায় না।</p>
+<p>পরীক্ষার design উত্তরে বাদ দেওয়া বিকল্পও বলো। Huge interval-এর দশ sparse কী-তে counting মেমরি waste। শুধু stable বলে bubble নিলে quadratic worst এড়ায় না। প্রতিটি constraint-কে property-র সঙ্গে মেলাও।</p>
+<table class="ref"><caption>Properties of the implementations in these lessons</caption><thead><tr><th scope="col">পদ্ধতি</th><th scope="col">Best সময়</th><th scope="col">গড় বা expected সময়</th><th scope="col">Worst সময়</th><th scope="col">বাড়তি মেমরি</th><th scope="col">Stable কি না</th><th scope="col">Strict in-place কি না</th></tr></thead><tbody><tr><td>Early-exit bubble</td><td>Θ(n)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>হ্যাঁ</td><td>হ্যাঁ</td></tr><tr><td>সোয়াপ-ভিত্তিক selection</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>না</td><td>হ্যাঁ</td></tr><tr><td>Shift-ভিত্তিক insertion</td><td>Θ(n)</td><td>Θ(n²)</td><td>Θ(n²)</td><td>Θ(1)</td><td>হ্যাঁ</td><td>হ্যাঁ</td></tr><tr><td>বাফার-সহ merge</td><td>Θ(n log n)</td><td>Θ(n log n)</td><td>Θ(n log n)</td><td>Θ(n)</td><td>হ্যাঁ</td><td>না</td></tr><tr><td>Simple-রিকার্শন quick</td><td>Θ(n log n)</td><td>Random distinct pivot-এ expected Θ(n log n)</td><td>Θ(n²)</td><td>Worst স্ট্যাক O(n)</td><td>না</td><td>নিশ্চিত নয়</td></tr><tr><td>Iterative হিপ</td><td>Ω(n), O(n log n)</td><td>O(n log n)</td><td>Θ(n log n)</td><td>Θ(1)</td><td>না</td><td>হ্যাঁ</td></tr><tr><td>Stable counting</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>Θ(n+k)</td><td>হ্যাঁ</td><td>না</td></tr><tr><td>Stable LSD radix</td><td>Θ(d(n+b))</td><td>Θ(d(n+b))</td><td>Θ(d(n+b))</td><td>Θ(n+b)</td><td>হ্যাঁ</td><td>না</td></tr></tbody></table>
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3>Tie-সহ পাঁচ mark সাজাও</h3>
+<p>ইন্টিজার comparator numeric order দেয়। qsort ফল1 3 3 5 7, tie-identity guarantee নেই।</p>
+<div data-example="ex-1"></div>
+<h3>Keyboard-এর সংখ্যা সর্ট করো</h3>
+<p>Relational result negative কী-তে subtraction overflow এড়ায়। Library ascending order দেয়।</p>
+<div data-example="ex-2"></div>
+<h3>Sorted neighbor থেকে distinct mark</h3>
+<p>Sorted কী-তে তিন equal-ভ্যালু group। Internal অ্যালগরিদম না জেনেও group কাউন্ট চলে।</p>
+<div data-example="ex-3"></div>
+<h3>Mark তারপর arrival-এ রেকর্ড সর্ট</h3>
+<p>Secondary arrival কী tie order স্পষ্ট করে;equal রেকর্ড qsort রেখে দেবে তার ওপর নয়।</p>
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">ধাপ</th><th scope="col">অবস্থা</th><th scope="col">কেন এমন হয়</th></tr></thead><tbody><tr><td>ইনপুট</td><td>[7, 3, 5, 3, 1]</td><td>চুক্তি ascending ইন্টিজার কী।</td></tr><tr><td>Comparator</td><td>Negative, zero বা positive</td><td>শুধু sign relative order ঠিক করে।</td></tr><tr><td>ফল</td><td>[1, 3, 3, 5, 7]</td><td>Library ওই চুক্তিতে সাজায়।</td></tr><tr><td>Tie</td><td>দুটি 3 রেকর্ড থাকে</td><td>তাদের relative order qsort নিশ্চিত করে না।</td></tr></tbody></table>
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>ইন্টিজার relation তিনটি দেখো। x&lt;y-এ0-1=-1, equal-এ0, x&gt;y-এ1-0=1। শুধু boolean result বিয়োগ, extreme difference overflow নেই। সাধারণ consistent ইন্টিজার order হয়।</p>
+<p>Universal winner নয়, required property প্রমাণ করো। Decision ট্রি worst কম্পারিজন, stable rule রেকর্ড order, workspace simultaneous বাফার-ফ্রেম গোনে। Contract-এর আলাদা প্রশ্নের উত্তর।</p>
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>Table এখানকার implementation-এর। Counting range k, radix ডিজিট d/base b। Simple quick worst O(n) স্ট্যাক, random-এ expected log ডেপথ। Qsort-এ universal standard complexity/stability নেই। একই নামের সব version-এর গুণ ভাববে না।</p>
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<h3>Arbitrary signed কী বিয়োগ</h3>
+<p>x-y overflow করতে পারে। Relational কম্পারিজন-এর boolean result বিয়োগ করো।</p>
+<h3>Qsort মানেই quick সর্ট ধরা</h3>
+<p>API comparator অনুযায়ী order দেয়, নির্দিষ্ট অ্যালগরিদম বা stability নয়।</p>
+<h3>কী-domain সাইজ উপেক্ষা</h3>
+<p>Linear counting-এ k নিয়ন্ত্রণ চাই। Sparse huge range কম্পারিজন সর্ট-এর চেয়ে ধীর ও বড় হতে পারে।</p>
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<div class="callout version"><p>Qsort C = 17-এর আগের standard interface। C = 17-তেও comparator contract ও stability guarantee না-থাকা একই।</p></div>
+<h2 id="summary">যা শিখলে</h2>
+<p>Constraint থেকে সর্ট guarantee বাছো, safe consistent qsort comparator লেখো।</p>
+<p>এবার <a href="topic:algo-divide-and-conquer">divide and conquer</a>-এ সাধারণ কৌশল বোঝো।</p>

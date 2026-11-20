@@ -23,15 +23,15 @@ function trace(input) {
         return result;
     }
     for(let i=0;i<nodes.length;i++) push(i);
-    steps.push({op:'list',name:'heap',items:heap.slice(),line:1,note:{en:'Heap entries are node IDs ordered by weight, then ID.'}});
+    steps.push({op:'list',name:'heap',items:heap.slice(),line:1,note:{en:'Heap entries are node IDs ordered by weight, then ID.', bn: "Heap-এ node ID থাকে; আগে weight, tie-তে ID দেখে ক্রম হয়।"}});
     while(heap.length>1) {
         const l=pop(),r=pop(),id=weights.length;
         weights.push(weights[l]+weights[r]); left[id]=l; right[id]=r;
         steps.push({op:'create',id,value:weights[id],line:4,note:{en:`Merge ${weights[l]} and ${weights[r]} because they are the two smallest weights.`,bn:'সবচেয়ে ছোট দুই ওজন জোড়া দিয়ে নতুন নোড বানাও।'}});
-        steps.push({op:'set-child',parent:id,side:'left',child:l,line:5,note:{en:'The first minimum becomes the zero-bit branch.'}});
-        steps.push({op:'set-child',parent:id,side:'right',child:r,line:5,note:{en:'The second minimum becomes the one-bit branch.'}});
+        steps.push({op:'set-child',parent:id,side:'left',child:l,line:5,note:{en:'The first minimum becomes the zero-bit branch.', bn: "প্রথম minimum zero-bit branch হয়।"}});
+        steps.push({op:'set-child',parent:id,side:'right',child:r,line:5,note:{en:'The second minimum becomes the one-bit branch.', bn: "দ্বিতীয় minimum one-bit branch হয়।"}});
         push(id);
-        steps.push({op:'list',name:'heap',items:heap.slice(),line:5,note:{en:'The merged subtree competes with all remaining weights.'}});
+        steps.push({op:'list',name:'heap',items:heap.slice(),line:5,note:{en:'The merged subtree competes with all remaining weights.', bn: "Merged subtree বাকি সব weight-এর সঙ্গে আবার compete করে।"}});
     }
     const root=pop(),codes=[]; let bits=0;
     function visit(id,path) {
@@ -43,7 +43,7 @@ function trace(input) {
     }
     visit(root,'');
     steps.push({op:'set-root',id:root,line:6,note:{en:'All symbols now belong to one prefix-code tree.',bn:'এখন সব সিম্বল একই prefix-code ট্রিতে আছে।'}});
-    steps.push({op:'list',name:'codes',items:codes,line:6,note:{en:'Root-to-leaf bits identify symbols without separators.'}});
+    steps.push({op:'list',name:'codes',items:codes,line:6,note:{en:'Root-to-leaf bits identify symbols without separators.', bn: "Root-to-leaf bit separator ছাড়াই symbol চেনে।"}});
     steps.push({op:'done',line:7,vars:{bits},note:{en:`The encoded message uses ${bits} bits, excluding the codebook.`,bn:`কোডবুক বাদে বার্তায় ${bits} বিট লাগবে।`}});
     return {init:{nodes,left:{},right:{},root:null},steps};
 }

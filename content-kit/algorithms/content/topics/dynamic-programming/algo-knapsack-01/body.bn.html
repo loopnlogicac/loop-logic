@@ -1,0 +1,91 @@
+<h2 id="introduction">শুরু করা যাক</h2>
+<p class="lead">Club সীমিত weight-এ equipment নেবে। Device-প্রতি weight, ভ্যালু;একবার নাও বা বাদ। অর্ধেক projector নয়।0/1 knapsack-এ zero=skip, one=take।</p>
+
+<p>Capacity upper limit, exact-fill বাধ্যতামূলক নয়। Empty selection চলে, zero ভ্যালু সবসময় feasible। Weight positive ইন্টিজার, ভ্যালু nonnegative;zero base ও capacity table সহজ।</p>
+
+<p>Fractional ratio এখানে চলে না। High density-এর পরে unused space রেখে অন্য whole combination বেশি দিতে পারে। DP item prefix ও capacity-তে alternative রাখে, item dimension reuse আটকায়।</p>
+
+<h2 id="syntax">সিউডোকোড ও ব্যবহারের নিয়ম</h2>
+<pre><code class="language-text">dp[0][c] = 0 for every capacity c
+for i = 1 to n
+    for c = 0 to capacity
+        dp[i][c] = dp[i-1][c]
+        if weight[i-1] &lt;= c: try value[i-1]+dp[i-1][c-weight[i-1]]
+        retain a larger candidate; skip on ties
+walk backward: changed row means take item and reduce c
+return value and increasing chosen IDs</code></pre>
+<p>ধাপ1:dp[i][c]=প্রথমi item দিয়ে total weight≤c-এর greatest ভ্যালু। Rowi-এর last itemi-1। Rowzero noitem, সবzero। Positive weight বলে columnzero-ওzero।</p>
+
+<p>ধাপ2:skip=dp[i-1][c]। Fit হলে take=value[i-1]+dp[i-1][c-weight[i-1]]। বড়টি নাও। দুই branch previous row পড়ে বলেই item দুবার নয়।</p>
+
+<h2 id="how-it-works">ধাপে ধাপে বোঝো</h2>
+<p>ধাপ3:i = 1..n, capacity 0..C। Dependency completed previous row-তে, full 2D-তে দুই capacity direction-ই চলে। এখানে পড়ার সুবিধায় increasing।</p>
+
+<p>Weight[2, 3, 4], value[4, 5, 7]-এ first capacity≥2-এ4। Second capacity 3-এ5, capacity 5-এ firstসহ9। Third capacity 4-এ7 করে, কিন্তুcapacity 5-এ7 হারায়9-এর কাছে।</p>
+
+<p>ধাপ4:n, C থেকে। dp[i][c]=dp[i-1][c] হলে skip;নইলে take, c থেকেweight কমাও। দুটোতেই i কমে। ভ্যালু tie-তে later item skip, witness deterministic।</p>
+
+<div data-lab="knapsack-dp"></div>
+<p>Grid row-তে new itemID, weight, ভ্যালু। Skip arrow ওপরে। Take previous row-এর weight-কমানো capacity, এক column-এর বেশি jump হতে পারে। Note actual dependency বলে, সবার one-column diagonal নয়।</p>
+
+<h2 id="examples">C প্রোগ্রাম ও ফল</h2>
+<h3 id="example-1">Row ভরে original item ফেরাও</h3>
+<p>Item 0, 1 weight 5, ভ্যালু 9;item 2 একার চেয়ে ভালো।</p>
+
+<div data-example="ex-1"></div>
+<h3 id="example-2">Capacity একrow-তে কমাও</h3>
+<p>Descending update previous-item মান রেখে একই9 পায়।</p>
+
+<div data-example="ex-2"></div>
+<h3 id="example-3">Zero capacity-তে item ধরে না</h3>
+<p>Capacityzero-র সবrowzero;recovery সবskip।</p>
+
+<div data-example="ex-3"></div>
+<h3 id="example-4">এক item পুনরায় চলে না</h3>
+<p>Capacity 4 হলেও single item শুধু একবার3 দেয়।</p>
+
+<div data-example="ex-4"></div>
+<h2 id="trace">ছোট ইনপুটে ধাপ দেখো</h2>
+<table class="ref"><thead><tr><th scope="col">যে item আছে</th><th scope="col">c=0</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th><th scope="col">4</th><th scope="col">5</th></tr></thead><tbody><tr><td>কোনোটি নয়</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>item 0</td><td>0</td><td>0</td><td>4</td><td>4</td><td>4</td><td>4</td></tr><tr><td>item 0..1</td><td>0</td><td>0</td><td>4</td><td>5</td><td>5</td><td>9</td></tr><tr><td>item 0..2</td><td>0</td><td>0</td><td>4</td><td>5</td><td>7</td><td>9</td></tr></tbody></table>
+
+<p>Final 5-এ row 3=row 2, তাইitem 2skip। Row 2c5 row 1 থেকে ভিন্ন, তাইitem 1take, c2। Row 1c2 row 0 থেকে ভিন্ন, item 0 নাও। Weight 5, ভ্যালু 9।</p>
+
+<h2 id="correctness">পদ্ধতিটি কেন সঠিক</h2>
+<p>প্রথমi item-এর subset হয় last বাদ, নয় আছে। বাদে firsti-1, c। নিলে c-weight বাকি, একই item ফের চলবে না। তাই previous-row optimum প্রতিটি case-এর সেরা।</p>
+
+<p>দুই exhaustive feasible case-এর বড়টি recurrence। Empty prefix optimumzero। i induction-এ প্রতিrow, bag পূর্ণ না হলেও। Exact-fill হলে unreachable ও অন্য base লাগত।</p>
+
+<p>Recovery stored ভ্যালু পাওয়া branch নেয়। Changed ভ্যালু take থেকে, কারণ skip আগের copy। Unchanged-এ skip বৈধ, take tie হলেও। Row সবসময় কমে, maxn decision, কোনো itemrepeat নয়।</p>
+
+<h2 id="complexity">সময় ও মেমরির হিসাব</h2>
+<p>(n+1)(C+1) state, fixed কাজ। Positive ভেরিয়েবল n, C-তে time-spaceΘ(nC);zero হলে boundary dimension-ও ধরো। Recovery O(n), chosen ID outputO(n)। Fixed demo general কনস্ট্যান্ট করে না।</p>
+
+<p>Capacity numeric magnitude, ইনপুট bit কাউন্ট নয়, তাই pseudo-polynomial। HugeC moderate n-তেও impractical। Constraint দেখে ভ্যালু-indexed DP, meet-in-the-middle বা অন্য formulation হতে পারে।</p>
+
+<p>Max 12 item, C = 20, ভ্যালু≤99-এ total≤1188, int যথেষ্ট। Positive weight repeated-free ambiguity এড়ায়;zero-weight 0/1 careful মডেল-এ চলতে পারে, এখানে বাদ।</p>
+
+<h2 id="variations">Capacity কমতে রেখে স্টোরেজ কমাও</h2>
+<p>শুধু optimum ভ্যালু-তে একrow চলবে। Item-প্রতি C থেকে weight পর্যন্ত নামো। তখন smaller dp[c-weight] এই stage-এ এখনও overwrite হয়নি, previous item-এর।</p>
+
+<p>Upward-এ dp[2] current weight 2 item নিলে পরে dp[4] সেটি reuse করতে পারে। One item weight 2, ভ্যালু 3, C = 4-এwrong6, correct 3। এটি unbounded update, 0/1 নয়।</p>
+
+<p>Compact ভ্যালু row নিজে আগের recovery row রাখে না। Capacity-প্রতি single mutable predecessor পরে overwrite-এ distinct item নিশ্চিত করে ধরে নিও না। Full decision, 2D বা আলাদা proved recovery চাই।</p>
+
+<h2 id="comparison">সমান ভ্যালু ও রেকর্ড identity</h2>
+<p>সমান weight-ভ্যালু-এর দুই রেকর্ড আলাদা item, capacity থাকলে দুটো নেওয়া যায়। Duplicate denomination unlimited একtype, আলাদা। ID device চেনে, row একবার ব্যবহার মানায়।</p>
+
+<p>সর্ট লাগে না। Reorder optimumvalue রাখে, row-originalID সম্পর্ক বদলায়। করলে ID বাঁচাও। এখানে original order-এ witness ও tie table মেলানো সহজ।</p>
+
+<h2 id="common-mistakes">প্রচলিত ভুল</h2>
+<p>ভ্যালু+dp[i][c-weight] current row নিলে reuse চলে। Take-এi-1 চাই। Numeric debug-এর আগে row ইনডেক্স দেখো। Compact upward-এর একই conceptual ভুল।</p>
+
+<p>Fit না দেখে weight বিয়োগে negative capacity access। Guard আগে। এই at-most সমস্যায় সবentry impossible-negative নয়, empty selection সবcapacity-তে feasible, basezero।</p>
+
+<p>Take capacity কমায়, skip নয়;দুটোই row কমায়। প্রতিrowcapacity কমালে আগে valid item হারায়। Reorder করলে sorted পজিশন-এর বদলে originalID print।</p>
+
+<h2 id="version-notes">C = 17-এর খুঁটিনাটি</h2>
+<p>C table 13 row, 21 column=item 0..12, C = 0..20। Backwalk chosen flag লিখে, caller পরে পড়ে। Fixed documented bound, int ভ্যালু safe। Compact downward-এ signed capacity কাউন্টার, একই C = 17 arithmetic।</p>
+
+<h2 id="summary">যা শিখলে</h2>
+<p>Skip-take previous item row থেকে। Table optimum ও recoverable ID দেয়;descending compact এক-use অর্থ রাখে। পরের LCS-এ item-capacity-এর বদলে দুই string-prefix state।</p>
+<p>এরপর <a href="topic:algo-lcs">longest common subsequence</a> পড়তে পারো।</p>
