@@ -1,0 +1,309 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-mini-project-tic-tac-toe",
+  "module": "practice-exam",
+  "order": 5,
+  "kind": "project",
+  "title": {
+    "en": "Mini Project: Tic-Tac-Toe",
+    "bn": "মিনি প্রজেক্ট: দুই খেলোয়াড়ের tic-tac-toe"
+  },
+  "summary": {
+    "en": "Build a two-player board game with validated moves, eight win lines, draw detection and a turn-preserving retry loop.",
+    "bn": "দুই খেলোয়াড়ের বোর্ড বানাও; ভুল চাল বাদ দাও, জয় বা draw দেখো এবং সঠিক চালের পরই পালা বদলাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 80,
+  "prerequisites": [
+    "c-mini-project-bank-account"
+  ],
+  "related": [],
+  "keywords": [
+    "tic tac toe",
+    "2D array",
+    "game loop",
+    "win detection",
+    "draw"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Treat a game as controlled state changes"
+    },
+    {
+      "id": "setup",
+      "title": "Compile a local two-player game"
+    },
+    {
+      "id": "examples",
+      "title": "Observe wins, draws and rejected attempts"
+    },
+    {
+      "id": "transition",
+      "title": "Validate before changing a single cell"
+    },
+    {
+      "id": "win-lines",
+      "title": "Look for one nonempty symbol across a whole line"
+    },
+    {
+      "id": "design",
+      "title": "Separate display, rules and interaction"
+    },
+    {
+      "id": "tests",
+      "title": "Choose lines and invalid transitions deliberately"
+    },
+    {
+      "id": "summary",
+      "title": "One accepted move, one consistent transition"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Finish when X completes the first row",
+      "level": "basic",
+      "file": "examples/ex-1.c",
+      "tryNow": true,
+      "explanationHtml": "<p>Players alternate legal placements. X wins on the fifth accepted move with the first row filled. The game checks a win before a draw and terminates without offering another turn.</p>",
+      "standard": "c17",
+      "stdin": "examples/ex-1.in",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Recognise a full board with no winning line",
+      "level": "basic",
+      "file": "examples/ex-2.c",
+      "tryNow": true,
+      "explanationHtml": "<p>All nine moves are legal and no row, column or diagonal has three equal nonempty marks. The final board is a draw. Move count tracks accepted placements, not input attempts.</p>",
+      "standard": "c17",
+      "stdin": "examples/ex-2.in",
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Keep the current player after an invalid or occupied request",
+      "level": "basic",
+      "file": "examples/ex-3.c",
+      "tryNow": true,
+      "explanationHtml": "<p>The out-of-range request and repeated occupied cell do not change the board, move count or player. O must still supply a valid move after rejection. End of input leaves this game unfinished rather than inventing a winner.</p>",
+      "standard": "c17",
+      "stdin": "examples/ex-3.in",
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Implement the complete two-player state machine",
+      "difficulty": "medium",
+      "statementHtml": "<p>Use a 3×3 board, X first, one-based row/column input and the displayed transcript. Reject malformed, out-of-range and occupied requests without changing the turn. Check all eight lines after a valid move, then check a full-board draw. End of input before a result prints Unfinished. Input is read as bounded complete lines with checked numeric conversion.</p>",
+      "hints": [
+        "Validate coordinates before subtracting one or indexing.",
+        "Switch the player only after a legal nonterminal move."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        },
+        {
+          "stdin": "practice/p-1.t5.in",
+          "output": "practice/p-1.t5.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Design a reset-and-rematch extension",
+      "difficulty": "medium",
+      "statementHtml": "<p>Plan a rematch command after a terminal result. Identify all state that must be reset, and decide whether the starting player alternates.</p>",
+      "hints": [
+        "A cleared board alone is not the whole game state."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Reset all nine cells, accepted move count, terminal status and the chosen starting player together. Keep a separate match counter if starts alternate, and state that policy. Accept rematch only at the intended boundary. Test a win followed by a fresh game, a draw followed by a fresh game and invalid input at the rematch prompt. Do not carry a previous winner or count into the new board.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When should the player change?",
+      "options": [
+        "After every input line",
+        "After an occupied request",
+        "Before validating coordinates",
+        "After a legal move that does not finish the game"
+      ],
+      "answer": 3,
+      "explanation": "Rejected attempts do not consume a turn."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why require a nonempty symbol when checking equal cells?",
+      "options": [
+        "All equality tests fail otherwise",
+        "It sorts the board",
+        "Three dots are not a win",
+        "Dots are forbidden in arrays"
+      ],
+      "answer": 2,
+      "explanation": "An empty row initially contains equal markers."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "How many winning lines does a 3×3 board have?",
+      "options": [
+        "Three",
+        "Eight",
+        "Six",
+        "Nine"
+      ],
+      "answer": 1,
+      "explanation": "There are three rows, three columns and two diagonals."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What is checked first after a legal ninth move?",
+      "options": [
+        "Win, then draw",
+        "Draw only",
+        "The next player",
+        "A random cell"
+      ],
+      "answer": 0,
+      "explanation": "The ninth placement may itself complete a winning line."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does moves count?",
+      "options": [
+        "Every typed line",
+        "Only X moves",
+        "Only empty rows",
+        "Accepted placements"
+      ],
+      "answer": 3,
+      "explanation": "Invalid and occupied requests do not add a board mark."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why validate one-based coordinates before indexing?",
+      "options": [
+        "It changes the winner",
+        "It removes the need for a turn rule",
+        "An invalid coordinate could otherwise access outside the board",
+        "Arrays are automatically safe"
+      ],
+      "answer": 2,
+      "explanation": "Convert to zero-based only after range validation."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does early EOF mean here?",
+      "options": [
+        "Automatic O win",
+        "Unfinished unless a result already occurred",
+        "Automatic draw",
+        "Automatic X win"
+      ],
+      "answer": 1,
+      "explanation": "A partial board without a winner is not a completed draw."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which invariant connects moves and the board?",
+      "options": [
+        "moves equals the number of nonempty cells",
+        "moves always equals nine",
+        "moves counts prompts",
+        "moves equals the current row"
+      ],
+      "answer": 0,
+      "explanation": "Each accepted placement changes exactly one empty cell."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Keep board, accepted move count and current player consistent.",
+      "bn": "বোর্ড, গৃহীত চালের সংখ্যা ও বর্তমান খেলোয়াড়ের পালা মিলিয়ে রাখো।"
+    },
+    {
+      "en": "Reject invalid coordinates before accessing the array.",
+      "bn": "অ্যারেতে ঢোকার আগেই ভুল coordinate বাদ দাও।"
+    },
+    {
+      "en": "An occupied-cell attempt leaves the turn unchanged.",
+      "bn": "আগে ভরা cell-এ চাল দিলে একই খেলোয়াড়ের পালা থাকবে।"
+    },
+    {
+      "en": "Check three rows, three columns and both diagonals for a nonempty win.",
+      "bn": "জয় দেখতে তিন row, তিন column ও দুই diagonal-এ nonempty mark মেলাও।"
+    },
+    {
+      "en": "Check a final winning move before declaring a full-board draw.",
+      "bn": "বোর্ড ভরে গেলে draw বলার আগে শেষ চালটি জয় দিল কি না দেখো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "program",
+      "question": "Describe a legal-move transition and its invariant.",
+      "marks": 8,
+      "answerHtml": "<p>Parse and validate coordinates, check that the cell is empty, write the current mark and increment moves. The number of nonempty cells now equals moves. Render, check winner, then full-board draw. Only a legal nonterminal move switches the player. Rejection leaves all three state components unchanged.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain all eight win checks and why empty equality is excluded.",
+      "marks": 7,
+      "answerHtml": "<p>Check each of three rows and three columns, then the main and anti-diagonal. A line wins only if all three symbols agree and the selected symbol is not the empty marker. Otherwise an untouched row of three dots would falsely win. Check after each accepted placement.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C arrays",
+      "url": "https://en.cppreference.com/w/c/language/array"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -19,7 +19,7 @@ pop returns 9; count becomes 1.</pre>
 <p>Each push allocates one node at the head; pop unlinks and frees that node. The linked version can still fail allocation, so it is not an unlimited stack. Cleanup handles an already-empty owner safely.</p>
 <div data-example="ex-2"></div>
 <h3>Match nested brackets by comparing the most recent opener</h3>
-<p>Correct counts alone are insufficient: ([)] crosses nesting order. Each closing bracket must match the most recent unmatched opener. The checker ignores non-bracket characters; it is not a C lexer and does not interpret quotes or comments.</p>
+<p>Correct counts alone are insufficient: ([)] crosses nesting order. Each closing bracket must match the most recent unmatched opener. The matching function ignores non-bracket characters; it is not a C lexer and does not interpret quotes or comments.</p>
 <div data-example="ex-3"></div>
 <h3>Reject array overflow and preserve an output on underflow</h3>
 <p>The ninth push fails before writing outside the eight slots. A failed pop does not invent a value or modify the output. Status and data stay separate, so zero would remain a valid stored value.</p>
@@ -36,6 +36,9 @@ pop returns 9; count becomes 1.</pre>
 
 <h2 id="common-mistakes">Preserve the abstraction at the boundaries</h2>
 <h3>Using count as a live top index</h3><p>count identifies the next free slot. Reading values[count] as the top reads outside the live range and can reach outside the buffer when full. Check nonempty, then use count minus one.</p><h3>Returning zero as both data and failure</h3><p>Store the value through an output pointer and return status separately. A stack containing zero must still be distinguishable from an empty stack. Callers use the output only after a successful result.</p><h3>Freeing the remaining chain on pop</h3><p>One pop removes one node. Advance top before freeing that node and leave the remaining chain owned by top. Whole-stack cleanup is a separate operation that repeats the single-node removal safely.</p><h3>Matching only bracket totals</h3><p>Totals cannot represent nesting order. Compare each closer with the actual top opener and require no unfinished opener at the end. Preserve the full state needed by the question rather than a smaller summary that loses essential information.</p>
+
+<h2 id="operation-trace">Trace state as well as returned values</h2>
+<p>For push 4, push 7, pop and push 9, write the stored sequence after every step: [4], [4,7], [4] and [4,9]. The returned pop value is seven, but it is no longer part of the stored sequence. Keeping these two records separate prevents a common trace error in which removed values remain drawn inside the stack.</p><p>Now peek twice. Both calls observe nine and preserve [4,9]. The next two pops return nine and four, leaving empty storage. A final failed pop changes neither the empty state nor the caller's previous output. This trace checks order, observation and failure behavior in one short sequence.</p>
 
 <h2 id="version-notes">C17 implementations with explicit ownership</h2>
 <p>Both storage implementations use standard C17 and single-threaded ownership. They are not concurrent stacks. The examples compile their module locally, while the standalone bracket example needs only the standard library. A bounded array failure and a linked allocation failure are both ordinary results that callers must handle.</p>

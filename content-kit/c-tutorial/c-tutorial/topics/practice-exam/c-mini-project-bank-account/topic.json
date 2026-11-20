@@ -1,0 +1,306 @@
+{
+  "schemaVersion": "1.1",
+  "id": "c-mini-project-bank-account",
+  "module": "practice-exam",
+  "order": 4,
+  "kind": "project",
+  "title": {
+    "en": "Mini Project: Bank Account System",
+    "bn": "মিনি প্রজেক্ট: হিসাব ও লেনদেনের ইতিহাস"
+  },
+  "summary": {
+    "en": "Model a fictional whole-taka account with validated deposits, withdrawals, replayable history and checked local persistence.",
+    "bn": "কাল্পনিক হিসাবে টাকা জমা, তোলা, balance দেখা ও ইতিহাস রাখা শেখো; validation করে ফাইলে পরিবর্তন রাখো।"
+  },
+  "level": "advanced",
+  "estMinutes": 100,
+  "prerequisites": [
+    "c-mini-project-student-records"
+  ],
+  "related": [],
+  "keywords": [
+    "bank account",
+    "validation",
+    "transaction history",
+    "struct",
+    "persistence"
+  ],
+  "standards": {
+    "minimum": "c17",
+    "notes": [
+      "Fictional single-account, single-process teaching exercise; no authentication, real payments or production banking guarantees.",
+      "Whole-taka amounts, maximum balance 1000000 and maximum 100 accepted transactions."
+    ]
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "Keep the story of a balance alongside the balance"
+    },
+    {
+      "id": "setup",
+      "title": "Start with an explicit empty history"
+    },
+    {
+      "id": "examples",
+      "title": "Follow accepted and rejected account changes"
+    },
+    {
+      "id": "model",
+      "title": "One structure holds the current state"
+    },
+    {
+      "id": "persistence",
+      "title": "Publish only a completely written history"
+    },
+    {
+      "id": "design-review",
+      "title": "Separate policy, storage and interaction"
+    },
+    {
+      "id": "verification",
+      "title": "Challenge the invariant rather than only the menu"
+    },
+    {
+      "id": "summary",
+      "title": "A trustworthy total has a valid sequence behind it"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Preserve balance and history after rejected withdrawals",
+      "level": "advanced",
+      "file": "examples/ex-1.c",
+      "tryNow": false,
+      "explanationHtml": "<p>Deposit 500 and withdraw 120, leaving 380 taka. An attempted 400 withdrawal and a negative amount are rejected. Neither enters history. The saved file contains only the two accepted transactions, in order.</p>",
+      "standard": "c17",
+      "stdin": "examples/ex-1.in",
+      "workdirFiles": [
+        "fixtures/account.txt"
+      ],
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Replay a saved history before accepting another operation",
+      "level": "advanced",
+      "file": "examples/ex-2.c",
+      "tryNow": false,
+      "explanationHtml": "<p>The starting file records a 500 deposit and 120 withdrawal. Startup recomputes 380 from those entries. Withdrawing the exact balance is allowed and adds a third entry that brings the result to zero.</p>",
+      "standard": "c17",
+      "stdin": "examples/ex-2.in",
+      "workdirFiles": [
+        "fixtures/existing/account.txt"
+      ],
+      "output": "examples/ex-2.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Implement the complete bounded account workflow",
+      "difficulty": "medium",
+      "statementHtml": "<p>Support D/W/B/H/Q as displayed, whole-taka amounts from 1 to 100000, maximum balance 1000000 and at most 100 accepted entries. Start with the supplied empty account.txt. Rejected commands leave both balance and history unchanged. Parse complete bounded lines safely, save every accepted operation and reconstruct the balance from the history on startup.</p>",
+      "hints": [
+        "Check capacity and balance bounds before mutation.",
+        "Keep one authoritative persisted history instead of two independent balance files."
+      ],
+      "solution": "practice/p-1.c",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ],
+      "workdirFiles": [
+        "fixtures/account.txt"
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Plan support for fractional taka without binary floating money",
+      "difficulty": "medium",
+      "statementHtml": "<p>Describe a representation and migration for amounts with two decimal places. Include parsing, arithmetic limits and history compatibility.</p>",
+      "hints": [
+        "Use integer minor units with explicit scale."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Store integer paisa and parse exactly the allowed decimal syntax into that scale with checked multiplication and addition. Define maximum amount and balance in minor units. Version the persisted format so old whole-taka entries are not mistaken for paisa. Format division and a two-digit remainder on display. Test one paisa, exact balances, excessive fractional digits and overflow before mutation.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which requests enter persisted history?",
+      "options": [
+        "Every malformed command",
+        "Balance reads only",
+        "All failed withdrawals",
+        "Only accepted deposits and withdrawals"
+      ],
+      "answer": 3,
+      "explanation": "Rejected operations do not mutate either state component."
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why replay the history during startup?",
+      "options": [
+        "To generate random balances",
+        "To authenticate a real customer",
+        "To reconstruct and validate the balance from one authority",
+        "To avoid checking files"
+      ],
+      "answer": 2,
+      "explanation": "A separate independently written balance file could disagree."
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "When is withdrawal of the exact balance allowed?",
+      "options": [
+        "Only for negative amounts",
+        "When other bounds pass; it leaves zero",
+        "Never",
+        "Only after deleting history"
+      ],
+      "answer": 1,
+      "explanation": "The invalid condition is amount above the balance."
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why check balance > MAX_BALANCE - amount before a deposit?",
+      "options": [
+        "To reject an excessive result before addition",
+        "To subtract the deposit",
+        "To sort history",
+        "To reset the account"
+      ],
+      "answer": 0,
+      "explanation": "Bounded positive amount makes the guard arithmetic safe."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What happens when the accepted history already has 100 entries?",
+      "options": [
+        "The oldest entry vanishes silently",
+        "The balance resets",
+        "Memory grows automatically",
+        "Further changes are rejected explicitly"
+      ],
+      "answer": 3,
+      "explanation": "The capacity policy preserves a complete bounded history."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why use integer whole taka here?",
+      "options": [
+        "Integers provide authentication",
+        "It makes file writes infallible",
+        "The stated exercise has no fractional amounts",
+        "Floating point is always invalid in C"
+      ],
+      "answer": 2,
+      "explanation": "A fractional extension needs a deliberate scale and parser."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Does checked rename provide full banking durability and concurrency?",
+      "options": [
+        "Only for deposits",
+        "No",
+        "Yes on all C hosts",
+        "Only when the balance is positive"
+      ],
+      "answer": 1,
+      "explanation": "This local exercise does not implement those production protocols."
+    },
+    {
+      "id": "q-8",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Which load outcome should stop startup?",
+      "options": [
+        "A history containing an impossible withdrawal",
+        "An empty valid history",
+        "A valid zero final balance",
+        "Two valid sequential deposits"
+      ],
+      "answer": 0,
+      "explanation": "Replay enforces the same acceptance rules as live operations."
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Keep money in a documented integer unit for this bounded exercise.",
+      "bn": "এই সীমিত প্রজেক্টে টাকার integer unit স্পষ্ট করে ব্যবহার করো।"
+    },
+    {
+      "en": "Check amount, capacity and resulting balance before mutation.",
+      "bn": "Amount, capacity ও নতুন balance-এর সীমা বদলানোর আগেই যাচাই করো।"
+    },
+    {
+      "en": "Rejected operations change neither balance nor accepted history.",
+      "bn": "বাদ দেওয়া operation balance বা গৃহীত ইতিহাস কোনোটাই বদলাবে না।"
+    },
+    {
+      "en": "Replay and validate the persisted history before serving commands.",
+      "bn": "Command নেওয়ার আগে ফাইলের ইতিহাস চালিয়ে balance ও শর্ত যাচাই করো।"
+    },
+    {
+      "en": "A local demonstration does not supply real banking guarantees.",
+      "bn": "Local শেখার প্রোগ্রামকে বাস্তব ব্যাংকিংয়ের নিশ্চয়তা ধরে নিও না।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "long",
+      "question": "State an account invariant connecting balance and history.",
+      "marks": 8,
+      "answerHtml": "<p>Balance equals the sequential replay of accepted deposits minus withdrawals, starting from zero. Every prefix stays within zero and MAX_BALANCE, each amount is positive and bounded, and count never exceeds capacity. Rejected operations append nothing. Loading checks the same rules instead of trusting a separately stored balance.</p>"
+    },
+    {
+      "type": "program",
+      "question": "Design exact-balance and capacity boundary tests.",
+      "marks": 8,
+      "answerHtml": "<p>Attempt withdrawal from zero, deposit a valid amount, withdraw exactly that amount and verify zero. Reject one more withdrawal without a new entry. Reach MAX_BALANCE using accepted bounded deposits, reject a deposit above the limit, then verify unchanged balance/history. Fill 100 entries and reject another accepted-shaped request. Restart and compare replayed results.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "C input/output",
+      "url": "https://en.cppreference.com/w/c/io"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  }
+}

@@ -1,3 +1,82 @@
+# C 0.6.0 — round 6 reviewer notes
+
+All 120 curriculum topics are now delivered as drafts. This batch adds the 23
+remaining topics after round 5: file-handling (6), advanced (8), data-structures
+(3), and practice-exam (6). Version 0.6.0 follows the later-batch numbering rule.
+The branch includes round-5 C PR #39 through main; earlier 97 topics are unchanged.
+
+## Coverage
+
+- File streams, open modes, text and binary transfer, portable text bookmarks,
+  defined fixed-width binary offsets, EOF/matching/I/O failure and cleanup.
+- argc/argv, complete strtol validation, guarded signed accumulation, actual
+  source/header modules and Makefile, const/volatile, undefined behavior,
+  standard-library utilities, explicit error contracts, C99/C11/C17/C23 and style.
+- Linked-list head/tail/position insertion, deletion/search/printing/freeing with
+  diagrams; array and linked stacks, bracket matching; circular and linked FIFO
+  queues, wraparound, singleton reset and a round-robin simulation.
+- 32 worked output traces; 25 complete first-year exam programs with sample
+  inputs/results and marking guidance; 50 answered interview questions.
+- Student-record CRUD with checked file replacement; a fictional whole-taka
+  account with replayed accepted history; two-player tic-tac-toe with all eight
+  win lines, draw detection and turn-preserving validation.
+- Unsigned bit operations are reinforced in qualifiers, output traces and
+  interview questions; the earlier operators lesson remains unchanged.
+
+New material includes 126 complete examples, 76 practice items (149 executable
+input cases), 254 quiz items (83 compiled output questions), 123 bilingual key
+points and 169 worked exam answers. Every output file was captured from an
+actual execution. Titles, summaries and key points have Bangla text; full Bangla
+bodies are optional and not added here. No unverified videos were attached.
+
+## Curriculum metadata repair
+
+The C brief explicitly designates the last six topics as three projects and
+three question banks. The C curriculum omitted their `kind` fields, so the
+checker defaulted them to lessons and rejected the intended counts. The only
+change outside the package is adding those six kind values in
+`c-tutorial/spec/curriculum.json`. IDs, order, level and coverage are unchanged.
+No checker rules were weakened or bypassed.
+
+## Validation
+
+Toolchain: Node 24.22.1, GCC 14.2.0, Linux. Run from content-kit:
+
+```sh
+node tools/check.mjs c-tutorial/c-tutorial --sanitize --report c-tutorial/c-tutorial/CHECK_REPORT.txt
+node --test c-tutorial/c-tutorial/tests/*.test.mjs
+```
+
+The full report checks all 120 topics, compiling/running examples, practice
+cases and output questions, with sanitizer execution on ordinary example and
+practice paths. Intentional warning, compile-error and undefined-behavior
+examples are labelled; undefined programs have no invented numeric output.
+The seven added tests independently cover cross-process record persistence,
+corrupt-file preservation, rejected edits, record capacity, overlong input,
+account replay/balance/history limits, all eight game wins and a draw, a
+1,000-operation FIFO oracle, argument-validation failures and a real Makefile.
+
+From the repository root, `node --test "tests/*.test.ts"` passes all 169 current
+platform tests, including the original suite. No application dependency,
+platform route, migration or secret is added by this content PR.
+
+## Review limits
+
+GCC 14.2 supports the demonstrated C23 keywords/literals in -std=c2x mode but
+not #embed. The standards lesson explains #embed and its build-time purpose
+without claiming a runnable supported example. Host-varying diagnostics stay
+on standard error; rand demonstrations compare seeded repeatability rather
+than asserting a portable numeric generator sequence.
+
+File projects require local execution in a disposable directory with an
+explicit starting data file. They use Linux replacement semantics, one writer
+and fixed temporary names. They are not crash-durable databases, concurrent
+services, authenticated student systems or real banking software. Raw-structure
+binary examples are explicitly local round trips, distinct from the defined
+portable field encoding. Human review and publication approval remain pending.
+
+---
+
 # C 0.5.0 — reviewer notes
 
 This cumulative package contains 97 draft topics: the unchanged 77 topics from
