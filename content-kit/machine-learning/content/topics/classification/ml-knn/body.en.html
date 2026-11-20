@@ -1,0 +1,37 @@
+<h2 id="introduction">Ask the nearby cards before naming a new fruit</h2>
+<div class="callout story"><p class="lead">Nana mixes six labelled fruit cards on the table. Tuktuk receives a seventh card with size and sweetness scores but no name. Mina suggests asking the closest cards to vote. Nana asks how close is close, and how many cards should be heard.</p></div><p>k-nearest neighbours, or KNN, answers both questions explicitly. It measures distance, selects k nearby examples and predicts from their labels. It does not need to learn one fixed fence before every prediction. The stored examples help decide the answer when a query arrives.</p><p>You will follow one query through distance measurement, ranking and voting. Then change k and move the query in the lab. Keep the selection rule visible, especially when distances or votes tie.</p>
+
+<h2 id="intuition">Nearby means close in the chosen features</h2>
+<p>Use the same six score cards as the classification introduction. Three apples have scores near one and two; three mangoes have scores near four and five. A star at (3.3,3.3) is closer to the mango group. Asking three neighbours therefore gives three mango votes.</p><table><thead><tr><th>Label</th><th>Size score</th><th>Sweetness score</th></tr></thead><tbody><tr><td>Apple</td><td>1</td><td>1</td></tr><tr><td>Apple</td><td>1</td><td>2</td></tr><tr><td>Apple</td><td>2</td><td>1</td></tr><tr><td>Mango</td><td>4</td><td>4</td></tr><tr><td>Mango</td><td>4</td><td>5</td></tr><tr><td>Mango</td><td>5</td><td>4</td></tr></tbody></table><p>A <dfn>query</dfn> is the new example needing a label. A <dfn>neighbour</dfn> is a stored example selected for being close to that query. A <dfn>vote</dfn> is one selected example's support for its known category. Farther examples do not vote in this uniform-k prediction.</p><p>The query's label is not an input. If you needed that answer to compute the distances, the method would not solve the prediction problem. Coordinates determine closeness; stored labels determine what the selected neighbours vote for.</p>
+
+<h2 id="how-it-works">Measure first, select second, count third</h2>
+<p>For each stored point, subtract the query's size and sweetness scores. Square the two differences, add them and take the square root. This Euclidean distance is the length of the straight segment between the points. A three-four offset gives distance five, not seven or twenty-five.</p><p>Sort by distance and retain the first k examples. If fewer examples exist, use that smaller effective count. This lesson breaks exact distance ties by input order. Count one vote per selected label, then choose the largest count. A tied class count chooses the smaller label zero.</p><p>The mango at (4,4) is about 0.990 from (3.3,3.3). The mangoes at (4,5) and (5,4) are about 1.838 away. The nearest apples are farther, so the three selected votes all name mango. The lab exposes each measurement before publishing the prediction.</p><pre class="diagram">limit k to the available example count
+measure distance from query to every point
+sort by distance, then input position
+select the first k points
+count one vote per selected class
+choose the largest count, with smaller-label class ties
+return the prediction</pre><div data-lab="knn"></div><p>The neighbourhood circle reaches the kth distance. If extra points lie at the same edge distance, the circle alone cannot show which tied points were selected. Read the highlighted selection and stated tie rule as well. Geometry and deterministic selection are related but not identical.</p>
+
+<h2 id="try-it-yourself">Move the query across the gap</h2>
+<p>Start at the first preset and predict the winning label before playing. Move the star toward (1,1), then repeat with k one and k three. Try an even effective k and explain the smaller-label tie instead of calling the answer random.</p><div class="callout unplugged"><p>Place labelled cards on squared paper. Give each classmate one distance to calculate. Arrange the cards from nearest to farthest, take the first k and count their labels. If distances tie at the cutoff, use the cards' original numbered order.</p></div>
+
+<h2 id="examples">Match a direct vote with a library classifier</h2>
+<h3>Measure, rank and vote on six cards</h3>
+<p>The closest three cards are mangoes. Squared distance ranking selects the same neighbours as Euclidean distance because square root preserves order. Exact distance ties keep input order; a class-vote tie chooses the smaller label zero.</p>
+<div data-example="ex-1"></div>
+<h3>Verify the same vote with KNeighborsClassifier</h3>
+<p>n_neighbors supplies k. Uniform weights give one vote per selected point. The six-card query has no ambiguous kth-distance tie, so both implementations select the same neighbours and print the same result.</p>
+<div data-example="ex-2"></div>
+<h3>Scale iris features inside a train-only pipeline</h3>
+<p>The scaler learns its means and scales only from training flowers. Distances then compare standardised features rather than allowing a larger numeric unit to dominate. Reserved test flowers remain outside both fitting stages.</p>
+<div data-example="ex-3"></div>
+
+<h2 id="common-mistakes">Do not confuse the neighbourhood with the whole dataset</h2>
+<h3>Counting every stored label</h3><p>KNN counts only selected neighbours. A large global apple majority can still lose near a small mango group. Rank before voting.</p><h3>Assuming odd k solves every tie</h3><p>Odd k avoids a binary equal uniform vote only when that many neighbours actually vote. Distance ties, multiclass ties and a clamped effective count still need policies. Different libraries may select different equal-distance candidates.</p><h3>Ignoring feature units</h3><p>A feature measured in thousands can dominate another measured from zero to five. Choose meaningful scaling and learn its parameters on training data only. A pipeline keeps that transformation attached to the classifier.</p><h3>Calling memory the absence of learning</h3><p>Basic KNN stores examples rather than fitting a small parameter vector. It still depends on training data, feature choices and a distance rule. Prediction can be costly because the simple implementation compares every stored point.</p>
+
+<h2 id="going-deeper">Optional: distance, voting and prediction cost</h2>
+<div class="callout math"><p>For two features, distance is sqrt((x1−q1)²+(x2−q2)²). Each symbol names one point or query coordinate. Ranking can use squared distance because square root preserves nonnegative order, while displayed distances remain in the original units.</p><p>The sort-based implementation takes O(n log n) work per query after O(n) distance calculations. It needs the stored examples and a ranking list. Search trees or partial selection can improve some workloads, but high-dimensional distances can become less informative. Feature design and representative data remain essential.</p></div>
+
+<h2 id="summary">A prediction built from selected examples</h2>
+<ul><li>KNN predicts from nearby stored examples.</li><li>Measure all candidate distances before selecting neighbours.</li><li>Distance ties and vote ties need separate stated rules.</li><li>Odd k does not remove every multiclass or distance tie.</li><li>Feature scaling changes which points count as close.</li></ul><p>Continue with <a href="topic:ml-knn-choosing-k">choosing k and reading boundaries</a>.</p>

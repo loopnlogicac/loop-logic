@@ -1,0 +1,529 @@
+{
+  "schemaVersion": "1.1",
+  "id": "ml-knn-choosing-k",
+  "module": "classification",
+  "order": 3,
+  "kind": "lesson",
+  "title": {
+    "en": "Choosing k and Seeing the Boundary",
+    "bn": "k বদলে boundary ও যাচাইয়ের ফল দেখা"
+  },
+  "summary": {
+    "en": "Compare neighbour counts and distance weighting on held-out cards, then choose a candidate without using the final test set.",
+    "bn": "নেবারের সংখ্যা ও distance weighting বদলে আলাদা কার্ডে ফল মাপো; final test না দেখে candidate বেছে নাও।"
+  },
+  "level": "intermediate",
+  "estMinutes": 60,
+  "prerequisites": [
+    "ml-knn"
+  ],
+  "related": [],
+  "keywords": [
+    "k selection",
+    "decision regions",
+    "validation",
+    "distance weights",
+    "scaling"
+  ],
+  "standards": {
+    "minimum": "Python 3.10",
+    "notes": []
+  },
+  "videos": [],
+  "sections": [
+    {
+      "id": "introduction",
+      "title": "A quieter vote can also miss a small group"
+    },
+    {
+      "id": "intuition",
+      "title": "Compare a local voice with a larger crowd"
+    },
+    {
+      "id": "how-it-works",
+      "title": "Score each candidate under the same separation"
+    },
+    {
+      "id": "try-it-yourself",
+      "title": "Create an island and challenge the validation set"
+    },
+    {
+      "id": "examples",
+      "title": "Compare direct and library candidate scores"
+    },
+    {
+      "id": "weighting",
+      "title": "Give exact matches an explicit rule"
+    },
+    {
+      "id": "common-mistakes",
+      "title": "Keep model choice separate from final evidence"
+    },
+    {
+      "id": "going-deeper",
+      "title": "Optional: validation uncertainty and weighted decisions"
+    },
+    {
+      "id": "summary",
+      "title": "Choose the neighbourhood with evidence"
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-1",
+      "title": "Score four neighbourhood sizes on reserved cards",
+      "level": "basic",
+      "file": "examples/ex-1.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The first lab preset uses these six training and four validation cards. k one and three both achieve full validation accuracy. Larger requested values are clamped to six neighbours and split the vote evenly, so the smaller-label rule predicts zero everywhere. The equal-score selection keeps k one.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "output": "examples/ex-1.out"
+    },
+    {
+      "id": "ex-2",
+      "title": "Match clamped candidate scores with scikit-learn",
+      "level": "basic",
+      "file": "examples/ex-2.py",
+      "tryNow": true,
+      "explanationHtml": "<p>The library receives the same clamped count and uniform weighting. Training cards fit the model; validation cards only measure candidate performance. Both implementations report the same selected and best-candidate scores.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-2.out"
+    },
+    {
+      "id": "ex-3",
+      "title": "Tune k before opening the iris test split",
+      "level": "basic",
+      "file": "examples/ex-3.py",
+      "tryNow": true,
+      "explanationHtml": "<p>Development rows are split again for choosing k. Each candidate fits its scaler only on the training portion. After selection, refit on all development rows and use the untouched test rows once for the fixed choice.</p>",
+      "standard": "Python 3.10",
+      "language": "python",
+      "requires": [
+        "sklearn"
+      ],
+      "output": "examples/ex-3.out"
+    }
+  ],
+  "practice": [
+    {
+      "id": "p-1",
+      "title": "Use distance-weighted votes with exact-match handling",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read qx qy k, then n and n lines x y label. Coordinates must be finite in 0–6, k an integer 1–15, n 1–30 and labels 0/1. Use inverse-distance weights among the closest min(k,n) points. If selected points include zero distance, let only those exact matches vote equally. Rank distance ties by input order, class ties to zero. Print the predicted class or invalid.</p>",
+      "hints": [
+        "Avoid dividing by zero at an exact match.",
+        "Do not give farther neighbours a vote when exact matches exist."
+      ],
+      "solution": "practice/p-1.py",
+      "tests": [
+        {
+          "stdin": "practice/p-1.t1.in",
+          "output": "practice/p-1.t1.out"
+        },
+        {
+          "stdin": "practice/p-1.t2.in",
+          "output": "practice/p-1.t2.out"
+        },
+        {
+          "stdin": "practice/p-1.t3.in",
+          "output": "practice/p-1.t3.out"
+        },
+        {
+          "stdin": "practice/p-1.t4.in",
+          "output": "practice/p-1.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-2",
+      "title": "Select a candidate using only validation scores",
+      "difficulty": "medium",
+      "statementHtml": "<p>Read 1–10 lines after n, each containing a positive integer k and a finite validation accuracy from zero to one. Print the k with highest accuracy, breaking ties toward smaller k, then the score to three decimals. Duplicate k values are invalid.</p>",
+      "hints": [
+        "Use score first and smaller k second.",
+        "The input is validation evidence, not final-test tuning."
+      ],
+      "solution": "practice/p-2.py",
+      "tests": [
+        {
+          "stdin": "practice/p-2.t1.in",
+          "output": "practice/p-2.t1.out"
+        },
+        {
+          "stdin": "practice/p-2.t2.in",
+          "output": "practice/p-2.t2.out"
+        },
+        {
+          "stdin": "practice/p-2.t3.in",
+          "output": "practice/p-2.t3.out"
+        },
+        {
+          "stdin": "practice/p-2.t4.in",
+          "output": "practice/p-2.t4.out"
+        }
+      ]
+    },
+    {
+      "id": "p-3",
+      "title": "Explain smoothing without a universal promise",
+      "difficulty": "medium",
+      "statementHtml": "<p>Why does large k often make a less detailed boundary, and why is smoother not always more accurate?</p>",
+      "hints": [
+        "Consider a small minority island."
+      ],
+      "type": "written",
+      "answerHtml": "<p>More neighbours average over local exceptions, so a single point has less influence. That can reduce sensitivity to noise but erase a small genuine class region. Select using representative validation evidence rather than judging the prettiest map.</p>"
+    },
+    {
+      "id": "p-4",
+      "title": "Budget prediction cost",
+      "difficulty": "medium",
+      "statementHtml": "<p>A service stores many examples and receives many queries. What costs and alternatives should it investigate?</p>",
+      "hints": [
+        "Separate storage from per-query work."
+      ],
+      "type": "written",
+      "answerHtml": "<p>Measure distance/ranking cost, storage, feature dimension and query volume. Partial selection or neighbour-search indexes may help, depending on dimension and metric. A parametric model may predict more cheaply, but must be compared on relevant validation performance.</p>"
+    }
+  ],
+  "quiz": [
+    {
+      "id": "q-1",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the curve: which candidate follows highest accuracy and smaller-k ties?",
+      "options": [
+        "k=3",
+        "k=7",
+        "k=15",
+        "k=1"
+      ],
+      "answer": 3,
+      "explanation": "k one and three both score one; the stated tie rule selects one. Seven and fifteen use all six points and score one-half.",
+      "figure": {
+        "caption": {
+          "en": "Validation accuracy from the six-card training set.",
+          "bn": "ছয়টি ট্রেনিং কার্ডের বাইরে আলাদা চারটি কার্ডে মাপা ফল।"
+        },
+        "panels": {
+          "chart": {
+            "xLabel": "Requested k",
+            "yLabel": "Accuracy",
+            "series": [
+              {
+                "id": "s0",
+                "label": "Validation",
+                "type": "line",
+                "points": [
+                  [
+                    1,
+                    1.0
+                  ],
+                  [
+                    3,
+                    1.0
+                  ],
+                  [
+                    7,
+                    0.5
+                  ],
+                  [
+                    15,
+                    0.5
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "q-2",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the table: which class wins with inverse-distance weights?",
+      "options": [
+        "A tie",
+        "No vote is possible",
+        "One, weight 5 versus 1.5",
+        "Zero, because it has two points"
+      ],
+      "answer": 2,
+      "explanation": "Class one receives 1/0.2=5. Class zero receives 1/1+1/2=1.5, so weighting reverses the uniform majority.",
+      "figure": {
+        "caption": {
+          "en": "Selected neighbour distances and labels.",
+          "bn": "বাছাই করা নেবারের দূরত্ব ও লেবেল দেখো।"
+        },
+        "panels": {
+          "tables": {
+            "data": {
+              "rows": 3,
+              "cols": 2,
+              "rowLabels": [
+                "Nearest",
+                "Second",
+                "Third"
+              ],
+              "colLabels": [
+                "Distance",
+                "Label"
+              ],
+              "cells": [
+                [
+                  0.2,
+                  1
+                ],
+                [
+                  1,
+                  0
+                ],
+                [
+                  2,
+                  0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-3",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Read the overlapping points: under the exact-match distance rule, who votes?",
+      "options": [
+        "No point because division by zero is required",
+        "Only the two exact matches",
+        "Only the farther zero point",
+        "All three with equal weights"
+      ],
+      "answer": 1,
+      "explanation": "The explicit zero-distance rule avoids division by zero and excludes nonzero-distance neighbours.",
+      "figure": {
+        "caption": {
+          "en": "Exact duplicate-location neighbours around a query.",
+          "bn": "Query-এর একই জায়গায় দুটি নেবার আছে।"
+        },
+        "panels": {
+          "plot": {
+            "xRange": [
+              0,
+              6
+            ],
+            "yRange": [
+              0,
+              6
+            ],
+            "xLabel": "Size score",
+            "yLabel": "Sweetness score",
+            "classes": [
+              {
+                "id": 0,
+                "label": "Apple"
+              },
+              {
+                "id": 1,
+                "label": "Mango"
+              }
+            ],
+            "points": [
+              {
+                "id": "p1",
+                "x": 3,
+                "y": 3,
+                "cls": 1
+              },
+              {
+                "id": "p2",
+                "x": 3,
+                "y": 3,
+                "cls": 1
+              },
+              {
+                "id": "p3",
+                "x": 3.5,
+                "y": 3,
+                "cls": 0
+              }
+            ],
+            "shapes": {
+              "q": {
+                "type": "marker",
+                "at": [
+                  3,
+                  3
+                ],
+                "symbol": "star"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "q-4",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What data should choose k?",
+      "options": [
+        "Representative validation data",
+        "The final test answers repeatedly",
+        "Training labels alone always",
+        "The prettiest boundary only"
+      ],
+      "answer": 0,
+      "explanation": "Keep final test evidence separate from selection."
+    },
+    {
+      "id": "q-5",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "What does distance weighting change?",
+      "options": [
+        "The stored true labels",
+        "The need for a query",
+        "Every distance to zero",
+        "Each selected neighbour’s vote strength"
+      ],
+      "answer": 3,
+      "explanation": "Closer selected examples receive more weight."
+    },
+    {
+      "id": "q-6",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Why can very large k miss a minority island?",
+      "options": [
+        "Classes disappear from the file",
+        "Distances stop existing",
+        "Distant majority votes can overwhelm the local pattern",
+        "Large k always memorises one point"
+      ],
+      "answer": 2,
+      "explanation": "A smoother map can erase a real small region."
+    },
+    {
+      "id": "q-7",
+      "type": "mcq",
+      "difficulty": "medium",
+      "prompt": "Where should a scaler fit during candidate validation?",
+      "options": [
+        "On future unseen records",
+        "On the candidate training portion",
+        "On all final test rows",
+        "On validation answers"
+      ],
+      "answer": 1,
+      "explanation": "Validation rows must remain outside learned preprocessing."
+    },
+    {
+      "id": "q-8",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which requested k survives an equal validation-score tie?",
+      "options": [
+        "3",
+        "7",
+        "1",
+        "0.9"
+      ],
+      "answer": 0,
+      "explanation": "Equal scores are resolved by the negative k key, preferring three to seven.",
+      "code": "def main():\n    rows = [(7, 0.9), (3, 0.9), (1, 0.8)]\n    print(max(rows, key=lambda row: (row[1], -row[0]))[0])\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-9",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "How many neighbours are available for requested k fifteen?",
+      "options": [
+        "15",
+        "9",
+        "1",
+        "6"
+      ],
+      "answer": 3,
+      "explanation": "The effective count is six.",
+      "code": "def main():\n    n = 6\n    k = 15\n    print(min(k, n))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "id": "q-10",
+      "type": "output",
+      "difficulty": "medium",
+      "prompt": "Which weighted class wins with distances 0.2, one and two?",
+      "options": [
+        "2",
+        "5",
+        "1",
+        "0"
+      ],
+      "answer": 2,
+      "explanation": "Five exceeds one and a half, so class one wins.",
+      "code": "def main():\n    weights = [1 / 1 + 1 / 2, 1 / 0.2]\n    print(int(weights[1] > weights[0]))\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    }
+  ],
+  "keyPoints": [
+    {
+      "en": "Choose k using validation evidence rather than final test answers.",
+      "bn": "Final test-এর উত্তর দিয়ে নয়, validation-এর ফল দেখে k বেছে নাও।"
+    },
+    {
+      "en": "A smoother boundary can reduce noise sensitivity or hide a real local group.",
+      "bn": "মসৃণ boundary noise-এর প্রভাব কমাতে পারে, আবার আসল ছোট দলও ঢাকতে পারে।"
+    },
+    {
+      "en": "Distance weighting gives closer selected neighbours stronger votes.",
+      "bn": "Distance weighting-এ বাছা কাছের নেবারের ভোট বেশি জোর পায়।"
+    },
+    {
+      "en": "Exact-match handling prevents inverse-distance division by zero.",
+      "bn": "একই জায়গার পয়েন্টের নিয়ম থাকলে inverse distance-এ শূন্য দিয়ে ভাগ লাগে না।"
+    },
+    {
+      "en": "Fit preprocessing only inside the training portion of each comparison.",
+      "bn": "প্রতিটি তুলনায় preprocessing শুধু তার ট্রেনিং অংশে fit করো।"
+    }
+  ],
+  "examQuestions": [
+    {
+      "type": "numerical",
+      "question": "Compute weighted votes for class-one distance 0.2 and class-zero distances one and two.",
+      "marks": 6,
+      "answerHtml": "<p>Inverse-distance weight for class one is 1/0.2=5. Class zero receives 1/1+1/2=1.5. Weighted prediction is one, while the uniform three-neighbour majority is zero. The weighting policy changes the decision without changing labels.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Explain why a final test score cannot repeatedly guide k selection.",
+      "marks": 6,
+      "answerHtml": "<p>Each choice informed by test answers adapts the workflow to those rows. The reported best test score then becomes optimistic selection evidence rather than an independent final check. Select using validation or cross-validation within development data, fix the workflow and evaluate a separate test once.</p>"
+    },
+    {
+      "type": "long",
+      "question": "Compare k one and all available neighbours on a small balanced binary dataset.",
+      "marks": 6,
+      "answerHtml": "<p>k one follows the nearest point and can create sensitive local regions. Using all points gives the same global vote at every query; for an even balanced set the stated tie rule selects zero. Larger k is not guaranteed to improve accuracy, and requested k must not exceed the available count without an explicit clamp.</p>"
+    }
+  ],
+  "references": [
+    {
+      "title": "Scikit-learn supervised learning guide",
+      "url": "https://scikit-learn.org/stable/supervised_learning.html"
+    }
+  ],
+  "review": {
+    "status": "draft",
+    "author": "codex",
+    "checkedBy": null
+  },
+  "labs": [
+    "knn-boundary"
+  ]
+}
