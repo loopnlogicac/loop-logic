@@ -20,6 +20,7 @@ import { chatPage } from '../app/ask-context.ts';
 import type { AdaptiveQuizService } from '../app/adaptive-quiz.ts';
 import { tutorialSubject, type TutorialStyleService } from '../app/tutorial-style.ts';
 import { trustedSources } from '../app/sources.ts';
+import { viewerCode, type DeviceGuard } from '../app/devices.ts';
 import type { LabService } from '../app/labs.ts';
 import type { TutorialService } from '../app/tutorials.ts';
 import type { MasteryService } from '../app/mastery.ts';
@@ -66,6 +67,7 @@ export interface AppDeps {
   questionBank?: QuestionBankService;
   office?: OfficeService;
   tutorialStyle?: TutorialStyleService;
+  devices?: DeviceGuard;
   orders?: OrderService;
   reports?: ReportService;
   runner?: RunnerService;
@@ -229,7 +231,10 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/profile/reset', ({ body, learnerId }) => learner.reset(learnerId, body.scope)),
 
     // video courses (YouTube playlists played in the site)
-    route('GET', '/api/courses/:id/videos', ({ params, query, learnerId }) => watch.view(params.id!, learnerId, lang(query.get('lang')), query.get('v'))),
+    route('GET', '/api/courses/:id/videos', ({ req, params, query, learnerId, email, signedIn }) => {
+      const role = (Boolean(signedIn) || d.auth.mode === 'supabase') && email && d.admin ? d.admin.roleOf(email) : 'learner';
+      return watch.view(params.id!, learnerId, lang(query.get('lang')), query.get('v'), { email, deviceId: req.headers['x-device'], userAgent: String(req.headers['user-agent'] ?? ''), staff: role === 'admin' || role === 'instructor' });
+    }),
     route('POST', '/api/courses/:id/videos/:vid/quiz', ({ params, body, learnerId }) => watch.quiz(params.id!, params.vid!, learnerId, body.answers)),
     route('GET', '/api/videos/:vid/extras', ({ params }) => extras.forEditor(params.vid!), 'editor'),
     route('POST', '/api/videos/:vid/extras', ({ params, body }) => extras.save(params.vid!, body), 'editor', 1024 * 1024),
@@ -364,7 +369,16 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('DELETE', '/api/admin/courses/:id', ({ params, email }) => adm().deleteCourse(email!, params.id!), 'admin'),
     route('POST', '/api/admin/courses/:id/sync', ({ params, email }) => adm().syncCourse(email!, params.id!), 'admin'),
     route('POST', '/api/admin/builtin-courses/:id/visibility', ({ params, body, email }) => adm().setBuiltInHidden(email!, 'course', params.id!, body.hidden === true), 'admin'),
-    route('GET', '/api/admin/courses/:id/access', ({ params }) => adm().courseGrants(params.id!), 'admin'),
+    route('GET', '/api/admin/courses/:id/access', async ({ params }) => Promise.all((await adm().courseGrants(params.id!)).map(async (g) => ({ ...g, code: viewerCode(g.learnerId), devices: d.devices ? (await d.devices.list(g.learnerId)).map((x) => ({ label: x.label, last: x.last })) : [] }))), 'admin'),
+    // premium video protection: device resets and leak tracing
+    route('POST', '/api/admin/devices/:learner/reset', async ({ params, email }) => {
+      if (!d.devices) throw new AppError('unavailable', 503, 'Device limits are off.');
+      await d.devices.reset(params.learner!);
+      await adm().logAudit(email!, 'devices.reset', params.learner!);
+      return { ok: true };
+    }, 'admin'),
+    route('GET', '/api/admin/trace/viewer', ({ query }) => adm().findViewer(query.get('code')), 'admin'),
+    route('GET', '/api/admin/trace/video', ({ query }) => adm().traceVideo(query.get('v')), 'admin'),
     route('POST', '/api/admin/courses/:id/access', ({ params, body, email }) => adm().grantAccess(email!, params.id!, body.email), 'admin'),
     route('DELETE', '/api/admin/courses/:id/access/:learner', ({ params, email }) => adm().revokeAccess(email!, params.id!, params.learner!), 'admin'),
     route('GET', '/api/admin/posts', () => ({ posts: adm().posts() }), 'admin'),

@@ -6,6 +6,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { AppError } from './service.ts';
+import { viewerCode } from './devices.ts';
 import type { DocRow, Store } from '../store/store.ts';
 import type { TutorialService, CustomTopicDef, CustomTrackDef } from './tutorials.ts';
 import type { WatchService } from './watch.ts';
@@ -152,6 +153,7 @@ export class AdminService {
         playlists: [{ id: plId, title: c.playlistTitle || c.title.en, videos: shown.length, youtubeId: c.access === 'paid' ? undefined : c.playlistId }],
         lessons: [], practice: false, access: c.access, price: c.access === 'paid' ? `৳ ${c.price}` : null,
         sampleIds: shown.filter((v: Json) => v.sample).map((v: Json) => v.id), tint: c.tint ?? null, dynamic: true,
+        aliases: c.access === 'paid' && c.aliases ? c.aliases : undefined,
       });
     }
     setExtraVideos(playlists, videos);
@@ -264,6 +266,34 @@ export class AdminService {
     await this.audit(actor, 'course.revoke', courseId, { learnerId });
     return { ok: true };
   }
+  /** Finds the account behind a watermark code (from a leaked screen recording). */
+  async findViewer(codeIn: unknown) {
+    const code = str(codeIn, 10).toUpperCase().replace(/[^0-9A-F]/g, '');
+    if (code.length !== 6) throw bad('Enter the 6-character code from the watermark.');
+    const grants = await this.store.listDocs('grant');
+    const ids = new Set<string>([...(await this.store.listDocs('member')).map((m) => m.id), ...grants.map((g) => g.data.learnerId as string)]);
+    const id = [...ids].find((x) => viewerCode(x) === code);
+    if (!id) return { found: false };
+    const member = await this.store.getDoc('member', id).catch(() => undefined);
+    return {
+      found: true, learnerId: id, email: member?.data.email ?? grants.find((g) => g.data.learnerId === id)?.data.email ?? null,
+      courses: grants.filter((g) => g.data.learnerId === id).map((g) => ({ id: g.data.courseId, title: this.doc('course', g.data.courseId)?.data.title?.en ?? g.data.courseId, until: g.data.until })),
+    };
+  }
+
+  /** Which paid course and batch a YouTube video belongs to (for a leaked link). */
+  traceVideo(input: unknown) {
+    const raw = str(input, 300);
+    const id = /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/.exec(raw)?.[1] ?? (/^[A-Za-z0-9_-]{11}$/.test(raw) ? raw : '');
+    if (!id) throw bad('Paste a YouTube video link or its 11-character id.');
+    const hits: { course: string; title: string; batch: string; current: boolean; until: string | null }[] = [];
+    for (const d of this.docs('course')) {
+      if ((d.data.videos ?? []).some((v: Json) => v.id === id)) hits.push({ course: d.id, title: d.data.title?.en ?? d.id, batch: d.data.batch || 'Current batch', current: true, until: null });
+      for (const b of (d.data.batches ?? []) as Json[]) if ((b.ids ?? []).includes(id)) hits.push({ course: d.id, title: d.data.title?.en ?? d.id, batch: b.label, current: false, until: b.until ?? null });
+    }
+    return { videoId: id, hits };
+  }
+
   async courseGrants(courseId: string) {
     return (await this.store.listDocs('grant')).filter((g) => g.data.courseId === courseId).map((g) => ({ learnerId: g.data.learnerId, email: g.data.email, until: g.data.until, at: g.data.at }));
   }
@@ -353,8 +383,13 @@ export class AdminService {
     const link = str(body.playlist, 300) || prev?.data.playlistId || '';
     if (!link) throw bad(access === 'free' ? 'A free course needs its YouTube playlist link.' : 'Add the unlisted YouTube playlist that holds the course videos.');
     const imported = await this.importPlaylist(link);
+    // A paid course moved to a new playlist (a new batch, or replacing leaked videos): the new videos take
+    // the old ones' places one by one, keeping free samples, hidden videos and learners' progress.
+    const newBatch = Boolean(prev && access === 'paid' && prev.data.playlistId && imported.playlistId !== prev.data.playlistId);
+    const prevVideos = (prev?.data.videos ?? []) as Json[];
     const flags = new Map<string, Json>();
-    for (const v of (Array.isArray(body.videos) ? body.videos : prev?.data.videos ?? []) as Json[]) if (v && typeof v.id === 'string') flags.set(v.id, v);
+    for (const v of (Array.isArray(body.videos) ? body.videos : prevVideos) as Json[]) if (v && typeof v.id === 'string') flags.set(v.id, v);
+    if (newBatch && !imported.videos.some((v) => flags.has(v.id))) imported.videos.forEach((v, i) => { if (prevVideos[i]) flags.set(v.id, prevVideos[i]!); });
     const order: string[] = Array.isArray(body.videos) ? (body.videos as Json[]).map((v) => String(v.id)).filter((id) => imported.videos.some((x) => x.id === id)) : [];
     const ordered = [...order, ...imported.videos.map((v) => v.id).filter((id) => !order.includes(id))];
     const videos = ordered.map((id) => {
@@ -362,6 +397,18 @@ export class AdminService {
       const f = flags.get(id);
       return { ...v, hidden: f?.hidden === true, sample: access === 'paid' && f?.sample === true };
     });
+    let batches = (prev?.data.batches ?? []) as Json[];
+    let aliases = { ...((prev?.data.aliases ?? {}) as Record<string, string[]>) };
+    if (newBatch) {
+      batches = [...batches, { label: prev!.data.batch || 'Earlier batch', playlistId: prev!.data.playlistId, ids: prevVideos.map((v) => v.id), until: this.now().toISOString() }].slice(-20);
+      const next: Record<string, string[]> = {};
+      videos.forEach((v, i) => {
+        const old = prevVideos[i]?.id;
+        if (old && old !== v.id) next[v.id] = [...new Set([old, ...(aliases[old] ?? [])])].slice(0, 20);
+        else if (aliases[v.id]) next[v.id] = aliases[v.id]!;
+      });
+      aliases = next;
+    }
     if (access === 'paid' && !videos.some((v) => v.sample && !v.hidden)) videos.filter((v) => !v.hidden).slice(0, 2).forEach((v) => (v.sample = true));
     const id = existingId ?? this.newCourseId(title.en, str(body.code, 30));
     const data = {
@@ -370,11 +417,12 @@ export class AdminService {
       videos, nightlySync: body.nightlySync !== false, price: access === 'paid' ? price : null, accessMonths: access === 'paid' ? int(body.accessMonths, 0, 120, 6) : null,
       includedInPro: access === 'paid' ? body.includedInPro !== false : null, couponsAllowed: access === 'paid' ? body.couponsAllowed !== false : null,
       includesOffice: access === 'paid' && body.includesOffice === true,
+      batch: access === 'paid' ? str(body.batch, 40) : '', batches: access === 'paid' ? batches : [], aliases: access === 'paid' ? aliases : {},
       published: body.published === true, syncedAt: this.now().toISOString(), createdAt: prev?.data.createdAt ?? this.now().toISOString(),
     };
     await this.put('course', id, data);
     this.apply();
-    await this.audit(actor, existingId ? 'course.update' : 'course.create', id, { access, published: data.published, videos: videos.length });
+    await this.audit(actor, existingId ? 'course.update' : 'course.create', id, { access, published: data.published, videos: videos.length, ...(newBatch ? { newBatch: data.batch || imported.playlistId, replaced: prev!.data.playlistId } : {}) });
     return this.getCourse(id);
   }
   private newCourseId(title: string, code: string) {

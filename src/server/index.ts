@@ -28,6 +28,7 @@ import { ClassService } from '../app/classes.ts';
 import { QuestionBankService } from '../app/question-bank.ts';
 import { OfficeService } from '../app/office.ts';
 import { TutorialStyleService } from '../app/tutorial-style.ts';
+import { DeviceGuard } from '../app/devices.ts';
 import { OrderService } from '../app/orders.ts';
 import { ReportService } from '../app/reports.ts';
 import { RunnerService, judge0Backend, pistonBackend, type FetchLike as RunFetch } from '../app/runner.ts';
@@ -65,6 +66,9 @@ const learner = new LearnerService(store, reading, learning);
 const labs = new LabService(store);
 const extras = new VideoExtrasService(store);
 const watch = new WatchService(store, extras);
+// Premium videos play on at most MAX_DEVICES devices per account (default 2).
+const devices = new DeviceGuard(store, { max: Number(env.MAX_DEVICES ?? 2) || 2 });
+watch.setDeviceGuard(devices);
 const tutorials = new TutorialService(store, join(here, '../../content-kit'));
 // Admins: everyone in ADMIN_EMAILS, plus people an admin gives the role in the admin site.
 const admin = new AdminService(store, tutorials, watch, { adminEmails: (env.ADMIN_EMAILS ?? '').split(','), youtubeKey: env.YOUTUBE_API_KEY || null });
@@ -101,6 +105,7 @@ const server = createApp({
   questionBank: new QuestionBankService(store, tutorials),
   office: new OfficeService(store),
   tutorialStyle: new TutorialStyleService(store, gateway, reading, tutorials),
+  devices,
   orders,
   reports: new ReportService(store, Object.entries(env).filter(([key]) => /KEY|SECRET|TOKEN|PASSWORD/.test(key)).map(([, value]) => value ?? '').filter((value) => value.length >= 8)),
   runner,

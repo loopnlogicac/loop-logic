@@ -57,8 +57,8 @@ function render() {
   left.append(el('div', { id: 'ad-video', class: 'ad-slot' }));
   if (cur) {
     left.append(
-      el('div', { class: 'player' },
-        el('iframe', { src: cur.embedUrl, title: cur.title, allow: 'accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share', allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin', loading: 'lazy' })),
+      protectPlayer(el('div', { class: 'player' },
+        el('iframe', { src: cur.embedUrl, title: cur.title, allow: 'accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share', allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin', loading: 'lazy' }))),
       el('div', { class: 'now' },
         el('h1', { text: cur.title }),
         el('p', { class: 'meta', text: [L.of(num(cur.position), num(progress.total)), cur.duration].join(' · ') }),
@@ -110,6 +110,28 @@ function render() {
   main.querySelector('.vlist a[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 
+// ── premium videos: a moving watermark (email + account code) and a fullscreen that keeps it on top ──
+let wmTimer = null;
+function protectPlayer(player) {
+  clearInterval(wmTimer);
+  const p = view?.protect;
+  if (!p) return player;
+  const bn = getLang() === 'bn';
+  const mark = el('div', { class: 'wm', 'aria-hidden': 'true', text: p.mark });
+  const move = () => { mark.style.left = `${4 + Math.random() * 56}%`; mark.style.top = `${6 + Math.random() * 78}%`; };
+  move();
+  wmTimer = setInterval(move, 7000);
+  const full = el('button', { type: 'button', class: 'wm-full', 'aria-label': bn ? 'পূর্ণ স্ক্রিন' : 'Full screen', title: bn ? 'পূর্ণ স্ক্রিন' : 'Full screen', text: '⛶' });
+  full.onclick = () => {
+    const fs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fs) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (player.requestFullscreen || player.webkitRequestFullscreen)?.call(player);
+  };
+  player.classList.add('protected');
+  player.append(mark, full);
+  return player;
+}
+
 async function load(v, push = false) {
   try {
     const q = new URLSearchParams({ lang: getLang() });
@@ -122,7 +144,11 @@ async function load(v, push = false) {
     }
     render();
   } catch (e) {
-    if (e.status === 404) main.replaceChildren(el('div', { class: 'card empty' }, el('h2', { text: t().notFound }), el('a', { class: 'btn secondary', href: '/courses.html', text: t().back })));
+    if (e.code === 'device_limit') {
+      const bn = getLang() === 'bn';
+      main.replaceChildren(el('div', { class: 'card empty' }, el('h2', { text: bn ? 'ডিভাইসের সীমা পূর্ণ' : 'Device limit reached' }), el('p', { class: 'muted', text: e.message }),
+        el('a', { class: 'btn secondary', href: '/courses.html', text: t().back })));
+    } else if (e.status === 404) main.replaceChildren(el('div', { class: 'card empty' }, el('h2', { text: t().notFound }), el('a', { class: 'btn secondary', href: '/courses.html', text: t().back })));
     else errorBox(main, e.message, () => load(v));
   }
 }

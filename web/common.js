@@ -84,8 +84,24 @@ export class ApiError extends Error {
   constructor(code, message, status) { super(message); this.code = code; this.status = status; }
 }
 
+/** A random id this browser keeps, so premium videos can limit how many devices one account uses. */
+let memDevice = '';
+export function deviceId() {
+  const fresh = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`).replace(/[^A-Za-z0-9_-]/g, '');
+  try {
+    let id = localStorage.getItem('ll-device');
+    if (!id) { id = fresh(); localStorage.setItem('ll-device', id); }
+    return id;
+  } catch { /* storage blocked: fall back to a cookie */ }
+  const m = /(?:^|; )ll_device=([A-Za-z0-9_-]{8,64})/.exec(document.cookie);
+  if (m) return m[1];
+  memDevice = memDevice || fresh();
+  document.cookie = `ll_device=${memDevice}; path=/; max-age=31536000; samesite=lax`;
+  return memDevice;
+}
+
 export async function api(method, path, body, extraHeaders = {}, format = 'json') {
-  const headers = { 'content-type': 'application/json', ...extraHeaders };
+  const headers = { 'content-type': 'application/json', 'x-device': deviceId(), ...extraHeaders };
   const token = await accessToken();
   if (token) headers.authorization = `Bearer ${token}`;
   let res;
