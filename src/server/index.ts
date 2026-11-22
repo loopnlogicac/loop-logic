@@ -18,6 +18,7 @@ import { MasteryService } from '../app/mastery.ts';
 import { MemoryStore, type Store } from '../store/store.ts';
 import { SupabaseStore } from '../store/supabase.ts';
 import { gatewayFromEnv } from '../ai/gateway.ts';
+import { AiBudget } from '../ai/budget.ts';
 import { AiPracticeTutor } from '../ai/tutor.ts';
 import { LiveSearch } from '../library/live.ts';
 import { anonymousAuth, hybridAuth, supabaseAuth } from './auth.ts';
@@ -60,7 +61,11 @@ const gateway = gatewayFromEnv(env, store);
 const live = new LiveSearch({ apiKey: env.TAVILY_API_KEY || null, store });
 
 const learning = new LearningService(store, { tutor: new AiPracticeTutor(gateway) });
-const reading = new ReadingService(store, gateway, live, { dailyAiLimit: Number(env.FREE_DAILY_AI_CALLS ?? 10) });
+// AI allowances (kept per day in the database, so restarts and cleared cookies don't reset them):
+// FREE_DAILY_AI_CALLS per learner, AI_GUEST_DAILY per network for guests, AI_DAILY_CAP model calls site-wide.
+const aiBudget = new AiBudget(store, { perLearner: Number(env.FREE_DAILY_AI_CALLS ?? 10), perGuestIp: Number(env.AI_GUEST_DAILY ?? 40), globalDaily: Number(env.AI_DAILY_CAP ?? 3000) });
+gateway.setBudget(aiBudget);
+const reading = new ReadingService(store, gateway, live, { dailyAiLimit: Number(env.FREE_DAILY_AI_CALLS ?? 10), budget: aiBudget });
 const instructor = new InstructorService(store, { minGroup: Number(env.MIN_GROUP_SIZE ?? 3) });
 const learner = new LearnerService(store, reading, learning);
 const labs = new LabService(store);
@@ -123,8 +128,9 @@ const server = createApp({
     liveSearch: live.enabled,
     storeKind: store.kind,
     instructorKey: env.INSTRUCTOR_KEY || null,
-    editLocked: Boolean(env.RENDER) && !env.INSTRUCTOR_KEY,
-    allowSeed: env.ALLOW_DEMO_SEED !== 'false',
+    editLocked: !env.INSTRUCTOR_KEY,
+    // Fake demo learners only on a local or test server, and only when asked for.
+    allowSeed: env.ALLOW_DEMO_SEED === 'true' && !(env.SITE_URL || env.RENDER || env.NODE_ENV === 'production'),
     freeDailyAi: Number(env.FREE_DAILY_AI_CALLS ?? 10),
     siteUrl: env.SITE_URL || null,
   },

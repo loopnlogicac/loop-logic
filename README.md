@@ -102,10 +102,13 @@ Copy `.env.example` to `.env`. Never commit it or paste keys in chat.
 | `GEMINI_API_KEY` (`GEMINI_MODEL`) | AI rewording of answers, first choice | Reviewed text only |
 | `GROQ_API_KEY` (`GROQ_MODEL`) | Fallback AI provider | — |
 | `TAVILY_API_KEY` | Live search limited to approved sites | Reviewed library only |
-| `INSTRUCTOR_KEY` | Protects `/instructor.html` | Dashboard open (fine locally only) |
+| `INSTRUCTOR_KEY` | Optional key for the older instructor tools, as an alternative to signing in | Only signed-in instructors and admins |
 | `MIN_GROUP_SIZE` | Privacy minimum for class stats (default 3) | — |
 | `FREE_DAILY_AI_CALLS` | AI-worded answers per learner per day (default 10, the Free plan) | — |
-| `ALLOW_DEMO_SEED=false` | Hides the demo-data button | Button available |
+| `AI_GUEST_DAILY` | AI answers per day shared by guests on one network (default 40) | — |
+| `AI_DAILY_CAP` | Model calls per day across the whole site (default 3000); past it, learners get reviewed text | — |
+| `MAX_DEVICES` | Devices per account for premium videos (default 2) | — |
+| `ALLOW_DEMO_SEED=true` | Shows the demo-data button (admins only, and never on a live site with `SITE_URL` set) | Off |
 
 ### Supabase setup (once)
 

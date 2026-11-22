@@ -98,17 +98,54 @@ export interface AppDeps {
   };
 }
 
-type Ctx = { req: IncomingMessage; params: Record<string, string>; query: URLSearchParams; body: any; learnerId: string; email: string | null; anonId?: string; signedIn?: boolean; headers: Record<string, string>; staff?: Staff };
+type Ctx = { req: IncomingMessage; params: Record<string, string>; query: URLSearchParams; body: any; learnerId: string; email: string | null; anonId?: string; signedIn?: boolean; headers: Record<string, string>; staff?: Staff; ip: string };
 type Handler = (ctx: Ctx) => unknown;
 interface Route {
   method: string;
   pattern: RegExp;
   keys: string[];
   handler: Handler;
-  /** editor = instructor, but refused outright when editing is locked (public deploy without a key). admin = signed in and an admin. */
+  /** instructor / editor = a signed-in instructor or admin (or the INSTRUCTOR_KEY, if one is set). admin = signed in and an admin. */
   auth: 'learner' | 'instructor' | 'editor' | 'admin' | 'staff' | 'none';
   maxBody?: number;
 }
+
+/** The visitor's IP: Cloudflare's header first, then the first X-Forwarded-For hop, then the socket. */
+export function clientIp(req: IncomingMessage): string {
+  const cf = String(req.headers['cf-connecting-ip'] ?? '').trim();
+  if (cf) return cf.slice(0, 64);
+  const xff = String(req.headers['x-forwarded-for'] ?? '').split(',')[0]!.trim();
+  if (xff) return xff.slice(0, 64);
+  return (req.socket?.remoteAddress ?? 'unknown').slice(0, 64);
+}
+
+/** Fixed-window request limits per IP, in memory (enough for one server). */
+export class RateLimiter {
+  private hits = new Map<string, { start: number; n: number }>();
+  private readonly now: () => number;
+  constructor(now: () => number = Date.now) { this.now = now; }
+  /** True when this request is allowed. */
+  take(key: string, limit: number, windowMs: number): boolean {
+    const t = this.now();
+    const h = this.hits.get(key);
+    if (!h || t - h.start >= windowMs) {
+      if (this.hits.size > 50_000) this.hits.clear(); // memory guard
+      this.hits.set(key, { start: t, n: 1 });
+      return true;
+    }
+    h.n += 1;
+    return h.n <= limit;
+  }
+}
+
+/** Stricter limits for endpoints that guess codes, take payments, send AI requests or collect emails. */
+const STRICT_LIMITS: [RegExp, number, number][] = [
+  [/^\/api\/coupons\/check$/, 20, 10 * 60_000],
+  [/^\/api\/buy\//, 20, 10 * 60_000],
+  [/^\/api\/classes\/join$/, 20, 10 * 60_000],
+  [/^\/api\/waitlist/, 10, 10 * 60_000],
+  [/^\/api\/(ask|selection-help)$|\/simpler$/, 60, 10 * 60_000],
+];
 
 function route(method: string, path: string, handler: Handler, auth: Route['auth'] = 'learner', maxBody?: number): Route {
   const keys: string[] = [];
@@ -148,6 +185,8 @@ export function buildRoutes(d: AppDeps): Route[] {
   const { learning, reading, instructor, learner, labs, watch, extras, tutorials } = d;
   const lang = (v: unknown) => (v === 'bn' ? 'bn' : 'en');
   const bank = () => { if (!d.questionBank) throw new AppError('unavailable', 503, 'Question bank is unavailable.'); return d.questionBank; };
+  /** Who is asking the AI: signed-in learners keep their allowance across devices; guests also share one per network. */
+  const aiClient = (ctx: Ctx) => ({ ip: ctx.ip, signedIn: Boolean(ctx.signedIn) || d.auth.mode === 'supabase' });
   const style = () => { if (!d.tutorialStyle) throw new AppError('unavailable', 503, 'Reading styles are unavailable.'); return d.tutorialStyle; };
   const office = () => { if (!d.office) throw new AppError('unavailable', 503, 'The Virtual Office is unavailable.', undefined, 'ভার্চুয়াল অফিস এখন পাওয়া যাচ্ছে না।'); return d.office; };
   /** Premium Virtual Office projects: open to staff, and to students who own a course that includes the office. */
@@ -199,7 +238,7 @@ export function buildRoutes(d: AppDeps): Route[] {
       liveSearch: d.config.liveSearch,
       store: d.config.storeKind,
       instructorKeyRequired: Boolean(d.config.instructorKey),
-      editing: d.config.instructorKey ? 'key' : d.config.editLocked ? 'locked' : 'open',
+      editing: d.config.instructorKey ? 'key' : 'locked', // otherwise only signed-in staff can edit
       freeDailyAi: d.config.freeDailyAi ?? 10,
       runner: d.runner ? d.runner.status() : { enabled: false, languages: [] },
       lessons: LESSONS.map((l) => ({ id: l.id, subject: l.subject, title: l.title, summary: l.summary })),
@@ -283,7 +322,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     }),
     // reading style on tutorials, and the quick check before an explanation
     route('GET', '/api/learn/:track/:topic/style', ({ params, query, learnerId }) => style().suggestion(learnerId, params.track!, lang(query.get('lang')))),
-    route('POST', '/api/learn/:track/:topic/simpler', ({ params, body, learnerId }) => style().simpler(learnerId, params.track!, params.topic!, String(body.section ?? '').slice(0, 120), lang(body.lang))),
+    route('POST', '/api/learn/:track/:topic/simpler', (ctx) => style().simpler(ctx.learnerId, ctx.params.track!, ctx.params.topic!, String(ctx.body.section ?? '').slice(0, 120), lang(ctx.body.lang), aiClient(ctx))),
     route('GET', '/api/learn/:track/:topic/quick-check', ({ params, query, learnerId }) => style().quickCheck(learnerId, params.track!, params.topic!, lang(query.get('lang')))),
     route('POST', '/api/learn/:track/:topic/quick-check', ({ params, body, learnerId }) => style().gradeQuickCheck(learnerId, params.track!, params.topic!, body ?? {}, lang(body?.lang))),
     // the public list of what the AI Teacher answers from
@@ -316,8 +355,9 @@ export function buildRoutes(d: AppDeps): Route[] {
     // personalised reading
     route('GET', '/api/lessons/:id', ({ params, query, learnerId }) => reading.getLesson(params.id!, learnerId, { lang: lang(query.get('lang')), original: query.get('original') === '1' })),
     route('POST', '/api/reading-events', ({ body, learnerId }) => reading.recordEvents(learnerId, body.events)),
-    route('POST', '/api/selection-help', ({ body, learnerId }) =>
-      reading.help(learnerId, {
+    route('POST', '/api/selection-help', (ctx) => {
+      const { body, learnerId } = ctx;
+      return reading.help(learnerId, {
         lessonId: String(body.lessonId ?? ''),
         blockId: String(body.blockId ?? ''),
         text: typeof body.text === 'string' ? body.text : undefined,
@@ -329,12 +369,14 @@ export function buildRoutes(d: AppDeps): Route[] {
         variant: ['simpler', 'example', 'more'].includes(body.variant) ? body.variant : undefined,
         latest: body.latest === true,
         question: typeof body.question === 'string' ? body.question : undefined,
-      }),
-    ),
+      }, aiClient(ctx));
+    }),
     route('POST', '/api/quiz/check', ({ body, learnerId }) => reading.checkQuiz(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), choice: Number(body.choice), lang: lang(body.lang) })),
-    route('POST', '/api/ask', async ({ body, learnerId }) =>
-      reading.chat(learnerId, { question: body.question, selection: body.selection, history: body.history, style: body.style, lang: lang(body.lang), page: await chatPage(body.page, lang(body.lang), extras, tutorials, typeof body.question === 'string' ? body.question : '') })),
-    route('GET', '/api/ask/limit', ({ learnerId }) => ({ left: reading.aiCallsLeft(learnerId) })),
+    route('POST', '/api/ask', async (ctx) => {
+      const { body, learnerId } = ctx;
+      return reading.chat(learnerId, { question: body.question, selection: body.selection, history: body.history, style: body.style, lang: lang(body.lang), page: await chatPage(body.page, lang(body.lang), extras, tutorials, typeof body.question === 'string' ? body.question : '') }, aiClient(ctx));
+    }),
+    route('GET', '/api/ask/limit', async (ctx) => ({ left: await reading.aiCallsLeft(ctx.learnerId, aiClient(ctx)) })),
     route('POST', '/api/selection-help/feedback', ({ body, learnerId }) => reading.feedback(learnerId, { lessonId: String(body.lessonId ?? ''), blockId: String(body.blockId ?? ''), value: String(body.value ?? ''), lang: lang(body.lang) })),
 
 
@@ -401,7 +443,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/admin/roles', ({ body, email }) => adm().setRole(email!, body.email, body.role), 'admin'),
     route('GET', '/api/admin/waitlist', async () => ({ waitlist: await adm().waitlist(), count: await d.store!.waitlistCount() }), 'admin'),
     route('POST', '/api/admin/waitlist/export', async ({ email }) => ({ csv: await adm().waitlistCsv(email!) }), 'admin'),
-    route('GET', '/api/admin/ai', () => adm().ai(), 'admin'),
+    route('GET', '/api/admin/ai', async () => ({ ...(await adm().ai()), budget: await reading.aiBudget.today() }), 'admin'),
     route('GET', '/api/admin/audit', () => adm().auditLog(), 'admin'),
 
     route('GET', '/api/my-notices', ({ learnerId, signedIn, query }) => {
@@ -470,7 +512,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     route('POST', '/api/instructor/seed-demo', async () => {
       if (!d.config.allowSeed) throw new AppError('forbidden', 403, 'Demo seeding is turned off.');
       return seedDemoData(learning, reading);
-    }, 'instructor'),
+    }, 'admin'),
   ];
 }
 
@@ -485,6 +527,7 @@ export function versionAssets(html: string, build: string): string {
 
 export function createApp(d: AppDeps) {
   const routes = buildRoutes(d);
+  const limiter = new RateLimiter();
   const publicDir = resolve(d.publicDir);
   const build = d.build ?? Date.now().toString(36);
   const connect = ["'self'", d.config.supabaseUrl && d.auth.mode !== 'anonymous' ? new URL(d.config.supabaseUrl).origin : ''].filter(Boolean).join(' ');
@@ -521,6 +564,9 @@ export function createApp(d: AppDeps) {
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'same-origin',
         'content-security-policy': csp,
+        'x-frame-options': 'DENY',
+        'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+        ...(base.startsWith('https://') ? { 'strict-transport-security': 'max-age=15552000; includeSubDomains' } : {}),
       });
       res.end(req.method === 'HEAD' ? undefined : data);
     } catch {
@@ -538,6 +584,13 @@ export function createApp(d: AppDeps) {
         .map((r) => ({ r, m: r.pattern.exec(url.pathname) }))
         .find((x) => x.m);
       if (!match) return send(res, 404, { error: { code: 'not_found', message: 'No such endpoint' } });
+      const ip = clientIp(req);
+      // Request limits per IP: a general one for every API call, and stricter ones for sensitive endpoints.
+      if (!limiter.take(`all:${ip}`, 600, 5 * 60_000)) return send(res, 429, { error: { code: 'rate_limited', message: 'Too many requests. Wait a few minutes and try again.', bn: 'অনেক বেশি অনুরোধ। কয়েক মিনিট পরে আবার চেষ্টা করো।' } }, { 'retry-after': '120' });
+      if (req.method !== 'GET') {
+        const strict = STRICT_LIMITS.find(([re]) => re.test(url.pathname));
+        if (strict && !limiter.take(`${strict[0].source}:${ip}`, strict[1], strict[2])) return send(res, 429, { error: { code: 'rate_limited', message: 'Too many attempts. Wait a few minutes and try again.', bn: 'অনেকবার চেষ্টা হয়েছে। কয়েক মিনিট পরে আবার চেষ্টা করো।' } }, { 'retry-after': '300' });
+      }
 
       let learnerId = '';
       let email: string | null = null;
@@ -569,17 +622,18 @@ export function createApp(d: AppDeps) {
           if (match.r.auth === 'admin' && staff?.role !== 'admin') throw new AppError('forbidden', 403, 'This account is not an admin. Ask an admin to give you the role.');
           if (match.r.auth === 'staff' && !staff) throw new AppError('forbidden', 403, 'This account is not an instructor yet. Ask an admin to give you the instructor role.');
         }
-      } else if (match.r.auth === 'editor' && !d.config.instructorKey && d.config.editLocked) {
-        throw new AppError('edit_locked', 403, 'Editing is turned off until an instructor key (INSTRUCTOR_KEY) is set on the server.');
-      } else if ((match.r.auth === 'instructor' || match.r.auth === 'editor') && d.config.instructorKey) {
+      } else if (match.r.auth === 'instructor' || match.r.auth === 'editor') {
+        // Never open to anonymous visitors: a signed-in instructor or admin (handled above), or the server's instructor key.
         const given = String(req.headers['x-instructor-key'] ?? '');
-        if (!given || !sameSecret(given, d.config.instructorKey)) throw new AppError('forbidden', 403, 'Instructor key required.');
+        if (!d.config.instructorKey || !given || !sameSecret(given, d.config.instructorKey)) {
+          throw new AppError('forbidden', 403, 'Sign in with an instructor or admin account.', undefined, 'শিক্ষক বা অ্যাডমিন অ্যাকাউন্ট দিয়ে সাইন ইন করো।');
+        }
       }
 
       const params: Record<string, string> = {};
       match.r.keys.forEach((k, i) => (params[k] = decodeURIComponent(match.m![i + 1]!)));
       const body = await readJson(req, match.r.maxBody);
-      const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers, staff });
+      const result = await match.r.handler({ req, params, query: url.searchParams, body, learnerId, email, anonId, signedIn, headers, staff, ip });
       if (result instanceof Download) {
         res.writeHead(200, { ...headers, 'content-type': result.contentType, 'content-disposition': `attachment; filename="${result.filename}"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
         return res.end(result.body);

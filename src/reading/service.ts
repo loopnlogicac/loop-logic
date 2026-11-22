@@ -12,6 +12,7 @@ import { getLab } from '../content/labs.ts';
 import { optionOrder } from '../core/options.ts';
 import { extractNumbers, SYSTEM_RULES, validateAnswer } from '../ai/validator.ts';
 import type { AiGateway } from '../ai/gateway.ts';
+import { AiBudget, type AiClient } from '../ai/budget.ts';
 import { searchLocal } from '../library/retrieval.ts';
 import type { LiveSearch } from '../library/live.ts';
 import type { ReadingEventRow, Store } from '../store/store.ts';
@@ -70,14 +71,18 @@ export class ReadingService {
   private readonly live: LiveSearch;
   private readonly dailyAiLimit: number;
   private readonly answerCache = new Map<string, { text: string; sources: SourceRef[] }>();
-  private readonly budget = new Map<string, { day: string; count: number }>();
+  private readonly budget: AiBudget;
 
-  constructor(store: Store, gateway: AiGateway, live: LiveSearch, options: { dailyAiLimit?: number } = {}) {
+  constructor(store: Store, gateway: AiGateway, live: LiveSearch, options: { dailyAiLimit?: number; budget?: AiBudget } = {}) {
     this.store = store;
     this.gateway = gateway;
     this.live = live;
     this.dailyAiLimit = options.dailyAiLimit ?? 10;
+    this.budget = options.budget ?? new AiBudget(store, { perLearner: this.dailyAiLimit });
   }
+
+  /** The shared AI allowance (also used by the gateway and the admin AI page). */
+  get aiBudget() { return this.budget; }
 
   // ── profile ────────────────────────────────────────────────────────────
 
@@ -226,20 +231,14 @@ export class ReadingService {
     }
   }
 
-  private withinBudget(learnerId: string): boolean {
-    const day = new Date().toISOString().slice(0, 10);
-    const b = this.budget.get(learnerId);
-    if (!b || b.day !== day) {
-      this.budget.set(learnerId, { day, count: 0 });
-      return true;
-    }
-    return b.count < this.dailyAiLimit;
+  private async withinBudget(learnerId: string, client?: AiClient): Promise<boolean> {
+    return (await this.budget.blocked(learnerId, client)) === null;
   }
 
   /** Spend one of today's AI answers if any are left (other services that call the AI share this budget). */
-  useAi(learnerId: string): boolean {
-    if (!this.withinBudget(learnerId)) return false;
-    this.spend(learnerId);
+  async useAi(learnerId: string, client?: AiClient): Promise<boolean> {
+    if (!(await this.withinBudget(learnerId, client))) return false;
+    await this.budget.spend(learnerId, client);
     return true;
   }
 
@@ -248,12 +247,11 @@ export class ReadingService {
     return this.signal(learnerId, signals);
   }
 
-  private spend(learnerId: string) {
-    const b = this.budget.get(learnerId);
-    if (b) b.count += 1;
+  private async spend(learnerId: string, client?: AiClient) {
+    await this.budget.spend(learnerId, client);
   }
 
-  async help(learnerId: string, input: HelpInput) {
+  async help(learnerId: string, input: HelpInput, client?: AiClient) {
     const lesson = this.lessonOr404(input.lessonId);
     const block = this.blockOr400(lesson, input.blockId);
     const lang: Lang = input.lang === 'bn' ? 'bn' : 'en';
@@ -373,7 +371,7 @@ export class ReadingService {
       return { kind: 'answer' as const, selectionType: type, origin: 'ai_checked' as const, title: null, text: cached.text, refresher, sources: cached.sources, chips, profile: this.summary(p, lang) };
     }
 
-    if (this.gateway.enabled && passages.length && this.withinBudget(learnerId)) {
+    if (this.gateway.enabled && passages.length && (await this.withinBudget(learnerId, client))) {
       const levelWords = level === 1 ? 'very simple everyday words, short sentences' : level === 3 ? 'precise technical wording' : 'clear standard wording';
       const languageName = lang === 'bn' ? 'Bangla (English terms in brackets are fine)' : 'English';
       const user = [
@@ -387,7 +385,7 @@ export class ReadingService {
         `<evidence>${JSON.stringify(passages.map((x) => ({ id: x.id, text: x.text[lang] })))}</evidence>`,
       ].filter(Boolean).join('\n');
       const req = { purpose: 'selection_help', system: SYSTEM_RULES, user, maxOutputTokens: Math.round(maxWords * 3) };
-      this.spend(learnerId);
+      await this.spend(learnerId, client);
       const result = await this.gateway.generate(req);
       if (result) {
         const allowedNumbers = [...passages.flatMap((x) => [...extractNumbers(x.text.en), ...extractNumbers(x.text.bn)]), ...extractNumbers(block.anchors.join(' ')), ...extractNumbers(selection)];
@@ -411,13 +409,11 @@ export class ReadingService {
   // ── free-form chat ("Ask AI" box and selected text on any page) ─────────
 
   /** Remaining AI answers today for this learner (the chat shows it). */
-  aiCallsLeft(learnerId: string): number {
-    const day = new Date().toISOString().slice(0, 10);
-    const b = this.budget.get(learnerId);
-    return !b || b.day !== day ? this.dailyAiLimit : Math.max(0, this.dailyAiLimit - b.count);
+  aiCallsLeft(learnerId: string, client?: AiClient): Promise<number> {
+    return this.budget.left(learnerId, client);
   }
 
-  async chat(learnerId: string, input: { question?: unknown; selection?: unknown; history?: unknown; lang: Lang; page: ChatPage; style?: unknown }) {
+  async chat(learnerId: string, input: { question?: unknown; selection?: unknown; history?: unknown; lang: Lang; page: ChatPage; style?: unknown }, client?: AiClient) {
     const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
     const lang: Lang = input.lang === 'bn' ? 'bn' : 'en';
     const question = clean(input.question, 500);
@@ -453,7 +449,7 @@ export class ReadingService {
       }
     }
     const used = evidence.slice(0, 6);
-    const base = { sources: [] as SourceRef[], liveUsed, left: this.aiCallsLeft(learnerId) };
+    const base = { sources: [] as SourceRef[], liveUsed, left: (await this.aiCallsLeft(learnerId, client)) };
 
     const cacheKey = ['chat', page.key, lang, style, normalizeQ(selection), normalizeQ(question)].join('|');
     const cached = history.length ? undefined : this.answerCache.get(cacheKey);
@@ -463,7 +459,7 @@ export class ReadingService {
     const styleLine = style === 'simpler'
       ? 'The learner is new to this: use very simple everyday words, short sentences, and one small step at a time.'
       : style === 'concise' ? 'The learner already knows the basics: be brief and precise, and use technical terms.' : '';
-    if (this.gateway.enabled && used.length && this.withinBudget(learnerId)) {
+    if (this.gateway.enabled && used.length && (await this.withinBudget(learnerId, client))) {
       const languageName = lang === 'bn' ? 'Bangla (English technical terms in brackets are fine)' : 'English';
       const user = [
         `A learner on a ${page.kind} page asks a question. Page: ${page.label}.`,
@@ -475,7 +471,7 @@ export class ReadingService {
         `<evidence>${JSON.stringify(used.map((e) => ({ id: e.id, source: e.source.title, text: e.text })))}</evidence>`,
       ].filter(Boolean).join('\n');
       const req = { purpose: 'chat', system: SYSTEM_RULES, user, maxOutputTokens: Math.round(maxWords * 3) };
-      this.spend(learnerId);
+      await this.spend(learnerId, client);
       const result = await this.gateway.generate(req);
       if (result) {
         const allowedNumbers = [...used.flatMap((e) => extractNumbers(e.text)), ...extractNumbers(query), ...extractNumbers(page.label)];
@@ -483,14 +479,14 @@ export class ReadingService {
         if (v.ok) {
           const cited = used.filter((e) => v.value.citations.includes(e.id)).map((e) => e.source);
           if (!history.length) this.answerCache.set(cacheKey, { text: v.value.explanation, sources: cited });
-          return { ...base, origin: 'ai_checked' as const, text: v.value.explanation, sources: cited, left: this.aiCallsLeft(learnerId) };
+          return { ...base, origin: 'ai_checked' as const, text: v.value.explanation, sources: cited, left: (await this.aiCallsLeft(learnerId, client)) };
         }
         await this.gateway.logOutcome(req, result.provider, result.model, `fallback_${v.reason}`);
       }
     }
 
     // No checked AI answer: point to the closest reviewed material, never invent text.
-    const overBudget = this.gateway.enabled && !this.withinBudget(learnerId);
+    const overBudget = this.gateway.enabled && !(await this.withinBudget(learnerId, client));
     const top = used.find((e) => e.source.reviewed);
     const note = overBudget
       ? (lang === 'bn' ? 'আজকের এআই উত্তরের সীমা শেষ। সবচেয়ে কাছের পর্যালোচিত অংশ:' : 'You have used today’s AI answers. The closest reviewed material:')
@@ -501,7 +497,7 @@ export class ReadingService {
     const path = (e?: Ev) => e?.source.url?.split('#')[0] ?? e?.id;
     const elsewhere = used.slice(2).find((e) => path(e) !== path(used[0]));
     const shown = [...used.slice(0, 2), ...(elsewhere ? [elsewhere] : used.slice(2, 3))];
-    return { ...base, origin: top ? ('reviewed' as const) : ('none' as const), text: top ? `${note} ${firstSentence(top.text)}` : note, sources: shown.map((e) => e.source), left: this.aiCallsLeft(learnerId) };
+    return { ...base, origin: top ? ('reviewed' as const) : ('none' as const), text: top ? `${note} ${firstSentence(top.text)}` : note, sources: shown.map((e) => e.source), left: (await this.aiCallsLeft(learnerId, client)) };
   }
 
   async checkQuiz(learnerId: string, input: { lessonId: string; blockId: string; choice: number; lang: Lang }) {

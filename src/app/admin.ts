@@ -615,7 +615,7 @@ export class AdminService {
     const head = bi(body.head, 140);
     if (!head.en) throw bad('Write the headline in English.');
     const href = str(body.href, 300);
-    if (!/^(\/[^\s]*|https:\/\/[^\s]+)$/.test(href)) throw bad('The button must open a page on this site (starting with /) or an https:// link.');
+    if (!/^(\/(?![\/\\])[^\s]*|https:\/\/[^\s]+)$/.test(href)) throw bad('The button must open a page on this site (starting with /) or an https:// link.');
     const pages = (Array.isArray(body.pages) ? body.pages : []).map((p: unknown) => str(p, 120).replace(/^\/+/, '')).filter((p: string) => p === '*' || /^[a-z0-9][a-z0-9/_-]*$/.test(p)).slice(0, 40);
     if (!pages.length) throw bad('Choose at least one page (or "Every page").');
     const data = {
@@ -747,7 +747,7 @@ export class AdminService {
     const text = bi(body.text, 220);
     const href = str(body.href, 300);
     if (body.on === true && !text.en) throw bad('Write the announcement in English.');
-    if (href && !/^(\/[^\s]*|https:\/\/[^\s]+)$/.test(href)) throw bad('The link must start with / or https://.');
+    if (href && !/^(\/(?![\/\\])[^\s]*|https:\/\/[^\s]+)$/.test(href)) throw bad('The link must start with / or https://.');
     const prev = this.doc('site', 'announcement')?.data ?? {};
     const data = { on: body.on === true, text, linkText: bi(body.linkText, 40), href: href || null, everyPage: body.everyPage === true, version: body.resetClosed === true || !prev.version ? this.now().toISOString() : prev.version };
     await this.put('site', 'announcement', data);

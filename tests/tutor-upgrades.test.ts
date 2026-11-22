@@ -59,11 +59,11 @@ test('simpler wording: checked against the section, stored once and shared by ev
   assert.match(r.text!, /zero character/);
   assert.match(good.lastUser, /"id":"tutorial:c-pointers-and-strings#introduction"/);
   assert.match(good.lastUser, /Do not add new facts/);
-  assert.equal(reading.aiCallsLeft('u1'), 1, 'a fresh rewrite uses one of the learner’s AI answers');
+  assert.equal(await reading.aiCallsLeft('u1'), 1, 'a fresh rewrite uses one of the learner’s AI answers');
   const again = await style.simpler('u2', TRACK, TOPIC, 'introduction', 'en');
   assert.equal(again.cached, true);
   assert.equal(good.calls, 1, 'second learner gets the stored version');
-  assert.equal(reading.aiCallsLeft('u2'), 2, 'stored versions are free');
+  assert.equal(await reading.aiCallsLeft('u2'), 2, 'stored versions are free');
   assert.ok(await store.getDoc('simpler_section', 'c:c-pointers-and-strings:introduction:en'));
   await assert.rejects(style.simpler('u1', TRACK, TOPIC, 'no-such-section', 'en'), /not found/i);
 });
@@ -78,7 +78,7 @@ test('simpler wording: invented numbers, AI off and the daily limit all leave th
   assert.deepEqual(await setup(null).style.simpler('u1', TRACK, TOPIC, 'introduction', 'en'), { origin: 'unavailable', reason: 'ai_off' });
 
   const c = setup(provider(() => ({ explanation: 'unused', citations: [], insufficient_evidence: false })), 1);
-  assert.equal(c.reading.useAi('u1'), true);
+  assert.equal(await c.reading.useAi('u1'), true);
   assert.deepEqual(await c.style.simpler('u1', TRACK, TOPIC, 'introduction', 'en'), { origin: 'unavailable', reason: 'limit' });
 });
 
