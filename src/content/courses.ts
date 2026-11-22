@@ -46,6 +46,8 @@ export interface Course {
   sampleIds?: string[];
   tint?: string | null;
   dynamic?: boolean;
+  /** Premium courses moved to a new batch playlist: new video id → the ids it replaced (progress carries over). */
+  aliases?: Record<string, string[]>;
 }
 
 const pl = (id: string, title: string, videos: number): Playlist => ({ id, title, videos });

@@ -322,7 +322,9 @@ async function coursePage(id) {
   fetchBtn.onclick = busy(fetchBtn, async () => {
     const imp = await api('POST', '/api/admin/youtube/playlist', { url: c.playlist });
     const old = new Map(c.videos.map((v) => [v.id, v]));
-    c.videos = imp.videos.map((v, i) => ({ ...v, hidden: old.get(v.id)?.hidden ?? false, sample: old.get(v.id)?.sample ?? (c.access === 'paid' && i < 2) }));
+    // A new batch playlist has all-new video ids: keep each position's sample and hidden setting.
+    const byPos = c.access === 'paid' && c.videos.length && !imp.videos.some((v) => old.has(v.id)) ? c.videos : null;
+    c.videos = imp.videos.map((v, i) => { const was = old.get(v.id) ?? byPos?.[i]; return { ...v, hidden: was?.hidden ?? false, sample: was?.sample ?? (c.access === 'paid' && i < 2) }; });
     if (!c.title.en) c.title.en = imp.title;
     toast(`Found ${imp.videos.length} videos in “${imp.title}”.`);
     draw();
@@ -330,6 +332,9 @@ async function coursePage(id) {
   const playlistBox = () => card(c.access === 'paid' ? 'Videos (an unlisted YouTube playlist)' : 'YouTube playlist',
     el('p', { class: 'adm-hint', text: c.access === 'paid' ? 'Upload the course videos to YouTube as Unlisted, put them in one playlist, and paste its link. Learners never see the YouTube links of locked videos.' : 'Paste the playlist link. Every video in it is added to the website, in the same order.' }),
     row(field(c.access === 'paid' ? 'Unlisted playlist link' : 'Playlist link (required)', input(c.playlist, (v) => { c.playlist = v; }, { type: 'url', placeholder: 'https://www.youtube.com/playlist?list=…' })), fetchBtn),
+    c.access === 'paid' ? row(field('Batch name', input(c.batch ?? '', (v) => { c.batch = v; }, { placeholder: 'e.g. Batch JAN-26' }), 'Burn this name into the videos before uploading (batch-mark tool), so a leaked copy shows which batch it came from.')) : null,
+    c.access === 'paid' && !isNew ? el('p', { class: 'adm-hint', text: 'New batch, or videos leaked? Upload a fresh unlisted copy as a new playlist, paste its link above, change the batch name and save. Videos are matched by position, so free samples and students\' progress carry over. Then make the old playlist private on YouTube so leaked links stop working.' }) : null,
+    c.access === 'paid' && (c.batches ?? []).length ? el('div', { class: 'adm-list' }, el('strong', { text: 'Earlier batches' }), ...[...c.batches].reverse().map((b) => el('div', { class: 'adm-list-row' }, el('span', { text: b.label }), el('span', { class: 'adm-hint', text: `${num((b.ids ?? []).length)} videos · until ${dateOnly(b.until)}` }), el('a', { href: `https://www.youtube.com/playlist?list=${encodeURIComponent(b.playlistId)}`, target: '_blank', rel: 'noopener', text: 'Playlist ↗' })))) : null,
     c.videos.length ? el('p', { class: 'adm-ok', text: `✓ ${num(c.videos.length)} videos. Titles, lengths and pictures come from YouTube.` }) : null,
     videoList,
     c.access === 'free' ? check('Check the playlist every night and add new videos automatically', c.nightlySync, (on) => { c.nightlySync = on; }) : null);
@@ -377,6 +382,9 @@ async function accessCard(courseId) {
     el('p', { class: 'adm-hint', text: 'After you confirm a bKash or Nagad payment, give the student access here. They must have signed in once.' }),
     row(field('Student email', input('', (v) => { email = v; }, { type: 'email', placeholder: 'student@example.com' })), add),
     grants.length ? el('div', { class: 'adm-list' }, ...grants.map((g) => el('div', { class: 'adm-list-row' }, el('span', { text: g.email }), el('span', { class: 'adm-hint', text: g.until ? `until ${dateOnly(g.until)}` : 'for ever' }),
+      chip(`Code ${g.code}`, ''),
+      el('span', { class: 'adm-hint', title: (g.devices ?? []).map((x) => `${x.label} · last used ${ago(x.last)}`).join('\n'), text: `${num((g.devices ?? []).length)} device${(g.devices ?? []).length === 1 ? '' : 's'}` }),
+      (g.devices ?? []).length ? button('Reset devices', async () => { if (!confirm(`Reset ${g.email}'s devices? Their next devices can then be registered.`)) return; await api('POST', `/api/admin/devices/${encodeURIComponent(g.learnerId)}/reset`); toast('Devices reset.'); route(); }, 'small line') : null,
       button('Remove', async () => { if (!confirm(`Remove ${g.email}'s access?`)) return; await api('DELETE', `/api/admin/courses/${encodeURIComponent(courseId)}/access/${encodeURIComponent(g.learnerId)}`); toast('Access removed.'); route(); }, 'danger small')))) : el('p', { class: 'adm-empty', text: 'Nobody yet.' }));
 }
 
@@ -439,7 +447,33 @@ async function usersPage() {
   draw();
   return [el('div', { class: 'adm-kpis' }, kpi('Signed-in accounts', num(d.counts.total)), kpi('Admins', num(d.counts.admins)), kpi('Instructors', num(d.counts.instructors))),
     card('Give someone a role', row(field('Email', input('', (v) => { email = v; }, { type: 'email', placeholder: 'teacher@uni.edu.bd' })), field('Role', select(role, [['instructor', 'Instructor'], ['admin', 'Admin'], ['learner', 'Learner (remove role)']], (v) => { role = v; })), add)),
-    card('Everyone', field('Filter', input('', (v) => { filter = v; draw(); }, { type: 'search', placeholder: 'email or role' })), list)];
+    card('Everyone', field('Filter', input('', (v) => { filter = v; draw(); }, { type: 'search', placeholder: 'email or role' })), list),
+    traceCard()];
+}
+
+// Leak tracing: who is behind a watermark code, and which batch a leaked video link came from.
+function traceCard() {
+  let code = '', link = '';
+  const out = el('div', { class: 'adm-stack', 'aria-live': 'polite' });
+  const who = button('Find the account', null, 'primary small');
+  who.onclick = busy(who, async () => {
+    const r = await api('GET', `/api/admin/trace/viewer?code=${encodeURIComponent(code)}`);
+    out.replaceChildren(r.found
+      ? el('div', { class: 'adm-list-row' }, el('strong', { text: r.email ?? r.learnerId }), el('span', { class: 'adm-hint', text: r.courses.length ? `Has: ${r.courses.map((c) => c.title).join(', ')}` : 'No premium courses' }))
+      : el('p', { class: 'adm-empty', text: 'No account has this code.' }));
+  });
+  const which = button('Find the batch', null, 'primary small');
+  which.onclick = busy(which, async () => {
+    const r = await api('GET', `/api/admin/trace/video?v=${encodeURIComponent(link)}`);
+    out.replaceChildren(r.hits.length
+      ? el('div', { class: 'adm-list' }, ...r.hits.map((h) => el('div', { class: 'adm-list-row' }, el('strong', { text: h.title }), chip(h.batch, h.current ? 'gold' : ''), el('span', { class: 'adm-hint', text: h.current ? 'current batch: upload a new copy and switch' : `old batch, replaced ${dateOnly(h.until)}` }))))
+      : el('p', { class: 'adm-empty', text: 'This video is not in any premium course.' }));
+  });
+  return card('Trace a leak',
+    el('p', { class: 'adm-hint', text: 'Found a recording or a link shared in a group? Premium videos show the viewer\'s email and a 6-character code that moves around the player.' }),
+    row(field('Code from the watermark', input('', (v) => { code = v; }, { placeholder: 'e.g. 3FA9C2', maxlength: '6' })), who),
+    row(field('Leaked YouTube link', input('', (v) => { link = v; }, { type: 'url', placeholder: 'https://youtu.be/…' })), which),
+    out);
 }
 
 // ── AI Teacher ──

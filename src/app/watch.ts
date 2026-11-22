@@ -8,6 +8,10 @@ import { allCourses, getCourse, coursePlaylistUrl, type Course } from '../conten
 import { getPlaylist, getVideo } from '../content/videos.ts';
 import type { Lang } from '../content/pricing-pack.ts';
 import { VideoExtrasService, COURSE_TRY_NOW, LANGUAGES } from './video-extras.ts';
+import { viewerCode, type DeviceGuard } from './devices.ts';
+
+/** Who is watching (for the device limit and the watermark on premium videos). */
+export interface Viewer { email: string | null; deviceId: unknown; userAgent: string; staff: boolean }
 
 const courseKey = (courseId: string) => `course:${courseId}`;
 
@@ -17,7 +21,10 @@ export function watchedSet(courseId: string, events: ReadingEventRow[]): Set<str
   for (const e of events) {
     if (e.type === 'video' && e.lessonId === courseKey(courseId) && e.blockId) state.set(e.blockId, e.payload.watched === true);
   }
-  return new Set([...state].filter(([, w]) => w).map(([id]) => id));
+  const set = new Set([...state].filter(([, w]) => w).map(([id]) => id));
+  // After a course moves to a new batch playlist, a video watched under its old id counts for the new one.
+  for (const [now, before] of Object.entries(getCourse(courseId)?.aliases ?? {})) if (before.some((id) => set.has(id))) set.add(now);
+  return set;
 }
 
 /** The course's videos in order: playlists in course order, videos in playlist order, first appearance only. */
@@ -38,6 +45,7 @@ export class WatchService {
   private readonly store: Store;
   private readonly extras: VideoExtrasService;
   private canWatch: (learnerId: string, courseId: string) => Promise<boolean> = async () => false;
+  private devices: DeviceGuard | null = null;
   constructor(store: Store, extras?: VideoExtrasService) {
     this.store = store;
     this.extras = extras ?? new VideoExtrasService(store);
@@ -46,6 +54,11 @@ export class WatchService {
   /** Who has bought a paid course (set by the admin service). */
   setAccessCheck(fn: (learnerId: string, courseId: string) => Promise<boolean>) {
     this.canWatch = fn;
+  }
+
+  /** Device limit for premium videos (set in the server start-up). */
+  setDeviceGuard(guard: DeviceGuard) {
+    this.devices = guard;
   }
 
   /** For a paid course the learner has not bought: true for every video that is not a free sample. */
@@ -70,9 +83,12 @@ export class WatchService {
   }
 
   /** Sections and progress for a course page or the player. */
-  async view(courseId: string, learnerId: string, lang: Lang, current?: string | null) {
+  async view(courseId: string, learnerId: string, lang: Lang, current?: string | null, viewer?: Viewer) {
     const course = this.courseOr404(courseId);
     const [events, marks, locked] = await Promise.all([this.store.readingEvents(learnerId), this.extras.summary(), this.lockFor(course, learnerId)]);
+    const ownsPaid = course.access === 'paid' && !locked('\u0000');
+    // A bought premium course plays on a limited number of devices per account (staff are not limited).
+    if (ownsPaid && this.devices && viewer && !viewer.staff) await this.devices.check(learnerId, viewer.deviceId, viewer.userAgent);
     const watched = watchedSet(course.id, events);
     const order = courseVideoOrder(course);
     const playable = order.filter((id) => !locked(id));
@@ -124,13 +140,16 @@ export class WatchService {
             by: cur.by,
             watched: watched.has(cur.id),
             position: order.indexOf(cur.id) + 1,
-            embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(cur.id)}?rel=0&modestbranding=1`,
+            // Premium videos: no YouTube fullscreen button (the site's own fullscreen keeps the watermark on top) and no keyboard shortcuts.
+            embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(cur.id)}?rel=0&modestbranding=1${course.access === 'paid' ? '&fs=0&disablekb=1&iv_load_policy=3' : ''}`,
             youtubeUrl: course.access === 'paid' ? null : `https://www.youtube.com/watch?v=${encodeURIComponent(cur.id)}`,
             prev: idx > 0 ? playable[idx - 1]! : null,
             next: idx >= 0 && idx < playable.length - 1 ? playable[idx + 1]! : null,
             extras,
           }
         : null,
+      // Moving watermark on premium videos: the viewer's email and account code, so a recording can be traced.
+      protect: ownsPaid ? { mark: `${viewer?.email ?? 'Loop & Logic'} · ${viewerCode(learnerId)}`, code: viewerCode(learnerId) } : null,
     };
   }
 
