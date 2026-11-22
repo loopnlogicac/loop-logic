@@ -5,6 +5,7 @@
 // - Keys stay on the server. If no provider is configured, generate() returns
 //   null and callers use reviewed content instead.
 
+import type { AiBudget } from './budget.ts';
 import { randomUUID } from 'node:crypto';
 import type { Store } from '../store/store.ts';
 
@@ -176,10 +177,19 @@ export class AiGateway {
   }
 
   /** Returns the first successful result, or null when every provider fails or none is configured. */
+  private budget: AiBudget | null = null;
+  /** Site-wide daily cap on model calls (every AI feature goes through generate). */
+  setBudget(budget: AiBudget) { this.budget = budget; }
+
   async generate(req: LlmRequest): Promise<LlmResult | null> {
+    if (this.budget && !(await this.budget.globalAllows())) {
+      await this.logOutcome(req, 'none', 'none', 'global_cap');
+      return null; // callers fall back to reviewed text
+    }
     for (const provider of this.providers) {
       for (let attempt = 0; attempt < 2; attempt++) {
         const started = Date.now();
+        await this.budget?.countCall();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.timeoutMs);
         try {

@@ -18,6 +18,8 @@ import type { TutorialService } from './tutorials.ts';
 import type { Lang } from '../content/pricing-pack.ts';
 import type { Subject } from '../content/subjects.ts';
 import { AppError } from './service.ts';
+import { createHash } from 'node:crypto';
+import type { AiClient } from '../ai/budget.ts';
 import { extractNumbers, SYSTEM_RULES, validateAnswer } from '../ai/validator.ts';
 
 export type ReadingStyle = 'simpler' | 'standard' | 'concise';
@@ -51,14 +53,16 @@ export class TutorialStyleService {
   }
 
   /** A checked plain-words version of one section, or the reason there is none. */
-  async simpler(learnerId: string, track: string, topic: string, section: string, lang: Lang) {
+  async simpler(learnerId: string, track: string, topic: string, section: string, lang: Lang, client?: AiClient) {
     const sec = this.tutorials.sectionText(track, topic, section, lang);
     if (!sec) throw new AppError('not_found', 404, lang === 'bn' ? 'এই অংশ পাওয়া যায়নি।' : 'Section not found.');
     const id = `${track}:${topic}:${section}:${lang}`;
+    // The stored version is tied to the exact text it was written from: edit the lesson and it is written again.
+    const source = createHash('sha256').update(`${sec.title}\n${sec.text}`).digest('hex').slice(0, 16);
     const hit = await this.store.getDoc(DOC_KIND, id);
-    if (hit?.data?.text) return { origin: 'ai_checked' as const, text: String(hit.data.text), cached: true };
+    if (hit?.data?.text && hit.data.source === source) return { origin: 'ai_checked' as const, text: String(hit.data.text), cached: true };
     if (!this.gateway.enabled) return { origin: 'unavailable' as const, reason: 'ai_off' as const };
-    if (!this.reading.useAi(learnerId)) return { origin: 'unavailable' as const, reason: 'limit' as const };
+    if (!(await this.reading.useAi(learnerId, client))) return { origin: 'unavailable' as const, reason: 'limit' as const };
 
     const languageName = lang === 'bn' ? 'Bangla (keep English technical terms in brackets after the Bangla word)' : 'English';
     const evidenceId = `tutorial:${topic}#${section}`;
@@ -78,7 +82,7 @@ export class TutorialStyleService {
       await this.gateway.logOutcome(req, result.provider, result.model, `fallback_${v.reason}`);
       return { origin: 'unavailable' as const, reason: 'check_failed' as const };
     }
-    await this.store.putDoc({ kind: DOC_KIND, id, data: { text: v.value.explanation, model: result.model, at: new Date().toISOString() }, updatedAt: new Date().toISOString() });
+    await this.store.putDoc({ kind: DOC_KIND, id, data: { text: v.value.explanation, source, model: result.model, at: new Date().toISOString() }, updatedAt: new Date().toISOString() });
     return { origin: 'ai_checked' as const, text: v.value.explanation, cached: false };
   }
 
